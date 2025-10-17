@@ -1,0 +1,9 @@
+langchain
+langchain[google-genai]
+langchain[ollama]
+
+langchain-core
+langchain-text-splitters
+langchain-community
+langgraph
+pypdf
