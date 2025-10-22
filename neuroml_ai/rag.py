@@ -19,10 +19,36 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.tools import tool
 from langchain.agents import create_agent
+from typing_extensions import TypedDict, Literal
+from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate
+from langgraph.graph import StateGraph, START, END
 
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
+
+
+class QueryTypeState(TypedDict):
+    """Classification of user query"""
+
+    category: Literal["question", "code_generation", "unknown"]
+
+
+class AgentState(TypedDict):
+    """The state of the graph"""
+
+    query: str
+    query_type: QueryTypeState
+    result: str
+
+
+class QueryTypeSchema(BaseModel):
+    """Docstring for QueryTypeSchema."""
+
+    query_type: Literal["question", "code_generation"] = Field(
+        description="'question' if user is asking for information, 'code_generation', if the user is asking for code"
+    )
 
 
 class NML_RAG(object):
@@ -30,7 +56,9 @@ class NML_RAG(object):
 
     nml_doc_pdf_path = "../data/neuroml-documentation.pdf"
 
-    def __init__(self, chat_model: str = "ollama:qwen3:1.7b", embedding_model: str = "bge-m3"):
+    def __init__(
+        self, chat_model: str = "ollama:qwen3:1.7b", embedding_model: str = "bge-m3"
+    ):
         """Initialise"""
         self.chat_model = chat_model
         self.model = None
@@ -94,8 +122,103 @@ class NML_RAG(object):
 
         assert self.model
 
-        self.__load_doc()
-        self.__setup_agent()
+        # self.__load_doc()
+        # self.__setup_agent()
+
+    def __classify_query_node(self, state: AgentState) -> dict:
+        """LLM decides what type the user query is"""
+        assert self.model
+
+        system_prompt = """You are an expert query classifier. Analyse the user's request
+            and determine its intent. Is it a 'quertion' or a 'code_generation'
+            request? Provide your answer as a JSON object matching the
+            requested schema."""
+
+        prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+        )
+
+        # can use | to merge these lines
+        query_node_llm = self.model.with_structured_output(QueryTypeSchema)
+        prompt = prompt_template.invoke({"query": state["query"]})
+
+        output = query_node_llm.invoke(prompt)
+        self.logger.debug(f"{output.query_type =}")
+
+        # return {"query_type": QueryTypeState(category=output.query_type)}
+        return {"query_type": output.query_type}
+
+    def __generate_code_node(self, state: AgentState) -> dict:
+        """Generate code"""
+
+        return {"result": "I can generate code for you"}
+
+    def __answer_question_node(self, state: AgentState) -> dict:
+        """Answer the question"""
+
+        return {"result": "I can answer your question"}
+
+        # langchain tool decorator does not work with class methods because
+        # Python expects `self` as the first argument which is not provided
+        # when the tool is called. So, we can either bind manually as below, or
+        # we can refactor the code to make the tool an external function that
+        # is not a class method
+        retrieve_docs_tool = tool(
+            "retrieve_docs",
+            description="Retrieve information from documentation",
+            response_format="content_and_artifact",
+        )(self.__retrieve_docs)
+        tools = [retrieve_docs_tool]
+
+        agent = create_agent(self.model, tools, system_prompt=self.system_prompt)
+        query = "List the standard NeuroML component types "
+
+        for event in agent.stream(
+            {
+                "messages": [
+                    {"role": "user", "content": query},
+                ]
+            },
+            stream_mode="values",
+        ):
+            event["messages"][-1].pretty_print()
+
+    def __route_query_node(self, state: AgentState) -> str:
+        """Route the query depending on LLM's result"""
+        self.logger.debug(f"{state =}")
+        query_type = state["query_type"]
+
+        if query_type == "question":
+            return "answer_question_node"
+        elif query_type == "code_generation":
+            return "generate_code_node"
+        else:
+            return "handle_unknown_node"
+
+    def create_graph(self):
+        """Create the LangGraph"""
+        self.workflow = StateGraph(AgentState)
+        self.workflow.add_node("classify_query", self.__classify_query_node)
+        self.workflow.add_node("answer_question_node", self.__answer_question_node)
+        self.workflow.add_node("generate_code_node", self.__generate_code_node)
+
+        self.workflow.set_entry_point("classify_query")
+
+        self.workflow.add_conditional_edges(
+            "classify_query",
+            self.__route_query_node,
+            {
+                "answer_question_node": "answer_question_node",
+                "generate_code_node": "generate_code_node",
+                "unknown": END,
+            },
+        )
+
+        self.workflow.add_edge("answer_question_node", END)
+        self.workflow.add_edge("generate_code_node", END)
+
+        self.graph = self.workflow.compile()
+        self.graph.get_graph().draw_mermaid_png(output_file_path="lang-graph.png")
 
     def __setup_agent(self):
         """Set up the chat agent"""
@@ -105,11 +228,16 @@ class NML_RAG(object):
         # when the tool is called. So, we can either bind manually as below, or
         # we can refactor the code to make the tool an external function that
         # is not a class method
-        retrieve_docs_tool = tool("retrieve_docs", response_format="content_and_artifact")(self.__retrieve_docs)
+        retrieve_docs_tool = tool(
+            "retrieve_docs",
+            description="Retrieve information from documentation",
+            response_format="content_and_artifact",
+        )(self.__retrieve_docs)
         self.tools = [retrieve_docs_tool]
-        # prompt = "Ask a question about NeuroML"
 
-        self.agent = create_agent(self.model, self.tools, system_prompt=self.system_prompt)
+        self.agent = create_agent(
+            self.model, self.tools, system_prompt=self.system_prompt
+        )
 
     def __setup_gemini(self):
         """Set up Gemini"""
@@ -132,11 +260,12 @@ class NML_RAG(object):
     def __setup_ollama(self):
         """Set up Ollama model"""
 
-
         from langchain_ollama import OllamaEmbeddings
 
         self.logger.info(f"Setting up chat model: {self.chat_model}")
-        self.model = init_chat_model(self.chat_model.replace("ollama:", ""), model_provider="ollama")
+        self.model = init_chat_model(
+            self.chat_model.replace("ollama:", ""), model_provider="ollama"
+        )
 
         self.logger.info(f"Setting up embedding model: {self.embedding_model}")
         self.embeddings = OllamaEmbeddings(model=self.embedding_model)
@@ -203,15 +332,23 @@ class NML_RAG(object):
             {
                 "messages": [
                     {"role": "user", "content": query},
-                    # {"role": "system", "content": self.system_prompt},
                 ]
             },
             stream_mode="values",
         ):
             event["messages"][-1].pretty_print()
 
+    def run_graph(self):
+        """Run the graph"""
+        initial_state = AgentState(query="Please generate a NeuroML model in Python",
+                                   query_type="", result="")
+        final_state = self.graph.invoke(initial_state)
+        print(final_state)
+
 
 if __name__ == "__main__":
     nml_ai = NML_RAG()
     nml_ai.setup()
-    nml_ai.run()
+    # nml_ai.run()
+    nml_ai.create_graph()
+    nml_ai.run_graph()
