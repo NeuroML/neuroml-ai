@@ -12,7 +12,10 @@ The following models are currently being used for testing:
 
 #### Ollama for local deployments
 
-Currently, Ollama is used for local deployments with the qwen3:0.6b chat model and qwen3-embeddings:0.6b embedding model.
+Currently, Ollama is used for local deployments.
+Please see the code to see what models are currently used.
+You can modify these to use different models to suit your hardware.
+However, do note that picking smaller models will most certainly affect the correctness/performance of the RAG.
 To install Ollama and pull the models, please follow the official documentation: https://ollama.com/download
 
 #### Gemini
