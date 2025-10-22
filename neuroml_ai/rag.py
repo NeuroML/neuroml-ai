@@ -195,7 +195,7 @@ class NML_RAG(object):
         else:
             return "handle_unknown_node"
 
-    def create_graph(self):
+    def __create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
         self.workflow.add_node("classify_query", self.__classify_query_node)
@@ -340,15 +340,17 @@ class NML_RAG(object):
 
     def run_graph(self):
         """Run the graph"""
-        initial_state = AgentState(query="Please generate a NeuroML model in Python",
-                                   query_type="", result="")
-        final_state = self.graph.invoke(initial_state)
-        print(final_state)
+        self.__create_graph()
+
+        initial_state = AgentState(
+            query="Please generate a NeuroML model in Python", query_type="", result=""
+        )
+        for chunk in self.graph.stream(initial_state):
+            for node, state in chunk.items():
+                print(f"Update from node '{node}': {state}")
 
 
 if __name__ == "__main__":
     nml_ai = NML_RAG()
     nml_ai.setup()
-    # nml_ai.run()
-    nml_ai.create_graph()
     nml_ai.run_graph()
