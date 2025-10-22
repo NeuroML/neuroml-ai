@@ -68,46 +68,6 @@ class NML_RAG(object):
         self.logger = logging.getLogger("NML_RAG")
         self.logger.setLevel(logging.DEBUG)
 
-        self.system_prompt = """
-        You are a fact-based research assistant. Your primary and only goal is
-        to provide accurate and current answers to user queries. Your
-        speciality is NeuroML, the standard and software ecosystem for
-        biophysically detailed modelling and related tools.
-
-        Core Directives:
-        1. Top priority: use the Tools. For any user query that requires a
-        factual answer, use the tool. Never answer a knowledge based question
-        directly from your general training data without using the tools. The
-        only exceptions are general conversational greetings, where you may
-        skip using the tool. Do not use synonyms to replace observations
-        obtained from the tools.
-
-        2. When using the tools, generate precise queries. Do not use stop
-        words.
-
-        3. After obtaining the data from the tool, only use the obtained
-        information to craft your answer.
-
-        Available tools:
-        You have access to the following tools:
-
-        1. "retrieve_docs": use this tool to search the provided documentation.
-
-        Your thought process (ReAct):
-
-        You must always structure your response using the
-        Thought/Action/Observation/Final Answer pattern:
-
-        - Thought: Reason about the user's request. Always conclude that a
-          factual query requires an `Action: retrieve`.
-        - ActionGenerate the tool call (e.g., `retrieve({"query": "focused
-          search term"})`).
-        - Observation: This is the result of the tool execution (the
-          documents).
-        - Final Answer: Generate the final response based only on the
-          Observation.
-
-        """
 
     def setup(self):
         """Set up basics."""
@@ -156,6 +116,8 @@ class NML_RAG(object):
     def __answer_question_node(self, state: AgentState) -> dict:
         """Answer the question"""
 
+        """
+
         return {"result": "I can answer your question"}
 
         # langchain tool decorator does not work with class methods because
@@ -182,6 +144,70 @@ class NML_RAG(object):
             stream_mode="values",
         ):
             event["messages"][-1].pretty_print()
+        """
+
+        system_prompt = """
+        You are a fact-based research assistant. Your primary and only goal is
+        to provide accurate and current answers to user queries. Your
+        speciality is NeuroML, the standard and software ecosystem for
+        biophysically detailed modelling and related tools.
+
+        Core Directives:
+        1. Top priority: use the Tools. For any user query that requires a
+        factual answer, use the tool. Never answer a knowledge based question
+        directly from your general training data without using the tools. The
+        only exceptions are general conversational greetings, where you may
+        skip using the tool. Do not use synonyms to replace observations
+        obtained from the tools.
+
+        2. When using the tools, generate precise queries. Do not use stop
+        words.
+
+        3. After obtaining the data from the tool, only use the obtained
+        information to craft your answer.
+
+        Available tools:
+        You have access to the following tools:
+
+        1. "retrieve_docs": use this tool to search the provided documentation.
+
+        Your thought process (ReAct):
+
+        You must always structure your response using the
+        Thought/Action/Observation/Final Answer pattern:
+
+        - Thought: Reason about the user's request. Always conclude that a
+          factual query requires an `Action: retrieve`.
+        - ActionGenerate the tool call (e.g., `retrieve({"query": "focused
+          search term"})`).
+        - Observation: This is the result of the tool execution (the
+          documents).
+        - Final Answer: Generate the final response based only on the
+          Observation.
+
+        """
+
+        assert self.model
+
+        retrieve_docs_tool = tool(
+            "retrieve_docs",
+            description="Retrieve information from documentation",
+            response_format="content_and_artifact",
+        )(self.__retrieve_docs)
+
+        question = state['query']
+
+        question_prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+        )
+
+        prompt = question_prompt_template.invoke(question)
+        self.logger.debug(f"{prompt =}")
+
+        output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
+        self.logger.debug(f"{output =}")
+
+        return {"result": output}
 
     def __route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
@@ -343,7 +369,7 @@ class NML_RAG(object):
         self.__create_graph()
 
         initial_state = AgentState(
-            query="Please generate a NeuroML model in Python", query_type="", result=""
+            query="Please list the NeuroML classes for synapses", query_type="", result=""
         )
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
