@@ -110,7 +110,8 @@ class NML_RAG(object):
 
         if self.vector_store._collection.count() == 0:
             self.logger.info(
-                "Vector store appears empty. Generating embeddings and adding documents"
+                "Vector store appears empty. Generating embeddings and adding documents. "
+                "This may take a while, depending on your hardware."
             )
             self.index = self.vector_store.add_documents(documents=self.splits)
         else:
