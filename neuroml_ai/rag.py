@@ -19,9 +19,10 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.tools import tool
 from langchain.agents import create_agent
-from typing_extensions import TypedDict, Literal
+from typing_extensions import TypedDict, Literal, List
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 
 
@@ -40,7 +41,7 @@ class AgentState(TypedDict):
 
     query: str
     query_type: QueryTypeState
-    result: str
+    messages: List[BaseMessage]
 
 
 class QueryTypeSchema(BaseModel):
@@ -82,7 +83,6 @@ class NML_RAG(object):
 
         assert self.model
 
-        # self.__load_doc()
         # self.__setup_agent()
 
     def __classify_query_node(self, state: AgentState) -> dict:
@@ -103,23 +103,26 @@ class NML_RAG(object):
         prompt = prompt_template.invoke({"query": state["query"]})
 
         output = query_node_llm.invoke(prompt)
+        self.logger.debug(f"{output =}")
         self.logger.debug(f"{output.query_type =}")
 
-        # return {"query_type": QueryTypeState(category=output.query_type)}
         return {"query_type": output.query_type}
 
     def __generate_code_node(self, state: AgentState) -> dict:
         """Generate code"""
+        messages = state['messages']
+        messages.append(AIMessage("I can generate code for you"))
 
-        return {"result": "I can generate code for you"}
+        return {"messages": messages}
 
     def __answer_question_node(self, state: AgentState) -> dict:
         """Answer the question"""
 
+        messages = state['messages']
+        messages.append(AIMessage("I can answer questions for for you"))
+
+        return {"messages": messages}
         """
-
-        return {"result": "I can answer your question"}
-
         # langchain tool decorator does not work with class methods because
         # Python expects `self` as the first argument which is not provided
         # when the tool is called. So, we can either bind manually as below, or
@@ -178,8 +181,8 @@ class NML_RAG(object):
 
         - Thought: Reason about the user's request. Always conclude that a
           factual query requires an `Action: retrieve`.
-        - ActionGenerate the tool call (e.g., `retrieve({"query": "focused
-          search term"})`).
+        - ActionGenerate the tool call (e.g., `retrieve({{"query": "focused
+          search term"}})`).
         - Observation: This is the result of the tool execution (the
           documents).
         - Final Answer: Generate the final response based only on the
@@ -188,6 +191,7 @@ class NML_RAG(object):
         """
 
         assert self.model
+        self.__load_doc()
 
         retrieve_docs_tool = tool(
             "retrieve_docs",
@@ -195,19 +199,20 @@ class NML_RAG(object):
             response_format="content_and_artifact",
         )(self.__retrieve_docs)
 
-        question = state['query']
-
         question_prompt_template = ChatPromptTemplate(
-            [("system", system_prompt), ("human", "User query: {query}")]
+            # [("system", system_prompt), ("human", "User query: {query}")]
+            [("human", "User query: {query}")]
         )
 
-        prompt = question_prompt_template.invoke(question)
-        self.logger.debug(f"{prompt =}")
+        self.logger.debug(f"{question_prompt_template =}")
+        prompt = question_prompt_template.invoke({"query": state['query']})
 
         output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
         self.logger.debug(f"{output =}")
 
-        return {"result": output}
+        messages = state['messages']
+        messages.append(output)
+        return {"messages": messages}
 
     def __route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
@@ -301,6 +306,7 @@ class NML_RAG(object):
         :returns: TODO
 
         """
+        self.logger.debug("Loading vector store")
         assert self.embeddings
 
         self.loader = PyPDFLoader(self.nml_doc_pdf_path)
@@ -369,14 +375,15 @@ class NML_RAG(object):
         self.__create_graph()
 
         initial_state = AgentState(
-            query="Please list the NeuroML classes for synapses", query_type="", result=""
+            query="Tell me something about NeuroML", query_type="", messages=[]
         )
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
-                print(f"Update from node '{node}': {state}")
+                self.logger.debug(f"Update from node '{node}': {state}")
+                # state["messages"][-1].pretty_print()
 
 
 if __name__ == "__main__":
-    nml_ai = NML_RAG()
+    nml_ai = NML_RAG(chat_model="ollama:qwen3:1.7b", embedding_model="embeddinggemma:latest")
     nml_ai.setup()
     nml_ai.run_graph()
