@@ -15,8 +15,7 @@ import logging
 from langchain.chat_models import init_chat_model
 from langchain_chroma import Chroma
 import chromadb
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from langchain.tools import tool
 from langchain.agents import create_agent
 from typing_extensions import TypedDict, Literal, List
@@ -57,8 +56,15 @@ class QueryTypeSchema(BaseModel):
 class NML_RAG(object):
     """NeuroML RAG implementation"""
 
-    nml_doc_pdf_path = "../data/neuroml-documentation.pdf"
+    # This is generated using the script in the data/scripts folder.
+    # Effectively:
+    # - we download the documentation sources
+    # - we use the jupyterbook system to generate a one page html
+    # - we use pandoc to convert the one page html to a one page markdown
 
+    # we prefer markdown because the one page PDF that is available for the
+    # documentation does not work too well with embeddings
+    nml_doc_md_path = "../data/single-markdown.md"
     def __init__(
         self,
         chat_model: str = "ollama:qwen3:1.7b",
@@ -327,12 +333,15 @@ class NML_RAG(object):
     def __load_doc(self):
         """Load NeuroML documentation into the vector store"""
 
-        # do not reload vector store if it is already loaded
+        # if a populated vector store already exists and is loaded, don't do
+        # anything
         if self.vector_store and self.vector_store._collection.count() != 0:
-            self.logger.debug("Vector store loaded")
+            self.logger.info("Vector store loaded")
+            return
 
         assert self.embeddings
 
+        self.logger.debug("Setting up/loading Chroma vector store")
         chroma_client_settings = chromadb.config.Settings(
             is_persistent=True,
             persist_directory=f"../data/neuroml_docs_{self.embedding_model.replace(':', '_')}.db",
@@ -344,25 +353,33 @@ class NML_RAG(object):
             client_settings=chroma_client_settings,
         )
 
+        # if a vector store exists, but it empty, load documents
         if self.vector_store._collection.count() == 0:
             self.logger.info(
                 "Vector store appears empty. Generating embeddings and adding documents. "
                 "This may take a while, depending on your hardware."
             )
-            self.loader = PyPDFLoader(self.nml_doc_pdf_path)
-            self.nml_doc = self.loader.load()
 
-            self.logger.debug(f"Length of loaded nml_docs: {len(self.nml_doc)}")
+            # update to use MD
+            headers_to_split_on = [
+                ("#", "Header 1"),
+                ("##", "Header 2"),
+                ("###", "Header 3"),
+                ("####", "Header 4"),
 
-            self.text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000, chunk_overlap=200, add_start_index=True
-            )
+            ]
+            with open(self.nml_doc_md_path, 'r') as f:
+                md_doc = f.read()
+                self.logger.debug(f"Length of loaded nml_docs: {len(md_doc.split())}")
+                md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on, strip_headers=False)
+                md_splits = md_splitter.split_text(md_doc)
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+                splits = text_splitter.split_documents(md_splits)
 
-            self.splits = self.text_splitter.split_documents(self.nml_doc)
-            self.logger.debug(f"Length of split docs: {len(self.splits)}")
-            self.index = self.vector_store.add_documents(documents=self.splits)
+                self.logger.debug(f"Length of split docs: {len(splits)}")
+                self.index = self.vector_store.add_documents(documents=splits)
         else:
-            self.logger.debug("Vector store already set up.")
+            self.logger.info("Vector store loaded.")
 
     def __retrieve_docs(self, query: str):
         """Retrieve embeddings from documentation to answer a query
