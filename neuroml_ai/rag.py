@@ -22,8 +22,10 @@ from langchain.agents import create_agent
 from typing_extensions import TypedDict, Literal, List
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import BaseMessage, AIMessage
 from langgraph.graph import StateGraph, START, END
+from textwrap import dedent
+from langgraph.prebuilt import ToolNode, tools_condition
 
 
 logging.basicConfig()
@@ -58,7 +60,10 @@ class NML_RAG(object):
     nml_doc_pdf_path = "../data/neuroml-documentation.pdf"
 
     def __init__(
-        self, chat_model: str = "ollama:qwen3:1.7b", embedding_model: str = "bge-m3"
+        self,
+        chat_model: str = "ollama:qwen3:1.7b",
+        embedding_model: str = "bge-m3",
+        logging_level: int = logging.DEBUG,
     ):
         """Initialise"""
         self.chat_model = chat_model
@@ -66,9 +71,16 @@ class NML_RAG(object):
         self.embedding_model = embedding_model
         self.embeddings = None
 
-        self.logger = logging.getLogger("NML_RAG")
-        self.logger.setLevel(logging.DEBUG)
+        self.vector_store = None
 
+        self.logger = logging.getLogger("NeuroML-AI")
+        self.logger.setLevel(logging_level)
+        self.logger.propagate = False
+        formatter = logging.Formatter("%(name)s (%(levelname)s) >>> %(message)s")
+        handler = logging.StreamHandler()
+        handler.setLevel(logging_level)
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
     def setup(self):
         """Set up basics."""
@@ -85,7 +97,7 @@ class NML_RAG(object):
 
         # self.__setup_agent()
 
-    def __classify_query_node(self, state: AgentState) -> dict:
+    def __question_or_code_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
         assert self.model
 
@@ -104,13 +116,12 @@ class NML_RAG(object):
 
         output = query_node_llm.invoke(prompt)
         self.logger.debug(f"{output =}")
-        self.logger.debug(f"{output.query_type =}")
 
         return {"query_type": output.query_type}
 
     def __generate_code_node(self, state: AgentState) -> dict:
         """Generate code"""
-        messages = state['messages']
+        messages = state["messages"]
         messages.append(AIMessage("I can generate code for you"))
 
         return {"messages": messages}
@@ -118,101 +129,101 @@ class NML_RAG(object):
     def __answer_question_node(self, state: AgentState) -> dict:
         """Answer the question"""
 
-        messages = state['messages']
-        messages.append(AIMessage("I can answer questions for for you"))
-
-        return {"messages": messages}
-        """
-        # langchain tool decorator does not work with class methods because
-        # Python expects `self` as the first argument which is not provided
-        # when the tool is called. So, we can either bind manually as below, or
-        # we can refactor the code to make the tool an external function that
-        # is not a class method
-        retrieve_docs_tool = tool(
-            "retrieve_docs",
-            description="Retrieve information from documentation",
-            response_format="content_and_artifact",
-        )(self.__retrieve_docs)
-        tools = [retrieve_docs_tool]
-
-        agent = create_agent(self.model, tools, system_prompt=self.system_prompt)
-        query = "List the standard NeuroML component types "
-
-        for event in agent.stream(
-            {
-                "messages": [
-                    {"role": "user", "content": query},
-                ]
-            },
-            stream_mode="values",
-        ):
-            event["messages"][-1].pretty_print()
-        """
-
-        system_prompt = """
+        system_prompt = dedent("""
         You are a fact-based research assistant. Your primary and only goal is
         to provide accurate and current answers to user queries. Your
         speciality is NeuroML, the standard and software ecosystem for
         biophysically detailed modelling and related tools.
 
-        Core Directives:
+        # Core Directives:
         1. Top priority: use the Tools. For any user query that requires a
-        factual answer, use the tool. Never answer a knowledge based question
-        directly from your general training data without using the tools. The
-        only exceptions are general conversational greetings, where you may
-        skip using the tool. Do not use synonyms to replace observations
-        obtained from the tools.
+          factual answer, use the tool. Never answer a knowledge based question
+          directly from your general training data without using the tools. The
+          only exceptions are general conversational greetings, where you may
+          skip using the tool.
 
         2. When using the tools, generate precise queries. Do not use stop
-        words.
+          words.
 
         3. After obtaining the data from the tool, only use the obtained
-        information to craft your answer.
+          information to craft your answer.
 
-        Available tools:
+        4. If you are unable to find the answer in the documentation, let the
+          user know and ask them to modify their query.
+
+        ## Available tools:
+
         You have access to the following tools:
 
-        1. "retrieve_docs": use this tool to search the provided documentation.
+        1. `__retrieve_docs`: use this tool to search the NeuroML documentation
 
-        Your thought process (ReAct):
+        ## Your thought process (ReAct):
 
         You must always structure your response using the
-        Thought/Action/Observation/Final Answer pattern:
+        Thought, Action, Observation, Final Answer pattern in that order:
 
-        - Thought: Reason about the user's request. Always conclude that a
+        1. Thought: Reason about the user's request. Always conclude that a
           factual query requires an `Action: retrieve`.
-        - ActionGenerate the tool call (e.g., `retrieve({{"query": "focused
+        2. Action: Generate the tool call (e.g., `retrieve({{"query": "focused
           search term"}})`).
-        - Observation: This is the result of the tool execution (the
+        3. Observation: This is the result of the tool execution (the
           documents).
-        - Final Answer: Generate the final response based only on the
+        4. Final Answer: Generate the final response based only on the
           Observation.
 
-        """
+        """)
 
         assert self.model
-        self.__load_doc()
 
+        question_prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+            # [("human", "User query: {query}")]
+        )
+        self.logger.debug(f"{question_prompt_template =}")
+        prompt = question_prompt_template.invoke({"query": state["query"]})
+
+        self.__load_doc()
         retrieve_docs_tool = tool(
-            "retrieve_docs",
-            description="Retrieve information from documentation",
+            "__retrieve_docs",
+            description="Retrieve information from NeuroML documentation",
             response_format="content_and_artifact",
         )(self.__retrieve_docs)
 
-        question_prompt_template = ChatPromptTemplate(
-            # [("system", system_prompt), ("human", "User query: {query}")]
-            [("human", "User query: {query}")]
-        )
-
-        self.logger.debug(f"{question_prompt_template =}")
-        prompt = question_prompt_template.invoke({"query": state['query']})
+        self.logger.debug(f"{retrieve_docs_tool =}")
 
         output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
-        self.logger.debug(f"{output =}")
+        # self.logger.debug(f"{output =}")
+        self.logger.debug(output.pretty_print())
 
-        messages = state['messages']
+        messages = state["messages"]
         messages.append(output)
         return {"messages": messages}
+
+    def __generate_answer_node(self, state: AgentState) -> dict:
+        """Generate the answer"""
+        assert self.model
+
+        system_prompt = dedent("""
+            You are an assistant for question-answering tasks.  Use the
+            following pieces of retrieved context to answer the question.  If
+            you don't know the answer, just say that you don't know.
+        """)
+
+        generate_answer_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "Question: {question}\nContext:{context}")]
+            # [("human", "User query: {query}")]
+        )
+        question = state["query"]
+        context = state["messages"][-1].content
+        prompt = generate_answer_template.invoke({"question": question, "context": context})
+        self.logger.debug(f"{prompt =}")
+        output = self.model.invoke(prompt)
+        self.logger.debug(output.pretty_print())
+
+        messages = state["messages"]
+        messages.append(output)
+        return {"messages": messages}
+
 
     def __route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
@@ -229,24 +240,36 @@ class NML_RAG(object):
     def __create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
-        self.workflow.add_node("classify_query", self.__classify_query_node)
-        self.workflow.add_node("answer_question_node", self.__answer_question_node)
-        self.workflow.add_node("generate_code_node", self.__generate_code_node)
+        self.workflow.add_node("classify_query", self.__question_or_code_node)
+        self.workflow.add_node("answer_question", self.__answer_question_node)
+        self.workflow.add_node("retrieve_docs", ToolNode([self.__retrieve_docs]))
+        self.workflow.add_node("generate_code", self.__generate_code_node)
+        self.workflow.add_node("generate_answer", self.__generate_answer_node)
 
-        self.workflow.set_entry_point("classify_query")
+        self.workflow.add_edge(START, "classify_query")
 
         self.workflow.add_conditional_edges(
             "classify_query",
             self.__route_query_node,
             {
-                "answer_question_node": "answer_question_node",
-                "generate_code_node": "generate_code_node",
+                "answer_question_node": "answer_question",
+                "generate_code_node": "generate_code",
                 "unknown": END,
             },
         )
 
-        self.workflow.add_edge("answer_question_node", END)
-        self.workflow.add_edge("generate_code_node", END)
+        self.workflow.add_conditional_edges(
+            "answer_question",
+            tools_condition,
+            {
+                "tools": "retrieve_docs",
+                END: END,
+            }
+        )
+
+        self.workflow.add_edge("retrieve_docs", "generate_answer")
+        self.workflow.add_edge("generate_answer", END)
+        self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
         self.graph.get_graph().draw_mermaid_png(output_file_path="lang-graph.png")
@@ -302,24 +325,13 @@ class NML_RAG(object):
         self.embeddings = OllamaEmbeddings(model=self.embedding_model)
 
     def __load_doc(self):
-        """Load NeuroML documentation
-        :returns: TODO
+        """Load NeuroML documentation into the vector store"""
 
-        """
-        self.logger.debug("Loading vector store")
+        # do not reload vector store if it is already loaded
+        if self.vector_store and self.vector_store._collection.count() != 0:
+            self.logger.debug("Vector store loaded")
+
         assert self.embeddings
-
-        self.loader = PyPDFLoader(self.nml_doc_pdf_path)
-        self.nml_doc = self.loader.load()
-
-        self.logger.debug(f"Length of loaded nml_docs: {len(self.nml_doc)}")
-
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200, add_start_index=True
-        )
-
-        self.splits = self.text_splitter.split_documents(self.nml_doc)
-        self.logger.debug(f"Length of split docs: {len(self.splits)}")
 
         chroma_client_settings = chromadb.config.Settings(
             is_persistent=True,
@@ -337,9 +349,20 @@ class NML_RAG(object):
                 "Vector store appears empty. Generating embeddings and adding documents. "
                 "This may take a while, depending on your hardware."
             )
+            self.loader = PyPDFLoader(self.nml_doc_pdf_path)
+            self.nml_doc = self.loader.load()
+
+            self.logger.debug(f"Length of loaded nml_docs: {len(self.nml_doc)}")
+
+            self.text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=200, add_start_index=True
+            )
+
+            self.splits = self.text_splitter.split_documents(self.nml_doc)
+            self.logger.debug(f"Length of split docs: {len(self.splits)}")
             self.index = self.vector_store.add_documents(documents=self.splits)
         else:
-            self.logger.info("Vector store already set up.")
+            self.logger.debug("Vector store already set up.")
 
     def __retrieve_docs(self, query: str):
         """Retrieve embeddings from documentation to answer a query
@@ -348,42 +371,51 @@ class NML_RAG(object):
         :returns: serialised metadata/page content and vector_store look up result
 
         """
-        res = self.vector_store.similarity_search(query)
+        assert self.vector_store
+
+        res = self.vector_store.similarity_search(query, k=5)
+
         serialized = "\n\n".join(
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
         )
+        self.logger.debug(res)
         return serialized, res
 
-    def run(self):
-        """Main runner method"""
-        assert self.agent
-
-        query = "List the standard NeuroML component types "
-
-        for event in self.agent.stream(
-            {
-                "messages": [
-                    {"role": "user", "content": query},
-                ]
-            },
-            stream_mode="values",
-        ):
-            event["messages"][-1].pretty_print()
+    def test_retrieval(self):
+        """Test the retrieval system"""
+        self.__load_doc()
+        self.__retrieve_docs("NeuroML community")
 
     def run_graph(self):
         """Run the graph"""
         self.__create_graph()
 
         initial_state = AgentState(
-            query="Tell me something about NeuroML", query_type="", messages=[]
+            query="Please tell me about the people that maintain NeuroML",
+            query_type="question",
+            messages=[],
         )
+
+        # output = self.__answer_question_node(initial_state)
+        # output["messages"][-1].pretty_print()
+
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
-                self.logger.debug(f"Update from node '{node}': {state}")
-                # state["messages"][-1].pretty_print()
+                print()
+                print(f"Update from node '{node}'")
+                try:
+                    state["messages"][-1].pretty_print()
+                except KeyError:
+                    print(state)
+                print()
 
 
 if __name__ == "__main__":
-    nml_ai = NML_RAG(chat_model="ollama:qwen3:1.7b", embedding_model="embeddinggemma:latest")
+    nml_ai = NML_RAG(
+        chat_model="ollama:qwen3:1.7b",
+        embedding_model="bge-m3",
+        logging_level=logging.DEBUG,
+    )
     nml_ai.setup()
-    nml_ai.run_graph()
+    nml_ai.test_retrieval()
+    # nml_ai.run_graph()
