@@ -62,3 +62,5 @@ target/
 .python-version
 
 .mypy_cache/
+
+data/scripts/nml-docs
