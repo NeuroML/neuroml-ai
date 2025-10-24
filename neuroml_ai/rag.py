@@ -210,9 +210,32 @@ class NML_RAG(object):
         assert self.model
 
         system_prompt = dedent("""
-            You are an assistant for question-answering tasks.  Use the
-            following pieces of retrieved context to answer the question.  If
-            you don't know the answer, just say that you don't know.
+        You are a fact-based research assistant. Your primary and only goal is
+        to provide accurate and current answers to user queries. Your
+        speciality is NeuroML, the standard and software ecosystem for
+        biophysically detailed modelling and related tools.
+
+        # Core Directives:
+
+        - Limit yourself to facts from the provided context only, avoid using
+          knowledge from your general training. If you cannot find an answer in
+          the context, tell the user and suggest a better question.
+        - Use concise, formal language.
+
+        ## Your thought process (ReAct):
+
+        You must always structure your response using the
+        Thought, Action, Observation, Final Answer pattern in that order:
+
+        1. Thought: Reason about the user's request. Always conclude that a
+          factual query requires an `Action: retrieve`.
+        2. Action: Generate the tool call (e.g., `retrieve({{"query": "focused
+          search term"}})`).
+        3. Observation: This is the result of the tool execution (the
+          documents).
+        4. Final Answer: Generate the final response based only on the
+          Observation.
+
         """)
 
         generate_answer_template = ChatPromptTemplate(
@@ -278,7 +301,7 @@ class NML_RAG(object):
         self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
-        self.graph.get_graph().draw_mermaid_png(output_file_path="lang-graph.png")
+        self.graph.get_graph().draw_mermaid_png(output_file_path="nml-ai-lang-graph.png")
 
     def __setup_agent(self):
         """Set up the chat agent"""
@@ -403,13 +426,13 @@ class NML_RAG(object):
         self.__load_doc()
         self.__retrieve_docs("NeuroML community")
 
-    def run_graph(self):
+    def run_graph(self, query: str):
         """Run the graph"""
         self.__create_graph()
 
         initial_state = AgentState(
-            query="Please tell me about the people that maintain NeuroML",
-            query_type="question",
+            query=query,
+            query_type="",
             messages=[],
         )
 
@@ -434,5 +457,5 @@ if __name__ == "__main__":
         logging_level=logging.DEBUG,
     )
     nml_ai.setup()
-    nml_ai.test_retrieval()
-    # nml_ai.run_graph()
+    # nml_ai.test_retrieval()
+    nml_ai.run_graph("Summarise why one should use NeuroML")
