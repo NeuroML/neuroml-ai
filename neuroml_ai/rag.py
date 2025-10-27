@@ -175,7 +175,7 @@ class NML_RAG(object):
 
         You have access to the following tools:
 
-        1. `__retrieve_docs`: use this tool to search the NeuroML documentation
+        1. `_retrieve_docs`: use this tool to search the NeuroML documentation
 
         ## Your thought process (ReAct):
 
@@ -204,7 +204,7 @@ class NML_RAG(object):
 
         self._load_vector_stores()
         retrieve_docs_tool = tool(
-            "__retrieve_docs",
+            "_retrieve_docs",
             description="Retrieve information from NeuroML documentation",
             response_format="content_and_artifact",
         )(self._retrieve_docs)
