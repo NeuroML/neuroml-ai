@@ -303,25 +303,6 @@ class NML_RAG(object):
         self.graph = self.workflow.compile()
         self.graph.get_graph().draw_mermaid_png(output_file_path="nml-ai-lang-graph.png")
 
-    def __setup_agent(self):
-        """Set up the chat agent"""
-
-        # langchain tool decorator does not work with class methods because
-        # Python expects `self` as the first argument which is not provided
-        # when the tool is called. So, we can either bind manually as below, or
-        # we can refactor the code to make the tool an external function that
-        # is not a class method
-        retrieve_docs_tool = tool(
-            "retrieve_docs",
-            description="Retrieve information from documentation",
-            response_format="content_and_artifact",
-        )(self.__retrieve_docs)
-        self.tools = [retrieve_docs_tool]
-
-        self.agent = create_agent(
-            self.model, self.tools, system_prompt=self.system_prompt
-        )
-
     def __setup_gemini(self):
         """Set up Gemini"""
         self.logger.info("Setting up Gemini")
