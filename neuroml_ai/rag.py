@@ -8,24 +8,28 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import os
-import sys
 import getpass
 import logging
-from langchain.chat_models import init_chat_model
-from langchain_chroma import Chroma
-import chromadb
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-from langchain.tools import tool
-from langchain.agents import create_agent
-from typing_extensions import TypedDict, Literal, List
-from pydantic import BaseModel, Field
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import BaseMessage, AIMessage
-from langgraph.graph import StateGraph, START, END
+import mimetypes
+import os
+import sys
+from glob import glob
+from hashlib import sha256
+from pathlib import Path
 from textwrap import dedent
-from langgraph.prebuilt import ToolNode, tools_condition
 
+import chromadb
+from langchain.chat_models import init_chat_model
+from langchain.tools import tool
+from langchain_chroma import Chroma
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_text_splitters import (MarkdownHeaderTextSplitter,
+                                      RecursiveCharacterTextSplitter)
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
+from pydantic import BaseModel, Field
+from typing_extensions import List, Literal, TypedDict
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -34,7 +38,7 @@ logging.root.setLevel(logging.WARNING)
 class QueryTypeState(TypedDict):
     """Classification of user query"""
 
-    category: Literal["question", "code_generation", "unknown"]
+    category: Literal["question", "code_generation", "unknown", ""]
 
 
 class AgentState(TypedDict):
@@ -48,7 +52,7 @@ class AgentState(TypedDict):
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
-    query_type: Literal["question", "code_generation"] = Field(
+    query_type: Literal["", "question", "code_generation"] = Field(
         description="'question' if user is asking for information, 'code_generation', if the user is asking for code"
     )
 
@@ -64,7 +68,16 @@ class NML_RAG(object):
 
     # we prefer markdown because the one page PDF that is available for the
     # documentation does not work too well with embeddings
-    nml_doc_md_path = "../data/single-markdown.md"
+    data_files_path = "../data/files"
+
+    # update to use MD
+    md_headers_to_split_on = [
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+        ("####", "Header 4"),
+    ]
+
     def __init__(
         self,
         chat_model: str = "ollama:qwen3:1.7b",
@@ -77,7 +90,8 @@ class NML_RAG(object):
         self.embedding_model = embedding_model
         self.embeddings = None
 
-        self.vector_store = None
+        self.text_vector_store = None
+        self.image_vector_store = None
 
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
@@ -92,18 +106,18 @@ class NML_RAG(object):
         """Set up basics."""
 
         if self.chat_model.lower() == "gemini":
-            self.__setup_gemini()
+            self._setup_gemini()
         elif self.chat_model.lower().startswith("ollama:"):
-            self.__setup_ollama()
+            self._setup_ollama()
         else:
             self.logger.error(f"Unknown LLM model given: {self.chat_model}. Exiting.")
             sys.exit(-1)
 
         assert self.model
 
-        # self.__setup_agent()
+        # self._setup_agent()
 
-    def __question_or_code_node(self, state: AgentState) -> dict:
+    def _question_or_code_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
         assert self.model
 
@@ -125,14 +139,14 @@ class NML_RAG(object):
 
         return {"query_type": output.query_type}
 
-    def __generate_code_node(self, state: AgentState) -> dict:
+    def _generate_code_node(self, state: AgentState) -> dict:
         """Generate code"""
         messages = state["messages"]
         messages.append(AIMessage("I can generate code for you"))
 
         return {"messages": messages}
 
-    def __answer_question_node(self, state: AgentState) -> dict:
+    def _answer_question_node(self, state: AgentState) -> dict:
         """Answer the question"""
 
         system_prompt = dedent("""
@@ -188,12 +202,12 @@ class NML_RAG(object):
         self.logger.debug(f"{question_prompt_template =}")
         prompt = question_prompt_template.invoke({"query": state["query"]})
 
-        self.__load_doc()
+        self._load_vector_stores()
         retrieve_docs_tool = tool(
             "__retrieve_docs",
             description="Retrieve information from NeuroML documentation",
             response_format="content_and_artifact",
-        )(self.__retrieve_docs)
+        )(self._retrieve_docs)
 
         self.logger.debug(f"{retrieve_docs_tool =}")
 
@@ -205,7 +219,7 @@ class NML_RAG(object):
         messages.append(output)
         return {"messages": messages}
 
-    def __generate_answer_node(self, state: AgentState) -> dict:
+    def _generate_answer_node(self, state: AgentState) -> dict:
         """Generate the answer"""
         assert self.model
 
@@ -239,12 +253,17 @@ class NML_RAG(object):
         """)
 
         generate_answer_template = ChatPromptTemplate(
-            [("system", system_prompt), ("human", "Question: {question}\nContext:{context}")]
+            [
+                ("system", system_prompt),
+                ("human", "Question: {question}\nContext:{context}"),
+            ]
             # [("human", "User query: {query}")]
         )
         question = state["query"]
         context = state["messages"][-1].content
-        prompt = generate_answer_template.invoke({"question": question, "context": context})
+        prompt = generate_answer_template.invoke(
+            {"question": question, "context": context}
+        )
         self.logger.debug(f"{prompt =}")
         output = self.model.invoke(prompt)
         self.logger.debug(output.pretty_print())
@@ -253,8 +272,7 @@ class NML_RAG(object):
         messages.append(output)
         return {"messages": messages}
 
-
-    def __route_query_node(self, state: AgentState) -> str:
+    def _route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
         self.logger.debug(f"{state =}")
         query_type = state["query_type"]
@@ -266,20 +284,20 @@ class NML_RAG(object):
         else:
             return "handle_unknown_node"
 
-    def __create_graph(self):
+    def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
-        self.workflow.add_node("classify_query", self.__question_or_code_node)
-        self.workflow.add_node("answer_question", self.__answer_question_node)
-        self.workflow.add_node("retrieve_docs", ToolNode([self.__retrieve_docs]))
-        self.workflow.add_node("generate_code", self.__generate_code_node)
-        self.workflow.add_node("generate_answer", self.__generate_answer_node)
+        self.workflow.add_node("classify_query", self._question_or_code_node)
+        self.workflow.add_node("answer_question", self._answer_question_node)
+        self.workflow.add_node("retrieve_docs", ToolNode([self._retrieve_docs]))
+        self.workflow.add_node("generate_code", self._generate_code_node)
+        self.workflow.add_node("generate_answer", self._generate_answer_node)
 
         self.workflow.add_edge(START, "classify_query")
 
         self.workflow.add_conditional_edges(
             "classify_query",
-            self.__route_query_node,
+            self._route_query_node,
             {
                 "answer_question_node": "answer_question",
                 "generate_code_node": "generate_code",
@@ -293,7 +311,7 @@ class NML_RAG(object):
             {
                 "tools": "retrieve_docs",
                 END: END,
-            }
+            },
         )
 
         self.workflow.add_edge("retrieve_docs", "generate_answer")
@@ -301,9 +319,11 @@ class NML_RAG(object):
         self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
-        self.graph.get_graph().draw_mermaid_png(output_file_path="nml-ai-lang-graph.png")
+        self.graph.get_graph().draw_mermaid_png(
+            output_file_path="nml-ai-lang-graph.png"
+        )
 
-    def __setup_gemini(self):
+    def _setup_gemini(self):
         """Set up Gemini"""
         self.logger.info("Setting up Gemini")
 
@@ -321,7 +341,7 @@ class NML_RAG(object):
             model="models/gemini-embedding-001"
         )
 
-    def __setup_ollama(self):
+    def _setup_ollama(self):
         """Set up Ollama model"""
 
         from langchain_ollama import OllamaEmbeddings
@@ -334,67 +354,97 @@ class NML_RAG(object):
         self.logger.info(f"Setting up embedding model: {self.embedding_model}")
         self.embeddings = OllamaEmbeddings(model=self.embedding_model)
 
-    def __load_doc(self):
-        """Load NeuroML documentation into the vector store"""
-
-        # if a populated vector store already exists and is loaded, don't do
-        # anything
-        if self.vector_store and self.vector_store._collection.count() != 0:
-            self.logger.info("Vector store loaded")
-            return
-
-        assert self.embeddings
-
+    def _load_vector_stores(self):
+        """Create/load the vector store"""
         self.logger.debug("Setting up/loading Chroma vector store")
-        chroma_client_settings = chromadb.config.Settings(
+
+        chroma_client_settings_text = chromadb.config.Settings(
             is_persistent=True,
-            persist_directory=f"../data/neuroml_docs_{self.embedding_model.replace(':', '_')}.db",
+            persist_directory=f"../data/neuroml_docs_text_{self.embedding_model.replace(':', '_')}.db",
             anonymized_telemetry=False,
         )
-        self.vector_store = Chroma(
+        self.text_vector_store = Chroma(
             collection_name="nml_docs",
             embedding_function=self.embeddings,
-            client_settings=chroma_client_settings,
+            client_settings=chroma_client_settings_text,
         )
 
-        # if a vector store exists, but it empty, load documents
-        if self.vector_store._collection.count() == 0:
-            self.logger.info(
-                "Vector store appears empty. Generating embeddings and adding documents. "
-                "This may take a while, depending on your hardware."
+        info_files = glob(f"{self.data_files_path}/*", recursive=True)
+        self.logger.debug(f"Loaded {len(info_files)} files from {self.data_files_path}")
+
+        for info_file in info_files:
+            file_type = mimetypes.guess_file_type(info_file)[0]
+
+            if "markdown" in file_type:
+                self._add_md_file_to_store(info_file)
+            else:
+                self.logger.warning(
+                    f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
+                )
+
+    def _add_md_file_to_store(self, file):
+        """Add a markdown file to the vector store
+
+        We add the file hash as extra metadata so that we can filter on it
+        later.
+
+        TODO: Handle images referenced in the markdown file.
+
+        For this, we need to use the same metadata for the chunks and for the
+        images in those chunks when they're added to the text and image stores.
+        The text chunks need to have an id each, and a list of figures too. The
+        images being added will need to have the document/file id, and the
+        figure ids.
+
+        For retrieval, we will first run the similarity search on both the text
+        and images. For text results, we will retrieve any linked images.
+
+        Note that for text only LLMs, only the associated metadata of the
+        obtained images (captions and so on) can be used in the context. To use
+        the images too, we need to use multi-modal LLMs.
+        """
+        file_path = Path(file)
+        file_hash = sha256(file_path.name.encode("utf-8")).hexdigest()
+        already_added = self.text_vector_store.get(where={"file_hash": file_hash})
+
+        if already_added and already_added["ids"]:
+            self.logger.debug(f"File already exists in vector store: {file_path}")
+            return
+
+        self.logger.debug(f"Adding markdown file to text vector store: {file_path}")
+        with open(file, "r") as f:
+            md_doc = f.read()
+            self.logger.debug(f"Length of loaded file: {len(md_doc.split())}")
+            md_splitter = MarkdownHeaderTextSplitter(
+                self.md_headers_to_split_on, strip_headers=False
             )
+            md_splits = md_splitter.split_text(md_doc)
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=200
+            )
+            splits = text_splitter.split_documents(md_splits)
+            for split in splits:
+                split.metadata.update(
+                    {
+                        "file_hash": file_hash,
+                        "file_name": file_path.name,
+                        "file_path": str(file_path),
+                    }
+                )
 
-            # update to use MD
-            headers_to_split_on = [
-                ("#", "Header 1"),
-                ("##", "Header 2"),
-                ("###", "Header 3"),
-                ("####", "Header 4"),
+            self.logger.debug(f"Length of split docs: {len(splits)}")
+            self.index = self.text_vector_store.add_documents(documents=splits)
 
-            ]
-            with open(self.nml_doc_md_path, 'r') as f:
-                md_doc = f.read()
-                self.logger.debug(f"Length of loaded nml_docs: {len(md_doc.split())}")
-                md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on, strip_headers=False)
-                md_splits = md_splitter.split_text(md_doc)
-                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-                splits = text_splitter.split_documents(md_splits)
-
-                self.logger.debug(f"Length of split docs: {len(splits)}")
-                self.index = self.vector_store.add_documents(documents=splits)
-        else:
-            self.logger.info("Vector store loaded.")
-
-    def __retrieve_docs(self, query: str):
+    def _retrieve_docs(self, query: str):
         """Retrieve embeddings from documentation to answer a query
 
         :param query: user query
         :returns: serialised metadata/page content and vector_store look up result
 
         """
-        assert self.vector_store
+        assert self.text_vector_store
 
-        res = self.vector_store.similarity_search(query, k=5)
+        res = self.text_vector_store.similarity_search(query, k=5)
 
         serialized = "\n\n".join(
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
@@ -404,20 +454,20 @@ class NML_RAG(object):
 
     def test_retrieval(self):
         """Test the retrieval system"""
-        self.__load_doc()
-        self.__retrieve_docs("NeuroML community")
+        self._load_vector_stores()
+        self._retrieve_docs("NeuroML community")
 
     def run_graph(self, query: str):
         """Run the graph"""
-        self.__create_graph()
+        self._create_graph()
 
         initial_state = AgentState(
             query=query,
-            query_type="",
+            query_type=QueryTypeState(category=""),
             messages=[],
         )
 
-        # output = self.__answer_question_node(initial_state)
+        # output = self._answer_question_node(initial_state)
         # output["messages"][-1].pretty_print()
 
         for chunk in self.graph.stream(initial_state):
@@ -438,5 +488,5 @@ if __name__ == "__main__":
         logging_level=logging.DEBUG,
     )
     nml_ai.setup()
-    # nml_ai.test_retrieval()
-    nml_ai.run_graph("Summarise why one should use NeuroML")
+    nml_ai.test_retrieval()
+    # nml_ai.run_graph("Summarise why one should use NeuroML")
