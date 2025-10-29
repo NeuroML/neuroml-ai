@@ -321,7 +321,7 @@ class NML_RAG(object):
         self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
-        if self.logger.logging_level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.graph.get_graph().draw_mermaid_png(
                 output_file_path="nml-ai-lang-graph.png"
             )
