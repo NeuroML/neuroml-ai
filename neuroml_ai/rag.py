@@ -66,10 +66,6 @@ class NML_RAG(object):
     # - we use the jupyterbook system to generate a one page html
     # - we use pandoc to convert the one page html to a one page markdown
 
-    # we prefer markdown because the one page PDF that is available for the
-    # documentation does not work too well with embeddings
-    data_files_path = "../data/files"
-
     # update to use MD
     md_headers_to_split_on = [
         ("#", "Header 1"),
@@ -92,6 +88,12 @@ class NML_RAG(object):
 
         self.text_vector_store = None
         self.image_vector_store = None
+
+        # we prefer markdown because the one page PDF that is available for the
+        # documentation does not work too well with embeddings
+        my_path = Path(__file__).parent
+        self.data_dir = f"{my_path}/data/"
+        self.data_files_path = f"{self.data_dir}/files/"
 
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
@@ -360,7 +362,7 @@ class NML_RAG(object):
 
         chroma_client_settings_text = chromadb.config.Settings(
             is_persistent=True,
-            persist_directory=f"../data/neuroml_docs_text_{self.embedding_model.replace(':', '_')}.db",
+            persist_directory=f"{self.data_dir}/neuroml_docs_text_{self.embedding_model.replace(':', '_')}.db",
             anonymized_telemetry=False,
         )
         self.text_vector_store = Chroma(
@@ -488,5 +490,5 @@ if __name__ == "__main__":
         logging_level=logging.DEBUG,
     )
     nml_ai.setup()
-    nml_ai.test_retrieval()
-    # nml_ai.run_graph("Summarise why one should use NeuroML")
+    # nml_ai.test_retrieval()
+    nml_ai.run_graph("Summarise why one should use NeuroML")
