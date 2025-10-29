@@ -12,9 +12,11 @@ AI assistant for helping with NeuroML queries and model generation.
 [![DOI](https://zenodo.org/badge/27832592.svg)](https://zenodo.org/doi/10.5281/zenodo.5744044)
 
 
+Please note that this project is under active development and does not currently provide a stable release/API/ABI.
+
 ## Set up
 
-The Python packages can be installed using the provided `requirements.txt` file.
+The package is `pip` installable.
 
 ### Models
 
