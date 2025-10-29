@@ -321,9 +321,10 @@ class NML_RAG(object):
         self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
-        self.graph.get_graph().draw_mermaid_png(
-            output_file_path="nml-ai-lang-graph.png"
-        )
+        if self.logger.logging_level <= logging.DEBUG:
+            self.graph.get_graph().draw_mermaid_png(
+                output_file_path="nml-ai-lang-graph.png"
+            )
 
     def _setup_gemini(self):
         """Set up Gemini"""

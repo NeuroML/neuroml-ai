@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import typer
 import logging
-from rag import NML_RAG
+from neuroml_ai.rag import NML_RAG
 
 
 nml_ai_app = typer.Typer()
