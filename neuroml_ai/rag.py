@@ -24,8 +24,10 @@ from langchain.tools import tool
 from langchain_chroma import Chroma
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import (MarkdownHeaderTextSplitter,
-                                      RecursiveCharacterTextSplitter)
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
@@ -55,6 +57,19 @@ class QueryTypeSchema(BaseModel):
     query_type: Literal["", "question", "code_generation"] = Field(
         description="'question' if user is asking for information, 'code_generation', if the user is asking for code"
     )
+
+
+class EvaluateAnswerSchema(TypedDict):
+    """Evaluation of LLM generated answer"""
+
+    relevance: int
+    groundedness: int
+    completeness: int
+    coherence: int
+    conciseness: int
+    confidence: int
+    next_step: Literal["continue", "retrieve_more_info", "modify_query", "ask_user"]
+    summary: str
 
 
 class NML_RAG(object):
@@ -274,6 +289,84 @@ class NML_RAG(object):
         messages.append(output)
         return {"messages": messages}
 
+    def _evaluate_answer_node(self, state: AgentState) -> dict:
+        """Evaluate the answer"""
+        evaluator_model = init_chat_model(
+            self.chat_model.replace("ollama:", ""),
+            model_provider="ollama",
+            temperature=0,
+        )
+
+        evaluator_prompt = dedent("""
+            You are a critical grader evaluating an answer produced by a retrieval-augmented generation (RAG) system.
+
+            You are given:
+            1. The user's question.
+            2. The retrieved context used to generate the answer.
+            3. The system's answer.
+
+            Your job:
+            - Judge the answer strictly based on the context.
+            - DO NOT use external knowledge.
+            - Provide your answer as a JSON object matching the provided
+              schema, with these values:
+
+            {{
+              "relevance": 0-1,         // How well the answer addresses the question
+              "groundedness": 0-1,      // How well it sticks to the provided context
+              "completeness": 0-1,      // Whether it covers all necessary info from context
+              "coherence": 0-1,         // Logical flow and clarity
+              "conciseness": 0-1,       // Avoids fluff or repetition
+              "confidence": 0-1,        // Overall sufficiency of context to support answer
+              "next_step": "continue", "retrieve_more_info", "modify_query", "ask_user"// next actions
+              "summary": "Brief natural-language justification for the grades"
+            }}
+
+            Guidelines for 'next_step':
+            - Set to 'continue' if the answer is clear and should be passed to the user
+            - Set to 'retrieve_more_info' if the answer is incomplete but grounded and needs more context
+            - Set to 'modify_query' if the answer is ungrounded or irrelevant and the query needs to be reformulated to improve retrieval precision
+            - Set to 'ask_user' if the query cannot be answered from the corpus and we need to ask the user for clarification or additional information
+            """)
+
+        question = state["query"]
+        context = state["messages"][-2].content
+        answer = state["messages"][-1].content
+        prompt_template = ChatPromptTemplate(
+            [
+                ("system", evaluator_prompt),
+                (
+                    "human",
+                    dedent("""
+                        Question:
+                        {question}
+
+                        -----
+                        Context:
+                        {context}
+
+                        -----
+                        Answer:
+                        {answer}
+
+                 """),
+                ),
+            ]
+        )
+
+        # can use | to merge these lines
+        query_node_llm = evaluator_model.with_structured_output(EvaluateAnswerSchema)
+        prompt = prompt_template.invoke(
+            {"question": question, "context": context, "answer": answer}
+        )
+
+        output = query_node_llm.invoke(prompt)
+        self.logger.debug(f"{output =}")
+
+        messages = state["messages"]
+        messages.append(AIMessage(content=output["summary"]))
+        return {"messages": messages}
+
     def _route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
         self.logger.debug(f"{state =}")
@@ -294,6 +387,7 @@ class NML_RAG(object):
         self.workflow.add_node("retrieve_docs", ToolNode([self._retrieve_docs]))
         self.workflow.add_node("generate_code", self._generate_code_node)
         self.workflow.add_node("generate_answer", self._generate_answer_node)
+        self.workflow.add_node("evaluate_answer", self._evaluate_answer_node)
 
         self.workflow.add_edge(START, "classify_query")
 
@@ -317,7 +411,8 @@ class NML_RAG(object):
         )
 
         self.workflow.add_edge("retrieve_docs", "generate_answer")
-        self.workflow.add_edge("generate_answer", END)
+        self.workflow.add_edge("generate_answer", "evaluate_answer")
+        self.workflow.add_edge("evaluate_answer", END)
         self.workflow.add_edge("generate_code", END)
 
         self.graph = self.workflow.compile()
@@ -351,7 +446,9 @@ class NML_RAG(object):
 
         self.logger.info(f"Setting up chat model: {self.chat_model}")
         self.model = init_chat_model(
-            self.chat_model.replace("ollama:", ""), model_provider="ollama"
+            self.chat_model.replace("ollama:", ""),
+            model_provider="ollama",
+            temperature=0.3,
         )
 
         self.logger.info(f"Setting up embedding model: {self.embedding_model}")
@@ -447,7 +544,7 @@ class NML_RAG(object):
         """
         assert self.text_vector_store
 
-        res = self.text_vector_store.similarity_search(query, k=5)
+        res = self.text_vector_store.similarity_search(query, k=3)
 
         serialized = "\n\n".join(
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
@@ -492,4 +589,4 @@ if __name__ == "__main__":
     )
     nml_ai.setup()
     # nml_ai.test_retrieval()
-    nml_ai.run_graph("Summarise why one should use NeuroML")
+    nml_ai.run_graph("What are the synapse models available in NeuroML?")
