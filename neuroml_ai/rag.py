@@ -98,6 +98,9 @@ class NML_RAG(object):
         self.text_vector_store = None
         self.image_vector_store = None
 
+        self.default_k = 2
+        self.k = self.default_k
+
         # we prefer markdown because the one page PDF that is available for the
         # documentation does not work too well with embeddings
         my_path = Path(__file__).parent
@@ -372,14 +375,28 @@ class NML_RAG(object):
         output = query_node_llm.invoke(prompt)
         self.logger.debug(f"{output =}")
 
+        # add the summary as a message also, to keep the message chain going
         messages = state.messages
         messages.append(AIMessage(content=output.summary))
-        return {"messages": messages}
+        return {"messages": messages, "text_response_eval": output}
 
     def _route_answer_evaluator_node(self, state: AgentState) -> str:
         """Route depending on evaluation of answer"""
-        # TODO: WIP
-        return "good"
+        # next_step: Literal["continue", "retrieve_more_info", "modify_query", "ask_user", "undefined"] = Field(default="undefined")
+        text_response_eval = state.text_response_eval.next_step
+
+        if text_response_eval == "continue":
+            self.logger.info(state.messages[-1].pretty_print())
+            self.k = self.default_k
+            return "continue"
+        elif text_response_eval == "retrieve_more_info":
+            self.k += 1
+            return "retrieve_more_info"
+        elif text_response_eval == "modify_query":
+            return "modify_query"
+        else:
+            return "undefined"
+
 
     def _route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
@@ -421,6 +438,16 @@ class NML_RAG(object):
             {
                 "tools": "retrieve_docs",
                 END: END,
+            },
+        )
+
+        self.workflow.add_conditional_edges(
+            "evaluate_answer",
+            self._route_answer_evaluator_node,
+            {
+                "continue": END,
+                "retrieve_more_info": "answer_question",
+                "unknown": END,
             },
         )
 
@@ -549,7 +576,7 @@ class NML_RAG(object):
             self.logger.debug(f"Length of split docs: {len(splits)}")
             self.index = self.text_vector_store.add_documents(documents=splits)
 
-    def _retrieve_docs(self, query: str, k:int = 2):
+    def _retrieve_docs(self, query: str):
         """Retrieve embeddings from documentation to answer a query
 
         :param query: user query
@@ -558,7 +585,7 @@ class NML_RAG(object):
         """
         assert self.text_vector_store
 
-        res = self.text_vector_store.similarity_search(query, k=k)
+        res = self.text_vector_store.similarity_search(query, k=self.k)
 
         serialized = "\n\n".join(
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
@@ -601,4 +628,4 @@ if __name__ == "__main__":
     )
     nml_ai.setup()
     # nml_ai.test_retrieval()
-    nml_ai.run_graph("What are the synapse models available in NeuroML?")
+    nml_ai.run_graph("Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library")
