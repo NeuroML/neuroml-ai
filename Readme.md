@@ -17,7 +17,15 @@ Please note that this project is under active development and does not currently
 
 ## Set up
 
-The package is `pip` installable.
+The package is `pip` installable:
+
+```
+git clone https://github.com/NeuroML/neuroml-ai.git
+cd neuroml-ai
+pip install .
+```
+
+Please remember to use a virtual environment.
 
 ### Models
 
