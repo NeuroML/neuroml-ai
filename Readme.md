@@ -11,7 +11,7 @@ AI assistant for helping with NeuroML queries and model generation.
 [![Gitter](https://badges.gitter.im/NeuroML/community.svg)](https://gitter.im/NeuroML/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 
-![Langchain schematic](neuroml_ai/nml-ai-lang-graph.png)
+![Langchain schematic](neuroml_ai/nml-ai-lang-graph.png "Langchain schematic")
 
 Please note that this project is under active development and does not currently provide a stable release/API/ABI.
 
