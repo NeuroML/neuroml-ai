@@ -9,3 +9,5 @@ langchain-community
 langgraph
 
 typer
+
+streamlit
