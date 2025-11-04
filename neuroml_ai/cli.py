@@ -18,11 +18,11 @@ nml_ai_app = typer.Typer()
 
 
 @nml_ai_app.command()
-def nml_ai_cli(query: str):
+def nml_ai_cli(query: str, chat_model: str = "ollama:qwen3:1.7b", embedding_model: str = "bge-m3"):
     """NeuroML AI cli wrapper function"""
     nml_ai = NML_RAG(
-        chat_model="ollama:qwen3:1.7b",
-        embedding_model="bge-m3",
+        chat_model=chat_model,
+        embedding_model=embedding_model,
         logging_level=logging.INFO
     )
     nml_ai.setup()
