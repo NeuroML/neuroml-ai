@@ -38,6 +38,12 @@ logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 
 
+def user_visible_node(func):
+    """Decorator to mark a LangGraph node as producing user-visible output."""
+    func.user_visible = True
+    return func
+
+
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
@@ -244,7 +250,7 @@ class NML_RAG(object):
 
         output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
         # self.logger.debug(f"{output =}")
-        self.logger.debug(output.pretty_print())
+        self.logger.debug(output)
 
         messages = state.messages
         messages.append(output)
@@ -297,7 +303,7 @@ class NML_RAG(object):
         )
         self.logger.debug(f"{prompt =}")
         output = self.model.invoke(prompt)
-        self.logger.debug(output.pretty_print())
+        self.logger.debug(output.pretty_repr())
 
         messages = state.messages
         messages.append(output)
@@ -393,7 +399,7 @@ class NML_RAG(object):
         text_response_eval = state.text_response_eval.next_step
 
         if text_response_eval == "continue":
-            self.logger.info(state.messages[-1].pretty_print())
+            self.logger.debug(state.messages[-1].pretty_repr())
             self.k = self.default_k
             return "continue"
         elif text_response_eval == "retrieve_more_info":
@@ -416,6 +422,14 @@ class NML_RAG(object):
         else:
             return "handle_unknown_node"
 
+    @user_visible_node
+    def _give_answer_to_user_node(self, state: AgentState) -> str:
+        """Return the answer message to the user"""
+        messages = state.messages
+        answer = messages[-1].content
+
+        return answer
+
     def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
@@ -425,6 +439,7 @@ class NML_RAG(object):
         self.workflow.add_node("generate_code", self._generate_code_node)
         self.workflow.add_node("generate_answer", self._generate_answer_node)
         self.workflow.add_node("evaluate_answer", self._evaluate_answer_node)
+        self.workflow.add_node("give_answer_to_user", self._give_answer_to_user_node)
 
         self.workflow.add_edge(START, "classify_query")
 
@@ -451,9 +466,10 @@ class NML_RAG(object):
             "evaluate_answer",
             self._route_answer_evaluator_node,
             {
-                "continue": END,
-                "retrieve_more_info": "answer_question",
-                "unknown": END,
+                "continue": "give_answer_to_user",
+                "retrieve_more_info": "give_answer_to_user",
+                # "retrieve_more_info": "answer_question",
+                "unknown": "give_answer_to_user",
             },
         )
 
@@ -642,7 +658,7 @@ class NML_RAG(object):
             for node, state in chunk.items():
                 self.logger.debug(f"Update from node '{node}'")
                 try:
-                    self.logger.debug(state.messages[-1].pretty_print())
+                    self.logger.debug(state.messages[-1].pretty_repr())
                 except AttributeError:
                     pass
                 except KeyError:
@@ -655,12 +671,25 @@ class NML_RAG(object):
 
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
-                try:
-                    yield str(state.messages[-1])
-                except AttributeError:
-                    yield ""
-                except KeyError:
-                    yield ""
+                self.logger.info(repr(state))
+                # NOTE: all functions must have the `_node` suffix
+                node_fn = getattr(self, f"_{node}_node", None)
+                if node_fn and getattr(node_fn, "user_visible", False):
+                    # TODO: ensure that all user facing nodes have consistent
+                    # returns
+                    yield state
+                else:
+                    yield f"In node: {node}"
+
+                # messages = getattr(state, "messages", None)
+                # if messages:
+                #     message = getattr(messages[-1], "content", "")
+                #     self.logger.info(f"Message from {node}: {message}")
+                #
+                #     if message.strip():
+                #         yield message
+
+        self.logger.info("END")
 
     def graph_stream(self, query: str):
         """Run the graph but return the stream"""

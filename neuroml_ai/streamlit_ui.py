@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 
+import logging
 import streamlit as st
 from neuroml_ai.rag import NML_RAG
 
@@ -18,7 +19,7 @@ def runner():
     st.title("NeuroML AI chat")
 
     if "nml_ai" not in st.session_state:
-        st.session_state.nml_ai = NML_RAG()
+        st.session_state.nml_ai = NML_RAG(logging_level=logging.INFO)
         st.session_state.nml_ai.setup()
 
     if query := st.chat_input("Ask a question:"):
@@ -27,7 +28,9 @@ def runner():
 
         with st.chat_message("assistant"):
             stream = st.session_state.nml_ai.run_graph_stream(query)
-            st.write_stream(stream)
+            for message in stream:
+                st.write(f"MESSAGE: {repr(message)}")
+            # st.write_stream(stream)
 
 
 if __name__ == "__main__":
