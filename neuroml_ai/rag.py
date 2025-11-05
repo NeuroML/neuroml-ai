@@ -19,6 +19,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import chromadb
+import ollama
 from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 from langchain_chroma import Chroma
@@ -39,7 +40,11 @@ logging.root.setLevel(logging.WARNING)
 
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
-    query_type: Literal["undefined", "question", "code_generation"] = Field(default="undefined", description="'question' if user is asking for information, 'code_generation', if the user is asking for code")
+
+    query_type: Literal["undefined", "question", "code_generation"] = Field(
+        default="undefined",
+        description="'question' if user is asking for information, 'code_generation', if the user is asking for code",
+    )
 
 
 class EvaluateAnswerSchema(BaseModel):
@@ -52,7 +57,9 @@ class EvaluateAnswerSchema(BaseModel):
     conciseness: float = 0.0
     confidence: float = 0.0
     # description given in the system prompt
-    next_step: Literal["continue", "retrieve_more_info", "modify_query", "ask_user", "undefined"] = Field(default="undefined")
+    next_step: Literal[
+        "continue", "retrieve_more_info", "modify_query", "ask_user", "undefined"
+    ] = Field(default="undefined")
     summary: str = ""
 
 
@@ -131,12 +138,12 @@ class NML_RAG(object):
         elif self.chat_model.lower().startswith("ollama:"):
             self._setup_ollama()
         else:
-            self.logger.error(f"Unknown LLM model given: {self.chat_model}. Exiting.")
+            self.logger.error(
+                f"Unsupported LLM model given: {self.chat_model}. Exiting."
+            )
             sys.exit(-1)
 
         assert self.model
-
-        # self._setup_agent()
 
     def _question_or_code_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
@@ -156,7 +163,7 @@ class NML_RAG(object):
         prompt = prompt_template.invoke({"query": state.query})
 
         output = query_node_llm.invoke(prompt)
-        self.logger.debug(f"{output =}")
+        self.logger.debug(f"{output = }")
 
         return {"query_type": QueryTypeSchema(query_type=output.query_type)}
 
@@ -397,7 +404,6 @@ class NML_RAG(object):
         else:
             return "undefined"
 
-
     def _route_query_node(self, state: AgentState) -> str:
         """Route the query depending on LLM's result"""
         self.logger.debug(f"{state =}")
@@ -486,11 +492,32 @@ class NML_RAG(object):
         from langchain_ollama import OllamaEmbeddings
 
         self.logger.info(f"Setting up chat model: {self.chat_model}")
+        chat_model_name = self.chat_model.replace("ollama:", "")
+
+        try:
+            _ = ollama.show(chat_model_name)
+        except ollama.ResponseError:
+            self.logger.error(f"Could not find ollama model: {chat_model_name}")
+            sys.exit(-1)
+        except ConnectionError:
+            self.logger.error("Could not connect to Ollama.")
+            sys.exit(-1)
+
         self.model = init_chat_model(
-            self.chat_model.replace("ollama:", ""),
+            chat_model_name,
             model_provider="ollama",
             temperature=0.3,
         )
+
+        try:
+            _ = ollama.show(self.embedding_model)
+        except ollama.ResponseError:
+            self.logger.error(f"Could not find ollama model: {self.embedding_model}")
+            self.logger.error("Please ensure you have pulled the model")
+            sys.exit(-1)
+        except ConnectionError:
+            self.logger.error("Could not connect to Ollama.")
+            sys.exit(-1)
 
         self.logger.info(f"Setting up embedding model: {self.embedding_model}")
         self.embeddings = OllamaEmbeddings(model=self.embedding_model)
@@ -650,4 +677,6 @@ if __name__ == "__main__":
     )
     nml_ai.setup()
     # nml_ai.test_retrieval()
-    nml_ai.run_graph("Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library")
+    nml_ai.run_graph(
+        "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
+    )
