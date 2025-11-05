@@ -38,12 +38,6 @@ logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 
 
-def user_visible_node(func):
-    """Decorator to mark a LangGraph node as producing user-visible output."""
-    func.user_visible = True
-    return func
-
-
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
@@ -77,6 +71,7 @@ class AgentState(BaseModel):
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
     # TODO: code_response_eval: EvaluateAnswerSchema
     messages: List[BaseMessage] = Field(default_factory=list)
+    user_message: str = ""
 
 
 class NML_RAG(object):
@@ -422,13 +417,12 @@ class NML_RAG(object):
         else:
             return "handle_unknown_node"
 
-    @user_visible_node
     def _give_answer_to_user_node(self, state: AgentState) -> str:
         """Return the answer message to the user"""
         messages = state.messages
         answer = messages[-1].content
 
-        return answer
+        return {"user_message": answer}
 
     def _create_graph(self):
         """Create the LangGraph"""
@@ -672,14 +666,10 @@ class NML_RAG(object):
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
                 self.logger.info(repr(state))
-                # NOTE: all functions must have the `_node` suffix
-                node_fn = getattr(self, f"_{node}_node", None)
-                if node_fn and getattr(node_fn, "user_visible", False):
-                    # TODO: ensure that all user facing nodes have consistent
-                    # returns
-                    yield state
+                if message := getattr(state, "user_message", None):
+                    yield message
                 else:
-                    yield f"In node: {node}"
+                    yield f"Working in node: {node}"
 
                 # messages = getattr(state, "messages", None)
                 # if messages:
