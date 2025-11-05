@@ -598,14 +598,18 @@ class NML_RAG(object):
         self._load_vector_stores()
         self._retrieve_docs("NeuroML community")
 
-    def run_graph(self, query: str):
+    def run_graph_invoke(self, query: str):
         """Run the graph"""
         self._create_graph()
 
         initial_state = AgentState(query=query)
+        final_state = self.graph.invoke(initial_state)
+        return final_state
 
-        # output = self._answer_question_node(initial_state)
-        # output["messages"][-1].pretty_print()
+    def run_graph(self, query: str):
+        """Run the graph but return the stream"""
+        self._create_graph()
+        initial_state = AgentState(query=query)
 
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
@@ -613,11 +617,29 @@ class NML_RAG(object):
                 try:
                     self.logger.debug(state.messages[-1].pretty_print())
                 except AttributeError:
-                    self.logger.debug(state)
+                    pass
                 except KeyError:
-                    self.logger.debug(state)
-                print()
-                print()
+                    pass
+
+    def run_graph_stream(self, query: str):
+        """Run the graph but return the stream"""
+        self._create_graph()
+        initial_state = AgentState(query=query)
+
+        for chunk in self.graph.stream(initial_state):
+            for node, state in chunk.items():
+                try:
+                    yield str(state.messages[-1])
+                except AttributeError:
+                    yield ""
+                except KeyError:
+                    yield ""
+
+    def graph_stream(self, query: str):
+        """Run the graph but return the stream"""
+        self._create_graph()
+        initial_state = AgentState(query=query)
+        return self.graph.stream(initial_state)
 
 
 if __name__ == "__main__":

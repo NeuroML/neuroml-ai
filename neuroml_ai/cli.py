@@ -18,15 +18,25 @@ nml_ai_app = typer.Typer()
 
 
 @nml_ai_app.command()
-def nml_ai_cli(query: str, chat_model: str = "ollama:qwen3:1.7b", embedding_model: str = "bge-m3"):
+def nml_ai_cli(query: str = typer.Option(None, help="Query for command line mode"), chat_model: str = "ollama:qwen3:1.7b",
+               embedding_model: str = "bge-m3", gui: bool = False):
     """NeuroML AI cli wrapper function"""
-    nml_ai = NML_RAG(
-        chat_model=chat_model,
-        embedding_model=embedding_model,
-        logging_level=logging.INFO
-    )
-    nml_ai.setup()
-    nml_ai.run_graph(query)
+
+    if not gui and not query:
+        typer.echo("Error: either query or gui must be given")
+        raise typer.Exit(code=1)
+
+    if not gui:
+        nml_ai = NML_RAG(
+            chat_model=chat_model,
+            embedding_model=embedding_model,
+            logging_level=logging.INFO
+        )
+        nml_ai.setup()
+        nml_ai.run_graph(query)
+    else:
+        # streamlit app
+        pass
 
 
 if __name__ == "__main__":
