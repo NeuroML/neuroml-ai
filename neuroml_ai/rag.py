@@ -38,6 +38,24 @@ logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 
 
+class LoggerNotInfoFilter(logging.Filter):
+
+    """Allow only non INFO messages"""
+
+    def filter(self, record):
+        return record.levelno != logging.INFO
+
+
+
+class LoggerInfoFilter(logging.Filter):
+
+    """Allow only INFO messages"""
+
+    def filter(self, record):
+        return record.levelno == logging.INFO
+
+
+
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
@@ -123,11 +141,13 @@ class NML_RAG(object):
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(logging.INFO)
+        stdout_handler.addFilter(LoggerInfoFilter())
         stdout_handler.setFormatter(formatter)
         self.logger.addHandler(stdout_handler)
 
         stderr_handler = logging.StreamHandler(sys.stderr)
         stderr_handler.setLevel(logging_level)
+        stderr_handler.addFilter(LoggerNotInfoFilter())
         stderr_handler.setFormatter(formatter)
         self.logger.addHandler(stderr_handler)
 
