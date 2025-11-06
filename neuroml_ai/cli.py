@@ -39,7 +39,7 @@ def nml_ai_cli(
             logging_level=logging.INFO,
         )
         nml_ai.setup()
-        nml_ai.run_graph(query)
+        nml_ai.run_graph_invoke(query)
     else:
         # streamlit app
         cwd = Path(__file__).parent
