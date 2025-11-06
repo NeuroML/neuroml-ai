@@ -405,7 +405,6 @@ class NML_RAG(object):
 
         # add the summary as a message also, to keep the message chain going
         messages = state.messages
-        # TODO: remove summary, set user_message depending on evaluation
         messages.append(AIMessage(content=output.summary))
         return {"messages": messages, "text_response_eval": output}
 
@@ -441,7 +440,9 @@ class NML_RAG(object):
     def _give_answer_to_user_node(self, state: AgentState) -> dict:
         """Return the answer message to the user"""
         messages = state.messages
-        answer = messages[-1].content
+        answer = messages[-2].content
+
+        self.logger.info(f"Returning final answer to user: {answer}")
 
         return {"user_message": answer}
 
@@ -686,21 +687,13 @@ class NML_RAG(object):
 
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
-                self.logger.info(repr(state))
-                # TODO: correct this, it doesn't return True when user_message
-                # is set
-                if message := getattr(state, "user_message", None):
+                self.logger.info(f"{node}: {repr(state)}")
+                # all nodes must return dicts
+                if (message := state.get("user_message", None)):
+                    self.logger.info(f"User message: {message}")
                     yield message
                 else:
-                    yield f"Working in node: {node}"
-
-                # messages = getattr(state, "messages", None)
-                # if messages:
-                #     message = getattr(messages[-1], "content", "")
-                #     self.logger.info(f"Message from {node}: {message}")
-                #
-                #     if message.strip():
-                #         yield message
+                    self.logger.debug(f"Working in node: {node}")
 
         self.logger.info("END")
 
