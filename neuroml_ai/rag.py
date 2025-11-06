@@ -687,7 +687,7 @@ class NML_RAG(object):
 
         for chunk in self.graph.stream(initial_state):
             for node, state in chunk.items():
-                self.logger.info(f"{node}: {repr(state)}")
+                self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
                 if (message := state.get("user_message", None)):
                     self.logger.info(f"User message: {message}")
