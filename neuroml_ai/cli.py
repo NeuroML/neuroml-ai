@@ -8,9 +8,11 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-
 import typer
 import logging
+import subprocess
+from pathlib import Path
+from contextlib import chdir
 from neuroml_ai.rag import NML_RAG
 
 
@@ -18,8 +20,12 @@ nml_ai_app = typer.Typer()
 
 
 @nml_ai_app.command()
-def nml_ai_cli(query: str = typer.Option(None, help="Query for command line mode"), chat_model: str = "ollama:qwen3:1.7b",
-               embedding_model: str = "bge-m3", gui: bool = False):
+def nml_ai_cli(
+    query: str = typer.Option(None, help="Query for command line mode"),
+    chat_model: str = "ollama:qwen3:1.7b",
+    embedding_model: str = "bge-m3",
+    gui: bool = False,
+):
     """NeuroML AI cli wrapper function"""
 
     if not gui and not query:
@@ -30,13 +36,15 @@ def nml_ai_cli(query: str = typer.Option(None, help="Query for command line mode
         nml_ai = NML_RAG(
             chat_model=chat_model,
             embedding_model=embedding_model,
-            logging_level=logging.INFO
+            logging_level=logging.INFO,
         )
         nml_ai.setup()
         nml_ai.run_graph(query)
     else:
         # streamlit app
-        pass
+        cwd = Path(__file__).parent
+        with chdir(cwd):
+            subprocess.run("streamlit run streamlit_ui.py".split())
 
 
 if __name__ == "__main__":
