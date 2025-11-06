@@ -28,7 +28,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
+
 )
+
+
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
@@ -61,7 +65,7 @@ class QueryTypeSchema(BaseModel):
 
     query_type: Literal["undefined", "question", "code_generation"] = Field(
         default="undefined",
-        description="'question' if user is asking for information, 'code_generation', if the user is asking for code",
+        description="'question' if user is asking for information, 'code_generation', if the user is asking for code, 'unknown' otherwise",
     )
 
 
@@ -89,6 +93,7 @@ class AgentState(BaseModel):
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
     # TODO: code_response_eval: EvaluateAnswerSchema
     messages: List[BaseMessage] = Field(default_factory=list)
+    message_summary: str = ""
     user_message: str = ""
 
 
@@ -108,6 +113,9 @@ class NML_RAG(object):
         ("###", "Header 3"),
         ("####", "Header 4"),
     ]
+
+    checkpointer = InMemorySaver()
+
 
     def __init__(
         self,
@@ -165,6 +173,8 @@ class NML_RAG(object):
             sys.exit(-1)
 
         assert self.model
+
+        self._create_graph()
 
     def _question_or_code_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
@@ -494,7 +504,7 @@ class NML_RAG(object):
         self.workflow.add_edge("evaluate_answer", END)
         self.workflow.add_edge("generate_code", END)
 
-        self.graph = self.workflow.compile()
+        self.graph = self.workflow.compile(checkpointer=self.checkpointer)
         if self.logger.level <= logging.DEBUG:
             self.graph.get_graph().draw_mermaid_png(
                 output_file_path="nml-ai-lang-graph.png"
@@ -657,35 +667,29 @@ class NML_RAG(object):
         self._load_vector_stores()
         self._retrieve_docs("NeuroML community")
 
-    def run_graph_invoke(self, query: str):
+    def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
         """Run the graph"""
-        self._create_graph()
 
-        initial_state = AgentState(query=query)
-        final_state = self.graph.invoke(initial_state)
-        return final_state
+        config = {
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
+        final_state = self.graph.invoke({"query": query}, config=config)
+        if message := final_state.get("user_message", None):
+            return message
+        else:
+            return "I was unable to answer"
 
-    def run_graph(self, query: str):
+    def run_graph_stream(self, query: str, thread_id: str = "default_thread"):
         """Run the graph but return the stream"""
-        self._create_graph()
-        initial_state = AgentState(query=query)
+        config = {
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
 
-        for chunk in self.graph.stream(initial_state):
-            for node, state in chunk.items():
-                self.logger.debug(f"Update from node '{node}'")
-                try:
-                    self.logger.debug(state.messages[-1].pretty_repr())
-                except AttributeError:
-                    pass
-                except KeyError:
-                    pass
-
-    def run_graph_stream(self, query: str):
-        """Run the graph but return the stream"""
-        self._create_graph()
-        initial_state = AgentState(query=query)
-
-        for chunk in self.graph.stream(initial_state):
+        for chunk in self.graph.stream({"query": query}, config=config):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
@@ -695,13 +699,16 @@ class NML_RAG(object):
                 else:
                     self.logger.debug(f"Working in node: {node}")
 
-        self.logger.info("END")
 
-    def graph_stream(self, query: str):
+    def graph_stream(self, query: str, thread_id: str = "default_threaD"):
         """Run the graph but return the stream"""
-        self._create_graph()
-        initial_state = AgentState(query=query)
-        return self.graph.stream(initial_state)
+        config = {
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
+
+        return self.graph.stream({"query": query}, config=config)
 
 
 if __name__ == "__main__":
@@ -712,6 +719,6 @@ if __name__ == "__main__":
     )
     nml_ai.setup()
     # nml_ai.test_retrieval()
-    nml_ai.run_graph(
+    nml_ai.run_graph_invoke(
         "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
     )
