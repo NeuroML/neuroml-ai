@@ -28,9 +28,7 @@ def runner():
 
         with st.chat_message("assistant"):
             stream = st.session_state.nml_ai.run_graph_stream(query)
-            for message in stream:
-                st.write(f"MESSAGE: {repr(message)}")
-            # st.write_stream(stream)
+            st.write_stream(stream)
 
 
 if __name__ == "__main__":
