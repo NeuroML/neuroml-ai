@@ -8,15 +8,17 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-
 import logging
 import streamlit as st
 from neuroml_ai.rag import NML_RAG
 
 
 def runner():
-    """Main runner for streamlit app """
-    st.title("NeuroML AI chat")
+    """Main runner for streamlit app"""
+    st.title("NeuroML AI Assistant")
+    st.info(
+        "The answers are generated using an LLM. They may be inaccurate.  Please check with the documentation at https://docs.neuroml.org."
+    )
 
     if "nml_ai" not in st.session_state:
         st.session_state.nml_ai = NML_RAG(logging_level=logging.INFO)
@@ -38,8 +40,9 @@ def runner():
         with st.chat_message("assistant"):
             # stream = st.session_state.nml_ai.run_graph_stream(query)
             # response = st.write_stream(stream)
-            response = st.session_state.nml_ai.run_graph_invoke(query)
-            st.markdown(response)
+            with st.spinner("Working..."):
+                response = st.session_state.nml_ai.run_graph_invoke(query)
+                st.markdown(response)
         st.session_state.history.append({"role": "assistant", "content": response})
 
 
