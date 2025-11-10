@@ -131,13 +131,14 @@ class NML_RAG(object):
 
         self._create_graph()
 
-    def _question_or_code_node(self, state: AgentState) -> dict:
+    def _classify_query_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
         assert self.model
 
         system_prompt = """You are an expert query classifier. Analyse the user's request
-            and determine its intent. Is it a 'quertion' or a 'code_generation'
-            request? Provide your answer as a JSON object matching the
+            and determine its intent. Is it a 'general question', a 'NeuroML
+            question', or a 'neuroml code generation' request? Provide your
+            answer as a JSON object matching the
             requested schema."""
 
         prompt_template = ChatPromptTemplate(
@@ -153,28 +154,63 @@ class NML_RAG(object):
 
         return {"query_type": QueryTypeSchema(query_type=output.query_type)}
 
-    def _generate_code_node(self, state: AgentState) -> dict:
+    def _generate_neuroml_code_node(self, state: AgentState) -> dict:
         """Generate code"""
         messages = state.messages
         messages.append(AIMessage("I can generate code for you"))
 
         return {"messages": messages}
 
-    def _answer_question_node(self, state: AgentState) -> dict:
-        """Answer the question"""
+    def _answer_general_question_node(self, state: AgentState) -> dict:
+        """Answer a general question"""
 
         system_prompt = dedent("""
-        You are a fact-based research assistant. Your primary and only goal is
-        to provide accurate and current answers to user queries. Your
-        speciality is NeuroML, the standard and software ecosystem for
-        biophysically detailed modelling and related tools.
+        You are an AI assistant. Answer questions to the best of your
+        knowledge.
+
+        ## Core directives
+
+        1. Only provide information you are confident about. If you are
+        unsuare, clearly say so.
+        2. Avoid inventing facts. If a fact is not known or uncertain, respond
+        with "I was unable to find factual information about this query".
+        3. Keep answers clear, concise, formal, and user-friendly.
+        4. Always prefix all your answers with this warning "This information
+        has not been retrieved from any provided documentation and may contain
+        errors. It is generated from general LLM knowledge."
+
+        """)
+
+        assert self.model
+
+        question_prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+        )
+        self.logger.debug(f"{question_prompt_template =}")
+        prompt = question_prompt_template.invoke({"query": state.query})
+
+        output = self.model.invoke(prompt)
+        # self.logger.debug(f"{output =}")
+        self.logger.debug(output)
+
+        messages = state.messages
+        messages.append(output)
+        return {"messages": messages, "user_message": output.content}
+
+    def _answer_neuroml_question_node(self, state: AgentState) -> dict:
+        """Answer a NeuroML question"""
+
+        system_prompt = dedent("""
+        You are a fact-based research assistant. Your only goal is to provide
+        accurate and current answers to user queries. Your speciality is
+        NeuroML, the standard and software ecosystem for biophysically detailed
+        modelling of neurons and neuronal circuits and related software tools.
 
         # Core Directives:
         1. Top priority: use the Tools. For any user query that requires a
           factual answer, use the tool. Never answer a knowledge based question
-          directly from your general training data without using the tools. The
-          only exceptions are general conversational greetings, where you may
-          skip using the tool.
+          directly from your general training data without using the tools.
+          Only skip using the tool for queries that are not NeuroML related.
 
         2. When using the tools, generate precise queries. Do not use stop
           words.
@@ -183,10 +219,10 @@ class NML_RAG(object):
           information to craft your answer.
 
         4. Prefer Python over other programming languages that may be mentioned
-          in the documentation
+          in the documentation.
 
         5. If you are unable to find the answer in the documentation, let the
-          user know and ask them to modify their query.
+          user know.
 
         ## Available tools:
 
@@ -200,7 +236,7 @@ class NML_RAG(object):
         Thought, Action, Observation, Final Answer pattern in that order:
 
         1. Thought: Reason about the user's request. Always conclude that a
-          factual query requires an `Action: retrieve`.
+          factual query about NeuroML requires an `Action: retrieve`.
         2. Action: Generate the tool call (e.g., `retrieve({{"query": "focused
           search term"}})`).
         3. Observation: This is the result of the tool execution (the
@@ -236,36 +272,19 @@ class NML_RAG(object):
         messages.append(output)
         return {"messages": messages}
 
-    def _generate_answer_node(self, state: AgentState) -> dict:
+    def _generate_answer_from_context_node(self, state: AgentState) -> dict:
         """Generate the answer"""
         assert self.model
 
         system_prompt = dedent("""
-        You are a fact-based research assistant. Your primary and only goal is
-        to provide accurate and current answers to user queries. Your
-        speciality is NeuroML, the standard and software ecosystem for
-        biophysically detailed modelling and related tools.
+        You are an expert summariser. Use only the provided context to generate
+        an answer to the provided question.
 
         # Core Directives:
 
         - Limit yourself to facts from the provided context only, avoid using
-          knowledge from your general training. If you cannot find an answer in
-          the context, tell the user and suggest a better question.
+          knowledge from your general training.
         - Use concise, formal language.
-
-        ## Your thought process (ReAct):
-
-        You must always structure your response using the
-        Thought, Action, Observation, Final Answer pattern in that order:
-
-        1. Thought: Reason about the user's request. Always conclude that a
-          factual query requires an `Action: retrieve`.
-        2. Action: Generate the tool call (e.g., `retrieve({{"query": "focused
-          search term"}})`).
-        3. Observation: This is the result of the tool execution (the
-          documents).
-        4. Final Answer: Generate the final response based only on the
-          Observation.
 
         """)
 
@@ -395,32 +414,28 @@ class NML_RAG(object):
         self.logger.debug(f"{state =}")
         query_type = state.query_type.query_type
 
-        if query_type == "question":
-            return "answer_question_node"
-        elif query_type == "code_generation":
-            return "generate_code_node"
-        else:
-            return "handle_unknown_node"
+        return query_type
 
-    def _give_answer_to_user_node(self, state: AgentState) -> dict:
+    def _give_neuroml_answer_to_user_node(self, state: AgentState) -> dict:
         """Return the answer message to the user"""
         messages = state.messages
-        answer = messages[-2].content
+        answer = messages[-2]
 
         self.logger.info(f"Returning final answer to user: {answer}")
 
-        return {"user_message": answer}
+        return {"user_message": answer.content}
 
     def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
-        self.workflow.add_node("classify_query", self._question_or_code_node)
-        self.workflow.add_node("answer_question", self._answer_question_node)
+        self.workflow.add_node("classify_query", self._classify_query_node)
+        self.workflow.add_node("answer_neuroml_question", self._answer_neuroml_question_node)
+        self.workflow.add_node("answer_general_question", self._answer_general_question_node)
         self.workflow.add_node("retrieve_docs", ToolNode([self._retrieve_docs]))
-        self.workflow.add_node("generate_code", self._generate_code_node)
-        self.workflow.add_node("generate_answer", self._generate_answer_node)
+        self.workflow.add_node("generate_neuroml_code", self._generate_neuroml_code_node)
+        self.workflow.add_node("generate_answer_from_context", self._generate_answer_from_context_node)
         self.workflow.add_node("evaluate_answer", self._evaluate_answer_node)
-        self.workflow.add_node("give_answer_to_user", self._give_answer_to_user_node)
+        self.workflow.add_node("give_neuroml_answer_to_user", self._give_neuroml_answer_to_user_node)
 
         self.workflow.add_edge(START, "classify_query")
 
@@ -428,14 +443,15 @@ class NML_RAG(object):
             "classify_query",
             self._route_query_node,
             {
-                "answer_question_node": "answer_question",
-                "generate_code_node": "generate_code",
+                "general question": "answer_general_question",
+                "neuroml question": "answer_neuroml_question",
+                "neuroml code generation": "generate_neuroml_code",
                 "unknown": END,
             },
         )
 
         self.workflow.add_conditional_edges(
-            "answer_question",
+            "answer_neuroml_question",
             tools_condition,
             {
                 "tools": "retrieve_docs",
@@ -447,23 +463,23 @@ class NML_RAG(object):
             "evaluate_answer",
             self._route_answer_evaluator_node,
             {
-                "continue": "give_answer_to_user",
-                "retrieve_more_info": "give_answer_to_user",
-                # "retrieve_more_info": "answer_question",
-                "unknown": "give_answer_to_user",
+                "continue": "give_neuroml_answer_to_user",
+                "retrieve_more_info": "give_neuroml_answer_to_user",
+                # "retrieve_more_info": "answer_neuroml_question",
+                "unknown": "give_neuroml_answer_to_user",
             },
         )
 
-        self.workflow.add_edge("retrieve_docs", "generate_answer")
-        self.workflow.add_edge("generate_answer", "evaluate_answer")
-        self.workflow.add_edge("evaluate_answer", END)
-        self.workflow.add_edge("generate_code", END)
+        self.workflow.add_edge("retrieve_docs", "generate_answer_from_context")
+        self.workflow.add_edge("generate_answer_from_context", "evaluate_answer")
+        self.workflow.add_edge("give_neuroml_answer_to_user", END)
+        self.workflow.add_edge("answer_general_question", END)
+        self.workflow.add_edge("generate_neuroml_code", END)
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
-        if self.logger.level <= logging.DEBUG:
-            self.graph.get_graph().draw_mermaid_png(
-                output_file_path="nml-ai-lang-graph.png"
-            )
+        self.graph.get_graph().draw_mermaid_png(
+            output_file_path="nml-ai-lang-graph.png"
+        )
 
     def _setup_gemini(self):
         """Set up Gemini"""
@@ -627,6 +643,7 @@ class NML_RAG(object):
 
         config = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke({"query": query}, config=config)
+        self.logger.debug(final_state)
         if message := final_state.get("user_message", None):
             return message
         else:

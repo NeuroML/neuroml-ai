@@ -16,7 +16,8 @@ from typing_extensions import List, Literal
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
-    query_type: Literal["undefined", "question", "code_generation"] = Field(
+    query_type: Literal["undefined", "general question", "neuroml question",
+                        "neuroml code generation"] = Field(
         default="undefined",
         description="'question' if user is asking for information, 'code_generation', if the user is asking for code, 'unknown' otherwise",
     )

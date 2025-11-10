@@ -36,10 +36,10 @@ def nml_ai_cli(
         nml_ai = NML_RAG(
             chat_model=chat_model,
             embedding_model=embedding_model,
-            logging_level=logging.INFO,
+            logging_level=logging.DEBUG,
         )
         nml_ai.setup()
-        nml_ai.run_graph_invoke(query)
+        print(nml_ai.run_graph_invoke(query))
     else:
         # streamlit app
         cwd = Path(__file__).parent
