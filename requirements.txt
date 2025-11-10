@@ -9,5 +9,5 @@ langchain-community
 langgraph
 
 typer
-
+yaspin
 streamlit
