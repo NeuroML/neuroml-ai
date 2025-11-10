@@ -27,6 +27,20 @@ pip install .
 
 Please remember to use a virtual environment.
 
+Usage:
+
+A cli is provided:
+
+```
+nml-ai
+```
+
+To use the streamlit chat interface, you can pass the `--gui` option:
+
+```
+nml-ai --gui
+```
+
 ### Models
 
 The following models are currently being used for testing:
