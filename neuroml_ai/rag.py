@@ -23,78 +23,34 @@ import ollama
 from langchain.chat_models import init_chat_model
 from langchain.tools import tool
 from langchain_chroma import Chroma
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
-
 )
-
-
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
-from pydantic import BaseModel, Field
-from typing_extensions import List, Literal
+
+from .schemas import QueryTypeSchema, EvaluateAnswerSchema, AgentState
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 
 
 class LoggerNotInfoFilter(logging.Filter):
-
     """Allow only non INFO messages"""
 
     def filter(self, record):
         return record.levelno != logging.INFO
 
 
-
 class LoggerInfoFilter(logging.Filter):
-
     """Allow only INFO messages"""
 
     def filter(self, record):
         return record.levelno == logging.INFO
-
-
-
-class QueryTypeSchema(BaseModel):
-    """Docstring for QueryTypeSchema."""
-
-    query_type: Literal["undefined", "question", "code_generation"] = Field(
-        default="undefined",
-        description="'question' if user is asking for information, 'code_generation', if the user is asking for code, 'unknown' otherwise",
-    )
-
-
-class EvaluateAnswerSchema(BaseModel):
-    """Evaluation of LLM generated answer"""
-
-    relevance: float = 0.0
-    groundedness: float = 0.0
-    completeness: float = 0.0
-    coherence: float = 0.0
-    conciseness: float = 0.0
-    confidence: float = 0.0
-    # description given in the system prompt
-    next_step: Literal[
-        "continue", "retrieve_more_info", "modify_query", "ask_user", "undefined"
-    ] = Field(default="undefined")
-    summary: str = ""
-
-
-class AgentState(BaseModel):
-    """The state of the graph"""
-
-    query: str = ""
-    query_type: QueryTypeSchema = QueryTypeSchema()
-    text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
-    # TODO: code_response_eval: EvaluateAnswerSchema
-    messages: List[BaseMessage] = Field(default_factory=list)
-    message_summary: str = ""
-    user_message: str = ""
 
 
 class NML_RAG(object):
@@ -115,7 +71,6 @@ class NML_RAG(object):
     ]
 
     checkpointer = InMemorySaver()
-
 
     def __init__(
         self,
@@ -670,11 +625,7 @@ class NML_RAG(object):
     def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
         """Run the graph"""
 
-        config = {
-            "configurable": {
-                "thread_id": thread_id
-            }
-        }
+        config = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke({"query": query}, config=config)
         if message := final_state.get("user_message", None):
             return message
@@ -683,30 +634,21 @@ class NML_RAG(object):
 
     def run_graph_stream(self, query: str, thread_id: str = "default_thread"):
         """Run the graph but return the stream"""
-        config = {
-            "configurable": {
-                "thread_id": thread_id
-            }
-        }
+        config = {"configurable": {"thread_id": thread_id}}
 
         for chunk in self.graph.stream({"query": query}, config=config):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
-                if (message := state.get("user_message", None)):
+                if message := state.get("user_message", None):
                     self.logger.info(f"User message: {message}")
                     yield message
                 else:
                     self.logger.debug(f"Working in node: {node}")
 
-
     def graph_stream(self, query: str, thread_id: str = "default_threaD"):
         """Run the graph but return the stream"""
-        config = {
-            "configurable": {
-                "thread_id": thread_id
-            }
-        }
+        config = {"configurable": {"thread_id": thread_id}}
 
         return self.graph.stream({"query": query}, config=config)
 
