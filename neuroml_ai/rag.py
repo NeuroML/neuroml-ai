@@ -80,6 +80,7 @@ class NML_RAG(object):
         self.image_vector_store = None
 
         self.default_k = 2
+        self.k_max = 10
         self.k = self.default_k
 
         # we prefer markdown because the one page PDF that is available for the
@@ -400,8 +401,15 @@ class NML_RAG(object):
             self.k = self.default_k
             return "continue"
         elif text_response_eval == "retrieve_more_info":
-            self.k += 1
-            return "retrieve_more_info"
+            # limit what max k we can have, otherwise, we end up pulling the
+            # whole store..
+            if self.k < self.k_max:
+                self.k += 1
+                return "retrieve_more_info"
+            else:
+                # we are already at max context, so we need to modify the query
+                # to get a better result
+                return "modify_query"
         elif text_response_eval == "modify_query":
             return "modify_query"
         else:
