@@ -55,13 +55,6 @@ class LoggerInfoFilter(logging.Filter):
 class NML_RAG(object):
     """NeuroML RAG implementation"""
 
-    # This is generated using the script in the data/scripts folder.
-    # Effectively:
-    # - we download the documentation sources
-    # - we use the jupyterbook system to generate a one page html
-    # - we use pandoc to convert the one page html to a one page markdown
-
-    # update to use MD
     md_headers_to_split_on = [
         ("#", "Header 1"),
         ("##", "Header 2"),
