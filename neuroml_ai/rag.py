@@ -8,10 +8,8 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import getpass
 import logging
 import mimetypes
-import os
 import sys
 from glob import glob
 from hashlib import sha256
@@ -21,6 +19,7 @@ from textwrap import dedent
 import chromadb
 import ollama
 from langchain.chat_models import init_chat_model
+from langchain.embeddings import init_embeddings
 from langchain.tools import tool
 from langchain_chroma import Chroma
 from langchain_core.messages import AIMessage
@@ -117,17 +116,23 @@ class NML_RAG(object):
     def setup(self):
         """Set up basics."""
 
-        if self.chat_model.lower() == "gemini":
-            self._setup_gemini()
-        elif self.chat_model.lower().startswith("ollama:"):
-            self._setup_ollama()
-        else:
-            self.logger.error(
-                f"Unsupported LLM model given: {self.chat_model}. Exiting."
+        if self.chat_model.lower().startswith("ollama:"):
+            self.__check_ollama_model(self.chat_model.lower().replace("ollama:", ""))
+
+        self.model = init_chat_model(
+            self.chat_model,
+            temperature=0.3,
+        )
+
+        if self.embedding_model.lower().startswith("ollama:"):
+            self.__check_ollama_model(
+                self.embedding_model.lower().replace("ollama:", "")
             )
-            sys.exit(-1)
+
+        self.embeddings = init_embeddings(self.embedding_model)
 
         assert self.model
+        assert self.embeddings
 
         self._create_graph()
 
@@ -429,13 +434,23 @@ class NML_RAG(object):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
         self.workflow.add_node("classify_query", self._classify_query_node)
-        self.workflow.add_node("answer_neuroml_question", self._answer_neuroml_question_node)
-        self.workflow.add_node("answer_general_question", self._answer_general_question_node)
+        self.workflow.add_node(
+            "answer_neuroml_question", self._answer_neuroml_question_node
+        )
+        self.workflow.add_node(
+            "answer_general_question", self._answer_general_question_node
+        )
         self.workflow.add_node("retrieve_docs", ToolNode([self._retrieve_docs]))
-        self.workflow.add_node("generate_neuroml_code", self._generate_neuroml_code_node)
-        self.workflow.add_node("generate_answer_from_context", self._generate_answer_from_context_node)
+        self.workflow.add_node(
+            "generate_neuroml_code", self._generate_neuroml_code_node
+        )
+        self.workflow.add_node(
+            "generate_answer_from_context", self._generate_answer_from_context_node
+        )
         self.workflow.add_node("evaluate_answer", self._evaluate_answer_node)
-        self.workflow.add_node("give_neuroml_answer_to_user", self._give_neuroml_answer_to_user_node)
+        self.workflow.add_node(
+            "give_neuroml_answer_to_user", self._give_neuroml_answer_to_user_node
+        )
 
         self.workflow.add_edge(START, "classify_query")
 
@@ -481,59 +496,26 @@ class NML_RAG(object):
             output_file_path="nml-ai-lang-graph.png"
         )
 
-    def _setup_gemini(self):
-        """Set up Gemini"""
-        self.logger.info("Setting up Gemini")
+    def __check_ollama_model(self, model):
+        """Check if ollama model is available
 
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        :param model: ollama model name
+        :type model: str
+        :returns: None
 
-        if not os.environ.get("GOOGLE_API_KEY"):
-            os.environ["GOOGLE_API_KEY"] = getpass.getpass(
-                "Enter API key for Google Gemini: "
-            )
+        :throws ollama.ResponseError: if `model` is not available
+        :throws ConnectionError: if cannot connect to an Ollama server
 
-        self.model = init_chat_model(
-            "gemini-2.5-flash", model_provider="google_genai", temperature=0
-        )
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001"
-        )
-
-    def _setup_ollama(self):
-        """Set up Ollama model"""
-
-        from langchain_ollama import OllamaEmbeddings
-
-        self.logger.info(f"Setting up chat model: {self.chat_model}")
-        chat_model_name = self.chat_model.replace("ollama:", "")
-
+        """
         try:
-            _ = ollama.show(chat_model_name)
+            _ = ollama.show(model)
         except ollama.ResponseError:
-            self.logger.error(f"Could not find ollama model: {chat_model_name}")
-            sys.exit(-1)
-        except ConnectionError:
-            self.logger.error("Could not connect to Ollama.")
-            sys.exit(-1)
-
-        self.model = init_chat_model(
-            chat_model_name,
-            model_provider="ollama",
-            temperature=0.3,
-        )
-
-        try:
-            _ = ollama.show(self.embedding_model)
-        except ollama.ResponseError:
-            self.logger.error(f"Could not find ollama model: {self.embedding_model}")
+            self.logger.error(f"Could not find ollama model: {model}")
             self.logger.error("Please ensure you have pulled the model")
             sys.exit(-1)
         except ConnectionError:
             self.logger.error("Could not connect to Ollama.")
             sys.exit(-1)
-
-        self.logger.info(f"Setting up embedding model: {self.embedding_model}")
-        self.embeddings = OllamaEmbeddings(model=self.embedding_model)
 
     def _load_vector_stores(self):
         """Create/load the vector store"""
@@ -673,7 +655,7 @@ class NML_RAG(object):
 if __name__ == "__main__":
     nml_ai = NML_RAG(
         chat_model="ollama:qwen3:1.7b",
-        embedding_model="bge-m3",
+        embedding_model="ollama:bge-m3",
         logging_level=logging.DEBUG,
     )
     nml_ai.setup()
