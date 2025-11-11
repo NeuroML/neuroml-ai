@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 from contextlib import chdir
 from neuroml_ai.rag import NML_RAG
+from neuroml_ai.schemas import AgentState, QueryTypeSchema, EvaluateAnswerSchema
 
 
 nml_ai_app = typer.Typer()
@@ -40,15 +41,27 @@ def nml_ai_cli(
         nml_ai = NML_RAG(
             chat_model=chat_model,
             embedding_model=embedding_model,
-            logging_level=logging.INFO,
+            logging_level=logging.DEBUG,
         )
         nml_ai.setup()
 
+        # persistent state
+        state = {}
+
         while (query := input("NeuroML-AI (USER) >>> ")) != "quit":
             assert nml_ai
+            # refresh state
+            state.update({"query": query, "query_type": QueryTypeSchema(),
+                          "text_response_eval": EvaluateAnswerSchema(),
+                          "message_for_user": ""})
+
             with yaspin(text="Working ..."):
-                response = nml_ai.run_graph_invoke(query)
-            print(f"NeuroML-AI (AI) >>> {response}\n\n")
+                state = nml_ai.run_graph_invoke_state(AgentState(state))
+
+            if message := state.get("message_for_user", None):
+                print(f"NeuroML-AI (AI) >>> {message}\n\n")
+            else:
+                print("I was unable to answer")
     else:
         # streamlit app
         cwd = Path(__file__).parent

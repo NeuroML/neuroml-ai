@@ -22,7 +22,7 @@ from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 from langchain.tools import tool
 from langchain_chroma import Chroma
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
@@ -93,18 +93,19 @@ class NML_RAG(object):
         self.logger.setLevel(logging_level)
         self.logger.propagate = False
 
-        formatter = logging.Formatter("%(name)s (%(levelname)s) >>> %(message)s")
+        formatter_info = logging.Formatter("%(name)s (%(levelname)s) >>> %(message)s\n\n")
+        formatter_other = logging.Formatter("%(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n")
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(logging.INFO)
         stdout_handler.addFilter(LoggerInfoFilter())
-        stdout_handler.setFormatter(formatter)
+        stdout_handler.setFormatter(formatter_info)
         self.logger.addHandler(stdout_handler)
 
         stderr_handler = logging.StreamHandler(sys.stderr)
         stderr_handler.setLevel(logging_level)
         stderr_handler.addFilter(LoggerNotInfoFilter())
-        stderr_handler.setFormatter(formatter)
+        stderr_handler.setFormatter(formatter_other)
         self.logger.addHandler(stderr_handler)
 
     def setup(self):
@@ -130,15 +131,103 @@ class NML_RAG(object):
 
         self._create_graph()
 
+    def _summarise_history_node(self, state: AgentState) -> dict:
+        """Summarise the conversation so far"""
+        assert self.model
+
+        system_prompt = dedent("""You are a memory/conversation summarisation
+        assistant. Your job is to maintain a concise, factual memory of an
+        ongoing conversation between a user and an AI assistant. This history
+        will help the AI assistant in future conversations with the user.
+
+        Guidelines:
+
+        1. Preserve key facts, user intentions, user requirements, and user
+        constraints.
+        2. Remove filler, greetings, and irrelevant small talk.
+        3. Keep the summary coherent and readable as a standalone record.
+        4. Do not include reasoning steps, or internal thought processes. Do not add explanations or commentary.
+        5. Limit the summary to 5-10 sentences unless the conversation is very complex.
+        6. Make it self-contained. Clearly note what the user said, and what the assistant's reply was.
+
+        """)
+
+        user_prompt = dedent("""
+        Please create a summary of the conversation between the user and the AI
+        assistant. Exclude this request from the summary.
+
+        ------
+
+        Here is the current summary of the conversation so far:
+
+        {old_summary}
+
+        ------
+
+        Here are the exchanges between the user and the assistant since the
+        last summarisation:
+
+        {conversation}
+
+        """)
+
+        prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", user_prompt)]
+        )
+
+        all_messages = state.messages
+
+        conv_messages = list(filter(lambda x: isinstance(x, (HumanMessage, AIMessage)), all_messages[state.summarised_till:]))
+
+        conversation = ""
+        for msg in conv_messages:
+            if isinstance(msg, HumanMessage):
+                conversation += f"User: {msg.content}\n\n"
+            else:
+                conversation += f"Assistant: {msg.content}\n\n"
+
+        self.logger.debug(f"{conversation =}")
+
+        prompt = prompt_template.invoke(
+            {
+                "old_summary": state.context_summary,
+                "conversation": conversation,
+            }
+        )
+
+        output = self.model.invoke(prompt)
+        self.logger.debug(f"Current history summary is:\n{output.content}")
+
+        # Do not update messages here, since we don't want this to be noted as
+        # an AI response to a user query
+        return {"context_summary": output.content, "summarised_till": len(state.messages)}
+
     def _classify_query_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
         assert self.model
 
-        system_prompt = """You are an expert query classifier. Analyse the user's request
-            and determine its intent. Is it a 'general question', a 'NeuroML
-            question', or a 'neuroml code generation' request? Provide your
-            answer as a JSON object matching the
-            requested schema."""
+        system_prompt = dedent("""
+            You are an expert query classifier. Analyse the user's request and
+            determine its intent.
+
+            - If the query is a NeuroML code generation request, respond 'neuroml_code_generation'
+            - Otherwise, if the query mentions NeuroML at all, or is related to NeuroML in any way, respond 'neuroml_question'.
+            - Otherwise, respond "general_question".
+
+            Examples:
+
+            - "How do I define ion channels in NeuroML?" → {{"query_type": "neuroml_question"}}
+            - "Generate NeuroML code for a neuron" → {{"query_type": "neuroml_code_generation"}}
+            - "What is the capital of France?" → {{"query_type": "general_question"}}
+
+            Provide your answer as a JSON object matching the requested schema.
+            Do not add any explanation or text.
+
+            Here is a concise summary of the previous conversation to maintain
+            continuity:
+
+            {context_summary}
+            """)
 
         prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
@@ -146,17 +235,25 @@ class NML_RAG(object):
 
         # can use | to merge these lines
         query_node_llm = self.model.with_structured_output(QueryTypeSchema)
-        prompt = prompt_template.invoke({"query": state.query})
+        prompt = prompt_template.invoke(
+            {"context_summary": state.context_summary, "query": state.query}
+        )
 
         output = query_node_llm.invoke(prompt)
-        self.logger.debug(f"{output = }")
 
-        return {"query_type": QueryTypeSchema(query_type=output.query_type)}
+        messages = state.messages
+        messages.append(HumanMessage(content=state.query))
+
+        self.logger.debug(f"{state =}")
+
+        return {"query_type": QueryTypeSchema(query_type=output.query_type), "messages": messages}
 
     def _generate_neuroml_code_node(self, state: AgentState) -> dict:
         """Generate code"""
         messages = state.messages
         messages.append(AIMessage("I can generate code for you"))
+
+        self.logger.debug(f"{state =}")
 
         return {"messages": messages}
 
@@ -174,10 +271,17 @@ class NML_RAG(object):
         2. Avoid inventing facts. If a fact is not known or uncertain, respond
         with "I was unable to find factual information about this query".
         3. Keep answers clear, concise, formal, and user-friendly.
-        4. Always prefix all your answers with this warning "This information
-        has not been retrieved from any provided documentation and may contain
-        errors. It is generated from general LLM knowledge."
+        4. If you have generated the answer from your general
+        knowledge/training, inform that user that this information has not been
+        retrieved from any provided documentation and may contain errors, that
+        it is generated from general LLM knowledge."
 
+        # Conversation history
+
+        Here is a concise summary of the previous conversation to maintain
+        continuity:
+
+        {context_summary}
         """)
 
         assert self.model
@@ -186,7 +290,9 @@ class NML_RAG(object):
             [("system", system_prompt), ("human", "User query: {query}")]
         )
         self.logger.debug(f"{question_prompt_template =}")
-        prompt = question_prompt_template.invoke({"query": state.query})
+        prompt = question_prompt_template.invoke(
+            {"context_summary": state.context_summary, "query": state.query}
+        )
 
         output = self.model.invoke(prompt)
         # self.logger.debug(f"{output =}")
@@ -194,7 +300,10 @@ class NML_RAG(object):
 
         messages = state.messages
         messages.append(output)
-        return {"messages": messages, "user_message": output.content}
+
+        self.logger.debug(f"{state =}")
+
+        return {"messages": messages, "message_for_user": output.content}
 
     def _answer_neuroml_question_node(self, state: AgentState) -> dict:
         """Answer a NeuroML question"""
@@ -223,13 +332,13 @@ class NML_RAG(object):
         5. If you are unable to find the answer in the documentation, let the
           user know.
 
-        ## Available tools:
+        # Available tools:
 
         You have access to the following tools:
 
         1. `_retrieve_docs`: use this tool to search the NeuroML documentation
 
-        ## Your thought process (ReAct):
+        # Your thought process (ReAct):
 
         You must always structure your response using the
         Thought, Action, Observation, Final Answer pattern in that order:
@@ -243,16 +352,23 @@ class NML_RAG(object):
         4. Final Answer: Generate the final response based only on the
           Observation.
 
+        # Conversation history
+
+        Here is a concise summary of the previous conversation to maintain
+        continuity:
+
+        {context_summary}
         """)
 
         assert self.model
 
         question_prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
-            # [("human", "User query: {query}")]
         )
         self.logger.debug(f"{question_prompt_template =}")
-        prompt = question_prompt_template.invoke({"query": state.query})
+        prompt = question_prompt_template.invoke(
+            {"context_summary": state.context_summary, "query": state.query}
+        )
 
         self._load_vector_stores()
         retrieve_docs_tool = tool(
@@ -264,11 +380,13 @@ class NML_RAG(object):
         self.logger.debug(f"{retrieve_docs_tool =}")
 
         output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
-        # self.logger.debug(f"{output =}")
-        self.logger.debug(output)
+        self.logger.debug(f"{output =}")
 
         messages = state.messages
         messages.append(output)
+
+        self.logger.debug(f"{state =}")
+
         return {"messages": messages}
 
     def _generate_answer_from_context_node(self, state: AgentState) -> dict:
@@ -285,19 +403,28 @@ class NML_RAG(object):
           knowledge from your general training.
         - Use concise, formal language.
 
+        Here is a concise summary of the previous conversation to maintain
+        continuity:
+
+        {context_summary}
+
         """)
 
         generate_answer_template = ChatPromptTemplate(
             [
                 ("system", system_prompt),
-                ("human", "Question: {question}\nContext:{context}"),
+                ("human", "Question: {question}\n\nContext:\n{context}"),
             ]
             # [("human", "User query: {query}")]
         )
         question = state.query
         context = state.messages[-1].content
         prompt = generate_answer_template.invoke(
-            {"question": question, "context": context}
+            {
+                "context_summary": state.context_summary,
+                "question": question,
+                "context": context,
+            }
         )
         self.logger.debug(f"{prompt =}")
         output = self.model.invoke(prompt)
@@ -305,6 +432,9 @@ class NML_RAG(object):
 
         messages = state.messages
         messages.append(output)
+
+        self.logger.debug(f"{state =}")
+
         return {"messages": messages}
 
     def _evaluate_answer_node(self, state: AgentState) -> dict:
@@ -386,10 +516,8 @@ class NML_RAG(object):
         output = query_node_llm.invoke(prompt)
         self.logger.debug(f"{output =}")
 
-        # add the summary as a message also, to keep the message chain going
-        messages = state.messages
-        messages.append(AIMessage(content=output.summary))
-        return {"messages": messages, "text_response_eval": output}
+        # do not store the evaluation message in state
+        return {"text_response_eval": output, "messages": state.messages}
 
     def _route_answer_evaluator_node(self, state: AgentState) -> str:
         """Route depending on evaluation of answer"""
@@ -425,16 +553,19 @@ class NML_RAG(object):
     def _give_neuroml_answer_to_user_node(self, state: AgentState) -> dict:
         """Return the answer message to the user"""
         messages = state.messages
-        answer = messages[-2]
+        answer = messages[-1]
 
         self.logger.info(f"Returning final answer to user: {answer}")
 
-        return {"user_message": answer.content}
+        self.logger.debug(f"{state =}")
+
+        return {"message_for_user": answer.content}
 
     def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
         self.workflow.add_node("classify_query", self._classify_query_node)
+
         self.workflow.add_node(
             "answer_neuroml_question", self._answer_neuroml_question_node
         )
@@ -452,17 +583,17 @@ class NML_RAG(object):
         self.workflow.add_node(
             "give_neuroml_answer_to_user", self._give_neuroml_answer_to_user_node
         )
+        self.workflow.add_node("summarise_history", self._summarise_history_node)
 
         self.workflow.add_edge(START, "classify_query")
-
         self.workflow.add_conditional_edges(
             "classify_query",
             self._route_query_node,
             {
-                "general question": "answer_general_question",
-                "neuroml question": "answer_neuroml_question",
-                "neuroml code generation": "generate_neuroml_code",
-                "unknown": END,
+                "general_question": "answer_general_question",
+                "neuroml_question": "answer_neuroml_question",
+                "neuroml_code_generation": "generate_neuroml_code",
+                "undefined": END,
             },
         )
 
@@ -471,7 +602,6 @@ class NML_RAG(object):
             tools_condition,
             {
                 "tools": "retrieve_docs",
-                END: END,
             },
         )
 
@@ -488,9 +618,10 @@ class NML_RAG(object):
 
         self.workflow.add_edge("retrieve_docs", "generate_answer_from_context")
         self.workflow.add_edge("generate_answer_from_context", "evaluate_answer")
-        self.workflow.add_edge("give_neuroml_answer_to_user", END)
-        self.workflow.add_edge("answer_general_question", END)
-        self.workflow.add_edge("generate_neuroml_code", END)
+        self.workflow.add_edge("give_neuroml_answer_to_user", "summarise_history")
+        self.workflow.add_edge("answer_general_question", "summarise_history")
+        self.workflow.add_edge("generate_neuroml_code", "summarise_history")
+        self.workflow.add_edge("summarise_history", END)
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
         self.graph.get_graph().draw_mermaid_png(
@@ -621,13 +752,25 @@ class NML_RAG(object):
         self._load_vector_stores()
         self._retrieve_docs("NeuroML community")
 
-    def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
-        """Run the graph"""
+    def run_graph_invoke_state(self, state: AgentState, thread_id: str = "default_thread"):
+        """Run the graph but accept and return states"""
 
         config = {"configurable": {"thread_id": thread_id}}
-        final_state = self.graph.invoke({"query": query}, config=config)
+
+        final_state = self.graph.invoke(state, config=config)
         self.logger.debug(final_state)
-        if message := final_state.get("user_message", None):
+        return final_state
+
+    def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
+        """Run the graph by using and returning string input"""
+
+        config = {"configurable": {"thread_id": thread_id}}
+
+        final_state = self.graph.invoke(
+            {"query": query}, config=config
+        )
+        self.logger.debug(f"{final_state =}")
+        if message := final_state.get("message_for_user", None):
             return message
         else:
             return "I was unable to answer"
@@ -636,11 +779,13 @@ class NML_RAG(object):
         """Run the graph but return the stream"""
         config = {"configurable": {"thread_id": thread_id}}
 
-        for chunk in self.graph.stream({"query": query}, config=config):
+        for chunk in self.graph.stream(
+            {"query": query}, config=config
+        ):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
-                if message := state.get("user_message", None):
+                if message := state.get("message_for_user", None):
                     self.logger.info(f"User message: {message}")
                     yield message
                 else:
@@ -650,7 +795,9 @@ class NML_RAG(object):
         """Run the graph but return the stream"""
         config = {"configurable": {"thread_id": thread_id}}
 
-        return self.graph.stream({"query": query}, config=config)
+        return self.graph.stream(
+            {"query": query}, config=config
+        )
 
 
 if __name__ == "__main__":

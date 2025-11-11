@@ -8,7 +8,7 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 from typing_extensions import List, Literal
 
@@ -16,10 +16,10 @@ from typing_extensions import List, Literal
 class QueryTypeSchema(BaseModel):
     """Docstring for QueryTypeSchema."""
 
-    query_type: Literal["undefined", "general question", "neuroml question",
-                        "neuroml code generation"] = Field(
+    query_type: Literal[
+        "undefined", "general_question", "neuroml_question", "neuroml_code_generation"
+    ] = Field(
         default="undefined",
-        description="'question' if user is asking for information, 'code_generation', if the user is asking for code, 'unknown' otherwise",
     )
 
 
@@ -46,7 +46,9 @@ class AgentState(BaseModel):
     query_type: QueryTypeSchema = QueryTypeSchema()
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
     # TODO: code_response_eval: EvaluateAnswerSchema
-    messages: List[BaseMessage] = Field(default_factory=list)
+    messages: List[AnyMessage] = Field(default_factory=list)
     # summarised version of context so far
     context_summary: str = ""
-    user_message: str = ""
+    # index till which summarised
+    summarised_till: int = 0
+    message_for_user: str = ""
