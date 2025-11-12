@@ -45,23 +45,14 @@ def nml_ai_cli(
         )
         nml_ai.setup()
 
-        # persistent state
-        state = {}
-
         while (query := input("NeuroML-AI (USER) >>> ")) != "quit":
             assert nml_ai
-            # refresh state
-            state.update({"query": query, "query_type": QueryTypeSchema(),
-                          "text_response_eval": EvaluateAnswerSchema(),
-                          "message_for_user": ""})
 
+            # we use checkpoints, so we don't need to store and reload the
+            # state ourselves
             with yaspin(text="Working ..."):
-                state = nml_ai.run_graph_invoke_state(AgentState(state))
-
-            if message := state.get("message_for_user", None):
-                print(f"NeuroML-AI (AI) >>> {message}\n\n")
-            else:
-                print("I was unable to answer")
+                response = nml_ai.run_graph_invoke(query)
+                print(f"NeuroML-AI (AI) >>> {response}\n\n")
     else:
         # streamlit app
         cwd = Path(__file__).parent

@@ -22,7 +22,7 @@ from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 from langchain.tools import tool
 from langchain_chroma import Chroma
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
@@ -30,7 +30,7 @@ from langchain_text_splitters import (
 )
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import tools_condition
 
 from .schemas import QueryTypeSchema, EvaluateAnswerSchema, AgentState
 
@@ -149,12 +149,13 @@ class NML_RAG(object):
         4. Do not include reasoning steps, or internal thought processes. Do not add explanations or commentary.
         5. Limit the summary to 5-10 sentences unless the conversation is very complex.
         6. Make it self-contained. Clearly note what the user said, and what the assistant's reply was.
+        7. Do not include requests to summarise the conversation in the summary.
 
         """)
 
         user_prompt = dedent("""
         Please create a summary of the conversation between the user and the AI
-        assistant. Exclude this request from the summary.
+        assistant.
 
         ------
 
@@ -194,6 +195,8 @@ class NML_RAG(object):
                 "conversation": conversation,
             }
         )
+
+        self.logger.debug(f"{prompt =}")
 
         output = self.model.invoke(prompt)
         self.logger.debug(f"Current history summary is:\n{output.content}")
@@ -572,7 +575,7 @@ class NML_RAG(object):
         self.workflow.add_node(
             "answer_general_question", self._answer_general_question_node
         )
-        self.workflow.add_node("retrieve_docs", ToolNode([self._retrieve_docs]))
+        self.workflow.add_node("retrieve_docs", self._retrieve_docs)
         self.workflow.add_node(
             "generate_neuroml_code", self._generate_neuroml_code_node
         )
@@ -730,7 +733,7 @@ class NML_RAG(object):
             self.logger.debug(f"Length of split docs: {len(splits)}")
             self.index = self.text_vector_store.add_documents(documents=splits)
 
-    def _retrieve_docs(self, query: str):
+    def _retrieve_docs(self, state: AgentState) -> dict:
         """Retrieve embeddings from documentation to answer a query
 
         :param query: user query
@@ -739,23 +742,30 @@ class NML_RAG(object):
         """
         assert self.text_vector_store
 
-        res = self.text_vector_store.similarity_search(query, k=self.k)
+        res = self.text_vector_store.similarity_search(state.query, k=self.k)
 
         serialized = "\n\n".join(
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
         )
-        self.logger.debug(res)
-        return serialized, res
+        self.logger.debug(f"{serialized =}")
+        result = ToolMessage(content=serialized,
+                             tool_call_id=state.messages[-1].tool_calls[0]["id"],
+                             name="_retrieve_docs",
+                             artifact=res)
 
-    def test_retrieval(self):
-        """Test the retrieval system"""
-        self._load_vector_stores()
-        self._retrieve_docs("NeuroML community")
+        messages = state.messages
+        state.messages.append(result)
 
-    def run_graph_invoke_state(self, state: AgentState, thread_id: str = "default_thread"):
+        return {"messages": messages}
+
+    def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
         """Run the graph but accept and return states"""
 
         config = {"configurable": {"thread_id": thread_id}}
+
+        if "query" not in state:
+            self.logger.error(f"Provided state should include the key 'query': {state}")
+            sys.exit(-1)
 
         final_state = self.graph.invoke(state, config=config)
         self.logger.debug(final_state)
