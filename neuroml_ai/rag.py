@@ -67,7 +67,7 @@ class NML_RAG(object):
     def __init__(
         self,
         chat_model: str = "ollama:qwen3:1.7b",
-        embedding_model: str = "bge-m3",
+        embedding_model: str = "ollama:bge-m3",
         logging_level: int = logging.DEBUG,
     ):
         """Initialise"""
