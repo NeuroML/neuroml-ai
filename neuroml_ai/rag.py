@@ -170,7 +170,7 @@ class NML_RAG(object):
         ## Core directives
 
         1. Only provide information you are confident about. If you are
-        unsuare, clearly say so.
+        unsure, clearly say so.
         2. Avoid inventing facts. If a fact is not known or uncertain, respond
         with "I was unable to find factual information about this query".
         3. Keep answers clear, concise, formal, and user-friendly.
@@ -276,7 +276,7 @@ class NML_RAG(object):
         assert self.model
 
         system_prompt = dedent("""
-        You are an expert summariser. Use only the provided context to generate
+        You are an expert summarizer. Use only the provided context to generate
         an answer to the provided question.
 
         # Core Directives:
