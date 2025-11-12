@@ -44,7 +44,7 @@ jobs:
 
     - name: Install package
       run: |
-        uv pip install .
+        uv pip install .[dev]
 
     - name: List packages so far
       run: |
@@ -55,7 +55,10 @@ jobs:
       run: |
         nml-ai --help
 
+    - name: Run unit tests
+      run: |
+        pytest
+
     - name: Lint with ruff
       run: |
-        uv pip install ruff
         ruff check . --exit-zero
