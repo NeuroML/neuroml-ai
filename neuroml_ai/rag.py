@@ -702,6 +702,8 @@ class NML_RAG(object):
             },
         )
 
+        # TODO: replace with routing node that does not go to __end__ if the
+        # node decides not to call the tool.
         self.workflow.add_conditional_edges(
             "answer_neuroml_question",
             tools_condition,
