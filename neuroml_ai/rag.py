@@ -83,6 +83,10 @@ class NML_RAG(object):
         self.k_max = 10
         self.k = self.default_k
 
+        # number of conversations after which to summarise
+        # no need to summarise after each
+        self.summarise_threshold = 10
+
         # we prefer markdown because the one page PDF that is available for the
         # documentation does not work too well with embeddings
         my_path = Path(__file__).parent
@@ -146,10 +150,12 @@ class NML_RAG(object):
         constraints.
         2. Remove filler, greetings, and irrelevant small talk.
         3. Keep the summary coherent and readable as a standalone record.
-        4. Do not include reasoning steps, or internal thought processes. Do not add explanations or commentary.
-        5. Limit the summary to 5-10 sentences unless the conversation is very complex.
+        4. Exclude reasoning steps, or internal thought processes. Do not add
+        explanations or commentary. Exclude requests to summarise the
+        conversation in the summary.
+        5. Limit the summary to 5-10 sentences
+        unless the conversation is very complex.
         6. Make it self-contained. Clearly note what the user said, and what the assistant's reply was.
-        7. Do not include requests to summarise the conversation in the summary.
 
         """)
 
@@ -181,11 +187,18 @@ class NML_RAG(object):
         conv_messages = list(filter(lambda x: isinstance(x, (HumanMessage, AIMessage)), all_messages[state.summarised_till:]))
 
         conversation = ""
+        conversations_num = 0
         for msg in conv_messages:
             if isinstance(msg, HumanMessage):
                 conversation += f"User: {msg.content}\n\n"
+                conversations_num += 1
             else:
                 conversation += f"Assistant: {msg.content}\n\n"
+                conversations_num += 1
+
+        if conversations_num < self.summarise_threshold:
+            self.logger.debug(f"Not enough conversations to summarise yet: {conversations_num}/{self.summarise_threshold}")
+            return {}
 
         self.logger.debug(f"{conversation =}")
 
@@ -212,6 +225,10 @@ class NML_RAG(object):
         system_prompt = dedent("""
             You are an expert query classifier. Analyse the user's request and
             determine its intent.
+
+            NeuroML is a standard and software ecosystem for data-driven
+            biophysically detailed computational modelling of neurons and
+            neuronal circuits.
 
             - If the query is a NeuroML code generation request, respond 'neuroml_code_generation'
             - Otherwise, if the query mentions NeuroML at all, or is related to NeuroML in any way, respond 'neuroml_question'.
@@ -314,8 +331,11 @@ class NML_RAG(object):
         system_prompt = dedent("""
         You are a fact-based research assistant. Your only goal is to provide
         accurate and current answers to user queries. Your speciality is
-        NeuroML, the standard and software ecosystem for biophysically detailed
-        modelling of neurons and neuronal circuits and related software tools.
+        NeuroML.
+
+        NeuroML is a standard and software ecosystem for data-driven
+        biophysically detailed computational modelling of neurons and neuronal
+        circuits.
 
         # Core Directives:
         1. Top priority: use the Tools. For any user query that requires a
@@ -418,7 +438,6 @@ class NML_RAG(object):
                 ("system", system_prompt),
                 ("human", "Question: {question}\n\nContext:\n{context}"),
             ]
-            # [("human", "User query: {query}")]
         )
         question = state.query
         context = state.messages[-1].content
