@@ -15,6 +15,7 @@ from glob import glob
 from hashlib import sha256
 from pathlib import Path
 from textwrap import dedent
+from typing import Optional
 
 import chromadb
 import ollama
@@ -79,13 +80,14 @@ class NML_RAG(object):
         self.text_vector_store = None
         self.image_vector_store = None
 
-        self.default_k = 2
+        self.default_k = 3
         self.k_max = 10
         self.k = self.default_k
 
         # number of conversations after which to summarise
         # no need to summarise after each
-        self.summarise_threshold = 10
+        # 5 rounds: 10 messages
+        self.num_recent_messages = 10
 
         # we prefer markdown because the one page PDF that is available for the
         # documentation does not work too well with embeddings
@@ -97,8 +99,12 @@ class NML_RAG(object):
         self.logger.setLevel(logging_level)
         self.logger.propagate = False
 
-        formatter_info = logging.Formatter("%(name)s (%(levelname)s) >>> %(message)s\n\n")
-        formatter_other = logging.Formatter("%(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n")
+        formatter_info = logging.Formatter(
+            "%(name)s (%(levelname)s) >>> %(message)s\n\n"
+        )
+        formatter_other = logging.Formatter(
+            "%(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n"
+        )
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(logging.INFO)
@@ -182,22 +188,15 @@ class NML_RAG(object):
             [("system", system_prompt), ("human", user_prompt)]
         )
 
-        all_messages = state.messages
+        conversation, human_messages, ai_messages = self._get_recent_conversation(
+            state.messages, state.summarised_till, None
+        )
+        conversations_num = len(human_messages) + len(ai_messages)
 
-        conv_messages = list(filter(lambda x: isinstance(x, (HumanMessage, AIMessage)), all_messages[state.summarised_till:]))
-
-        conversation = ""
-        conversations_num = 0
-        for msg in conv_messages:
-            if isinstance(msg, HumanMessage):
-                conversation += f"User: {msg.content}\n\n"
-                conversations_num += 1
-            else:
-                conversation += f"Assistant: {msg.content}\n\n"
-                conversations_num += 1
-
-        if conversations_num < self.summarise_threshold:
-            self.logger.debug(f"Not enough conversations to summarise yet: {conversations_num}/{self.summarise_threshold}")
+        if conversations_num < self.num_recent_messages:
+            self.logger.debug(
+                f"Not enough conversations to summarise yet: {conversations_num}/{self.num_recent_messages}"
+            )
             return {}
 
         self.logger.debug(f"{conversation =}")
@@ -216,38 +215,131 @@ class NML_RAG(object):
 
         # Do not update messages here, since we don't want this to be noted as
         # an AI response to a user query
-        return {"context_summary": output.content, "summarised_till": len(state.messages)}
+        return {
+            "context_summary": output.content,
+            "summarised_till": len(state.messages),
+        }
+
+    def _add_memory_to_prompt(self, state: AgentState) -> str:
+        """Add memory to system prompt.
+
+        Adds the context summary and recent conversation
+
+        :param state: agent state
+        :returns: "memory" string to add to the system prompt
+
+        """
+        ret_string = ""
+
+        directive = dedent(
+            """
+            IMPORTANT:
+
+            - Consider both the latest user message AND the conversation history.
+            - If the latest query is contextually about NeuroML due to prior discussion, treat it as a NeuroML related query even if the word does not appear.
+
+            """
+        )
+
+        if len(state.context_summary):
+            ret_string += dedent(
+                f"""
+            -----
+
+            Here is a concise summary of the previous conversation to maintain
+            continuity:
+
+            {state.context_summary}
+
+            -----
+            """
+            )
+
+        conversation, _, _ = self._get_recent_conversation(
+            state.messages, (-1 * self.num_recent_messages), None
+        )
+        if len(conversation):
+            ret_string += dedent(
+                f"""
+            -----
+
+            Here are the recent messages between the user and the assistant:
+
+            {conversation}
+
+            -----
+            """
+            )
+
+        if len(ret_string):
+            ret_string += directive
+
+        return ret_string
+
+    def _get_recent_conversation(
+        self, all_messages, start: int = 0, stop: Optional[int] = None
+    ) -> tuple[str, list[HumanMessage], list[AIMessage]]:
+        """Get recent converstations between start and stop indices
+
+        :param all_messages: all the messages
+        :param start: start index
+        :param stop: stop index
+        :returns: (conversation, list of human messages, list of ai messages)
+
+        """
+        conv_messages = list(
+            filter(
+                lambda x: isinstance(x, (HumanMessage, AIMessage)),
+                all_messages[start:stop],
+            )
+        )
+        human_messages = []
+        ai_messages = []
+        conversation = ""
+        for msg in conv_messages:
+            if isinstance(msg, HumanMessage):
+                conversation += f"{msg.pretty_repr()}"
+                human_messages.append(msg)
+            else:
+                conversation += f": {msg.pretty_repr()}"
+                ai_messages.append(msg)
+
+        return (conversation.replace('{', '{{').replace('}', '}}'), human_messages, ai_messages)
 
     def _classify_query_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
         assert self.model
+        self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
             You are an expert query classifier. Analyse the user's request and
             determine its intent.
 
-            NeuroML is a standard and software ecosystem for data-driven
-            biophysically detailed computational modelling of neurons and
-            neuronal circuits.
+            # Classification rules:
+
+            Reason about the user's request. Go step by step. Take past
+            conversation history and context into account to identify the
+            objective of the query.
 
             - If the query is a NeuroML code generation request, respond 'neuroml_code_generation'
-            - Otherwise, if the query mentions NeuroML at all, or is related to NeuroML in any way, respond 'neuroml_question'.
-            - Otherwise, respond "general_question".
+            - If the query mentions NeuroML at all in its text, respond 'neuroml_question'.
+            - If the query is asking for information related to NeuroML, respond 'neuroml_question'
+
+            - If the query is unrelated to NeuroML, only then respond "general_question".
 
             Examples:
-
-            - "How do I define ion channels in NeuroML?" → {{"query_type": "neuroml_question"}}
-            - "Generate NeuroML code for a neuron" → {{"query_type": "neuroml_code_generation"}}
-            - "What is the capital of France?" → {{"query_type": "general_question"}}
+            - "How do I get learn NeuroML?": {{"query_type": "neuroml_question"}}
+            - "How do I get started with NeuroML?": {{"query_type": "neuroml_question"}}
+            - "How do I define ion channels in NeuroML?": {{"query_type": "neuroml_question"}}
+            - "Generate NeuroML code for a neuron": {{"query_type": "neuroml_code_generation"}}
+            - "What is the capital of France?": {{"query_type": "general_question"}}
+            - "What are we talking about?": {{"query_type": "general_question"}}
 
             Provide your answer as a JSON object matching the requested schema.
             Do not add any explanation or text.
-
-            Here is a concise summary of the previous conversation to maintain
-            continuity:
-
-            {context_summary}
             """)
+
+        system_prompt += self._add_memory_to_prompt(state)
 
         prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
@@ -255,30 +347,35 @@ class NML_RAG(object):
 
         # can use | to merge these lines
         query_node_llm = self.model.with_structured_output(QueryTypeSchema)
-        prompt = prompt_template.invoke(
-            {"context_summary": state.context_summary, "query": state.query}
-        )
+        prompt = prompt_template.invoke({"query": state.query})
+
+        self.logger.debug(f"{prompt = }")
 
         output = query_node_llm.invoke(prompt)
 
         messages = state.messages
         messages.append(HumanMessage(content=state.query))
 
-        self.logger.debug(f"{state =}")
 
-        return {"query_type": QueryTypeSchema(query_type=output.query_type), "messages": messages}
+        return {
+            "query_type": QueryTypeSchema(query_type=output.query_type),
+            "messages": messages,
+        }
 
     def _generate_neuroml_code_node(self, state: AgentState) -> dict:
         """Generate code"""
+        self.logger.debug(f"{state =}")
+
         messages = state.messages
         messages.append(AIMessage("I can generate code for you"))
 
-        self.logger.debug(f"{state =}")
 
         return {"messages": messages}
 
     def _answer_general_question_node(self, state: AgentState) -> dict:
         """Answer a general question"""
+        assert self.model
+        self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
         You are an AI assistant. Answer questions to the best of your
@@ -295,24 +392,15 @@ class NML_RAG(object):
         knowledge/training, inform that user that this information has not been
         retrieved from any provided documentation and may contain errors, that
         it is generated from general LLM knowledge."
-
-        # Conversation history
-
-        Here is a concise summary of the previous conversation to maintain
-        continuity:
-
-        {context_summary}
         """)
 
-        assert self.model
+        system_prompt += self._add_memory_to_prompt(state)
 
         question_prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
         )
         self.logger.debug(f"{question_prompt_template =}")
-        prompt = question_prompt_template.invoke(
-            {"context_summary": state.context_summary, "query": state.query}
-        )
+        prompt = question_prompt_template.invoke({"query": state.query})
 
         output = self.model.invoke(prompt)
         # self.logger.debug(f"{output =}")
@@ -321,45 +409,40 @@ class NML_RAG(object):
         messages = state.messages
         messages.append(output)
 
-        self.logger.debug(f"{state =}")
 
         return {"messages": messages, "message_for_user": output.content}
 
     def _answer_neuroml_question_node(self, state: AgentState) -> dict:
         """Answer a NeuroML question"""
+        assert self.model
+        self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
-        You are a fact-based research assistant. Your only goal is to provide
-        accurate and current answers to user queries. Your speciality is
-        NeuroML.
-
-        NeuroML is a standard and software ecosystem for data-driven
-        biophysically detailed computational modelling of neurons and neuronal
-        circuits.
+        You are a fact-based research assistant. Your goal is to provide
+        accurate answers to user queries about NeuroML.
 
         # Core Directives:
-        1. Top priority: use the Tools. For any user query that requires a
-          factual answer, use the tool. Never answer a knowledge based question
-          directly from your general training data without using the tools.
-          Only skip using the tool for queries that are not NeuroML related.
 
-        2. When using the tools, generate precise queries. Do not use stop
-          words.
-
-        3. After obtaining the data from the tool, only use the obtained
-          information to craft your answer.
-
-        4. Prefer Python over other programming languages that may be mentioned
-          in the documentation.
-
-        5. If you are unable to find the answer in the documentation, let the
-          user know.
+        1. Reason about the user's request. Include past conversation history and context.
+        2. **Always** use the available tools. Never answer a query without using a tool.
+        1. Generate precise queries for the tools. Do not use stop words.
 
         # Available tools:
 
         You have access to the following tools:
 
         1. `_retrieve_docs`: use this tool to search the NeuroML documentation
+        for information to answer the query.
+        """)
+
+        # unused because we make the tool call explicitly
+        react_directive = """
+
+        3. Prefer Python over other programming languages that may be mentioned
+        in the documentation.
+
+        4. If you are unable to find the answer in the documentation using the
+        tool, let the user know.
 
         # Your thought process (ReAct):
 
@@ -367,33 +450,27 @@ class NML_RAG(object):
         Thought, Action, Observation, Final Answer pattern in that order:
 
         1. Thought: Reason about the user's request. Always conclude that a
-          factual query about NeuroML requires an `Action: retrieve`.
+        factual query about NeuroML requires an `Action: retrieve`.
+
         2. Action: Generate the tool call (e.g., `retrieve({{"query": "focused
-          search term"}})`).
+        search term"}})`).
+
         3. Observation: This is the result of the tool execution (the
-          documents).
+        documents).
+
         4. Final Answer: Generate the final response based only on the
-          Observation.
+        Observation.
 
-        # Conversation history
+        """
 
-        Here is a concise summary of the previous conversation to maintain
-        continuity:
-
-        {context_summary}
-        """)
-
-        assert self.model
+        system_prompt += self._add_memory_to_prompt(state)
 
         question_prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
         )
-        self.logger.debug(f"{question_prompt_template =}")
-        prompt = question_prompt_template.invoke(
-            {"context_summary": state.context_summary, "query": state.query}
-        )
+        prompt = question_prompt_template.invoke({"query": state.query})
+        self.logger.debug(f"{prompt =}")
 
-        self._load_vector_stores()
         retrieve_docs_tool = tool(
             "_retrieve_docs",
             description="Retrieve information from NeuroML documentation",
@@ -401,51 +478,57 @@ class NML_RAG(object):
         )(self._retrieve_docs)
 
         self.logger.debug(f"{retrieve_docs_tool =}")
-
         output = self.model.bind_tools([retrieve_docs_tool]).invoke(prompt)
+
+        # output = self.model.invoke(prompt)
         self.logger.debug(f"{output =}")
 
         messages = state.messages
         messages.append(output)
 
-        self.logger.debug(f"{state =}")
 
         return {"messages": messages}
 
     def _generate_answer_from_context_node(self, state: AgentState) -> dict:
         """Generate the answer"""
         assert self.model
+        self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
         You are an expert summariser. Use only the provided context to generate
-        an answer to the provided question.
+        an answer to the provided question. The context is only available to
+        you, the user does not see it.
 
         # Core Directives:
 
         - Limit yourself to facts from the provided context only, avoid using
           knowledge from your general training.
         - Use concise, formal language.
-
-        Here is a concise summary of the previous conversation to maintain
-        continuity:
-
-        {context_summary}
-
+        - Write the answer as a self contained explanation.
+        - Do not mention "context", "reference material", "documents" or
+          "retrieval".
+        - Do not refer to documents indirectly (e.g., "as described above",
+          "follow the tutorial"). Instead, restate the necessary information
+          directly to the user in clear natural language.
         """)
+
+        system_prompt += self._add_memory_to_prompt(state)
 
         generate_answer_template = ChatPromptTemplate(
             [
                 ("system", system_prompt),
-                ("human", "Question: {question}\n\nContext:\n{context}"),
+                (
+                    "human",
+                    "Question: {question}\n\nContext (reference material not visible to the user):\n{reference_material}",
+                ),
             ]
         )
         question = state.query
-        context = state.messages[-1].content
+        reference_material = state.messages[-1].content
         prompt = generate_answer_template.invoke(
             {
-                "context_summary": state.context_summary,
                 "question": question,
-                "context": context,
+                "reference_material": reference_material.replace('{', '{{').replace('}', '}}'),
             }
         )
         self.logger.debug(f"{prompt =}")
@@ -455,7 +538,6 @@ class NML_RAG(object):
         messages = state.messages
         messages.append(output)
 
-        self.logger.debug(f"{state =}")
 
         return {"messages": messages}
 
@@ -532,7 +614,7 @@ class NML_RAG(object):
         # can use | to merge these lines
         query_node_llm = evaluator_model.with_structured_output(EvaluateAnswerSchema)
         prompt = prompt_template.invoke(
-            {"question": question, "context": context, "answer": answer}
+            {"question": question, "context": context.replace('{', '{{').replace('}', '}}'), "answer": answer}
         )
 
         output = query_node_llm.invoke(prompt)
@@ -574,12 +656,13 @@ class NML_RAG(object):
 
     def _give_neuroml_answer_to_user_node(self, state: AgentState) -> dict:
         """Return the answer message to the user"""
+        self.logger.debug(f"{state =}")
+
         messages = state.messages
         answer = messages[-1]
 
         self.logger.info(f"Returning final answer to user: {answer}")
 
-        self.logger.debug(f"{state =}")
 
         return {"message_for_user": answer.content}
 
@@ -759,6 +842,8 @@ class NML_RAG(object):
         :returns: serialised metadata/page content and vector_store look up result
 
         """
+        self._load_vector_stores()
+
         assert self.text_vector_store
 
         res = self.text_vector_store.similarity_search(state.query, k=self.k)
@@ -767,10 +852,12 @@ class NML_RAG(object):
             (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
         )
         self.logger.debug(f"{serialized =}")
-        result = ToolMessage(content=serialized,
-                             tool_call_id=state.messages[-1].tool_calls[0]["id"],
-                             name="_retrieve_docs",
-                             artifact=res)
+        result = ToolMessage(
+            content=serialized,
+            tool_call_id=state.messages[-1].tool_calls[0]["id"],
+            name="_retrieve_docs",
+            # artifact=res,  # contains the text only, so no need to keep
+        )
 
         messages = state.messages
         state.messages.append(result)
@@ -795,9 +882,7 @@ class NML_RAG(object):
 
         config = {"configurable": {"thread_id": thread_id}}
 
-        final_state = self.graph.invoke(
-            {"query": query}, config=config
-        )
+        final_state = self.graph.invoke({"query": query}, config=config)
         self.logger.debug(f"{final_state =}")
         if message := final_state.get("message_for_user", None):
             return message
@@ -808,9 +893,7 @@ class NML_RAG(object):
         """Run the graph but return the stream"""
         config = {"configurable": {"thread_id": thread_id}}
 
-        for chunk in self.graph.stream(
-            {"query": query}, config=config
-        ):
+        for chunk in self.graph.stream({"query": query}, config=config):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
@@ -824,9 +907,7 @@ class NML_RAG(object):
         """Run the graph but return the stream"""
         config = {"configurable": {"thread_id": thread_id}}
 
-        return self.graph.stream(
-            {"query": query}, config=config
-        )
+        return self.graph.stream({"query": query}, config=config)
 
 
 if __name__ == "__main__":
