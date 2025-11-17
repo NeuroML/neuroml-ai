@@ -25,6 +25,7 @@ def nml_ai_cli(
     chat_model: str = "ollama:qwen3:1.7b",
     embedding_model: str = "ollama:bge-m3",
     gui: bool = False,
+    single_query: str = ""
 ):
     """NeuroML AI cli wrapper function"""
 
@@ -45,14 +46,22 @@ def nml_ai_cli(
         )
         nml_ai.setup()
 
-        while (query := input("NeuroML-AI (USER) >>> ")) != "quit":
-            assert nml_ai
-
-            # we use checkpoints, so we don't need to store and reload the
-            # state ourselves
+        if len(single_query):
+            print(f"NeuroML-AI (USER) >>> {single_query}\n\n")
             with yaspin(text="Working ..."):
-                response = nml_ai.run_graph_invoke(query)
+                response = nml_ai.run_graph_invoke(single_query)
                 print(f"NeuroML-AI (AI) >>> {response}\n\n")
+
+        else:
+            while (query := input("NeuroML-AI (USER) >>> ")) != "quit":
+                assert nml_ai
+
+                # we use checkpoints, so we don't need to store and reload the
+                # state ourselves
+                with yaspin(text="Working ..."):
+                    response = nml_ai.run_graph_invoke(query)
+                    print(f"NeuroML-AI (AI) >>> {response}\n\n")
+
     else:
         # streamlit app
         cwd = Path(__file__).parent
