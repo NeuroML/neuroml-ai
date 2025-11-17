@@ -49,18 +49,22 @@ def runner(source: str):
         ":align: ",
         ":alt: ",
         ":scale: ",
+        ":widths: ",
+        ":width: ",
+        ":delim: ",
+        "(schema:"
         "%"
     )
     refs  = {}
 
     replacements = {
-        r"{ref}`(.+?)>`": r"\1>",
+        r"{ref}`(.+?) <.+?>`": r"\1",
         r"{doc}`(.+?)>`": r"\1>",
         r"{eq}`(.+?)>`": r" (see equation \1)",
         r"{cite}`(.+?)`": r"[citation: \1]",
         r"{(image|figure)} (.+)": r"\nFigure: \2",
         r"{(admonition|tip|warning|note|important)}": r"\nNOTE: ",
-        r"{(code|code-block|download)}": r""
+        r"{(code|code-block|download|tab-set|tab-item|csv-table|schema:)}": r""
     }
 
     for srcfile in filelist:
