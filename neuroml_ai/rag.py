@@ -24,14 +24,12 @@ from langchain.embeddings import init_embeddings
 from langchain_chroma import Chroma
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
+from langchain_text_splitters import (MarkdownHeaderTextSplitter,
+                                      RecursiveCharacterTextSplitter)
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from .schemas import QueryTypeSchema, EvaluateAnswerSchema, AgentState
+from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -140,9 +138,21 @@ class NML_RAG(object):
         self._create_graph()
 
     def _summarise_history_node(self, state: AgentState) -> dict:
-        """Summarise the conversation so far"""
+        """Clean ups after every round of conversation"""
         assert self.model
 
+        conversation, human_messages, ai_messages = self._get_recent_conversation(
+            state.messages, state.summarised_till, None
+        )
+        conversations_num = len(human_messages) + len(ai_messages)
+
+        if conversations_num < self.num_recent_messages:
+            self.logger.debug(
+                f"Not enough conversations to summarise yet: {conversations_num}/{self.num_recent_messages}"
+            )
+            return {}
+
+        # Summarise history
         system_prompt = dedent("""You are a memory/conversation summarisation
         assistant. Your job is to maintain a concise, factual memory of an
         ongoing conversation between a user and an AI assistant. This history
@@ -185,17 +195,6 @@ class NML_RAG(object):
         prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", user_prompt)]
         )
-
-        conversation, human_messages, ai_messages = self._get_recent_conversation(
-            state.messages, state.summarised_till, None
-        )
-        conversations_num = len(human_messages) + len(ai_messages)
-
-        if conversations_num < self.num_recent_messages:
-            self.logger.debug(
-                f"Not enough conversations to summarise yet: {conversations_num}/{self.num_recent_messages}"
-            )
-            return {}
 
         self.logger.debug(f"{conversation =}")
 
@@ -302,7 +301,19 @@ class NML_RAG(object):
                 conversation += f": {msg.pretty_repr()}"
                 ai_messages.append(msg)
 
-        return (conversation.replace('{', '{{').replace('}', '}}'), human_messages, ai_messages)
+        return (
+            conversation.replace("{", "{{").replace("}", "}}"),
+            human_messages,
+            ai_messages,
+        )
+
+    def _init_rag_state_node(self, state: AgentState) -> dict:
+        """Initialise, reset state before next iteration"""
+        return {
+            "query_type": QueryTypeSchema(),
+            "text_response_eval": EvaluateAnswerSchema(),
+            "message_for_user": "",
+        }
 
     def _classify_query_node(self, state: AgentState) -> dict:
         """LLM decides what type the user query is"""
@@ -324,7 +335,7 @@ class NML_RAG(object):
             - If the query is asking for information related to NeuroML, respond 'neuroml_question'
 
             - If the query is unrelated to NeuroML, only then respond "general_question".
-            - If it is general conversation, respond "undefined"
+            - If it is general conversation unrelated to NeuroML, respond "undefined".
 
             Examples:
             - "How do I get learn NeuroML?": {{"query_type": "neuroml_question"}}
@@ -355,7 +366,6 @@ class NML_RAG(object):
         messages = state.messages
         messages.append(HumanMessage(content=state.query))
 
-
         return {
             "query_type": QueryTypeSchema(query_type=output.query_type),
             "messages": messages,
@@ -368,7 +378,6 @@ class NML_RAG(object):
         messages = state.messages
         messages.append(AIMessage("I can generate code for you"))
 
-
         return {"messages": messages}
 
     def _answer_general_question_node(self, state: AgentState) -> dict:
@@ -378,23 +387,32 @@ class NML_RAG(object):
 
         if state.query_type == "general_question":
             system_prompt = dedent("""
-            You are an AI assistant. Answer questions to the best of your
-            knowledge.
+            You are an AI assistant. Answer questions to the best of your knowledge.
+            This is a general query, not related to NeuroML.
 
             ## Core directives
 
-            1. Only provide information you are confident about. If you are
-            unsuare, clearly say so.
-            2. Avoid inventing facts. If a fact is not known or uncertain, respond
-            with "I was unable to find factual information about this query".
-            3. Keep answers clear, concise, formal, and user-friendly.
-            4. If you have generated the answer from your general
-            knowledge/training, inform that user that this information has not been
-            retrieved from any provided documentation and may contain errors, that
-            it is generated from general LLM knowledge."
+            - Do not assume this question is related to NeuroML or other technical domains.
+            - Only provide information you are confident about. If you are unsuare, clearly say so.
+            - Avoid inventing facts. If a fact is not known or uncertain, respond with "I was unable to find factual information about this query".
+            - Keep answers clear, concise, formal, and user-friendly.
+
+            Examples:
+            User: Thank you.
+            Assistant: You are welcome.
+            User: I like cats.
+            Assistant: That's great, I like cats too. I also like dogs.
+
             """)
         else:
-            system_prompt = ""
+            system_prompt = dedent(
+                """
+            You are a warm, easy-going conversational assistant.
+            Engage with the user even if they are simply talking rather than asking questions.
+            Reflect their tone, acknowledge what they say, and continue the conversation naturally.
+
+            """
+            )
 
         system_prompt += self._add_memory_to_prompt(state)
 
@@ -410,7 +428,6 @@ class NML_RAG(object):
 
         messages = state.messages
         messages.append(output)
-
 
         return {"messages": messages, "message_for_user": output.content}
 
@@ -510,7 +527,9 @@ class NML_RAG(object):
         prompt = generate_answer_template.invoke(
             {
                 "question": question,
-                "reference_material": reference_material.replace('{', '{{').replace('}', '}}'),
+                "reference_material": reference_material.replace("{", "{{").replace(
+                    "}", "}}"
+                ),
             }
         )
         self.logger.debug(f"{prompt =}")
@@ -519,7 +538,6 @@ class NML_RAG(object):
 
         messages = state.messages
         messages.append(output)
-
 
         return {"messages": messages}
 
@@ -596,7 +614,11 @@ class NML_RAG(object):
         # can use | to merge these lines
         query_node_llm = evaluator_model.with_structured_output(EvaluateAnswerSchema)
         prompt = prompt_template.invoke(
-            {"question": question, "context": context.replace('{', '{{').replace('}', '}}'), "answer": answer}
+            {
+                "question": question,
+                "context": context.replace("{", "{{").replace("}", "}}"),
+                "answer": answer,
+            }
         )
 
         output = query_node_llm.invoke(prompt)
@@ -644,17 +666,15 @@ class NML_RAG(object):
 
         self.logger.info(f"Returning final answer to user: {answer}")
 
-
         return {"message_for_user": answer.content}
 
     def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
+        self.workflow.add_node("init_rag_state", self._init_rag_state_node)
         self.workflow.add_node("classify_query", self._classify_query_node)
 
-        self.workflow.add_node(
-            "generate_clean_query", self._generate_clean_query_node
-        )
+        self.workflow.add_node("generate_clean_query", self._generate_clean_query_node)
         self.workflow.add_node(
             "answer_general_question", self._answer_general_question_node
         )
@@ -670,7 +690,9 @@ class NML_RAG(object):
         )
         self.workflow.add_node("summarise_history", self._summarise_history_node)
 
-        self.workflow.add_edge(START, "classify_query")
+        self.workflow.add_edge(START, "init_rag_state")
+        self.workflow.add_edge("init_rag_state", "classify_query")
+
         self.workflow.add_conditional_edges(
             "classify_query",
             self._route_query_node,
