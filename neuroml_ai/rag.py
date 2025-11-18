@@ -15,7 +15,7 @@ from glob import glob
 from hashlib import sha256
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional
+from typing import Optional, Any
 
 import chromadb
 import ollama
@@ -73,11 +73,12 @@ class NML_RAG(object):
         self.embedding_model = embedding_model
         self.embeddings = None
 
-        self.text_vector_store = None
-        self.image_vector_store = None
+        self.text_vector_stores: dict[str, Any] = {}
+        self.image_vector_stores: dict[str, Any] = {}
 
-        self.default_k = 3
-        self.k_max = 10
+        # per vector store
+        self.default_k = 2
+        self.k_max = 5
         self.k = self.default_k
 
         # number of conversations after which to summarise
@@ -89,7 +90,8 @@ class NML_RAG(object):
         # documentation does not work too well with embeddings
         my_path = Path(__file__).parent
         self.data_dir = f"{my_path}/data/"
-        self.data_files_path = f"{self.data_dir}/files/"
+        self.vector_stores_path = f"{self.data_dir}/vector-stores"
+        self.vector_stores_sources_path = f"{self.vector_stores_path}/sources"
 
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
@@ -517,10 +519,15 @@ class NML_RAG(object):
         question = state.query
 
         self.logger.debug(f"retrieval query: {state.messages[-1].content}")
+
         res = self._retrieve_docs(state.messages[-1].content)
-        serialized = "\n\n".join(
-            (f"Source: {r.metadata}\nContent:{r.page_content}") for r in res
-        )
+        serialized = ""
+
+        for rs in res:
+            for r in rs:
+                metadata = [f"{key}: {val}" for key, val in r.metadata.items() if "header" in key.lower()]
+                metadata_str = "Document: " + " | ".join(metadata)
+                serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
         self.logger.debug(f"{serialized =}")
 
         reference_material = serialized
@@ -752,31 +759,48 @@ class NML_RAG(object):
         """Create/load the vector store"""
         self.logger.debug("Setting up/loading Chroma vector store")
 
-        chroma_client_settings_text = chromadb.config.Settings(
-            is_persistent=True,
-            persist_directory=f"{self.data_dir}/neuroml_docs_text_{self.embedding_model.replace(':', '_')}.db",
-            anonymized_telemetry=False,
-        )
-        self.text_vector_store = Chroma(
-            collection_name="nml_docs",
-            embedding_function=self.embeddings,
-            client_settings=chroma_client_settings_text,
-        )
+        self.logger.debug(f"{self.vector_stores_sources_path =}")
+        vec_store_sources = glob(f"{self.vector_stores_sources_path}/*", recursive=False)
+        self.logger.debug(f"{vec_store_sources =}")
 
-        info_files = glob(f"{self.data_files_path}/*", recursive=True)
-        self.logger.debug(f"Loaded {len(info_files)} files from {self.data_files_path}")
+        assert len(vec_store_sources)
 
-        for info_file in info_files:
-            file_type = mimetypes.guess_file_type(info_file)[0]
+        for src in vec_store_sources:
+            self.logger.debug(f"Setting up vector store: {src}")
+            src_path = Path(src)
 
-            if "markdown" in file_type:
-                self._add_md_file_to_store(info_file)
-            else:
-                self.logger.warning(
-                    f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
-                )
+            assert src_path.is_dir()
 
-    def _add_md_file_to_store(self, file):
+            vs_persist_dir = f"{self.vector_stores_path}/{src_path.name}_{self.embedding_model.replace(':', '_')}.db"
+            self.logger.debug(f"{vs_persist_dir =}")
+
+            chroma_client_settings_text = chromadb.config.Settings(
+                is_persistent=True,
+                persist_directory=vs_persist_dir,
+                anonymized_telemetry=False,
+            )
+            store = Chroma(
+                collection_name=src_path.name,
+                embedding_function=self.embeddings,
+                client_settings=chroma_client_settings_text,
+            )
+
+            self.text_vector_stores[src_path.name] = store
+
+            info_files = glob(f"{src}/*", recursive=True)
+            self.logger.debug(f"Loaded {len(info_files)} files from {src}")
+
+            for info_file in info_files:
+                file_type = mimetypes.guess_file_type(info_file)[0]
+
+                if "markdown" in file_type:
+                    self._add_md_file_to_store(store, info_file)
+                else:
+                    self.logger.warning(
+                        f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
+                    )
+
+    def _add_md_file_to_store(self, store, file):
         """Add a markdown file to the vector store
 
         We add the file hash as extra metadata so that we can filter on it
@@ -799,7 +823,7 @@ class NML_RAG(object):
         """
         file_path = Path(file)
         file_hash = sha256(file_path.name.encode("utf-8")).hexdigest()
-        already_added = self.text_vector_store.get(where={"file_hash": file_hash})
+        already_added = store.get(where={"file_hash": file_hash})
 
         if already_added and already_added["ids"]:
             self.logger.debug(f"File already exists in vector store: {file_path}")
@@ -827,7 +851,7 @@ class NML_RAG(object):
                 )
 
             self.logger.debug(f"Length of split docs: {len(splits)}")
-            self.index = self.text_vector_store.add_documents(documents=splits)
+            _ = store.add_documents(documents=splits)
 
     def _retrieve_docs(self, query: str) -> list:
         """Retrieve embeddings from documentation to answer a query
@@ -838,9 +862,12 @@ class NML_RAG(object):
         """
         self._load_vector_stores()
 
-        assert self.text_vector_store
+        assert self.text_vector_stores
 
-        res = self.text_vector_store.similarity_search(query, k=self.k)
+        res = []
+
+        for sname, store in self.text_vector_stores.items():
+            res.append(store.similarity_search(query, k=self.k))
 
         return res
 
