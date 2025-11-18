@@ -34,7 +34,7 @@ class EvaluateAnswerSchema(BaseModel):
     confidence: float = 0.0
     # description given in the system prompt
     next_step: Literal[
-        "continue", "retrieve_more_info", "modify_query", "ask_user", "undefined"
+        "continue", "retrieve_more_info", "modify_query", "undefined"
     ] = Field(default="undefined")
     summary: str = ""
 

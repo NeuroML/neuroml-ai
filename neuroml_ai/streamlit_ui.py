@@ -32,7 +32,7 @@ def runner():
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    if query := st.chat_input("Ask a question:", key="user"):
+    if query := st.chat_input("Ask anything", key="user"):
         with st.chat_message("user"):
             st.markdown(query)
         st.session_state.history.append({"role": "user", "content": query})

@@ -397,7 +397,8 @@ class NML_RAG(object):
             - Do not assume this question is related to NeuroML or other technical domains.
             - Only provide information you are confident about. If you are unsuare, clearly say so.
             - Avoid inventing facts. If a fact is not known or uncertain, respond with "I was unable to find factual information about this query".
-            - Keep answers clear, concise, formal, and user-friendly.
+            - Keep answers clear, concise, and user-friendly.
+            - Respond in a formal, academic style.
 
             Examples:
             User: Thank you.
@@ -577,7 +578,7 @@ class NML_RAG(object):
               "coherence": 0-1,         // Logical flow and clarity
               "conciseness": 0-1,       // Avoids fluff or repetition
               "confidence": 0-1,        // Overall sufficiency of context to support answer
-              "next_step": "continue", "retrieve_more_info", "modify_query", "undefined"// next actions
+              "next_step": "continue", "retrieve_more_info", "modify_query", "undefined"
               "summary": "Brief natural-language justification for the grades"
             }}
 
@@ -586,6 +587,7 @@ class NML_RAG(object):
             - Set to 'retrieve_more_info' if the answer is incomplete but grounded and needs more context
             - Set to 'modify_query' if the answer is ungrounded or irrelevant and the query needs to be reformulated to improve retrieval precision
             - Set to 'undefined' if the query cannot be answered from the corpus and we need to ask the user for clarification or additional information
+
             """)
 
         question = state.query
@@ -636,6 +638,7 @@ class NML_RAG(object):
 
     def _route_answer_evaluator_node(self, state: AgentState) -> str:
         """Route depending on evaluation of answer"""
+        self.logger.debug(f"{state =}")
         text_response_eval = state.text_response_eval.next_step
 
         if text_response_eval == "continue":
@@ -717,7 +720,6 @@ class NML_RAG(object):
             {
                 "continue": "give_neuroml_answer_to_user",
                 "retrieve_more_info": "give_neuroml_answer_to_user",
-                # "retrieve_more_info": "generate_clean_query",
                 "undefined": "give_neuroml_answer_to_user",
             },
         )
@@ -867,7 +869,9 @@ class NML_RAG(object):
         res = []
 
         for sname, store in self.text_vector_stores.items():
-            res.append(store.similarity_search(query, k=self.k))
+            data = store.similarity_search(query, k=self.k)
+            self.logger.debug(f"{data =}")
+            res.append(data)
 
         return res
 
