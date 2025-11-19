@@ -24,17 +24,16 @@ class QueryTypeSchema(BaseModel):
 
 
 class EvaluateAnswerSchema(BaseModel):
-    """Evaluation of LLM generated answer"""
+    """Evaluation of LLM generated answer. Descriptions given in the main prompt"""
 
+    confidence: float = 0.0
+    coverage: float = 0.0
     relevance: float = 0.0
     groundedness: float = 0.0
-    completeness: float = 0.0
     coherence: float = 0.0
     conciseness: float = 0.0
-    confidence: float = 0.0
-    # description given in the system prompt
     next_step: Literal[
-        "continue", "retrieve_more_info", "modify_query", "undefined"
+        "continue", "retrieve_more_info", "modify_query", "rewrite_answer", "undefined"
     ] = Field(default="undefined")
     summary: str = ""
 
@@ -52,3 +51,4 @@ class AgentState(BaseModel):
     # index till which summarised
     summarised_till: int = 0
     message_for_user: str = ""
+    reference_material: List[str] = Field(default_factory=list)
