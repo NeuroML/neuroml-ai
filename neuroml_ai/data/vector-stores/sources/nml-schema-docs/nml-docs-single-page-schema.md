@@ -12,8 +12,8 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 ## NeuroMLDocument
 
-`````
-```` Schema
+
+Schema
 ``` xml
   <xs:element name="neuroml" type="NeuroMLDocument">
     <xs:annotation>
@@ -49,9 +49,9 @@ Please file any issues or questions at the [issue tracker here](https://github.c
   </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=NeuroMLDocument" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import NeuroMLDocument
@@ -133,9 +133,9 @@ variable = component_factory(
     networks: 'list of Network(s) (optional)' = None
     ComponentType: 'list of ComponentType(s) (optional)' = None
 ```
-````
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <neuroml xmlns="http://www.neuroml.org/schema/neuroml2"  xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.neuroml.org/schema/neuroml2 https://raw.github.com/NeuroML/NeuroML2/development/Schemas/NeuroML2/NeuroML_v2.3.xsd" id="HL23PYR">
     <include href="HL23PYR.cell.nml"/>
@@ -156,24 +156,24 @@ variable = component_factory(
     </network>
 </neuroml>
 ```
-````
-`````
+
+
 
 ## IncludeType
 
 
 Used to include other documents into each other.
 
-`````
-```` Schema
+
+Schema
 ``` xml
   <xs:complexType name="IncludeType">
     <xs:attribute name="href" use="required" type="xs:anyURI"/>
   </xs:complexType>
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IncludeType" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IncludeType
@@ -183,17 +183,17 @@ variable = component_factory(
     IncludeType,
     href: 'a anyURI (required)' = None)
 ```
-````
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <neuroml xmlns="http://www.neuroml.org/schema/neuroml2"  xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.neuroml.org/schema/neuroml2 https://raw.github.com/NeuroML/NeuroML2/development/Schemas/NeuroML2/NeuroML_v2.3.xsd" id="HL23PYR">
     <include href="A.cell.nml"/>
     ..
 </neuroml>
 ```
-````
-`````
+
+
 
 # NeuroMLCoreDimensions
 
@@ -211,14 +211,14 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 ### area
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: cm2
 
@@ -226,22 +226,22 @@ L^2
 
 - Defined unit: um2
 
-````
 
 
 
-`````
+
+
 
 ### capacitance
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-1 L^-2 T^4 I^2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: F
 
@@ -251,10 +251,10 @@ M^-1 L^-2 T^4 I^2
 
 - Defined unit: uF
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_capacitance">
   <xs:restriction base="xs:string">
@@ -263,41 +263,41 @@ M^-1 L^-2 T^4 I^2
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### charge
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 T^1 I^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: C
 
 - Defined unit: e
 
-````
 
 
 
-`````
+
+
 
 ### charge\_per\_mole
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 T^1 I^1 N^-1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: C_per_mol
 
@@ -305,22 +305,22 @@ T^1 I^1 N^-1
 
 - Defined unit: pC_per_umol
 
-````
 
 
 
-`````
+
+
 
 ### concentration
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^-3 N^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: M
 
@@ -330,10 +330,10 @@ L^-3 N^1
 
 - Defined unit: mol_per_m3
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_concentration">
   <xs:restriction base="xs:string">
@@ -342,20 +342,20 @@ L^-3 N^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### conductance
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-1 L^-2 T^3 I^2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: S
 
@@ -367,10 +367,10 @@ M^-1 L^-2 T^3 I^2
 
 - Defined unit: uS
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_conductance">
   <xs:restriction base="xs:string">
@@ -379,20 +379,20 @@ M^-1 L^-2 T^3 I^2
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### conductanceDensity
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-1 L^-4 T^3 I^2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: S_per_cm2
 
@@ -402,31 +402,31 @@ M^-1 L^-4 T^3 I^2
 
 - Defined unit: uS_per_cm2
 
-````
 
 
 
-`````
+
+
 
 ### conductance\_per\_voltage
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-2 L^-4 T^6 I^3 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: S_per_V
 
 - Defined unit: nS_per_mV
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_conductancePerVoltage">
   <xs:restriction base="xs:string">
@@ -435,20 +435,20 @@ M^-2 L^-4 T^6 I^3
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### current
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 I^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: A
 
@@ -458,10 +458,10 @@ I^1
 
 - Defined unit: uA
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_current">
   <xs:restriction base="xs:string">
@@ -470,20 +470,20 @@ I^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### currentDensity
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^-2 I^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: A_per_m2
 
@@ -491,43 +491,43 @@ L^-2 I^1
 
 - Defined unit: uA_per_cm2
 
-````
 
 
 
-`````
+
+
 
 ### idealGasConstantDims
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^1 L^2 T^-2 K^-1 N^-1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: J_per_K_per_mol
 
 - Defined unit: fJ_per_K_per_umol
 
-````
 
 
 
-`````
+
+
 
 ### length
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: cm
 
@@ -535,10 +535,10 @@ L^1
 
 - Defined unit: um
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_length">
   <xs:restriction base="xs:string">
@@ -547,20 +547,20 @@ L^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### per\_time
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 T^-1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: Hz
 
@@ -572,10 +572,10 @@ T^-1
 
 - Defined unit: per_s
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_pertime">
   <xs:restriction base="xs:string">
@@ -584,41 +584,41 @@ T^-1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### per\_voltage
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-1 L^-2 T^3 I^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: per_V
 
 - Defined unit: per_mV
 
-````
 
 
 
-`````
+
+
 
 ### permeability
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^1 T^-1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: cm_per_ms
 
@@ -628,10 +628,10 @@ L^1 T^-1
 
 - Defined unit: um_per_ms
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_permeability">
   <xs:restriction base="xs:string">
@@ -640,20 +640,20 @@ L^1 T^-1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### resistance
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^1 L^2 T^-3 I^-2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: Mohm
 
@@ -661,10 +661,10 @@ M^1 L^2 T^-3 I^-2
 
 - Defined unit: ohm
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_resistance">
   <xs:restriction base="xs:string">
@@ -673,20 +673,20 @@ M^1 L^2 T^-3 I^-2
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### resistivity
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^2 L^2 T^-3 I^-2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: kohm_cm
 
@@ -694,10 +694,10 @@ M^2 L^2 T^-3 I^-2
 
 - Defined unit: ohm_m
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:complexType name="Resistivity">
   <xs:complexContent>
@@ -709,20 +709,20 @@ M^2 L^2 T^-3 I^-2
 </xs:complexType>
 
 ```
-````
 
-`````
+
+
 
 ### rho\_factor
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^-1 T^-1 I^-1 N^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: mol_per_cm_per_uA_per_ms
 
@@ -730,10 +730,10 @@ L^-1 T^-1 I^-1 N^1
 
 - Defined unit: umol_per_cm_per_nA_per_ms
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_rhoFactor">
   <xs:restriction base="xs:string">
@@ -742,69 +742,69 @@ L^-1 T^-1 I^-1 N^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### specificCapacitance
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^-1 L^-4 T^4 I^2 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: F_per_m2
 
 - Defined unit: uF_per_cm2
 
-````
 
 
 
-`````
+
+
 
 ### substance
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 N^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: mol
 
-````
 
 
 
-`````
+
+
 
 ### temperature
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 K^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: K
 
 - Defined unit: degC
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_temperature">
   <xs:restriction base="xs:string">
@@ -813,20 +813,20 @@ K^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### time
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 T^1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: hour
 
@@ -836,10 +836,10 @@ T^1
 
 - Defined unit: s__
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_time">
   <xs:restriction base="xs:string">
@@ -848,29 +848,29 @@ T^1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### voltage
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 M^1 L^2 T^-3 I^-1 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: V
 
 - Defined unit: mV
 
-````
 
 
-```` Schema
+
+ Schema
 ``` xml
 <xs:simpleType name="Nml2Quantity_voltage">
   <xs:restriction base="xs:string">
@@ -879,20 +879,20 @@ M^1 L^2 T^-3 I^-1
 </xs:simpleType>
 
 ```
-````
 
-`````
+
+
 
 ### volume
 
-`````
 
 
-```` Dimensions
+
+ Dimensions
 L^3 
-````
 
-```` Units
+
+ Units
 
 - Defined unit: cm3
 
@@ -902,11 +902,11 @@ L^3
 
 - Defined unit: um3
 
-````
 
 
 
-`````
+
+
 
 
 
@@ -914,7 +914,7 @@ L^3
 
 ### A
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:current
@@ -931,11 +931,11 @@ L^3
 - 1 A = 1.00e+06 uA
 
 ```
-````
+
 
 ### A_per_m2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:currentDensity
@@ -951,11 +951,11 @@ L^3
 - 1 A_per_m2 = 100 uA_per_cm2
 
 ```
-````
+
 
 ### C
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:charge
@@ -970,11 +970,11 @@ L^3
 - 1 C = 6.24e+18 e
 
 ```
-````
+
 
 ### C_per_mol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:charge_per_mole
@@ -990,11 +990,11 @@ L^3
 - 1 C_per_mol = 1.00e+06 pC_per_umol
 
 ```
-````
+
 
 ### F
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:capacitance
@@ -1011,11 +1011,11 @@ L^3
 - 1 F = 1.00e+06 uF
 
 ```
-````
+
 
 ### F_per_m2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:specificCapacitance
@@ -1030,11 +1030,11 @@ L^3
 - 1 F_per_m2 = 100 uF_per_cm2
 
 ```
-````
+
 
 ### Hz
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_time
@@ -1052,11 +1052,11 @@ L^3
 - 1 Hz = 1 per_s
 
 ```
-````
+
 
 ### J_per_K_per_mol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:idealGasConstantDims
@@ -1071,11 +1071,11 @@ L^3
 - 1 J_per_K_per_mol = 1.00e+09 fJ_per_K_per_umol
 
 ```
-````
+
 
 ### K
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:temperature
@@ -1090,11 +1090,11 @@ L^3
 - 1 K = -272.15 degC
 
 ```
-````
+
 
 ### M
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:concentration
@@ -1111,11 +1111,11 @@ L^3
 - 1 M = 1000 mol_per_m3
 
 ```
-````
+
 
 ### Mohm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistance
@@ -1131,11 +1131,11 @@ L^3
 - 1 Mohm = 1.00e+06 ohm
 
 ```
-````
+
 
 ### S
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance
@@ -1153,11 +1153,11 @@ L^3
 - 1 S = 1.00e+06 uS
 
 ```
-````
+
 
 ### S_per_V
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance_per_voltage
@@ -1172,11 +1172,11 @@ L^3
 - 1 S_per_V = 1.00e+06 nS_per_mV
 
 ```
-````
+
 
 ### S_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductanceDensity
@@ -1193,11 +1193,11 @@ L^3
 - 1 S_per_cm2 = 1.00e+06 uS_per_cm2
 
 ```
-````
+
 
 ### S_per_m2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductanceDensity
@@ -1214,11 +1214,11 @@ L^3
 - 1 S_per_m2 = 100 uS_per_cm2
 
 ```
-````
+
 
 ### V
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:voltage
@@ -1233,11 +1233,11 @@ L^3
 - 1 V = 1000 mV
 
 ```
-````
+
 
 ### cm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:length
@@ -1253,11 +1253,11 @@ L^3
 - 1 cm = 10000 um
 
 ```
-````
+
 
 ### cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:area
@@ -1273,11 +1273,11 @@ L^3
 - 1 cm2 = 1.00e+08 um2
 
 ```
-````
+
 
 ### cm3
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:volume
@@ -1294,11 +1294,11 @@ L^3
 - 1 cm3 = 1.00e+12 um3
 
 ```
-````
+
 
 ### cm_per_ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:permeability
@@ -1315,11 +1315,11 @@ L^3
 - 1 cm_per_ms = 10000 um_per_ms
 
 ```
-````
+
 
 ### cm_per_s
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:permeability
@@ -1336,11 +1336,11 @@ L^3
 - 1 cm_per_s = 10 um_per_ms
 
 ```
-````
+
 
 ### degC
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:temperature
@@ -1356,11 +1356,11 @@ L^3
 - 1 degC = 274.15 K
 
 ```
-````
+
 
 ### e
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:charge
@@ -1377,11 +1377,11 @@ L^3
 - 1 e = 1.6022e-19 C
 
 ```
-````
+
 
 ### fJ_per_K_per_umol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:idealGasConstantDims
@@ -1396,11 +1396,11 @@ L^3
 - 1 fJ_per_K_per_umol = 1e-09 J_per_K_per_mol
 
 ```
-````
+
 
 ### hour
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:time
@@ -1419,11 +1419,11 @@ L^3
 - 1 hour = 3600 s__
 
 ```
-````
+
 
 ### kohm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistance
@@ -1439,11 +1439,11 @@ L^3
 - 1 kohm = 1000 ohm
 
 ```
-````
+
 
 ### kohm_cm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistivity
@@ -1459,11 +1459,11 @@ L^3
 - 1 kohm_cm = 10 ohm_m
 
 ```
-````
+
 
 ### litre
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:volume
@@ -1480,11 +1480,11 @@ L^3
 - 1 litre = 1.00e+15 um3
 
 ```
-````
+
 
 ### m
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:length
@@ -1500,11 +1500,11 @@ L^3
 - 1 m = 1.00e+06 um
 
 ```
-````
+
 
 ### m2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:area
@@ -1520,11 +1520,11 @@ L^3
 - 1 m2 = 1.00e+12 um2
 
 ```
-````
+
 
 ### m3
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:volume
@@ -1541,11 +1541,11 @@ L^3
 - 1 m3 = 1.00e+18 um3
 
 ```
-````
+
 
 ### mA_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:currentDensity
@@ -1561,11 +1561,11 @@ L^3
 - 1 mA_per_cm2 = 1000 uA_per_cm2
 
 ```
-````
+
 
 ### mM
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:concentration
@@ -1582,11 +1582,11 @@ L^3
 - 1 mM = 1 mol_per_m3
 
 ```
-````
+
 
 ### mS
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance
@@ -1604,11 +1604,11 @@ L^3
 - 1 mS = 1000 uS
 
 ```
-````
+
 
 ### mS_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductanceDensity
@@ -1625,11 +1625,11 @@ L^3
 - 1 mS_per_cm2 = 1000 uS_per_cm2
 
 ```
-````
+
 
 ### mV
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:voltage
@@ -1644,11 +1644,11 @@ L^3
 - 1 mV = 0.001 V
 
 ```
-````
+
 
 ### m_per_s
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:permeability
@@ -1665,11 +1665,11 @@ L^3
 - 1 m_per_s = 1000 um_per_ms
 
 ```
-````
+
 
 ### min
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:time
@@ -1688,11 +1688,11 @@ L^3
 - 1 min = 60 s__
 
 ```
-````
+
 
 ### mol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:substance
@@ -1701,11 +1701,11 @@ L^3
 
 
 ```
-````
+
 
 ### mol_per_cm3
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:concentration
@@ -1722,11 +1722,11 @@ L^3
 - 1 mol_per_cm3 = 1.00e+06 mol_per_m3
 
 ```
-````
+
 
 ### mol_per_cm_per_uA_per_ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:rho_factor
@@ -1742,11 +1742,11 @@ L^3
 - 1 mol_per_cm_per_uA_per_ms = 1000 umol_per_cm_per_nA_per_ms
 
 ```
-````
+
 
 ### mol_per_m3
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:concentration
@@ -1763,11 +1763,11 @@ L^3
 - 1 mol_per_m3 = 1e-06 mol_per_cm3
 
 ```
-````
+
 
 ### mol_per_m_per_A_per_s
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:rho_factor
@@ -1783,11 +1783,11 @@ L^3
 - 1 mol_per_m_per_A_per_s = 1e-08 umol_per_cm_per_nA_per_ms
 
 ```
-````
+
 
 ### ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:time
@@ -1804,11 +1804,11 @@ L^3
 - 1 ms = 0.001 s__
 
 ```
-````
+
 
 ### nA
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:current
@@ -1825,11 +1825,11 @@ L^3
 - 1 nA = 0.001 uA
 
 ```
-````
+
 
 ### nA_ms_per_amol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:charge_per_mole
@@ -1845,11 +1845,11 @@ L^3
 - 1 nA_ms_per_amol = 1.00e+12 pC_per_umol
 
 ```
-````
+
 
 ### nF
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:capacitance
@@ -1866,11 +1866,11 @@ L^3
 - 1 nF = 0.001 uF
 
 ```
-````
+
 
 ### nS
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance
@@ -1888,11 +1888,11 @@ L^3
 - 1 nS = 0.001 uS
 
 ```
-````
+
 
 ### nS_per_mV
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance_per_voltage
@@ -1907,11 +1907,11 @@ L^3
 - 1 nS_per_mV = 1e-06 S_per_V
 
 ```
-````
+
 
 ### ohm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistance
@@ -1927,11 +1927,11 @@ L^3
 - 1 ohm = 0.001 kohm
 
 ```
-````
+
 
 ### ohm_cm
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistivity
@@ -1947,11 +1947,11 @@ L^3
 - 1 ohm_cm = 0.01 ohm_m
 
 ```
-````
+
 
 ### ohm_m
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:resistivity
@@ -1967,11 +1967,11 @@ L^3
 - 1 ohm_m = 100 ohm_cm
 
 ```
-````
+
 
 ### pA
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:current
@@ -1988,11 +1988,11 @@ L^3
 - 1 pA = 1e-06 uA
 
 ```
-````
+
 
 ### pC_per_umol
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:charge_per_mole
@@ -2008,11 +2008,11 @@ L^3
 - 1 pC_per_umol = 1e-12 nA_ms_per_amol
 
 ```
-````
+
 
 ### pF
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:capacitance
@@ -2029,11 +2029,11 @@ L^3
 - 1 pF = 1e-06 uF
 
 ```
-````
+
 
 ### pS
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance
@@ -2051,11 +2051,11 @@ L^3
 - 1 pS = 1e-06 uS
 
 ```
-````
+
 
 ### per_V
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_voltage
@@ -2070,11 +2070,11 @@ L^3
 - 1 per_V = 0.001 per_mV
 
 ```
-````
+
 
 ### per_hour
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_time
@@ -2094,11 +2094,11 @@ L^3
 - 1 per_hour = 0.00027778 per_s
 
 ```
-````
+
 
 ### per_mV
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_voltage
@@ -2113,11 +2113,11 @@ L^3
 - 1 per_mV = 1000 per_V
 
 ```
-````
+
 
 ### per_min
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_time
@@ -2137,11 +2137,11 @@ L^3
 - 1 per_min = 0.016667 per_s
 
 ```
-````
+
 
 ### per_ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_time
@@ -2159,11 +2159,11 @@ L^3
 - 1 per_ms = 1000 per_s
 
 ```
-````
+
 
 ### per_s
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:per_time
@@ -2181,11 +2181,11 @@ L^3
 - 1 per_s = 0.001 per_ms
 
 ```
-````
+
 
 ### s
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:time
@@ -2202,11 +2202,11 @@ L^3
 - 1 s = 1000 ms__
 
 ```
-````
+
 
 ### uA
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:current
@@ -2223,11 +2223,11 @@ L^3
 - 1 uA = 1.00e+06 pA
 
 ```
-````
+
 
 ### uA_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:currentDensity
@@ -2243,11 +2243,11 @@ L^3
 - 1 uA_per_cm2 = 0.001 mA_per_cm2
 
 ```
-````
+
 
 ### uF
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:capacitance
@@ -2264,11 +2264,11 @@ L^3
 - 1 uF = 1.00e+06 pF
 
 ```
-````
+
 
 ### uF_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:specificCapacitance
@@ -2283,11 +2283,11 @@ L^3
 - 1 uF_per_cm2 = 0.01 F_per_m2
 
 ```
-````
+
 
 ### uS
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductance
@@ -2305,11 +2305,11 @@ L^3
 - 1 uS = 1.00e+06 pS
 
 ```
-````
+
 
 ### uS_per_cm2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:conductanceDensity
@@ -2326,11 +2326,11 @@ L^3
 - 1 uS_per_cm2 = 0.001 mS_per_cm2
 
 ```
-````
+
 
 ### um
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:length
@@ -2346,11 +2346,11 @@ L^3
 - 1 um = 1e-06 m__
 
 ```
-````
+
 
 ### um2
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:area
@@ -2366,11 +2366,11 @@ L^3
 - 1 um2 = 1e-12 m2
 
 ```
-````
+
 
 ### um3
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:volume
@@ -2387,11 +2387,11 @@ L^3
 - 1 um3 = 1e-18 m3
 
 ```
-````
+
 
 ### um_per_ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:permeability
@@ -2408,11 +2408,11 @@ L^3
 - 1 um_per_ms = 0.001 m_per_s
 
 ```
-````
+
 
 ### umol_per_cm_per_nA_per_ms
 
-````
+
 
 ``` Summary
 - Dimension: dimensions:rho_factor
@@ -2428,7 +2428,7 @@ L^3
 - 1 umol_per_cm_per_nA_per_ms = 1.00e+08 mol_per_m_per_A_per_s
 
 ```
-````
+
 
 
 
@@ -2453,8 +2453,8 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 Human readable notes/description for a Component.
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:simpleType name="Notes">
   <xs:annotation>
@@ -2466,10 +2466,10 @@ Human readable notes/description for a Component.
 </xs:simpleType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <notes>A Simple Spiking cell for testing purposes</notes>
 ```
@@ -2479,8 +2479,8 @@ Human readable notes/description for a Component.
 ``` xml
 <notes>Leak conductance</notes>
 ```
-````
-`````
+
+
 
 
 ## annotation
@@ -2491,24 +2491,26 @@ Human readable notes/description for a Component.
 A structured annotation containing metadata, specifically RDF or  property elements.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rdf:RDF**$  $ rdf_rdf
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **property**$  $ property
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Annotation">
   <xs:complexContent>
@@ -2521,9 +2523,9 @@ A structured annotation containing metadata, specifically RDF or  property eleme
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Annotation" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Annotation
@@ -2534,8 +2536,8 @@ variable = component_factory(
     anytypeobjs_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <annotation>
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:bqbiol="http://biomodels.net/biology-qualifiers/">
@@ -2549,8 +2551,8 @@ variable = component_factory(
     </rdf:RDF>
 </annotation>
 ```
-````
-`````
+
+
 
 
 ## property
@@ -2561,16 +2563,17 @@ variable = component_factory(
 A property ( a **tag** and **value** pair ), which can be on any  basestandalone either as a direct child, or within an  annotation. Generally something which helps the visual display or facilitates simulation of a Component, but is not a core physiological property. Common examples include: **numberInternalDivisions,** equivalent of nseg in NEURON; **radius,** for a radius to use in graphical displays for abstract cells ( i.e. without defined morphologies ); **color,** the color to use for a  population or  populationlist of cells; **recommended_dt_ms,** the recommended timestep to use for simulating a  network, **recommended_duration_ms** the recommended duration to use when running a  network.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **tag**$ Name of the property
 **value**$ Value of the property
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Property">
   <xs:complexContent>
@@ -2582,9 +2585,9 @@ A property ( a **tag** and **value** pair ), which can be on any  basestandalone
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Property" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Property
@@ -2596,13 +2599,13 @@ variable = component_factory(
     value: 'a string (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <property tag="numberInternalDivisions" value="9"/>
 ```
-````
-`````
+
+
 
 
 ## *baseStandalone*
@@ -2613,25 +2616,27 @@ variable = component_factory(
 Base type of any Component which can have  notes,  annotation, or a  property list.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 **annotation**$  $ annotation
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **property**$  $ property
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Standalone">
   <xs:complexContent>
@@ -2647,8 +2652,8 @@ Base type of any Component which can have  notes,  annotation, or a  property li
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## rdf_RDF
@@ -2659,22 +2664,24 @@ Base type of any Component which can have  notes,  annotation, or a  property li
 Structured block in an  annotation based on RDF. See https://github.com/OpenSourceBrain/OSB_API/blob/master/python/examples/grancelllayer.xml.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **xmlns:rdf**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rdf:Description**$  $ rdf_description
 
 ```
-````
-`````
+
+
 
 
 ## rdf_Description
@@ -2685,16 +2692,18 @@ Structured block in an  annotation based on RDF. See https://github.com/OpenSour
 Structured block in an  annotation based on RDF.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **rdf:about**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **bqbiol:encodes**$  $ bqbiol_encodes
 **bqbiol:hasPart**$  $ bqbiol_haspart
@@ -2714,8 +2723,8 @@ Structured block in an  annotation based on RDF.
 **bqmodel:isDerivedFrom**$  $ bqmodel_isderivedfrom
 
 ```
-````
-`````
+
+
 
 
 ## *baseBqbiol*
@@ -2726,15 +2735,16 @@ Structured block in an  annotation based on RDF.
 Structured block in an  annotation based on RDF.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rdf:Bag**$  $ rdf_bag
 
 ```
-````
-`````
+
+
 
 
 ## bqbiol_encodes
@@ -2889,14 +2899,15 @@ extends *basebqbiol*
 See http://co.mbine.org/standards/qualifiers.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **xmlns:bqbiol**$ 
 
-````
-`````
+
+
 
 
 ## bqbiol_occursIn
@@ -2953,14 +2964,15 @@ extends *basebqbiol*
 See http://co.mbine.org/standards/qualifiers.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **xmlns:bqmodel**$ 
 
-````
-`````
+
+
 
 
 ## bqmodel_isDerivedFrom
@@ -2985,15 +2997,16 @@ See http://co.mbine.org/standards/qualifiers.
 Structured block in an  annotation based on RDF.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **rdf:li**$  $ rdf:li
 
 ```
-````
-`````
+
+
 
 
 ## rdf_li
@@ -3004,14 +3017,15 @@ Structured block in an  annotation based on RDF.
 Structured block in an  annotation based on RDF.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **rdf:resource**$ 
 
-````
-`````
+
+
 
 
 ## point3DWithDiam
@@ -3022,9 +3036,10 @@ Structured block in an  annotation based on RDF.
 Base type for ComponentTypes which specify an ( **x,** **y,** **z** ) coordinate along with a **diameter.** Note: no dimension used in the attributes for these coordinates! These are assumed to have dimension micrometer ( 10^-6 m ). This is due to micrometers being the default option for the majority of neuronal morphology formats, and dimensions are omitted here to facilitate reading and writing of morphologies in NeuroML.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **diameter**$ Diameter of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. $Dimensionless
 **x**$ x coordinate of the point. Note: no dimension used, see description of _point3DWithDiam_ for details. $Dimensionless
@@ -3032,41 +3047,43 @@ Base type for ComponentTypes which specify an ( **x,** **y,** **z** ) coordinate
 **z**$ z coordinate of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MICRON** = 1um$  $ dimensions:length
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **radius**$ A dimensional quantity given by half the _diameter. $dimensions:length
 ```
 **radius** = MICRON * diameter / 2
-```Table:
+```
 
 **xLength**$ A version of _x with dimension length. $dimensions:length
 ```
 **xLength** = MICRON * x
-```Table:
+```
 
 **yLength**$ A version of _y with dimension length. $dimensions:length
 ```
 **yLength** = MICRON * y
-```Table:
+```
 
 **zLength**$ A version of _z with dimension length. $dimensions:length
 ```
 **zLength** = MICRON * z
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Point3DWithDiam">
   <xs:complexContent>
@@ -3080,9 +3097,9 @@ Base type for ComponentTypes which specify an ( **x,** **y,** **z** ) coordinate
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Point3DWithDiam" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Point3DWithDiam
@@ -3096,8 +3113,8 @@ variable = component_factory(
     diameter: 'a DoubleGreaterThanZero (required)' = None,
 )
 ```
-````
-`````
+
+
 
 # Cells
 
@@ -3126,8 +3143,8 @@ extends *basestandalone*
 Base type of any cell ( e.g. point neuron like  izhikevich2007cell, or a morphologically detailed  cell with  segments ) which can be used in a  population.
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseCell">
   <xs:complexContent>
@@ -3138,9 +3155,9 @@ Base type of any cell ( e.g. point neuron like  izhikevich2007cell, or a morphol
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseCell
@@ -3157,8 +3174,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseSpikingCell*
@@ -3173,15 +3190,16 @@ extends *basecell*
 Base type of any cell which can emit **spike** events.
 
 
-`````
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## *baseCellMembPot*
@@ -3196,23 +3214,25 @@ extends *basespikingcell*
 Any spiking cell which has a membrane potential **v** with units of voltage ( as opposed to a dimensionless membrane potential used in  basecellmembpotdl ).
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **v**$ Membrane potential $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## *baseCellMembPotDL*
@@ -3227,23 +3247,25 @@ extends *basespikingcell*
 Any spiking cell which has a dimensioness membrane potential, **V** ( as opposed to a membrane potential units of voltage,  basecellmembpot ).
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **V**$ Membrane potential $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## *baseChannelPopulation*
@@ -3258,31 +3280,34 @@ extends *basevoltagedeppointcurrent*
 Base type for any current produced by a population of channels, all of which are of type **ionChannel**.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **ionChannel**$  $ baseionchannel
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## channelPopulation
@@ -3297,48 +3322,53 @@ extends *basechannelpopulation*
 Population of a **number** of ohmic ion channels. These each produce a conductance **channelg** across a reversal potential **erev,** giving a total current **i.** Note that active membrane currents are more frequently specified as a density over an area of the  cell using  channeldensity.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ The reversal potential of the current produced $dimensions:voltage
 **number**$ The number of channels present. This will be multiplied by the time varying conductance of the individual ion channel (which extends _baseIonChannel_) to produce the total conductance $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **vShift** = 0mV$ Set to a constant 0mV here to allow ion channels which use _vShift in their rate variable expressions to be used with _channelPopulation_, not just with _channelDensityVShift_ (where _vShift would be explicitly set) $ dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -3361,9 +3391,9 @@ Population of a **number** of ohmic ion channels. These each produce a conductan
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelPopulation">
   <xs:complexContent>
@@ -3385,9 +3415,9 @@ Population of a **number** of ohmic ion channels. These each produce a conductan
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelPopulation" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelPopulation
@@ -3405,13 +3435,13 @@ variable = component_factory(
     variable_parameters: 'list of VariableParameter(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <channelPopulation id="naChansDend" ionChannel="NaConductance" segment="2" number="120000" erev="50mV" ion="na"/>
 ```
-````
-`````
+
+
 
 
 ## channelPopulationNernst
@@ -3426,17 +3456,19 @@ extends *basechannelpopulation*
 Population of a **number** of channels with a time varying reversal potential **erev** determined by Nernst equation. Note: hard coded for Ca only!
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **number**$ The number of channels present. This will be multiplied by the time varying conductance of the individual ion channel (which extends _baseIonChannel_) to produce the total conductance $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **R** = 8.3144621 J_per_K_per_mol$ $ dimensions:idealGasConstantDims
 **zCa** = 2$ $ Dimensionless
@@ -3444,26 +3476,29 @@ Population of a **number** of channels with a time varying reversal potential **
 **vShift** = 0mV$ Set to a constant 0mV here to allow ion channels which use _vShift in their rate variable expressions to be used with _channelPopulation_, not just with _channelDensityVShift_ (where _vShift would be explicitly set) $ dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ The reversal potential of the current produced, calculated from _caConcExt and _caConc $dimensions:voltage
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$ The internal Ca2+ concentration, as calculated/exposed by the parent Component $dimensions:concentration
 **caConcExt**$ The external Ca2+ concentration, as calculated/exposed by the parent Component $dimensions:concentration
@@ -3471,9 +3506,9 @@ Population of a **number** of channels with a time varying reversal potential **
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -3497,8 +3532,8 @@ Population of a **number** of channels with a time varying reversal potential **
 
 
 
-````
-`````
+
+
 
 
 ## *baseChannelDensity*
@@ -3509,31 +3544,34 @@ Population of a **number** of channels with a time varying reversal potential **
 Base type for a current of density **iDensity** distributed on an area of a  cell, flowing through the specified **ionChannel.** Instances of this ( normally  channeldensity ) are specified in the  membraneproperties of the  cell.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **ionChannel**$  $ baseionchannel
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iDensity**$  $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseChannelDensityCond*
@@ -3548,32 +3586,35 @@ extends *basechanneldensity*
 Base type for distributed conductances on an area of a cell producing a ( not necessarily ohmic ) current.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  $dimensions:conductanceDensity
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **gDensity**$  $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## variableParameter
@@ -3584,24 +3625,26 @@ Base type for distributed conductances on an area of a cell producing a ( not ne
 Specifies a **parameter** ( e.g. condDensity ) which can vary its value across a **segmentGroup.** The value is calculated from **value** attribute of the  inhomogeneousvalue subelement. This element is normally a child of  channeldensitynonuniform,  channeldensitynonuniformnernst or  channeldensitynonuniformghk and is used to calculate the value of the conductance, etc. which will vary on different parts of the cell. The **segmentGroup** specified here needs to define an  inhomogeneousparameter ( referenced from **inhomogeneousParameter** in the  inhomogeneousvalue ), which calculates a **variable** ( e.g. p ) varying across the cell ( e.g. based on the path length from soma ), which is then used in the **value** attribute of the  inhomogeneousvalue ( so for example condDensity = f( p ) ).
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **parameter**$ 
 **segmentGroup**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **inhomogeneousValue**$  $ inhomogeneousvalue
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="VariableParameter">
   <xs:sequence>
@@ -3612,9 +3655,9 @@ Specifies a **parameter** ( e.g. condDensity ) which can vary its value across a
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=VariableParameter" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import VariableParameter
@@ -3627,15 +3670,15 @@ variable = component_factory(
     inhomogeneous_value: 'a InhomogeneousValue (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <variableParameter parameter="condDensity" segmentGroup="dendrite_group">
     <inhomogeneousValue inhomogeneousParameter="dendrite_group_x1" value="5e-7 * exp(-p/200)"/>
 </variableParameter>
 ```
-````
-`````
+
+
 
 
 ## inhomogeneousValue
@@ -3646,16 +3689,17 @@ variable = component_factory(
 Specifies the **value** of an **inhomogeneousParameter.** For usage see  variableparameter.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **inhomogeneousParameter**$ 
 **value**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InhomogeneousValue">
   <xs:complexContent>
@@ -3667,9 +3711,9 @@ Specifies the **value** of an **inhomogeneousParameter.** For usage see  variabl
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=InhomogeneousValue" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import InhomogeneousValue
@@ -3681,13 +3725,13 @@ variable = component_factory(
     value: 'a string (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <inhomogeneousValue inhomogeneousParameter="dendrite_group_x1" value="5e-7 * exp(-p/200)"/>
 ```
-````
-`````
+
+
 
 
 ## channelDensityNonUniform
@@ -3702,56 +3746,62 @@ extends *basechanneldensity*
 Specifies a time varying ohmic conductance density, which is distributed on a region of the **cell.** The conductance density of the channel is not uniform, but is set using the  variableparameter. Note, there is no dynamical description of this in LEMS yet, as this type only makes sense for multicompartmental cells. A ComponentType for this needs to be present to enable export of NeuroML 2 multicompartmental cells via LEMS/jNeuroML to NEURON.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ The reversal potential of the current produced $dimensions:voltage
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **ZERO_CURR_DENS** = 0 A_per_m2$  $ dimensions:currentDensity
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ 
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **variableParameter**$  $ variableparameter
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -3772,9 +3822,9 @@ Specifies a time varying ohmic conductance density, which is distributed on a re
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityNonUniform">
   <xs:complexContent>
@@ -3793,9 +3843,9 @@ Specifies a time varying ohmic conductance density, which is distributed on a re
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityNonUniform" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityNonUniform
@@ -3810,8 +3860,8 @@ variable = component_factory(
     variable_parameters: 'list of VariableParameter(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <channelDensityNonUniform id="nonuniform_na_chans" ionChannel="NaConductance" erev="50mV" ion="na">
     <variableParameter parameter="condDensity" segmentGroup="dendrite_group">
@@ -3819,8 +3869,8 @@ variable = component_factory(
     </variableParameter>
 </channelDensityNonUniform>
 ```
-````
-`````
+
+
 
 
 ## channelDensityNonUniformNernst
@@ -3835,48 +3885,53 @@ extends *basechanneldensity*
 Specifies a time varying conductance density, which is distributed on a region of the **cell,** and whose reversal potential is calculated from the Nernst equation. Hard coded for Ca only!. The conductance density of the channel is not uniform, but is set using the  variableparameter. Note, there is no dynamical description of this in LEMS yet, as this type only makes sense for multicompartmental cells. A ComponentType for this needs to be present to enable export of NeuroML 2 multicompartmental cells via LEMS/jNeuroML to NEURON.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **ZERO_CURR_DENS** = 0 A_per_m2$  $ dimensions:currentDensity
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ 
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **variableParameter**$  $ variableparameter
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -3897,9 +3952,9 @@ Specifies a time varying conductance density, which is distributed on a region o
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityNonUniformNernst">
   <xs:complexContent>
@@ -3917,9 +3972,9 @@ Specifies a time varying conductance density, which is distributed on a region o
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityNonUniformNernst" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityNonUniformNernst
@@ -3933,8 +3988,8 @@ variable = component_factory(
     variable_parameters: 'list of VariableParameter(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensityNonUniformGHK
@@ -3949,48 +4004,53 @@ extends *basechanneldensity*
 Specifies a time varying conductance density, which is distributed on a region of the **cell,** and whose current is calculated from the Goldman-Hodgkin-Katz equation. Hard coded for Ca only!. The conductance density of the channel is not uniform, but is set using the  variableparameter. Note, there is no dynamical description of this in LEMS yet, as this type only makes sense for multicompartmental cells. A ComponentType for this needs to be present to enable export of NeuroML 2 multicompartmental cells via LEMS/jNeuroML to NEURON.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **ZERO_CURR_DENS** = 0 A_per_m2$  $ dimensions:currentDensity
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ 
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **variableParameter**$  $ variableparameter
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4011,9 +4071,9 @@ Specifies a time varying conductance density, which is distributed on a region o
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityNonUniformGHK">
   <xs:complexContent>
@@ -4031,9 +4091,9 @@ Specifies a time varying conductance density, which is distributed on a region o
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityNonUniformGHK" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityNonUniformGHK
@@ -4047,8 +4107,8 @@ variable = component_factory(
     variable_parameters: 'list of VariableParameter(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensity
@@ -4063,50 +4123,55 @@ extends *basechanneldensitycond*
 Specifies a time varying ohmic conductance density, **gDensity,** which is distributed on an area of the **cell** ( specified in  membraneproperties ) with fixed reversal potential **erev** producing a current density **iDensity**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **erev**$ The reversal potential of the current produced $dimensions:voltage
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **vShift** = 0mV$ Set to a constant 0mV here to allow ion channels which use _vShift in their rate variable expressions to be used with _channelDensity_, not just with _channelDensityVShift_ (where _vShift would be explicitly set) $ dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensity is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **gDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4129,9 +4194,9 @@ Specifies a time varying ohmic conductance density, **gDensity,** which is distr
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensity">
   <xs:complexContent>
@@ -4153,9 +4218,9 @@ Specifies a time varying ohmic conductance density, **gDensity,** which is distr
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensity" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensity
@@ -4174,8 +4239,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <channelDensity id="pasChans" ionChannel="pas" condDensity="3.0 S_per_m2" erev="-70mV" ion="non_specific"/>
 ```
@@ -4185,8 +4250,8 @@ variable = component_factory(
 ``` xml
 <channelDensity id="naChans" ionChannel="HH_Na" segmentGroup="soma_group" condDensity="120.0 mS_per_cm2" ion="na" erev="50mV"/>
 ```
-````
-`````
+
+
 
 
 ## channelDensityVShift
@@ -4201,43 +4266,47 @@ extends channeldensity
 Same as  channeldensity, but with a **vShift** parameter to change voltage activation of gates. The exact usage of **vShift** in expressions for rates is determined by the individual gates.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **erev**$ The reversal potential of the current produced *(from channeldensity)* $dimensions:voltage
 **vShift**$  $dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensity is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **gDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityVShift">
   <xs:complexContent>
@@ -4248,9 +4317,9 @@ Same as  channeldensity, but with a **vShift** parameter to change voltage activ
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityVShift" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityVShift
@@ -4269,8 +4338,8 @@ variable = component_factory(
     v_shift: 'a Nml2Quantity_voltage (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensityNernst
@@ -4285,45 +4354,50 @@ extends *basechanneldensitycond*
 Specifies a time varying conductance density, **gDensity,** which is distributed on an area of the **cell,** producing a current density **iDensity** and whose reversal potential is calculated from the Nernst equation. Hard coded for Ca only! See https://github.com/OpenSourceBrain/ghk-nernst.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **R** = 8.3144621 J_per_K_per_mol$ $ dimensions:idealGasConstantDims
 **zCa** = 2$ $ Dimensionless
 **F** = 96485.3 C_per_mol$ $ dimensions:charge_per_mole
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensityNernst is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ The reversal potential of the current produced, calculated from caConcExt and caConc $dimensions:voltage
 **gDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **caConcExt**$  $dimensions:concentration
@@ -4331,9 +4405,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4368,9 +4442,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 :  **iDensity** = 0 (exposed as **iDensity**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityNernst">
   <xs:complexContent>
@@ -4391,9 +4465,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityNernst" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityNernst
@@ -4411,8 +4485,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensityNernstCa2
@@ -4427,45 +4501,50 @@ extends *basechanneldensitycond*
 This component is similar to the original component type  channeldensitynernst but it is changed in order to have a reversal potential that depends on a second independent Ca++ pool ( ca2 ). See https://github.com/OpenSourceBrain/ghk-nernst.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **R** = 8.3144621 J_per_K_per_mol$ $ dimensions:idealGasConstantDims
 **zCa** = 2$ $ Dimensionless
 **F** = 96485.3 C_per_mol$ $ dimensions:charge_per_mole
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensityNernstCa2 is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ The reversal potential of the current produced $dimensions:voltage
 **gDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc2**$  $dimensions:concentration
 **caConcExt2**$  $dimensions:concentration
@@ -4473,9 +4552,9 @@ This component is similar to the original component type  channeldensitynernst b
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4510,9 +4589,9 @@ This component is similar to the original component type  channeldensitynernst b
 :  **iDensity** = 0 (exposed as **iDensity**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityNernstCa2">
   <xs:complexContent>
@@ -4522,9 +4601,9 @@ This component is similar to the original component type  channeldensitynernst b
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityNernstCa2" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityNernstCa2
@@ -4541,8 +4620,8 @@ variable = component_factory(
     variable_parameters: 'list of VariableParameter(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensityGHK
@@ -4557,43 +4636,48 @@ extends *basechanneldensity*
 Specifies a time varying conductance density, **gDensity,** which is distributed on an area of the cell, producing a current density **iDensity** and whose reversal potential is calculated from the Goldman Hodgkin Katz equation. Hard coded for Ca only! See https://github.com/OpenSourceBrain/ghk-nernst.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **permeability**$  $dimensions:permeability
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **R** = 8.3144621 J_per_K_per_mol$ $ dimensions:idealGasConstantDims
 **zCa** = 2$ $ Dimensionless
 **F** = 96485.3 C_per_mol$ $ dimensions:charge_per_mole
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensityGHK is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **caConcExt**$  $dimensions:concentration
@@ -4601,9 +4685,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4632,9 +4716,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 :  **iDensity** = 0 (exposed as **iDensity**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityGHK">
   <xs:complexContent>
@@ -4652,9 +4736,9 @@ Specifies a time varying conductance density, **gDensity,** which is distributed
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityGHK" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityGHK
@@ -4670,8 +4754,8 @@ variable = component_factory(
     ion: 'a NmlId (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## channelDensityGHK2
@@ -4686,44 +4770,49 @@ extends *basechanneldensitycond*
 Time varying conductance density, **gDensity,** which is distributed on an area of the cell, producing a current density **iDensity.** Modified version of Jaffe et al. 1994 ( used also in Lawrence et al. 2006 ). See https://github.com/OpenSourceBrain/ghk-nernst.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **condDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **VOLT_SCALE** = 1 mV$  $ dimensions:voltage
 **CONC_SCALE** = 1 mM$  $ dimensions:concentration
 **TEMP_SCALE** = 1 K$  $ dimensions:temperature
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ Which _segmentGroup_ the channelDensityGHK2 is placed on. If this is missing, it implies it is placed on all _segment_s of the _cell_
 **ion**$ Which ion flows through the channel. Note: ideally this needs to be a property of ionChannel only, but it's here as it makes it easier to select channelPopulations transmitting specific ions.
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **gDensity**$  *(from basechanneldensitycond)* $dimensions:conductanceDensity
 **iDensity**$  *(from basechanneldensity)* $dimensions:currentDensity
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **caConcExt**$  $dimensions:concentration
@@ -4731,9 +4820,9 @@ Time varying conductance density, **gDensity,** which is distributed on an area 
 **v**$  *(from basechanneldensity)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **ionChannel**
@@ -4770,9 +4859,9 @@ Time varying conductance density, **gDensity,** which is distributed on an area 
 :  **iDensity** = 0 (exposed as **iDensity**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChannelDensityGHK2">
   <xs:complexContent>
@@ -4790,9 +4879,9 @@ Time varying conductance density, **gDensity,** which is distributed on an area 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ChannelDensityGHK2" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ChannelDensityGHK2
@@ -4808,8 +4897,8 @@ variable = component_factory(
     ion: 'a NmlId (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## pointCellCondBased
@@ -4824,52 +4913,57 @@ extends *basecellmembpotcap*
 Simple model of a conductance based cell, with no separate  morphology element, just an absolute capacitance **C,** and a set of channel **populations.** Note: use of  cell is generally preferable ( and more widely supported ), even for a single compartment cell.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **thresh**$ The voltage threshold above which the cell is considered to be _spiking $dimensions:voltage
 **v0**$ The initial membrane potential of the cell $dimensions:voltage
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **populations**$  $ basechannelpopulation
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -4918,8 +5012,8 @@ Simple model of a conductance based cell, with no separate  morphology element, 
     : d **v** /dt = iMemb / C
     
 
-````
-`````
+
+
 
 
 ## pointCellCondBasedCa
@@ -4934,28 +5028,31 @@ extends *basecellmembpotcap*
 TEMPORARY: Point cell with conductances and Ca concentration info. Not yet fully tested!!!
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **thresh**$ The voltage threshold above which the cell is considered to be _spiking $dimensions:voltage
 **v0**$ The initial membrane potential of the cell $dimensions:voltage
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **populations**$  $ basechannelpopulation
 **concentrationModels**$  $ concentrationmodel
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **iCa**$  $dimensions:current
@@ -4964,25 +5061,27 @@ TEMPORARY: Point cell with conductances and Ca concentration info. Not yet fully
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -5033,8 +5132,8 @@ TEMPORARY: Point cell with conductances and Ca concentration info. Not yet fully
     : d **v** /dt = iMemb / C
     
 
-````
-`````
+
+
 
 
 ## distal
@@ -5049,9 +5148,10 @@ extends point3dwithdiam
 Point on a  segment furthest from the soma. Should always be present in the description of a  segment, unlike  proximal.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **diameter**$ Diameter of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
 **x**$ x coordinate of the point. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
@@ -5059,34 +5159,35 @@ Point on a  segment furthest from the soma. Should always be present in the desc
 **z**$ z coordinate of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **radius**$ A dimensional quantity given by half the _diameter. *(from point3dwithdiam)* $dimensions:length
 ```
 **radius** = MICRON * diameter / 2
-```Table:
+```
 
 **xLength**$ A version of _x with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **xLength** = MICRON * x
-```Table:
+```
 
 **yLength**$ A version of _y with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **yLength** = MICRON * y
-```Table:
+```
 
 **zLength**$ A version of _z with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **zLength** = MICRON * z
 
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <distal x="10" y="0" z="0" diameter="10"/>
 ```
@@ -5096,8 +5197,8 @@ Point on a  segment furthest from the soma. Should always be present in the desc
 ``` xml
 <distal x="30" y="0" z="0" diameter="1"/>
 ```
-````
-`````
+
+
 
 
 ## proximal
@@ -5112,9 +5213,10 @@ extends point3dwithdiam
 Point on a  segment closest to the soma. Note, the proximal point can be omitted, and in this case is defined as being the point **fractionAlong** between the proximal and  distal point of the  parent, i.e. if **fractionAlong** = 1 ( as it is by default ) it will be the **distal** on the parent, or if **fractionAlong** = 0, it will be the proximal point. If between 0 and 1, it is the linear interpolation between the two points.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **diameter**$ Diameter of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
 **x**$ x coordinate of the point. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
@@ -5122,34 +5224,35 @@ Point on a  segment closest to the soma. Note, the proximal point can be omitted
 **z**$ z coordinate of the ppoint. Note: no dimension used, see description of _point3DWithDiam_ for details. *(from point3dwithdiam)* $Dimensionless
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **radius**$ A dimensional quantity given by half the _diameter. *(from point3dwithdiam)* $dimensions:length
 ```
 **radius** = MICRON * diameter / 2
-```Table:
+```
 
 **xLength**$ A version of _x with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **xLength** = MICRON * x
-```Table:
+```
 
 **yLength**$ A version of _y with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **yLength** = MICRON * y
-```Table:
+```
 
 **zLength**$ A version of _z with dimension length. *(from point3dwithdiam)* $dimensions:length
 ```
 **zLength** = MICRON * z
 
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <proximal x="0" y="0" z="0" diameter="10"/>
 ```
@@ -5159,8 +5262,8 @@ Point on a  segment closest to the soma. Note, the proximal point can be omitted
 ``` xml
 <proximal x="0" y="0" z="0" diameter="10"/>
 ```
-````
-`````
+
+
 
 
 ## parent
@@ -5171,16 +5274,17 @@ Point on a  segment closest to the soma. Note, the proximal point can be omitted
 Specifies the  segment which is this segment's parent. The **fractionAlong** specifies where it is connected, usually 1 ( the default value ), meaning the  distal point of the parent, or 0, meaning the  proximal point. If it is between these, a linear interpolation between the 2 points should be used.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segment**$ The id of the parent segment
 **fractionAlong**$ The fraction along the the parent segment at which this segment is attached. For usage see _proximal_
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SegmentParent">
   <xs:complexContent>
@@ -5192,10 +5296,10 @@ Specifies the  segment which is this segment's parent. The **fractionAlong** spe
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <parent segment="0"/>
 ```
@@ -5205,8 +5309,8 @@ Specifies the  segment which is this segment's parent. The **fractionAlong** spe
 ``` xml
 <parent segment="2" fractionAlong="0.5"/>
 ```
-````
-`````
+
+
 
 
 ## segment
@@ -5217,43 +5321,47 @@ Specifies the  segment which is this segment's parent. The **fractionAlong** spe
 A segment defines the smallest unit within a possibly branching structure (  morphology ), such as a dendrite or axon. Its **id** should be a nonnegative integer ( usually soma/root = 0 ). Its end points are given by the  proximal and  distal points. The  proximal point can be omitted, usually because it is the same as a point on the  parent segment, see  proximal for details.  parent specifies the parent segment. The first segment of a  cell ( with no  parent ) usually represents the soma. The shape is normally a cylinder ( radii of the  proximal and  distal equal, but positions different ) or a conical frustum ( radii and positions different ). If the x, y, x positions of the  proximal and  distal are equal, the segment can be interpreted as a sphere, and in this case the radii of these points must be equal. NOTE: LEMS does not yet support multicompartmental modelling, so the Dynamics here is only appropriate for single compartment modelling.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **LEN** = 1m$  $ dimensions:length
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **name**$ An optional name for the segment. Convenient for providing a suitable variable name for generated code, e.g. soma, dend0
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **parent**$  $ parent
 **distal**$  $ distal
 **proximal**$  $ proximal
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **length**$  $dimensions:length
 **radDist**$  $dimensions:length
 **surfaceArea**$  $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -5283,9 +5391,9 @@ A segment defines the smallest unit within a possibly branching structure (  mor
 :  **surfaceArea** = 2 \* radDist \* 3.14159265 \* length (exposed as **surfaceArea**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Segment">
   <xs:complexContent>
@@ -5302,9 +5410,9 @@ A segment defines the smallest unit within a possibly branching structure (  mor
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Segment" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Segment
@@ -5320,8 +5428,8 @@ variable = component_factory(
     distal: 'a Point3DWithDiam (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <segment id="3" name="Spine1">
     <parent segment="2" fractionAlong="0.5"/>
@@ -5341,8 +5449,8 @@ variable = component_factory(
     <distal x="20" y="0" z="0" diameter="3"/>
 </segment>
 ```
-````
-`````
+
+
 
 
 ## segmentGroup
@@ -5353,25 +5461,28 @@ variable = component_factory(
 A method to describe a group of  segments in a  morphology, e.g. soma_group, dendrite_group, axon_group. While a name is useful to describe the group, the **neuroLexId** attribute can be used to explicitly specify the meaning of the group, e.g. sao1044911821 for 'Neuronal Cell Body', sao1211023249 for 'Dendrite'. The  segments in this group can be specified as: a list of individual  member segments; a  path, all of the segments along which should be included; a  subtree of the  cell to include; other segmentGroups to  include ( so all segments from those get included here ). An  inhomogeneousparameter can be defined on the region of the cell specified by this group ( see  variableparameter for usage ).
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **neuroLexId**$ An id string for pointing to an entry in the NeuroLex ontology. Use of this attribute is a shorthand for a full         RDF based reference to the MIRIAM Resource urn:miriam:neurolex, with an bqbiol:is qualifier.
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 **annotation**$  $ annotation
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **property**$  $ property
 **members**$  $ member
@@ -5381,9 +5492,9 @@ A method to describe a group of  segments in a  morphology, e.g. soma_group, den
 **inhomogeneousParameter**$  $ inhomogeneousparameter
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SegmentGroup">
   <xs:complexContent>
@@ -5404,9 +5515,9 @@ A method to describe a group of  segments in a  morphology, e.g. soma_group, den
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SegmentGroup" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SegmentGroup
@@ -5426,8 +5537,8 @@ variable = component_factory(
     inhomogeneous_parameters: 'list of InhomogeneousParameter(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <segmentGroup id="dendrite_group" neuroLexId="sao1211023249">
     <member segment="1"/>
@@ -5445,8 +5556,8 @@ variable = component_factory(
     <member segment="3"/>
 </segmentGroup>
 ```
-````
-`````
+
+
 
 
 ## member
@@ -5457,15 +5568,16 @@ variable = component_factory(
 A single identified **segment** which is part of the  segmentgroup.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segment**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Member">
   <xs:complexContent>
@@ -5476,9 +5588,9 @@ A single identified **segment** which is part of the  segmentgroup.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Member" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Member
@@ -5489,8 +5601,8 @@ variable = component_factory(
     segments: 'a NonNegativeInteger (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <member segment="0"/>
 ```
@@ -5500,8 +5612,8 @@ variable = component_factory(
 ``` xml
 <member segment="2"/>
 ```
-````
-`````
+
+
 
 
 ## from
@@ -5512,15 +5624,16 @@ variable = component_factory(
 In a  path or  subtree, specifies which **segment** ( inclusive ) from which to calculate the  segmentgroup.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segment**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SegmentEndPoint">
   <xs:complexContent>
@@ -5531,18 +5644,18 @@ In a  path or  subtree, specifies which **segment** ( inclusive ) from which to 
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <from segment="1"/>
 ```
 ``` xml
 <from segment="1"/>
 ```
-````
-`````
+
+
 
 
 ## to
@@ -5553,15 +5666,16 @@ In a  path or  subtree, specifies which **segment** ( inclusive ) from which to 
 In a  path, specifies which **segment** ( inclusive ) up to which to calculate the  segmentgroup.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segment**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SegmentEndPoint">
   <xs:complexContent>
@@ -5572,15 +5686,15 @@ In a  path, specifies which **segment** ( inclusive ) up to which to calculate t
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <to segment="2"/>
 ```
-````
-`````
+
+
 
 
 ## include
@@ -5591,16 +5705,17 @@ In a  path, specifies which **segment** ( inclusive ) up to which to calculate t
 Include all members of another  segmentgroup in this group.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **href**$ 
 **segmentGroup**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Include">
   <xs:complexContent>
@@ -5611,9 +5726,9 @@ Include all members of another  segmentgroup in this group.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Include" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Include
@@ -5624,8 +5739,8 @@ variable = component_factory(
     segment_groups: 'a NmlId (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <include href="NML2_SingleCompHHCell.nml"/>
 ```
@@ -5635,8 +5750,8 @@ variable = component_factory(
 ``` xml
 <include href="NML2_SimpleIonChannel.nml"/>
 ```
-````
-`````
+
+
 
 
 ## path
@@ -5647,17 +5762,18 @@ variable = component_factory(
 Include all the  segments between those specified by  from and  to, inclusive.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **from**$  $ from
 **to**$  $ to
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Path">
   <xs:complexContent>
@@ -5671,9 +5787,9 @@ Include all the  segments between those specified by  from and  to, inclusive.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Path" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Path
@@ -5685,16 +5801,16 @@ variable = component_factory(
     to: 'a SegmentEndPoint (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <path>
     <from segment="1"/>
     <to segment="2"/>
 </path>
 ```
-````
-`````
+
+
 
 
 ## subTree
@@ -5705,16 +5821,17 @@ variable = component_factory(
 Include all the  segments distal to that specified by  from in the  segmentgroup.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **from**$  $ from
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SubTree">
   <xs:complexContent>
@@ -5728,9 +5845,9 @@ Include all the  segments distal to that specified by  from in the  segmentgroup
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SubTree" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SubTree
@@ -5742,15 +5859,15 @@ variable = component_factory(
     to: 'a SegmentEndPoint (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <subTree>
     <from segment="1"/>
 </subTree>
 ```
-````
-`````
+
+
 
 
 ## inhomogeneousParameter
@@ -5761,25 +5878,27 @@ variable = component_factory(
 An inhomogeneous parameter specified across the  segmentgroup ( see  variableparameter for usage ).
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **variable**$ 
 **metric**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **proximal**$  $ proximaldetails
 **distal**$  $ distaldetails
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InhomogeneousParameter">
   <xs:complexContent>
@@ -5795,9 +5914,9 @@ An inhomogeneous parameter specified across the  segmentgroup ( see  variablepar
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=InhomogeneousParameter" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import InhomogeneousParameter
@@ -5812,8 +5931,8 @@ variable = component_factory(
     distal: 'a DistalDetails (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <inhomogeneousParameter id="dendrite_group_x2" variable="r" metric="Path Length from root">
     <proximal translationStart="0"/>
@@ -5823,8 +5942,8 @@ variable = component_factory(
 ``` xml
 <inhomogeneousParameter id="dendrite_group_x1" variable="p" metric="Path Length from root"/>
 ```
-````
-`````
+
+
 
 
 ## proximalDetails
@@ -5835,15 +5954,16 @@ variable = component_factory(
 What to do at the proximal point when creating an inhomogeneous parameter.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **translationStart**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ProximalDetails">
   <xs:complexContent>
@@ -5854,9 +5974,9 @@ What to do at the proximal point when creating an inhomogeneous parameter.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ProximalDetails" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ProximalDetails
@@ -5867,8 +5987,8 @@ variable = component_factory(
     translation_start: 'a double (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## distalDetails
@@ -5879,15 +5999,16 @@ variable = component_factory(
 What to do at the distal point when creating an inhomogeneous parameter.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **normalizationEnd**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DistalDetails">
   <xs:complexContent>
@@ -5898,9 +6019,9 @@ What to do at the distal point when creating an inhomogeneous parameter.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=DistalDetails" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import DistalDetails
@@ -5911,8 +6032,8 @@ variable = component_factory(
     normalization_end: 'a double (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## morphology
@@ -5923,17 +6044,18 @@ variable = component_factory(
 The collection of  segments which specify the 3D structure of the cell, along with a number of  segmentgroups.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **segments**$  $ segment
 **segmentGroups**$  $ segmentgroup
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Morphology">
   <xs:complexContent>
@@ -5947,9 +6069,9 @@ The collection of  segments which specify the 3D structure of the cell, along wi
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Morphology" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Morphology
@@ -5966,8 +6088,8 @@ variable = component_factory(
     segment_groups: 'list of SegmentGroup(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <morphology id="SpikingCell_morphology">
     <segment id="0" name="Soma">
@@ -6037,8 +6159,8 @@ variable = component_factory(
     </segmentGroup>
 </morphology>
 ```
-````
-`````
+
+
 
 
 ## specificCapacitance
@@ -6049,31 +6171,34 @@ variable = component_factory(
 Capacitance per unit area.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **value**$  $dimensions:specificCapacitance
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **specCap**$  $dimensions:specificCapacitance
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6090,9 +6215,9 @@ Capacitance per unit area.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpecificCapacitance">
   <xs:complexContent>
@@ -6104,9 +6229,9 @@ Capacitance per unit area.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpecificCapacitance" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpecificCapacitance
@@ -6118,8 +6243,8 @@ variable = component_factory(
     segment_groups: 'a NmlId (optional)' = 'all',
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <specificCapacitance segmentGroup="soma_group" value="1.0 uF_per_cm2"/>
 ```
@@ -6129,8 +6254,8 @@ variable = component_factory(
 ``` xml
 <specificCapacitance segmentGroup="soma_group" value="1.0 uF_per_cm2"/>
 ```
-````
-`````
+
+
 
 
 ## initMembPotential
@@ -6141,16 +6266,17 @@ variable = component_factory(
 Explicitly set initial membrane potential for the cell.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **value**$  $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InitMembPotential">
   <xs:complexContent>
@@ -6162,9 +6288,9 @@ Explicitly set initial membrane potential for the cell.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=InitMembPotential" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import InitMembPotential
@@ -6176,16 +6302,16 @@ variable = component_factory(
     segment_groups: 'a NmlId (optional)' = 'all',
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <initMembPotential value="-65mV"/>
 ```
 ``` xml
 <initMembPotential value="-65mV"/>
 ```
-````
-`````
+
+
 
 
 ## spikeThresh
@@ -6196,16 +6322,17 @@ variable = component_factory(
 Membrane potential at which to emit a spiking event. Note, usually the spiking event will not be emitted again until the membrane potential has fallen below this value and rises again to cross it in a positive direction.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **value**$  $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeThresh">
   <xs:complexContent>
@@ -6217,9 +6344,9 @@ Membrane potential at which to emit a spiking event. Note, usually the spiking e
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeThresh" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeThresh
@@ -6231,16 +6358,16 @@ variable = component_factory(
     segment_groups: 'a NmlId (optional)' = 'all',
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeThresh value="-20mV"/>
 ```
 ``` xml
 <spikeThresh value="-20mV"/>
 ```
-````
-`````
+
+
 
 
 ## membraneProperties
@@ -6251,45 +6378,49 @@ variable = component_factory(
 Properties specific to the membrane, such as the **populations** of channels, **channelDensities,** **specificCapacitance,** etc.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **initMembPotential**$  $ initmembpotential
 **spikeThresh**$  $ spikethresh
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **specificCapacitances**$  $ specificcapacitance
 **populations**$  $ basechannelpopulation
 **channelDensities**$  $ basechanneldensity
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iCa**$  $dimensions:current
 **totChanCurrent**$  $dimensions:current
 **totSpecCap**$  $dimensions:specificCapacitance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **surfaceArea**$  $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6312,9 +6443,9 @@ Properties specific to the membrane, such as the **populations** of channels, **
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="MembraneProperties">
   <xs:complexContent>
@@ -6338,9 +6469,9 @@ Properties specific to the membrane, such as the **populations** of channels, **
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=MembraneProperties" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import MembraneProperties
@@ -6363,8 +6494,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <membraneProperties>
     <channelPopulation id="naChansDend" ionChannel="NaConductance" segment="2" number="120000" erev="50mV" ion="na"/>
@@ -6392,8 +6523,8 @@ variable = component_factory(
     <specificCapacitance segmentGroup="soma_group" value="1.0 uF_per_cm2"/>
 </membraneProperties>
 ```
-````
-`````
+
+
 
 
 ## membraneProperties2CaPools
@@ -6408,28 +6539,31 @@ extends membraneproperties
 Variant of membraneProperties with 2 independent Ca pools.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **initMembPotential**$  $ initmembpotential
 **spikeThresh**$  $ spikethresh
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **specificCapacitances**$  $ specificcapacitance
 **populations**$  $ basechannelpopulation
 **channelDensities**$  $ basechanneldensity
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iCa**$  *(from membraneproperties)* $dimensions:current
 **iCa2**$  $dimensions:current
@@ -6437,18 +6571,19 @@ Variant of membraneProperties with 2 independent Ca pools.
 **totSpecCap**$  *(from membraneproperties)* $dimensions:specificCapacitance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **surfaceArea**$  $dimensions:area
 **surfaceArea**$  *(from membraneproperties)* $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6474,9 +6609,9 @@ Variant of membraneProperties with 2 independent Ca pools.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="MembraneProperties2CaPools">
   <xs:complexContent>
@@ -6489,9 +6624,9 @@ Variant of membraneProperties with 2 independent Ca pools.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=MembraneProperties2CaPools" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import MembraneProperties2CaPools
@@ -6514,8 +6649,8 @@ variable = component_factory(
     channel_density_nernst_ca2s: 'list of ChannelDensityNernstCa2(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## biophysicalProperties
@@ -6526,25 +6661,27 @@ variable = component_factory(
 The biophysical properties of the  cell, including the  membraneproperties and the  intracellularproperties.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **membraneProperties**$  $ membraneproperties
 **intracellularProperties**$  $ intracellularproperties
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **totSpecCap**$  $dimensions:specificCapacitance
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6561,9 +6698,9 @@ The biophysical properties of the  cell, including the  membraneproperties and t
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BiophysicalProperties">
   <xs:complexContent>
@@ -6578,9 +6715,9 @@ The biophysical properties of the  cell, including the  membraneproperties and t
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BiophysicalProperties" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BiophysicalProperties
@@ -6598,8 +6735,8 @@ variable = component_factory(
     extracellular_properties: 'a ExtracellularProperties (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <biophysicalProperties id="bio_cell">
     <membraneProperties>
@@ -6644,8 +6781,8 @@ variable = component_factory(
     </intracellularProperties>
 </biophysicalProperties>
 ```
-````
-`````
+
+
 
 
 ## biophysicalProperties2CaPools
@@ -6656,25 +6793,27 @@ variable = component_factory(
 The biophysical properties of the  cell, including the  membraneproperties2capools and the  intracellularproperties2capools for a cell with two Ca pools.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **membraneProperties2CaPools**$  $ membraneproperties2capools
 **intracellularProperties2CaPools**$  $ intracellularproperties2capools
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **totSpecCap**$  $dimensions:specificCapacitance
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6691,9 +6830,9 @@ The biophysical properties of the  cell, including the  membraneproperties2capoo
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BiophysicalProperties2CaPools">
   <xs:complexContent>
@@ -6708,9 +6847,9 @@ The biophysical properties of the  cell, including the  membraneproperties2capoo
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BiophysicalProperties2CaPools" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BiophysicalProperties2CaPools
@@ -6728,8 +6867,8 @@ variable = component_factory(
     extracellular_properties: 'a ExtracellularProperties (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## intracellularProperties
@@ -6740,26 +6879,28 @@ variable = component_factory(
 Biophysical properties related to the intracellular space within the  cell, such as the  resistivity and the list of ionic  species present. **caConc** and **caConcExt** are explicitly exposed here to facilitate accessing these values from other Components, even though **caConcExt** is clearly not an intracellular property.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **resistivity**$  $ resistivity
 **speciesList**$  $ species
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **caConcExt**$  $dimensions:concentration
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6777,9 +6918,9 @@ Biophysical properties related to the intracellular space within the  cell, such
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IntracellularProperties">
   <xs:complexContent>
@@ -6793,9 +6934,9 @@ Biophysical properties related to the intracellular space within the  cell, such
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IntracellularProperties" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IntracellularProperties
@@ -6808,8 +6949,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <intracellularProperties>
     <resistivity value="0.1 kohm_cm"/>
@@ -6827,8 +6968,8 @@ variable = component_factory(
     <resistivity value="0.1 kohm_cm"/>
 </intracellularProperties>
 ```
-````
-`````
+
+
 
 
 ## intracellularProperties2CaPools
@@ -6843,18 +6984,20 @@ extends intracellularproperties
 Variant of intracellularProperties with 2 independent Ca pools.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **speciesList**$  $ species
 **resistivity**$  $ resistivity
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  *(from intracellularproperties)* $dimensions:concentration
 **caConc2**$  $dimensions:concentration
@@ -6862,9 +7005,9 @@ Variant of intracellularProperties with 2 independent Ca pools.
 **caConcExt2**$  $dimensions:concentration
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -6884,9 +7027,9 @@ Variant of intracellularProperties with 2 independent Ca pools.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IntracellularProperties2CaPools">
   <xs:complexContent>
@@ -6896,9 +7039,9 @@ Variant of intracellularProperties with 2 independent Ca pools.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IntracellularProperties2CaPools" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IntracellularProperties2CaPools
@@ -6910,8 +7053,8 @@ variable = component_factory(
     resistivities: 'list of Resistivity(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## resistivity
@@ -6922,23 +7065,25 @@ variable = component_factory(
 The resistivity, or specific axial resistance, of the cytoplasm.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **value**$  $dimensions:resistivity
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentGroup**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Resistivity">
   <xs:complexContent>
@@ -6950,9 +7095,9 @@ The resistivity, or specific axial resistance, of the cytoplasm.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Resistivity" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Resistivity
@@ -6964,8 +7109,8 @@ variable = component_factory(
     segment_groups: 'a NmlId (optional)' = 'all',
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <resistivity value="0.1 kohm_cm"/>
 ```
@@ -6975,8 +7120,8 @@ variable = component_factory(
 ``` xml
 <resistivity value="0.1 kohm_cm"/>
 ```
-````
-`````
+
+
 
 
 ## concentrationModel
@@ -6987,34 +7132,37 @@ variable = component_factory(
 Base for any model of an **ion** concentration which changes with time. Internal ( **concentration** ) and external ( **extConcentration** ) values for the concentration of the ion are given.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **concentration**$  $dimensions:concentration
 **extConcentration**$  $dimensions:concentration
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **initialConcentration**$  $dimensions:concentration
 **initialExtConcentration**$  $dimensions:concentration
 **surfaceArea**$  $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7041,8 +7189,8 @@ Base for any model of an **ion** concentration which changes with time. Internal
 
 
 
-````
-`````
+
+
 
 
 ## decayingPoolConcentrationModel
@@ -7057,45 +7205,50 @@ extends concentrationmodel
 Model of an intracellular buffering mechanism for **ion** ( currently hard Coded to be calcium, due to requirement for **iCa** ) which has a baseline level **restingConc** and tends to this value with time course **decayConstant.** The ion is assumed to occupy a shell inside the membrane of thickness **shellThickness.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **decayConstant**$  $dimensions:time
 **restingConc**$  $dimensions:concentration
 **shellThickness**$  $dimensions:length
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **Faraday** = 96485.3C_per_mol$  $ dimensions:charge_per_mole
 **AREA_SCALE** = 1m2$  $ dimensions:area
 **LENGTH_SCALE** = 1m$  $ dimensions:length
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **concentration**$  *(from concentrationmodel)* $dimensions:concentration
 **extConcentration**$  *(from concentrationmodel)* $dimensions:concentration
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **iCa**$  $dimensions:current
 **initialConcentration**$  *(from concentrationmodel)* $dimensions:concentration
@@ -7103,9 +7256,9 @@ Model of an intracellular buffering mechanism for **ion** ( currently hard Coded
 **surfaceArea**$  *(from concentrationmodel)* $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7150,9 +7303,9 @@ Model of an intracellular buffering mechanism for **ion** ( currently hard Coded
     : d **concentration** /dt = iCa / (2 * Faraday * shellVolume) - ((concentration - restingConc) / decayConstant)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DecayingPoolConcentrationModel">
   <xs:complexContent>
@@ -7169,9 +7322,9 @@ Model of an intracellular buffering mechanism for **ion** ( currently hard Coded
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=DecayingPoolConcentrationModel" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import DecayingPoolConcentrationModel
@@ -7191,8 +7344,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## fixedFactorConcentrationModel
@@ -7207,35 +7360,39 @@ extends concentrationmodel
 Model of buffering of concentration of an ion ( currently hard coded to be calcium, due to requirement for **iCa** ) which has a baseline level **restingConc** and tends to this value with time course **decayConstant.** A fixed factor **rho** is used to scale the incoming current *independently of the size of the compartment* to produce a concentration change.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **decayConstant**$  $dimensions:time
 **restingConc**$  $dimensions:concentration
 **rho**$  $dimensions:rho_factor
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **concentration**$  *(from concentrationmodel)* $dimensions:concentration
 **extConcentration**$  *(from concentrationmodel)* $dimensions:concentration
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **iCa**$  $dimensions:current
 **initialConcentration**$  *(from concentrationmodel)* $dimensions:concentration
@@ -7244,9 +7401,9 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
 **surfaceArea**$  *(from concentrationmodel)* $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7284,9 +7441,9 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
     : d **concentration** /dt = (iCa/surfaceArea) * rho - ((concentration - restingConc) / decayConstant)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="FixedFactorConcentrationModel">
   <xs:complexContent>
@@ -7303,9 +7460,9 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=FixedFactorConcentrationModel" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import FixedFactorConcentrationModel
@@ -7324,8 +7481,8 @@ variable = component_factory(
     rho: 'a Nml2Quantity_rhoFactor (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## fixedFactorConcentrationModelTraub
@@ -7340,35 +7497,39 @@ extends concentrationmodel
 Model of buffering of concentration of an ion ( currently hard coded to be calcium, due to requirement for **iCa** ) which has a baseline level **restingConc** and tends to this value with time course 1 / **beta.** A fixed factor **phi** is used to scale the incoming current *independently of the size of the compartment* to produce a concentration change. Not recommended for use in models other than Traub et al. 2005!
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **beta**$  $dimensions:per_time
 **phi**$  $dimensions:rho_factor
 **restingConc**$  $dimensions:concentration
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **concentration**$  *(from concentrationmodel)* $dimensions:concentration
 **extConcentration**$  *(from concentrationmodel)* $dimensions:concentration
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **iCa**$  $dimensions:current
 **initialConcentration**$  *(from concentrationmodel)* $dimensions:concentration
@@ -7377,9 +7538,9 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
 **surfaceArea**$  *(from concentrationmodel)* $dimensions:area
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7417,8 +7578,8 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
     : d **concentration** /dt = (iCa/surfaceArea) * 1e-9 * phi - ((concentration - restingConc) * beta)
     
 
-````
-`````
+
+
 
 
 ## species
@@ -7429,42 +7590,46 @@ Model of buffering of concentration of an ion ( currently hard coded to be calci
 Description of a chemical species identified by **ion,** which has internal, **concentration,** and external, **extConcentration** values for its concentration.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **initialConcentration**$  $dimensions:concentration
 **initialExtConcentration**$  $dimensions:concentration
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **ion**$ 
 **segmentGroup**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **concentrationModel**$  $ concentrationmodel
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **concentration**$  $dimensions:concentration
 **extConcentration**$  $dimensions:concentration
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : CHILD INSTANCE: **concentrationModel**
@@ -7486,9 +7651,9 @@ Description of a chemical species identified by **ion,** which has internal, **c
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Species">
   <xs:complexContent>
@@ -7506,9 +7671,9 @@ Description of a chemical species identified by **ion,** which has internal, **c
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Species" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Species
@@ -7524,8 +7689,8 @@ variable = component_factory(
     segment_groups: 'a NmlId (optional)' = 'all',
 )
 ```
-````
-`````
+
+
 
 
 ## cell
@@ -7540,25 +7705,28 @@ extends *basecellmembpot*
 Cell with  segments specified in a  morphology element along with details on its  biophysicalproperties. NOTE: this can only be correctly simulated using jLEMS when there is a single segment in the cell, and **v** of this cell represents the membrane potential in that isopotential segment.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **neuroLexId**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **morphology**$ Should only be used if morphology element is outside the cell. This points to the id of the morphology. $ morphology
 **biophysicalProperties**$ Should only be used if biophysicalProperties element is outside the cell.  This points to the id of the biophysicalProperties $ biophysicalproperties
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **caConcExt**$  $dimensions:concentration
@@ -7571,25 +7739,27 @@ Cell with  segments specified in a  morphology element along with details on its
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7645,9 +7815,9 @@ Cell with  segments specified in a  morphology element along with details on its
     : d **v** /dt = (iChannels + iSyn) / totCap
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Cell">
   <xs:complexContent>
@@ -7669,9 +7839,9 @@ Cell with  segments specified in a  morphology element along with details on its
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Cell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Cell
@@ -7692,8 +7862,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <cell id="SpikingCell" metaid="HippoCA1Cell">
     <notes>A Simple Spiking cell for testing purposes</notes>
@@ -7799,8 +7969,8 @@ variable = component_factory(
     </biophysicalProperties>
 </cell>
 ```
-````
-`````
+
+
 
 
 ## cell2CaPools
@@ -7815,24 +7985,27 @@ extends cell
 Variant of cell with two independent Ca2+ pools. Cell with  segments specified in a  morphology element along with details on its  biophysicalproperties. NOTE: this can only be correctly simulated using jLEMS when there is a single segment in the cell, and **v** of this cell represents the membrane potential in that isopotential segment.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **neuroLexId**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **biophysicalProperties2CaPools**$  $ biophysicalproperties2capools
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  *(from cell)* $dimensions:concentration
 **caConc2**$  $dimensions:concentration
@@ -7848,25 +8021,27 @@ Variant of cell with two independent Ca2+ pools. Cell with  segments specified i
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -7925,9 +8100,9 @@ Variant of cell with two independent Ca2+ pools. Cell with  segments specified i
     : d **v** /dt = (iChannels + iSyn) / totCap
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Cell2CaPools">
   <xs:complexContent>
@@ -7940,9 +8115,9 @@ Variant of cell with two independent Ca2+ pools. Cell with  segments specified i
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Cell2CaPools" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Cell2CaPools
@@ -7963,8 +8138,8 @@ variable = component_factory(
     biophysical_properties2_ca_pools: 'a BiophysicalProperties2CaPools (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseCellMembPotCap*
@@ -7979,34 +8154,37 @@ extends *basecellmembpot*
 Any cell with a membrane potential **v** with voltage units and a membrane capacitance **C.** Also defines exposed value **iSyn** for current due to external synapses and **iMemb** for total transmembrane current ( usually channel currents plus **iSyn** ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane $dimensions:capacitance
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane $dimensions:current
 **iSyn**$ Total current due to synaptic inputs $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseCellMembPotCap">
   <xs:complexContent>
@@ -8023,9 +8201,9 @@ Any cell with a membrane potential **v** with voltage units and a membrane capac
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseCellMembPotCap" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseCellMembPotCap
@@ -8043,8 +8221,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseIaf*
@@ -8059,32 +8237,35 @@ extends *basecellmembpot*
 Base ComponentType for an integrate and fire cell which emits a spiking event at membrane potential **thresh** and and resets to **reset**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **reset**$ The value the membrane potential is reset to on spiking $dimensions:voltage
 **thresh**$ The membrane potential at which to emit a spiking event and reset voltage $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## iafTauCell
@@ -8099,9 +8280,10 @@ extends *baseiaf*
 Integrate and fire cell which returns to its leak reversal potential of **leakReversal** with a time constant **tau**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **leakReversal**$  $dimensions:voltage
 **reset**$ The value the membrane potential is reset to on spiking *(from baseiaf)* $dimensions:voltage
@@ -8109,25 +8291,27 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
 **thresh**$ The membrane potential at which to emit a spiking event and reset voltage *(from baseiaf)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8164,9 +8348,9 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
     : d **v** /dt = (leakReversal - v) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IafTauCell">
   <xs:complexContent>
@@ -8180,9 +8364,9 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IafTauCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IafTauCell
@@ -8203,13 +8387,13 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <iafTauCell id="iafTau" leakReversal="-50mV" thresh="-55mV" reset="-70mV" tau="30ms"/>
 ```
-````
-`````
+
+
 
 
 ## iafTauRefCell
@@ -8224,9 +8408,10 @@ extends iaftaucell
 Integrate and fire cell which returns to its leak reversal potential of **leakReversal** with a time course **tau.** It has a refractory period of **refract** after spiking.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **leakReversal**$  *(from iaftaucell)* $dimensions:voltage
 **refract**$  $dimensions:time
@@ -8235,25 +8420,27 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
 **thresh**$ The membrane potential at which to emit a spiking event and reset voltage *(from baseiaf)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8295,9 +8482,9 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = (leakReversal - v) / tau
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IafTauRefCell">
   <xs:complexContent>
@@ -8308,9 +8495,9 @@ Integrate and fire cell which returns to its leak reversal potential of **leakRe
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IafTauRefCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IafTauRefCell
@@ -8331,13 +8518,13 @@ variable = component_factory(
     refract: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <iafTauRefCell id="iafTauRef" leakReversal="-50mV" thresh="-55mV" reset="-70mV" tau="30ms" refract="5ms"/>
 ```
-````
-`````
+
+
 
 
 ## *baseIafCapCell*
@@ -8352,35 +8539,38 @@ extends *basecellmembpotcap*
 Base Type for all Integrate and Fire cells with a capacitance **C,** threshold **thresh** and reset membrane potential **reset**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **reset**$  $dimensions:voltage
 **thresh**$  $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## iafCell
@@ -8395,9 +8585,10 @@ extends *baseiafcapcell*
 Integrate and fire cell with capacitance **C,** **leakConductance** and **leakReversal**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **leakConductance**$  $dimensions:conductance
@@ -8406,35 +8597,38 @@ Integrate and fire cell with capacitance **C,** **leakConductance** and **leakRe
 **thresh**$  *(from baseiafcapcell)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8477,9 +8671,9 @@ Integrate and fire cell with capacitance **C,** **leakConductance** and **leakRe
     : d **v** /dt = iMemb / C
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IafCell">
   <xs:complexContent>
@@ -8494,9 +8688,9 @@ Integrate and fire cell with capacitance **C,** **leakConductance** and **leakRe
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IafCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IafCell
@@ -8518,8 +8712,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <iafCell id="iaf" leakReversal="-50mV" thresh="-55mV" reset="-70mV" C="0.2nF" leakConductance="0.01uS"/>
 ```
@@ -8529,8 +8723,8 @@ variable = component_factory(
 ``` xml
 <iafCell id="iaf" leakConductance="0.2nS" leakReversal="-70mV" thresh="-55mV" reset="-70mV" C="3.2pF"/>
 ```
-````
-`````
+
+
 
 
 ## iafRefCell
@@ -8545,9 +8739,10 @@ extends iafcell
 Integrate and fire cell with capacitance **C,** **leakConductance,** **leakReversal** and refractory period **refract**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **leakConductance**$  *(from iafcell)* $dimensions:conductance
@@ -8557,35 +8752,38 @@ Integrate and fire cell with capacitance **C,** **leakConductance,** **leakRever
 **thresh**$  *(from baseiafcapcell)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8633,9 +8831,9 @@ Integrate and fire cell with capacitance **C,** **leakConductance,** **leakRever
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = iMemb / C
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IafRefCell">
   <xs:complexContent>
@@ -8646,9 +8844,9 @@ Integrate and fire cell with capacitance **C,** **leakConductance,** **leakRever
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IafRefCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IafRefCell
@@ -8670,13 +8868,13 @@ variable = component_factory(
     refract: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <iafRefCell id="iafRef" leakReversal="-50mV" thresh="-55mV" reset="-70mV" C="0.2nF" leakConductance="0.01uS" refract="5ms"/>
 ```
-````
-`````
+
+
 
 
 ## izhikevichCell
@@ -8691,9 +8889,10 @@ extends *basecellmembpot*
 Cell based on the 2003 model of Izhikevich, see http://izhikevich.org/publications/spikes.htm.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **a**$ Time scale of the recovery variable U $Dimensionless
 **b**$ Sensitivity of U to the subthreshold fluctuations of the membrane potential V $Dimensionless
@@ -8703,43 +8902,47 @@ Cell based on the 2003 model of Izhikevich, see http://izhikevich.org/publicatio
 **v0**$ Initial membrane potential $dimensions:voltage
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1ms$  $ dimensions:time
 **MVOLT** = 1mV$  $ dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **U**$ Membrane recovery variable $Dimensionless
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrentdl
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8785,9 +8988,9 @@ Cell based on the 2003 model of Izhikevich, see http://izhikevich.org/publicatio
     : d **U** /dt = a * (b * v / MVOLT - U) / MSEC
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IzhikevichCell">
   <xs:complexContent>
@@ -8803,9 +9006,9 @@ Cell based on the 2003 model of Izhikevich, see http://izhikevich.org/publicatio
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IzhikevichCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IzhikevichCell
@@ -8827,13 +9030,13 @@ variable = component_factory(
     d: 'a Nml2Quantity_none (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <izhikevichCell id="izBurst" v0="-70mV" thresh="30mV" a="0.02" b="0.2" c="-50.0" d="2"/>
 ```
-````
-`````
+
+
 
 
 ## izhikevich2007Cell
@@ -8848,9 +9051,10 @@ extends *basecellmembpotcap*
 Cell based on the modified Izhikevich model in Izhikevich 2007, Dynamical systems in neuroscience, MIT Press.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **a**$ Time scale of recovery variable u $dimensions:per_time
@@ -8864,10 +9068,11 @@ Cell based on the modified Izhikevich model in Izhikevich 2007, Dynamical system
 **vt**$ Spike threshold $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
@@ -8875,25 +9080,27 @@ Cell based on the modified Izhikevich model in Izhikevich 2007, Dynamical system
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -8940,9 +9147,9 @@ Cell based on the modified Izhikevich model in Izhikevich 2007, Dynamical system
     : d **u** /dt = a * (b * (v-vr) - u)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Izhikevich2007Cell">
   <xs:complexContent>
@@ -8961,9 +9168,9 @@ Cell based on the modified Izhikevich model in Izhikevich 2007, Dynamical system
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Izhikevich2007Cell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Izhikevich2007Cell
@@ -8989,13 +9196,13 @@ variable = component_factory(
     d: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <izhikevich2007Cell id="iz2007RS" v0="-60mV" C="100 pF" k="0.7 nS_per_mV" vr="-60 mV" vt="-40 mV" vpeak="35 mV" a="0.03 per_ms" b="-2 nS" c="-50 mV" d="100 pA"/>
 ```
-````
-`````
+
+
 
 
 ## adExIaFCell
@@ -9010,9 +9217,10 @@ extends *basecellmembpotcap*
 Model based on Brette R and Gerstner W ( 2005 ) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **EL**$ Leak reversal potential $dimensions:voltage
@@ -9027,10 +9235,11 @@ Model based on Brette R and Gerstner W ( 2005 ) Adaptive Exponential Integrate-a
 **thresh**$ Spike detection threshold $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
 **iSyn**$ Total current due to synaptic inputs *(from basecellmembpotcap)* $dimensions:current
@@ -9038,25 +9247,27 @@ Model based on Brette R and Gerstner W ( 2005 ) Adaptive Exponential Integrate-a
 **w**$ Adaptation current $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9110,9 +9321,9 @@ Model based on Brette R and Gerstner W ( 2005 ) Adaptive Exponential Integrate-a
 : **Time Derivatives**
 :  d **v** /dt = iMemb / C
 :  d **w** /dt = (a * (v - EL) - w) / tauw
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="AdExIaFCell">
   <xs:complexContent>
@@ -9132,9 +9343,9 @@ Model based on Brette R and Gerstner W ( 2005 ) Adaptive Exponential Integrate-a
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=AdExIaFCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import AdExIaFCell
@@ -9161,13 +9372,13 @@ variable = component_factory(
     b: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <adExIaFCell id="adExBurst" C="281pF" gL="30nS" EL="-70.6mV" reset="-48.5mV" VT="-50.4mV" thresh="-40.4mV" refract="0ms" delT="2mV" tauw="40ms" a="4nS" b="0.08nA"/>
 ```
-````
-`````
+
+
 
 
 ## fitzHughNagumoCell
@@ -9182,41 +9393,45 @@ extends *basecellmembpotdl*
 Simple dimensionless model of spiking cell from FitzHugh and Nagumo. Superseded by **fitzHughNagumo1969Cell** ( See https://github.com/NeuroML/NeuroML2/issues/42 ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **I**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SEC** = 1s$  $ dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **V**$ Membrane potential *(from basecellmembpotdl)* $Dimensionless
 **W**$  $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9238,9 +9453,9 @@ Simple dimensionless model of spiking cell from FitzHugh and Nagumo. Superseded 
     : d **W** /dt = (0.08 * (V + 0.7 - 0.8 * W)) / SEC
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="FitzHughNagumoCell">
   <xs:complexContent>
@@ -9251,9 +9466,9 @@ Simple dimensionless model of spiking cell from FitzHugh and Nagumo. Superseded 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=FitzHughNagumoCell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import FitzHughNagumoCell
@@ -9270,13 +9485,13 @@ variable = component_factory(
     I: 'a Nml2Quantity_none (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <fitzHughNagumoCell id="fn1" I="0.8"/>
 ```
-````
-`````
+
+
 
 
 ## pinskyRinzelCA3Cell
@@ -9291,9 +9506,10 @@ extends *basecellmembpot*
 Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhythmogenesis in a reduced traub model for CA3 neurons. J Comput Neurosci 1, 39-60 ( 1994 ). See https://github.com/OpenSourceBrain/PinskyRinzelModel.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **alphac**$  $Dimensionless
 **betac**$  $Dimensionless
@@ -9318,10 +9534,11 @@ Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhyth
 **qd0**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1 ms$  $ dimensions:time
 **MVOLT** = 1 mV$  $ dimensions:voltage
@@ -9331,10 +9548,11 @@ Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhyth
 **betaqd** = 0.001$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **Cad**$  $Dimensionless
 **ICad**$  $dimensions:currentDensity
@@ -9350,17 +9568,18 @@ Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhyth
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9450,9 +9669,9 @@ Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhyth
     : d **Wi** /dt = -Wi/2.0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="PinskyRinzelCA3Cell">
   <xs:complexContent>
@@ -9483,9 +9702,9 @@ Reduced CA3 cell model from Pinsky, P.F., Rinzel, J. Intrinsic and network rhyth
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=PinskyRinzelCA3Cell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import PinskyRinzelCA3Cell
@@ -9522,13 +9741,13 @@ variable = component_factory(
     cm: 'a Nml2Quantity_specificCapacitance (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <pinskyRinzelCA3Cell id="pr2A" iSoma="0.75 uA_per_cm2" iDend="0 uA_per_cm2" gc="2.1 mS_per_cm2" qd0="0" gLs="0.1 mS_per_cm2" gLd="0.1 mS_per_cm2" gNa="30 mS_per_cm2" gKdr="15 mS_per_cm2" gCa="10 mS_per_cm2" gKahp="0.8 mS_per_cm2" gKC="15 mS_per_cm2" eNa="60 mV" eCa="80 mV" eK="-75 mV" eL="-60 mV" pp="0.5" cm="3 uF_per_cm2" alphac="2" betac="0.1" gNmda="0 mS_per_cm2" gAmpa="0 mS_per_cm2"/>
 ```
-````
-`````
+
+
 
 
 ## hindmarshRose1984Cell
@@ -9543,9 +9762,10 @@ extends *basecellmembpotcap*
 The Hindmarsh Rose model is a simplified point cell model which captures complex firing patterns of single neurons, such as periodic and chaotic bursting. It has a fast spiking subsystem, which is a generalization of the FitzHugh-Nagumo system, coupled to a slower subsystem which allows the model to fire bursts. The dynamical variables x, y, z correspond to the membrane potential, a recovery variable, and a slower adaptation current, respectively. See Hindmarsh J. L., and Rose R. M. ( 1984 ) A model of neuronal bursting using three coupled first order differential equations. Proc. R. Soc. London, Ser. B 221:87–102.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **C**$ Total capacitance of the cell membrane *(from basecellmembpotcap)* $dimensions:capacitance
 **a**$ cubic term in x nullcline $Dimensionless
@@ -9561,18 +9781,20 @@ The Hindmarsh Rose model is a simplified point cell model which captures complex
 **z0**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1ms$  $ dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **chi**$  $Dimensionless
 **iMemb**$ Total current crossing the cell membrane *(from basecellmembpotcap)* $dimensions:current
@@ -9586,25 +9808,27 @@ The Hindmarsh Rose model is a simplified point cell model which captures complex
 **z**$  $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basepointcurrent
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9661,9 +9885,9 @@ The Hindmarsh Rose model is a simplified point cell model which captures complex
     : d **z** /dt = r * rho / MSEC
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HindmarshRose1984Cell">
   <xs:complexContent>
@@ -9684,9 +9908,9 @@ The Hindmarsh Rose model is a simplified point cell model which captures complex
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=HindmarshRose1984Cell" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import HindmarshRose1984Cell
@@ -9714,8 +9938,8 @@ variable = component_factory(
     v_scaling: 'a Nml2Quantity_voltage (required)' = None,
 )
 ```
-````
-`````
+
+
 
 # Channels
 
@@ -9740,23 +9964,25 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 Base ComponentType for voltage dependent rate. Produces a time varying rate **r** which depends on **v.**.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageConcDepRate*
@@ -9771,24 +9997,26 @@ extends *basevoltagedeprate*
 Base ComponentType for voltage and concentration dependent rate. Produces a time varying rate **r** which depends on **v** and **caConc.**.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  *(from basevoltagedeprate)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **v**$  *(from basevoltagedeprate)* $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseHHRate*
@@ -9803,34 +10031,37 @@ extends *basevoltagedeprate*
 Base ComponentType for rate which follow one of the typical forms for rate equations in the standard HH formalism, using the parameters **rate,** **midpoint** and **scale**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  $dimensions:voltage
 **rate**$  $dimensions:per_time
 **scale**$  $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  *(from basevoltagedeprate)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedeprate)* $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHRate">
   <xs:complexContent>
@@ -9844,8 +10075,8 @@ Base ComponentType for rate which follow one of the typical forms for rate equat
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHExpRate
@@ -9860,34 +10091,37 @@ extends *basehhrate*
 Exponential form for rate equation ( Q: Should these be renamed hhExpRate, etc? ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhrate)* $dimensions:voltage
 **rate**$  *(from basehhrate)* $dimensions:per_time
 **scale**$  *(from basehhrate)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  *(from basevoltagedeprate)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedeprate)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9904,9 +10138,9 @@ Exponential form for rate equation ( Q: Should these be renamed hhExpRate, etc? 
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHRate">
   <xs:complexContent>
@@ -9920,8 +10154,8 @@ Exponential form for rate equation ( Q: Should these be renamed hhExpRate, etc? 
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHSigmoidRate
@@ -9936,34 +10170,37 @@ extends *basehhrate*
 Sigmoidal form for rate equation.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhrate)* $dimensions:voltage
 **rate**$  *(from basehhrate)* $dimensions:per_time
 **scale**$  *(from basehhrate)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  *(from basevoltagedeprate)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedeprate)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -9980,9 +10217,9 @@ Sigmoidal form for rate equation.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHRate">
   <xs:complexContent>
@@ -9996,8 +10233,8 @@ Sigmoidal form for rate equation.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHExpLinearRate
@@ -10012,34 +10249,37 @@ extends *basehhrate*
 Exponential linear form for rate equation. Linear for large positive **v,** exponentially decays for large negative **v.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhrate)* $dimensions:voltage
 **rate**$  *(from basehhrate)* $dimensions:per_time
 **scale**$  *(from basehhrate)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **r**$  *(from basevoltagedeprate)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedeprate)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10062,9 +10302,9 @@ Exponential linear form for rate equation. Linear for large positive **v,** expo
 :  **r** = rate (exposed as **r**)
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHRate">
   <xs:complexContent>
@@ -10078,8 +10318,8 @@ Exponential linear form for rate equation. Linear for large positive **v,** expo
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepVariable*
@@ -10090,23 +10330,25 @@ Exponential linear form for rate equation. Linear for large positive **v,** expo
 Base ComponentType for voltage dependent variable **x,** which depends on **v.** Can be used for inf/steady state of rate variable.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageConcDepVariable*
@@ -10121,24 +10363,26 @@ extends *basevoltagedepvariable*
 Base ComponentType for voltage and calcium concentration dependent variable **x,** which depends on **v** and **caConc.**.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  *(from basevoltagedepvariable)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **v**$  *(from basevoltagedepvariable)* $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseHHVariable*
@@ -10153,34 +10397,37 @@ extends *basevoltagedepvariable*
 Base ComponentType for voltage dependent dimensionless variable which follow one of the typical forms for variable equations in the standard HH formalism, using the parameters **rate,** **midpoint,** **scale**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  $dimensions:voltage
 **rate**$  $Dimensionless
 **scale**$  $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  *(from basevoltagedepvariable)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedepvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHVariable">
   <xs:complexContent>
@@ -10194,8 +10441,8 @@ Base ComponentType for voltage dependent dimensionless variable which follow one
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHExpVariable
@@ -10210,34 +10457,37 @@ extends *basehhvariable*
 Exponential form for variable equation.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhvariable)* $dimensions:voltage
 **rate**$  *(from basehhvariable)* $Dimensionless
 **scale**$  *(from basehhvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  *(from basevoltagedepvariable)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedepvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10254,9 +10504,9 @@ Exponential form for variable equation.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHVariable">
   <xs:complexContent>
@@ -10270,8 +10520,8 @@ Exponential form for variable equation.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHSigmoidVariable
@@ -10286,34 +10536,37 @@ extends *basehhvariable*
 Sigmoidal form for variable equation.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhvariable)* $dimensions:voltage
 **rate**$  *(from basehhvariable)* $Dimensionless
 **scale**$  *(from basehhvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  *(from basevoltagedepvariable)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedepvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10330,9 +10583,9 @@ Sigmoidal form for variable equation.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHVariable">
   <xs:complexContent>
@@ -10346,8 +10599,8 @@ Sigmoidal form for variable equation.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## HHExpLinearVariable
@@ -10362,34 +10615,37 @@ extends *basehhvariable*
 Exponential linear form for variable equation. Linear for large positive **v,** exponentially decays for large negative **v.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **midpoint**$  *(from basehhvariable)* $dimensions:voltage
 **rate**$  *(from basehhvariable)* $Dimensionless
 **scale**$  *(from basehhvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **x**$  *(from basevoltagedepvariable)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedepvariable)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10407,9 +10663,9 @@ Exponential linear form for variable equation. Linear for large positive **v,** 
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HHVariable">
   <xs:complexContent>
@@ -10423,8 +10679,8 @@ Exponential linear form for variable equation. Linear for large positive **v,** 
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepTime*
@@ -10435,23 +10691,25 @@ Exponential linear form for variable equation. Linear for large positive **v,** 
 Base ComponentType for voltage dependent ComponentType producing value **t** with dimension time ( e.g. for time course of rate variable ). Note: time course would not normally be fit to exp/sigmoid etc.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **t**$  $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageConcDepTime*
@@ -10466,24 +10724,26 @@ extends *basevoltagedeptime*
 Base type for voltage and calcium concentration dependent ComponentType producing value **t** with dimension time ( e.g. for time course of rate variable ).
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **t**$  *(from basevoltagedeptime)* $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **v**$  *(from basevoltagedeptime)* $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## fixedTimeCourse
@@ -10498,32 +10758,35 @@ extends *basevoltagedeptime*
 Time course of a fixed magnitude **tau** which can be used for the time course in  gatehhtauinf,  gatehhratestau or  gatehhratestauinf.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **t**$  *(from basevoltagedeptime)* $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from basevoltagedeptime)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10540,8 +10803,8 @@ Time course of a fixed magnitude **tau** which can be used for the time course i
 
 
 
-````
-`````
+
+
 
 
 ## *baseQ10Settings*
@@ -10552,24 +10815,26 @@ Time course of a fixed magnitude **tau** which can be used for the time course i
 Base ComponentType for a scaling to apply to gating variable time course, usually temperature dependent.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **q10**$  $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  $dimensions:temperature
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Q10Settings">
   <xs:attribute name="type" type="NmlId" use="required"/>
@@ -10579,8 +10844,8 @@ Base ComponentType for a scaling to apply to gating variable time course, usuall
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## q10Fixed
@@ -10595,32 +10860,35 @@ extends *baseq10settings*
 A fixed value, **fixedQ10,** for the scaling of the time course of the gating variable.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **fixedQ10**$  $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **q10**$  *(from baseq10settings)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  *(from baseq10settings)* $dimensions:temperature
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10637,8 +10905,8 @@ A fixed value, **fixedQ10,** for the scaling of the time course of the gating va
 
 
 
-````
-`````
+
+
 
 
 ## q10ExpTemp
@@ -10653,41 +10921,45 @@ extends *baseq10settings*
 A value for the Q10 scaling which varies as a standard function of the difference between the current temperature, **temperature,** and the temperature at which the gating variable equations were determined, **experimentalTemp**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **experimentalTemp**$  $dimensions:temperature
 **q10Factor**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **TENDEGREES** = 10K$  $ dimensions:temperature
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **q10**$  *(from baseq10settings)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  *(from baseq10settings)* $dimensions:temperature
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10704,8 +10976,8 @@ A value for the Q10 scaling which varies as a standard function of the differenc
 
 
 
-````
-`````
+
+
 
 
 ## *baseConductanceScaling*
@@ -10716,23 +10988,25 @@ A value for the Q10 scaling which varies as a standard function of the differenc
 Base ComponentType for a scaling to apply to a gate's conductance, e.g. temperature dependent scaling.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **factor**$  $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  $dimensions:temperature
 
 ```
-````
-`````
+
+
 
 
 ## q10ConductanceScaling
@@ -10747,41 +11021,45 @@ extends *baseconductancescaling*
 A value for the conductance scaling which varies as a standard function of the difference between the current temperature, **temperature,** and the temperature at which the conductance was originally determined, **experimentalTemp**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **experimentalTemp**$  $dimensions:temperature
 **q10Factor**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **TENDEGREES** = 10K$  $ dimensions:temperature
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **factor**$  *(from baseconductancescaling)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  *(from baseconductancescaling)* $dimensions:temperature
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -10798,9 +11076,9 @@ A value for the conductance scaling which varies as a standard function of the d
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Q10ConductanceScaling">
   <xs:complexContent>
@@ -10812,9 +11090,9 @@ A value for the conductance scaling which varies as a standard function of the d
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Q10ConductanceScaling" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Q10ConductanceScaling
@@ -10826,8 +11104,8 @@ variable = component_factory(
     experimental_temp: 'a Nml2Quantity_temperature (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseConductanceScalingCaDependent*
@@ -10842,24 +11120,26 @@ extends *baseconductancescaling*
 Base ComponentType for a scaling to apply to a gate's conductance which depends on Ca concentration. Usually a generic expression of **caConc** ( so no standard, non-base form here ).
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **factor**$  *(from baseconductancescaling)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **caConc**$  $dimensions:concentration
 **temperature**$  *(from baseconductancescaling)* $dimensions:temperature
 
 ```
-````
-`````
+
+
 
 
 ## *baseGate*
@@ -10870,33 +11150,36 @@ Base ComponentType for a scaling to apply to a gate's conductance which depends 
 Base ComponentType for a voltage and/or concentration dependent gate.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  $Dimensionless
 **q**$  $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHUndetermined">
   <xs:complexContent>
@@ -10917,8 +11200,8 @@ Base ComponentType for a voltage and/or concentration dependent gate.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## gate
@@ -10933,25 +11216,27 @@ extends *basegate*
 Conveniently named baseGate.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  *(from basegate)* $Dimensionless
 **q**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHUndetermined">
   <xs:complexContent>
@@ -10972,9 +11257,9 @@ Conveniently named baseGate.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHUndetermined" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHUndetermined
@@ -10994,8 +11279,8 @@ variable = component_factory(
     sub_gates: 'list of GateFractionalSubgate(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateHHrates
@@ -11010,34 +11295,38 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **forwardRate**$  $ basevoltagedeprate
 **reverseRate**$  $ basevoltagedeprate
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **alpha**$  $dimensions:per_time
 **beta**$  $dimensions:per_time
@@ -11048,9 +11337,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11089,9 +11378,9 @@ Gate which follows the general Hodgkin Huxley formalism.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHRates">
   <xs:complexContent>
@@ -11108,9 +11397,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHRates" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHRates
@@ -11126,8 +11415,8 @@ variable = component_factory(
     reverse_rate: 'a HHRate (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <gateHHrates id="m" instances="3">
     <forwardRate type="HHExpLinearRate" rate="1per_ms" midpoint="-40mV" scale="10mV"/>
@@ -11146,8 +11435,8 @@ variable = component_factory(
     <reverseRate type="HHExpRate" rate="4per_ms" midpoint="-65mV" scale="-18mV"/>
 </gateHHrates>
 ```
-````
-`````
+
+
 
 
 ## gateHHtauInf
@@ -11162,34 +11451,38 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **timeCourse**$  $ basevoltagedeptime
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  *(from basegate)* $Dimensionless
 **inf**$  $Dimensionless
@@ -11198,9 +11491,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11238,9 +11531,9 @@ Gate which follows the general Hodgkin Huxley formalism.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHTauInf">
   <xs:complexContent>
@@ -11257,9 +11550,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHTauInf" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHTauInf
@@ -11275,8 +11568,8 @@ variable = component_factory(
     steady_state: 'a HHVariable (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateHHInstantaneous
@@ -11291,33 +11584,37 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism but is instantaneous, so tau = 0 and gate follows exactly inf value.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SEC** = 1 s$  $ dimensions:time
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  *(from basegate)* $Dimensionless
 **inf**$  $Dimensionless
@@ -11325,9 +11622,9 @@ Gate which follows the general Hodgkin Huxley formalism but is instantaneous, so
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11347,9 +11644,9 @@ Gate which follows the general Hodgkin Huxley formalism but is instantaneous, so
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHInstantaneous">
   <xs:complexContent>
@@ -11364,9 +11661,9 @@ Gate which follows the general Hodgkin Huxley formalism but is instantaneous, so
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHInstantaneous" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHInstantaneous
@@ -11380,8 +11677,8 @@ variable = component_factory(
     steady_state: 'a HHVariable (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateHHratesTau
@@ -11396,35 +11693,39 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **forwardRate**$  $ basevoltagedeprate
 **reverseRate**$  $ basevoltagedeprate
 **timeCourse**$  $ basevoltagedeptime
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **alpha**$  $dimensions:per_time
 **beta**$  $dimensions:per_time
@@ -11435,9 +11736,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11477,9 +11778,9 @@ Gate which follows the general Hodgkin Huxley formalism.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHRatesTau">
   <xs:complexContent>
@@ -11497,9 +11798,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHRatesTau" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHRatesTau
@@ -11516,8 +11817,8 @@ variable = component_factory(
     time_course: 'a HHTime (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateHHratesInf
@@ -11532,35 +11833,39 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **forwardRate**$  $ basevoltagedeprate
 **reverseRate**$  $ basevoltagedeprate
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **alpha**$  $dimensions:per_time
 **beta**$  $dimensions:per_time
@@ -11571,9 +11876,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11612,9 +11917,9 @@ Gate which follows the general Hodgkin Huxley formalism.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHRatesInf">
   <xs:complexContent>
@@ -11632,9 +11937,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHRatesInf" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHRatesInf
@@ -11651,8 +11956,8 @@ variable = component_factory(
     steady_state: 'a HHVariable (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateHHratesTauInf
@@ -11667,17 +11972,19 @@ extends gate
 Gate which follows the general Hodgkin Huxley formalism.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **forwardRate**$  $ basevoltagedeprate
 **reverseRate**$  $ basevoltagedeprate
@@ -11685,18 +11992,20 @@ Gate which follows the general Hodgkin Huxley formalism.
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **alpha**$  $dimensions:per_time
 **beta**$  $dimensions:per_time
@@ -11707,9 +12016,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11749,9 +12058,9 @@ Gate which follows the general Hodgkin Huxley formalism.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateHHRatesTauInf">
   <xs:complexContent>
@@ -11770,9 +12079,9 @@ Gate which follows the general Hodgkin Huxley formalism.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateHHRatesTauInf" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateHHRatesTauInf
@@ -11790,8 +12099,8 @@ variable = component_factory(
     steady_state: 'a HHVariable (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateFractional
@@ -11806,35 +12115,38 @@ extends gate
 Gate composed of subgates contributing with fractional conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **q10Settings**$  $ baseq10settings
 **subGate**$  $ subgate
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  *(from basegate)* $Dimensionless
 **q**$  *(from basegate)* $Dimensionless
 **rateScale**$  $Dimensionless
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11853,9 +12165,9 @@ Gate composed of subgates contributing with fractional conductance.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateFractional">
   <xs:complexContent>
@@ -11871,9 +12183,9 @@ Gate composed of subgates contributing with fractional conductance.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateFractional" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateFractional
@@ -11888,8 +12200,8 @@ variable = component_factory(
     sub_gates: 'list of GateFractionalSubgate(s) (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## subGate
@@ -11900,27 +12212,30 @@ variable = component_factory(
 Gate composed of subgates contributing with fractional conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **fractionalConductance**$  $Dimensionless
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 **timeCourse**$  $ basevoltagedeptime
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **inf**$  $Dimensionless
 **q**$  $Dimensionless
@@ -11928,17 +12243,18 @@ Gate composed of subgates contributing with fractional conductance.
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **rateScale**$  $Dimensionless
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -11975,9 +12291,9 @@ Gate composed of subgates contributing with fractional conductance.
     : d **q** /dt = (inf - q) / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateFractionalSubgate">
   <xs:complexContent>
@@ -11994,9 +12310,9 @@ Gate composed of subgates contributing with fractional conductance.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateFractionalSubgate" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateFractionalSubgate
@@ -12012,8 +12328,8 @@ variable = component_factory(
     time_course: 'a HHTime (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseIonChannel*
@@ -12024,48 +12340,53 @@ variable = component_factory(
 Base for all ion channel ComponentTypes.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  $dimensions:conductance
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **neuroLexId**$ 
 
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 **annotation**$  $ annotation
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  $Dimensionless
 **g**$  $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## ionChannelPassive
@@ -12080,40 +12401,44 @@ extends ionchannel
 Simple passive ion channel where the constant conductance through the channel is equal to **conductance**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  *(from baseionchannel)* $Dimensionless
 **g**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from baseionchannel)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12131,8 +12456,8 @@ Simple passive ion channel where the constant conductance through the channel is
 
 
 
-````
-`````
+
+
 
 
 ## ionChannelHH
@@ -12147,49 +12472,54 @@ extends *baseionchannel*
 Note  ionchannel and  ionchannelhh are currently functionally identical. This is needed since many existing examples use ionChannel, some use ionChannelHH. NeuroML v2beta4 should remove one of these, probably ionChannelHH.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **conductanceScaling**$  $ baseconductancescaling
 **gates**$  $ gate
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  *(from baseionchannel)* $Dimensionless
 **g**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from baseionchannel)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12209,9 +12539,9 @@ Note  ionchannel and  ionchannelhh are currently functionally identical. This is
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IonChannelHH">
   <xs:complexContent>
@@ -12220,9 +12550,9 @@ Note  ionchannel and  ionchannelhh are currently functionally identical. This is
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IonChannelHH" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IonChannelHH
@@ -12250,8 +12580,8 @@ variable = component_factory(
     gate_fractionals: 'list of GateFractional(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <ionChannelHH id="pas" conductance="10pS"/>
 ```
@@ -12272,8 +12602,8 @@ variable = component_factory(
     </gateHHrates>
 </ionChannelHH>
 ```
-````
-`````
+
+
 
 
 ## ionChannel
@@ -12288,33 +12618,36 @@ extends ionchannelhh
 Note  ionchannel and  ionchannelhh are currently functionally identical. This is needed since many existing examples use ionChannel, some use ionChannelHH. NeuroML v2beta4 should remove one of these, probably ionChannelHH.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  *(from baseionchannel)* $Dimensionless
 **g**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from baseionchannel)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12334,9 +12667,9 @@ Note  ionchannel and  ionchannelhh are currently functionally identical. This is
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IonChannel">
   <xs:complexContent>
@@ -12359,9 +12692,9 @@ Note  ionchannel and  ionchannelhh are currently functionally identical. This is
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IonChannel" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IonChannel
@@ -12390,8 +12723,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## ionChannelVShift
@@ -12406,41 +12739,45 @@ extends ionchannel
 Same as  ionchannel, but with a **vShift** parameter to change voltage activation of gates. The exact usage of **vShift** in expressions for rates is determined by the individual gates.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  *(from baseionchannel)* $dimensions:conductance
 **vShift**$  $dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  *(from baseionchannel)* $Dimensionless
 **g**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from baseionchannel)* $dimensions:voltage
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IonChannelVShift">
   <xs:complexContent>
@@ -12451,9 +12788,9 @@ Same as  ionchannel, but with a **vShift** parameter to change voltage activatio
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IonChannelVShift" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IonChannelVShift
@@ -12482,8 +12819,8 @@ variable = component_factory(
     v_shift: 'a Nml2Quantity_voltage (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## KSState
@@ -12494,25 +12831,27 @@ variable = component_factory(
 One of the states in which a  gateks can be. The rates of transitions between these states are given by  kstransitions.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **relativeConductance**$  $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **occupancy**$  $Dimensionless
 **q**$  $Dimensionless
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12533,8 +12872,8 @@ One of the states in which a  gateks can be. The rates of transitions between th
 
 
 
-````
-`````
+
+
 
 
 ## closedState
@@ -12549,25 +12888,27 @@ extends ksstate
 A  ksstate with **relativeConductance** of 0.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **relativeConductance**$  *(from ksstate)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **occupancy**$  *(from ksstate)* $Dimensionless
 **q**$  *(from ksstate)* $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ClosedState">
   <xs:complexContent>
@@ -12577,9 +12918,9 @@ A  ksstate with **relativeConductance** of 0.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ClosedState" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ClosedState
@@ -12590,8 +12931,8 @@ variable = component_factory(
     id: 'a NmlId (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## openState
@@ -12606,25 +12947,27 @@ extends ksstate
 A  ksstate with **relativeConductance** of 1.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **relativeConductance**$  *(from ksstate)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **occupancy**$  *(from ksstate)* $Dimensionless
 **q**$  *(from ksstate)* $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="OpenState">
   <xs:complexContent>
@@ -12634,9 +12977,9 @@ A  ksstate with **relativeConductance** of 1.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=OpenState" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import OpenState
@@ -12647,8 +12990,8 @@ variable = component_factory(
     id: 'a NmlId (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## ionChannelKS
@@ -12663,49 +13006,54 @@ extends *baseionchannel*
 A kinetic scheme based ion channel with multiple  gatekss, each of which consists of multiple  ksstates and  kstransitions giving the rates of transition between them.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **conductanceScaling**$  $ baseconductancescaling
 **gates**$  $ gateks
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fopen**$  *(from baseionchannel)* $Dimensionless
 **g**$  *(from baseionchannel)* $dimensions:conductance
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  *(from baseionchannel)* $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12723,9 +13071,9 @@ A kinetic scheme based ion channel with multiple  gatekss, each of which consist
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IonChannelKS">
   <xs:complexContent>
@@ -12741,9 +13089,9 @@ A kinetic scheme based ion channel with multiple  gatekss, each of which consist
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IonChannelKS" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IonChannelKS
@@ -12762,8 +13110,8 @@ variable = component_factory(
     gate_kses: 'list of GateKS(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## KSTransition
@@ -12774,16 +13122,17 @@ variable = component_factory(
 Specified the forward and reverse rates of transition between two  ksstates in a  gateks.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **rf**$  $dimensions:per_time
 **rr**$  $dimensions:per_time
 
 ```
-````
-`````
+
+
 
 
 ## forwardTransition
@@ -12798,33 +13147,36 @@ extends kstransition
 A forward only  kstransition for a  gateks which specifies a **rate** ( type  basehhrate ) which follows one of the standard Hodgkin Huxley forms ( e.g.  hhexprate,  hhsigmoidrate,  hhexplinearrate.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SEC** = 1s$  $ dimensions:time
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rate**$  $ basehhrate
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **rf**$  *(from kstransition)* $dimensions:per_time
 **rr**$  *(from kstransition)* $dimensions:per_time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12843,9 +13195,9 @@ A forward only  kstransition for a  gateks which specifies a **rate** ( type  ba
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ForwardTransition">
   <xs:complexContent>
@@ -12860,9 +13212,9 @@ A forward only  kstransition for a  gateks which specifies a **rate** ( type  ba
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ForwardTransition" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ForwardTransition
@@ -12876,8 +13228,8 @@ variable = component_factory(
     anytypeobjs_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## reverseTransition
@@ -12892,33 +13244,36 @@ extends kstransition
 A reverse only  kstransition for a  gateks which specifies a **rate** ( type  basehhrate ) which follows one of the standard Hodgkin Huxley forms ( e.g.  hhexprate,  hhsigmoidrate,  hhexplinearrate.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SEC** = 1s$  $ dimensions:time
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rate**$  $ basehhrate
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **rf**$  *(from kstransition)* $dimensions:per_time
 **rr**$  *(from kstransition)* $dimensions:per_time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -12937,9 +13292,9 @@ A reverse only  kstransition for a  gateks which specifies a **rate** ( type  ba
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ReverseTransition">
   <xs:complexContent>
@@ -12954,9 +13309,9 @@ A reverse only  kstransition for a  gateks which specifies a **rate** ( type  ba
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ReverseTransition" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ReverseTransition
@@ -12970,8 +13325,8 @@ variable = component_factory(
     anytypeobjs_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## vHalfTransition
@@ -12986,9 +13341,10 @@ extends kstransition
 Transition which specifies both the forward and reverse rates of transition.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **gamma**$  $Dimensionless
 **tau**$  $dimensions:time
@@ -12997,34 +13353,37 @@ Transition which specifies both the forward and reverse rates of transition.
 **z**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **kte** = 25.3mV$  $ dimensions:voltage
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **rf**$  *(from kstransition)* $dimensions:per_time
 **rr**$  *(from kstransition)* $dimensions:per_time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -13044,8 +13403,8 @@ Transition which specifies both the forward and reverse rates of transition.
 
 
 
-````
-`````
+
+
 
 
 ## tauInfTransition
@@ -13060,26 +13419,28 @@ extends kstransition
 KS Transition specified in terms of time constant  tau and steady state  inf.
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **timeCourse**$  $ basevoltagedeptime
 **steadyState**$  $ basevoltagedepvariable
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **rf**$  *(from kstransition)* $dimensions:per_time
 **rr**$  *(from kstransition)* $dimensions:per_time
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -13099,9 +13460,9 @@ KS Transition specified in terms of time constant  tau and steady state  inf.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="TauInfTransition">
   <xs:complexContent>
@@ -13117,9 +13478,9 @@ KS Transition specified in terms of time constant  tau and steady state  inf.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=TauInfTransition" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import TauInfTransition
@@ -13134,8 +13495,8 @@ variable = component_factory(
     time_course: 'a HHTime (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## gateKS
@@ -13150,36 +13511,39 @@ extends *basegate*
 A gate which consists of multiple  ksstates and  kstransitions giving the rates of transition between them.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  *(from basegate)* $Dimensionless
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **states**$  $ ksstate
 **transitions**$  $ kstransition
 **q10Settings**$  $ baseq10settings
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **fcond**$  *(from basegate)* $Dimensionless
 **q**$  *(from basegate)* $Dimensionless
 **rateScale**$  $Dimensionless
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -13198,9 +13562,9 @@ A gate which consists of multiple  ksstates and  kstransitions giving the rates 
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GateKS">
   <xs:complexContent>
@@ -13221,9 +13585,9 @@ A gate which consists of multiple  ksstates and  kstransitions giving the rates 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GateKS" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GateKS
@@ -13242,8 +13606,8 @@ variable = component_factory(
     tau_inf_transition: 'list of TauInfTransition(s) (required)' = None,
 )
 ```
-````
-`````
+
+
 
 # Synapses
 
@@ -13274,24 +13638,26 @@ Base type for all synapses, i.e. ComponentTypes which produce a current ( dimens
 
 [Bioportal entry for Computational Neuroscience Ontology related to baseSynapse.](https://bioportal.bioontology.org/ontologies/CNO/?p=classes&conceptid=cno_0000009)
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseSynapse">
   <xs:complexContent>
@@ -13302,9 +13668,9 @@ Base type for all synapses, i.e. ComponentTypes which produce a current ( dimens
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseSynapse
@@ -13321,8 +13687,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepSynapse*
@@ -13337,32 +13703,35 @@ extends *basesynapse*
 Base type for synapses with a dependence on membrane potential.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseVoltageDepSynapse">
   <xs:complexContent>
@@ -13373,9 +13742,9 @@ Base type for synapses with a dependence on membrane potential.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseVoltageDepSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseVoltageDepSynapse
@@ -13392,8 +13761,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseSynapseDL*
@@ -13410,23 +13779,25 @@ Base type for all synapses, i.e. ComponentTypes which produce a dimensionless cu
 
 [Bioportal entry for Computational Neuroscience Ontology related to baseSynapseDL.](https://bioportal.bioontology.org/ontologies/CNO/?p=classes&conceptid=cno_0000009)
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **V**$ The current may vary with the dimensionless voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrentdl)* $Dimensionless
 
 ```
-````
-`````
+
+
 
 
 ## *baseCurrentBasedSynapse*
@@ -13441,24 +13812,26 @@ extends *basesynapse*
 Synapse model which produces a synaptic current.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseCurrentBasedSynapse">
   <xs:complexContent>
@@ -13469,9 +13842,9 @@ Synapse model which produces a synaptic current.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseCurrentBasedSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseCurrentBasedSynapse
@@ -13488,8 +13861,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## alphaCurrentSynapse
@@ -13504,41 +13877,45 @@ extends *basecurrentbasedsynapse*
 Alpha current synapse: rise time and decay time are both **tau.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **ibase**$ Baseline current increase after receiving a spike $dimensions:current
 **tau**$ Time course for rise and decay $dimensions:time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -13581,9 +13958,9 @@ Alpha current synapse: rise time and decay time are both **tau.**.
     : d **J** /dt = -J/tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="AlphaCurrentSynapse">
   <xs:complexContent>
@@ -13595,9 +13972,9 @@ Alpha current synapse: rise time and decay time are both **tau.**.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=AlphaCurrentSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import AlphaCurrentSynapse
@@ -13615,8 +13992,8 @@ variable = component_factory(
     ibase: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseConductanceBasedSynapse*
@@ -13633,42 +14010,46 @@ Synapse model which exposes a conductance **g** in addition to producing a curre
 
 [Bioportal entry for Computational Neuroscience Ontology related to baseConductanceBasedSynapse.](https://bioportal.bioontology.org/ontologies/CNO/?p=classes&conceptid=cno_0000027)
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike $dimensions:conductance
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseConductanceBasedSynapse">
   <xs:complexContent>
@@ -13680,9 +14061,9 @@ Synapse model which exposes a conductance **g** in addition to producing a curre
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseConductanceBasedSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseConductanceBasedSynapse
@@ -13701,8 +14082,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## *baseConductanceBasedSynapseTwo*
@@ -13719,43 +14100,47 @@ Synapse model suited for a sum of two expTwoSynapses which exposes a conductance
 
 [Bioportal entry for Computational Neuroscience Ontology related to baseConductanceBasedSynapseTwo.](https://bioportal.bioontology.org/ontologies/CNO/?p=classes&conceptid=cno_0000027)
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse $dimensions:voltage
 **gbase1**$ Baseline conductance 1 $dimensions:conductance
 **gbase2**$ Baseline conductance 2 $dimensions:conductance
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BaseConductanceBasedSynapseTwo">
   <xs:complexContent>
@@ -13768,9 +14153,9 @@ Synapse model suited for a sum of two expTwoSynapses which exposes a conductance
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BaseConductanceBasedSynapseTwo" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BaseConductanceBasedSynapseTwo
@@ -13790,8 +14175,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## expOneSynapse
@@ -13806,51 +14191,56 @@ extends *baseconductancebasedsynapse*
 Ohmic synapse model whose conductance rises instantaneously by ( **gbase** * **weight** ) on receiving an event, and which decays exponentially to zero with time course **tauDecay**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapse)* $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike *(from baseconductancebasedsynapse)* $dimensions:conductance
 **tauDecay**$ Time course of decay $dimensions:time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse *(from baseconductancebasedsynapse)* $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -13890,9 +14280,9 @@ Ohmic synapse model whose conductance rises instantaneously by ( **gbase** * **w
     : d **g** /dt = -g / tauDecay
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExpOneSynapse">
   <xs:complexContent>
@@ -13903,9 +14293,9 @@ Ohmic synapse model whose conductance rises instantaneously by ( **gbase** * **w
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExpOneSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExpOneSynapse
@@ -13924,8 +14314,8 @@ variable = component_factory(
     tau_decay: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <expOneSynapse id="syn1" gbase="5nS" erev="0mV" tauDecay="3ms"/>
 ```
@@ -13935,8 +14325,8 @@ variable = component_factory(
 ``` xml
 <expOneSynapse id="syn1" gbase="5nS" erev="0mV" tauDecay="3ms"/>
 ```
-````
-`````
+
+
 
 
 ## alphaSynapse
@@ -13951,51 +14341,56 @@ extends *baseconductancebasedsynapse*
 Ohmic synapse model where rise time and decay time are both **tau.** Max conductance reached during this time ( assuming zero conductance before ) is **gbase** * **weight.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapse)* $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike *(from baseconductancebasedsynapse)* $dimensions:conductance
 **tau**$ Time course of rise/decay $dimensions:time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse *(from baseconductancebasedsynapse)* $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -14038,9 +14433,9 @@ Ohmic synapse model where rise time and decay time are both **tau.** Max conduct
     : d **A** /dt = -A / tau
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="AlphaSynapse">
   <xs:complexContent>
@@ -14051,9 +14446,9 @@ Ohmic synapse model where rise time and decay time are both **tau.** Max conduct
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=AlphaSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import AlphaSynapse
@@ -14072,15 +14467,15 @@ variable = component_factory(
     tau: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <alphaSynapse id="synalpha" gbase="0.5nS" erev="0mV" tau="2ms">
     <notes>An alpha synapse with time for rise equal to decay.</notes>
 </alphaSynapse>
 ```
-````
-`````
+
+
 
 
 ## expTwoSynapse
@@ -14095,9 +14490,10 @@ extends *baseconductancebasedsynapse*
 Ohmic synapse model whose conductance waveform on receiving an event has a rise time of **tauRise** and a decay time of **tauDecay.** Max conductance reached during this time ( assuming zero conductance before ) is **gbase** * **weight.**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapse)* $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike *(from baseconductancebasedsynapse)* $dimensions:conductance
@@ -14105,56 +14501,61 @@ Ohmic synapse model whose conductance waveform on receiving an event has a rise 
 **tauRise**$  $dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **peakTime**$  $dimensions:time
 ```
 **peakTime** = log(tauDecay / tauRise) * (tauRise * tauDecay)/(tauDecay - tauRise)
-```Table:
+```
 
 **waveformFactor**$  $Dimensionless
 ```
 **waveformFactor** = 1 / (-exp(-peakTime / tauRise) + exp(-peakTime / tauDecay))
 
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse *(from baseconductancebasedsynapse)* $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -14199,9 +14600,9 @@ Ohmic synapse model whose conductance waveform on receiving an event has a rise 
     : d **B** /dt = -B / tauDecay
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExpTwoSynapse">
   <xs:complexContent>
@@ -14213,9 +14614,9 @@ Ohmic synapse model whose conductance waveform on receiving an event has a rise 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExpTwoSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExpTwoSynapse
@@ -14236,8 +14637,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <expTwoSynapse id="AMPA" gbase="0.5nS" erev="0mV" tauRise="1ms" tauDecay="2ms"/>
 ```
@@ -14247,8 +14648,8 @@ variable = component_factory(
 ``` xml
 <expTwoSynapse id="synInputFast" gbase="1nS" erev="20mV" tauRise="0.2ms" tauDecay="1ms"/>
 ```
-````
-`````
+
+
 
 
 ## expThreeSynapse
@@ -14263,9 +14664,10 @@ extends *baseconductancebasedsynapsetwo*
 Ohmic synapse similar to expTwoSynapse but consisting of two components that can differ in decay times and max conductances but share the same rise time.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapsetwo)* $dimensions:voltage
 **gbase1**$ Baseline conductance 1 *(from baseconductancebasedsynapsetwo)* $dimensions:conductance
@@ -14275,66 +14677,71 @@ Ohmic synapse similar to expTwoSynapse but consisting of two components that can
 **tauRise**$  $dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **peakTime1**$  $dimensions:time
 ```
 **peakTime1** = log(tauDecay1 / tauRise) * (tauRise * tauDecay1)/(tauDecay1 - tauRise)
-```Table:
+```
 
 **peakTime2**$  $dimensions:time
 ```
 **peakTime2** = log(tauDecay2 / tauRise) * (tauRise * tauDecay2)/(tauDecay2 - tauRise)
-```Table:
+```
 
 **waveformFactor1**$  $Dimensionless
 ```
 **waveformFactor1** = 1 / (-exp(-peakTime1 / tauRise) + exp(-peakTime1 / tauDecay1))
-```Table:
+```
 
 **waveformFactor2**$  $Dimensionless
 ```
 **waveformFactor2** = 1 / (-exp(-peakTime2 / tauRise) + exp(-peakTime2 / tauDecay2))
 
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse *(from baseconductancebasedsynapsetwo)* $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -14383,9 +14790,9 @@ Ohmic synapse similar to expTwoSynapse but consisting of two components that can
     : d **C** /dt = -C / tauDecay2
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExpThreeSynapse">
   <xs:complexContent>
@@ -14398,9 +14805,9 @@ Ohmic synapse similar to expTwoSynapse but consisting of two components that can
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExpThreeSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExpThreeSynapse
@@ -14422,8 +14829,8 @@ variable = component_factory(
     tau_rise: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <expThreeSynapse id="synInputFastTwo" gbase1="1.5nS" tauRise="0.1ms" tauDecay1="0.7ms" gbase2="0.5nS" tauDecay2="2.5ms" erev="0mV"/>
 ```
@@ -14432,8 +14839,8 @@ variable = component_factory(
     <notes>A synapse consisting of one rise and two decay time courses.</notes>
 </expThreeSynapse>
 ```
-````
-`````
+
+
 
 
 ## *baseBlockMechanism*
@@ -14444,15 +14851,16 @@ variable = component_factory(
 Base of any ComponentType which produces a varying scaling ( or blockage ) of synaptic strength of magnitude **scaling**.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **blockFactor**$  $Dimensionless
 
 ```
-````
-`````
+
+
 
 
 ## voltageConcDepBlockMechanism
@@ -14467,41 +14875,45 @@ extends *baseblockmechanism*
 Synaptic blocking mechanism which varys with membrane potential across the synapse, e.g. in NMDA receptor mediated synapses.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **blockConcentration**$  $dimensions:concentration
 **scalingConc**$  $dimensions:concentration
 **scalingVolt**$  $dimensions:voltage
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **species**$ 
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **blockFactor**$  *(from baseblockmechanism)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -14518,8 +14930,8 @@ Synaptic blocking mechanism which varys with membrane potential across the synap
 
 
 
-````
-`````
+
+
 
 
 ## *basePlasticityMechanism*
@@ -14530,23 +14942,25 @@ Synaptic blocking mechanism which varys with membrane potential across the synap
 Base plasticity mechanism.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **plasticityFactor**$  $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ This is where the plasticity mechanism receives spike events from the parent synapse.$Direction: in
 
 ```
-````
-`````
+
+
 
 
 ## tsodyksMarkramDepMechanism
@@ -14561,33 +14975,36 @@ extends *baseplasticitymechanism*
 Depression-only Tsodyks-Markram model, as in Tsodyks and Markram 1997.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **initReleaseProb**$  $Dimensionless
 **tauRec**$  $dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **plasticityFactor**$  *(from baseplasticitymechanism)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ This is where the plasticity mechanism receives spike events from the parent synapse. *(from baseplasticitymechanism)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **parent** AS **a**
@@ -14635,8 +15052,8 @@ Depression-only Tsodyks-Markram model, as in Tsodyks and Markram 1997.
     : d **R** /dt = (1 - R) / tauRec
     
 
-````
-`````
+
+
 
 
 ## tsodyksMarkramDepFacMechanism
@@ -14651,34 +15068,37 @@ extends *baseplasticitymechanism*
 Full Tsodyks-Markram STP model with both depression and facilitation, as in Tsodyks, Pawelzik and Markram 1998.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **initReleaseProb**$  $Dimensionless
 **tauFac**$  $dimensions:time
 **tauRec**$  $dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **plasticityFactor**$  *(from baseplasticitymechanism)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ This is where the plasticity mechanism receives spike events from the parent synapse. *(from baseplasticitymechanism)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **parent** AS **a**
@@ -14729,8 +15149,8 @@ Full Tsodyks-Markram STP model with both depression and facilitation, as in Tsod
     : d **U** /dt = (initReleaseProb - U) / tauFac
     
 
-````
-`````
+
+
 
 
 ## blockingPlasticSynapse
@@ -14745,9 +15165,10 @@ extends exptwosynapse
 Biexponential synapse that allows for optional block and plasticity mechanisms, which can be expressed as child elements.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapse)* $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike *(from baseconductancebasedsynapse)* $dimensions:conductance
@@ -14755,66 +15176,72 @@ Biexponential synapse that allows for optional block and plasticity mechanisms, 
 **tauRise**$  *(from exptwosynapse)* $dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **peakTime**$  *(from exptwosynapse)* $dimensions:time
 ```
 **peakTime** = log(tauDecay / tauRise) * (tauRise * tauDecay)/(tauDecay - tauRise)
-```Table:
+```
 
 **waveformFactor**$  *(from exptwosynapse)* $Dimensionless
 ```
 **waveformFactor** = 1 / (-exp(-peakTime / tauRise) + exp(-peakTime / tauDecay))
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **plasticityMechanisms**$  $ baseplasticitymechanism
 **blockMechanisms**$  $ baseblockmechanism
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$ Time varying conductance through the synapse *(from baseconductancebasedsynapse)* $dimensions:conductance
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 **relay**$ Used to relay incoming spikes to child plasticity mechanism$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -14862,9 +15289,9 @@ Biexponential synapse that allows for optional block and plasticity mechanisms, 
     : d **B** /dt = -B / tauDecay
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BlockingPlasticSynapse">
   <xs:complexContent>
@@ -14878,9 +15305,9 @@ Biexponential synapse that allows for optional block and plasticity mechanisms, 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BlockingPlasticSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BlockingPlasticSynapse
@@ -14902,8 +15329,8 @@ variable = component_factory(
     block_mechanism: 'a BlockMechanism (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <blockingPlasticSynapse id="NMDA" gbase=".8nS" tauRise="1e-3s" tauDecay="13.3333e-3s" erev="0V">
     <blockMechanism type="voltageConcDepBlockMechanism" species="mg" blockConcentration="1.2mM" scalingConc="1.9205441817997078mM" scalingVolt="0.016129032258064516V"/>
@@ -14924,8 +15351,8 @@ variable = component_factory(
     <blockMechanism type="voltageConcDepBlockMechanism" species="mg" blockConcentration="1.2 mM" scalingConc="1.920544 mM" scalingVolt="16.129 mV"/>
 </blockingPlasticSynapse>
 ```
-````
-`````
+
+
 
 
 ## doubleSynapse
@@ -14940,58 +15367,64 @@ extends *basevoltagedepsynapse*
 Synapse consisting of two independent synaptic mechanisms ( e.g. AMPA-R and NMDA-R ), which can be easily colocated in connections.
 
 
-`````
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **synapse1Path**$ 
 **synapse2Path**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse1**$  $ basesynapse
 **synapse2**$  $ basesynapse
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 **relay**$ Used to relay incoming spikes to child mechanisms$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **this** AS **a**
@@ -15040,9 +15473,9 @@ Synapse consisting of two independent synaptic mechanisms ( e.g. AMPA-R and NMDA
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DoubleSynapse">
   <xs:complexContent>
@@ -15056,9 +15489,9 @@ Synapse consisting of two independent synaptic mechanisms ( e.g. AMPA-R and NMDA
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=DoubleSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import DoubleSynapse
@@ -15078,15 +15511,15 @@ variable = component_factory(
     synapse2_path: 'a string (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <doubleSynapse id="AMPA_NMDA" synapse1="AMPA" synapse1Path="./AMPA" synapse2="NMDA" synapse2Path="./NMDA">
     <notes>A single "synapse" which contains both AMPA and NMDA. It is planned that the need for extra synapse1Path/synapse2Path attributes can be removed in later versions.</notes>
 </doubleSynapse>
 ```
-````
-`````
+
+
 
 
 ## stdpSynapse
@@ -15103,9 +15536,10 @@ Spike timing dependent plasticity mechanism, NOTE: EXAMPLE NOT YET WORKING!!!!
 
 [Bioportal entry for Computational Neuroscience Ontology related to stdpSynapse.](https://bioportal.bioontology.org/ontologies/CNO/?p=classes&conceptid=cno_0000034)
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **erev**$ Reversal potential of the synapse *(from baseconductancebasedsynapse)* $dimensions:voltage
 **gbase**$ Baseline conductance, generally the maximum conductance following a single spike *(from baseconductancebasedsynapse)* $dimensions:conductance
@@ -15113,33 +15547,36 @@ Spike timing dependent plasticity mechanism, NOTE: EXAMPLE NOT YET WORKING!!!!
 **tauRise**$  *(from exptwosynapse)* $dimensions:time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **tsinceRate** = 1$  $ Dimensionless
 **longTime** = 1000s$  $ dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **peakTime**$  *(from exptwosynapse)* $dimensions:time
 ```
 **peakTime** = log(tauDecay / tauRise) * (tauRise * tauDecay)/(tauDecay - tauRise)
-```Table:
+```
 
 **waveformFactor**$  *(from exptwosynapse)* $Dimensionless
 ```
 **waveformFactor** = 1 / (-exp(-peakTime / tauRise) + exp(-peakTime / tauDecay))
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **M**$  $Dimensionless
 **P**$  $Dimensionless
@@ -15148,25 +15585,27 @@ Spike timing dependent plasticity mechanism, NOTE: EXAMPLE NOT YET WORKING!!!!
 **tsince**$  $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -15219,8 +15658,8 @@ Spike timing dependent plasticity mechanism, NOTE: EXAMPLE NOT YET WORKING!!!!
     : d **tsince** /dt = tsinceRate
     
 
-````
-`````
+
+
 
 
 ## gapJunction
@@ -15235,48 +15674,53 @@ extends *basesynapse*
 Gap junction/single electrical connection.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  $dimensions:conductance
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -15294,9 +15738,9 @@ Gap junction/single electrical connection.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GapJunction">
   <xs:complexContent>
@@ -15307,9 +15751,9 @@ Gap junction/single electrical connection.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GapJunction" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GapJunction
@@ -15326,16 +15770,16 @@ variable = component_factory(
     conductance: 'a Nml2Quantity_conductance (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <gapJunction id="gj1" conductance="10pS"/>
 ```
 ``` xml
 <gapJunction id="gj1" conductance="10pS"/>
 ```
-````
-`````
+
+
 
 
 ## *baseGradedSynapse*
@@ -15350,23 +15794,25 @@ extends *basesynapse*
 Base type for graded synapses.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
-`````
+
+
 
 
 ## silentSynapse
@@ -15381,48 +15827,53 @@ extends *basegradedsynapse*
 Dummy synapse which emits no current. Used as presynaptic endpoint for analog synaptic connection.
 
 
-`````
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **AMP** = 1A$  $ dimensions:current
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -15440,9 +15891,9 @@ Dummy synapse which emits no current. Used as presynaptic endpoint for analog sy
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SilentSynapse">
   <xs:complexContent>
@@ -15453,9 +15904,9 @@ Dummy synapse which emits no current. Used as presynaptic endpoint for analog sy
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SilentSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SilentSynapse
@@ -15471,8 +15922,8 @@ variable = component_factory(
     neuro_lex_id: 'a NeuroLexId (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <silentSynapse id="silent1"/>
 ```
@@ -15482,8 +15933,8 @@ variable = component_factory(
 ``` xml
 <silentSynapse id="silent1"/>
 ```
-````
-`````
+
+
 
 
 ## linearGradedSynapse
@@ -15498,48 +15949,53 @@ extends *basegradedsynapse*
 Behaves just like a one way gap junction.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **conductance**$  $dimensions:conductance
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -15557,9 +16013,9 @@ Behaves just like a one way gap junction.
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="LinearGradedSynapse">
   <xs:complexContent>
@@ -15570,9 +16026,9 @@ Behaves just like a one way gap junction.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=LinearGradedSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import LinearGradedSynapse
@@ -15589,13 +16045,13 @@ variable = component_factory(
     conductance: 'a Nml2Quantity_conductance (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <linearGradedSynapse id="gs1" conductance="5pS"/>
 ```
-````
-`````
+
+
 
 
 ## gradedSynapse
@@ -15610,9 +16066,10 @@ extends *basegradedsynapse*
 Graded/analog synapse. Based on synapse in Methods of http://www.nature.com/neuro/journal/v7/n12/abs/nn1352.html.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **Vth**$ The half-activation voltage of the synapse $dimensions:voltage
 **conductance**$  $dimensions:conductance
@@ -15621,43 +16078,47 @@ Graded/analog synapse. Based on synapse in Methods of http://www.nature.com/neur
 **k**$ Rate constant for transmitter-receptor dissociation rate $dimensions:per_time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 **inf**$  $Dimensionless
 **tau**$  $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$  $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -15705,9 +16166,9 @@ Graded/analog synapse. Based on synapse in Methods of http://www.nature.com/neur
     : d **s** /dt = s_rate
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="GradedSynapse">
   <xs:complexContent>
@@ -15722,9 +16183,9 @@ Graded/analog synapse. Based on synapse in Methods of http://www.nature.com/neur
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=GradedSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import GradedSynapse
@@ -15745,16 +16206,16 @@ variable = component_factory(
     erev: 'a Nml2Quantity_voltage (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <gradedSynapse id="gs2" conductance="5pS" delta="5mV" Vth="-55mV" k="0.025per_ms" erev="0mV"/>
 ```
 ``` xml
 <gradedSynapse id="gs1" conductance="0.1nS" delta="5mV" Vth="-35mV" k="0.025per_ms" erev="0mV"/>
 ```
-````
-`````
+
+
 
 # Inputs
 
@@ -15783,15 +16244,16 @@ extends *basestandalone*
 Base type for all ComponentTypes which produce a current **i** ( with dimension current ).
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType $dimensions:current
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepPointCurrent*
@@ -15806,23 +16268,25 @@ extends *basepointcurrent*
 Base type for all ComponentTypes which produce a current **i** ( with dimension current ) and require a voltage **v** exposed on the parent Component, which would often be the membrane potential of a Component extending  basecellmembpot.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed $dimensions:voltage
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepPointCurrentSpiking*
@@ -15837,32 +16301,35 @@ extends *basevoltagedeppointcurrent*
 Base type for all ComponentTypes which produce a current **i,** require a membrane potential **v** exposed on the parent and emit spikes ( on a port **spike** ). The exposed variable **tsince** can be used for plotting the time since the Component has spiked last.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 **tsince**$ Time since the last spike was emitted $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## *basePointCurrentDL*
@@ -15873,15 +16340,16 @@ Base type for all ComponentTypes which produce a current **i,** require a membra
 Base type for all ComponentTypes which produce a dimensionless current **I.** There are many dimensionless equivalents of all the core current producing ComponentTypes such as  pulsegenerator /  pulsegeneratordl,  sinegenerator /  sinegeneratordl and  rampgenerator /  rampgeneratordl.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType $Dimensionless
 
 ```
-````
-`````
+
+
 
 
 ## *baseVoltageDepPointCurrentDL*
@@ -15896,23 +16364,25 @@ extends *basepointcurrentdl*
 Base type for all ComponentTypes which produce a dimensionless current **I** and require a dimensionless membrane potential **V** exposed on the parent Component.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **V**$ The current may vary with the dimensionless voltage exposed by the ComponentType on which this is placed $Dimensionless
 
 ```
-````
-`````
+
+
 
 
 ## *baseSpikeSource*
@@ -15923,23 +16393,25 @@ Base type for all ComponentTypes which produce a dimensionless current **I** and
 Base for any ComponentType whose main purpose is to emit spikes ( on a port **spike** ). The exposed variable **tsince** can be used for plotting the time since the Component has spiked last.
 
 
-`````
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **tsince**$ Time since the last spike was emitted $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted$Direction: out
 
 ```
-````
-`````
+
+
 
 
 ## spikeGenerator
@@ -15954,41 +16426,45 @@ extends *basespikesource*
 Simple generator of spikes at a regular interval set by **period**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **period**$ Time between spikes. The first spike will be emitted after this time. $dimensions:time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SMALL_TIME** = 1e-9ms$ A useful constant for use as a non zero time increment $ dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **tnext**$ When the next spike should ideally be emitted (dt permitting) $dimensions:time
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -16029,9 +16505,9 @@ Simple generator of spikes at a regular interval set by **period**.
     : d **tnext** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeGenerator">
   <xs:complexContent>
@@ -16042,9 +16518,9 @@ Simple generator of spikes at a regular interval set by **period**.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeGenerator" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeGenerator
@@ -16060,13 +16536,13 @@ variable = component_factory(
     period: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeGenerator id="spikeGenRegular" period="20 ms"/>
 ```
-````
-`````
+
+
 
 
 ## spikeGeneratorRandom
@@ -16081,43 +16557,47 @@ extends *basespikesource*
 Generator of spikes with a random interspike interval of at least **minISI** and at most **maxISI**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **maxISI**$ Maximum interspike interval $dimensions:time
 **minISI**$ Minimum interspike interval $dimensions:time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1ms$ Required for converting time values to/from dimensionless quantities $ dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **isi**$ The interval until the next spike $dimensions:time
 **tnext**$ When the next spike should ideally be emitted (dt permitting) $dimensions:time
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -16161,9 +16641,9 @@ Generator of spikes with a random interspike interval of at least **minISI** and
     : d **tnext** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeGeneratorRandom">
   <xs:complexContent>
@@ -16175,9 +16655,9 @@ Generator of spikes with a random interspike interval of at least **minISI** and
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeGeneratorRandom" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeGeneratorRandom
@@ -16194,13 +16674,13 @@ variable = component_factory(
     min_isi: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeGeneratorRandom id="spikeGenRandom" minISI="10 ms" maxISI="30 ms"/>
 ```
-````
-`````
+
+
 
 
 ## spikeGeneratorPoisson
@@ -16215,25 +16695,28 @@ extends *basespikesource*
 Generator of spikes whose ISI is distributed according to an exponential PDF with scale: 1 / **averageRate**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageRate**$ The average rate at which spikes are emitted $dimensions:per_time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SMALL_TIME** = 1e-9ms$  $ dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **isi**$ The interval until the next spike $dimensions:time
 **tnextIdeal**$ This is the ideal/perfect next spike time, based on a newly generated isi, but dt precision will mean that it's usually slightly later than this $dimensions:time
@@ -16241,17 +16724,18 @@ Generator of spikes whose ISI is distributed according to an exponential PDF wit
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -16299,9 +16783,9 @@ Generator of spikes whose ISI is distributed according to an exponential PDF wit
     : d **tnextIdeal** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeGeneratorPoisson">
   <xs:complexContent>
@@ -16312,9 +16796,9 @@ Generator of spikes whose ISI is distributed according to an exponential PDF wit
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeGeneratorPoisson" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeGeneratorPoisson
@@ -16331,13 +16815,13 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeGeneratorPoisson id="spikeGenPoisson" averageRate="50 Hz"/>
 ```
-````
-`````
+
+
 
 
 ## spikeGeneratorRefPoisson
@@ -16352,27 +16836,30 @@ extends spikegeneratorpoisson
 Generator of spikes whose ISI distribution is the maximum entropy distribution over [ **minimumISI,** +infinity ) with mean: 1 / **averageRate**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageRate**$ The average rate at which spikes are emitted *(from spikegeneratorpoisson)* $dimensions:per_time
 **minimumISI**$ The minimum interspike interval $dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageIsi**$ The average interspike interval $dimensions:time
 ```
 **averageIsi** = 1 / averageRate
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **isi**$ The interval until the next spike *(from spikegeneratorpoisson)* $dimensions:time
 **tnextIdeal**$ This is the ideal/perfect next spike time, based on a newly generated isi, but dt precision will mean that it's usually slightly later than this *(from spikegeneratorpoisson)* $dimensions:time
@@ -16380,17 +16867,18 @@ Generator of spikes whose ISI distribution is the maximum entropy distribution o
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -16438,9 +16926,9 @@ Generator of spikes whose ISI distribution is the maximum entropy distribution o
     : d **tnextIdeal** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeGeneratorRefPoisson">
   <xs:complexContent>
@@ -16451,9 +16939,9 @@ Generator of spikes whose ISI distribution is the maximum entropy distribution o
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeGeneratorRefPoisson" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeGeneratorRefPoisson
@@ -16470,13 +16958,13 @@ variable = component_factory(
     minimum_isi: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeGeneratorRefPoisson id="spikeGenRefPoisson" averageRate="50 Hz" minimumISI="10 ms"/>
 ```
-````
-`````
+
+
 
 
 ## poissonFiringSynapse
@@ -16491,57 +16979,64 @@ extends *basevoltagedeppointcurrentspiking*
 Poisson spike generator firing at **averageRate,** which is connected to single **synapse** that is triggered every time a spike is generated, producing an input current. See also  transientpoissonfiringsynapse.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageRate**$ The average rate at which spikes are emitted $dimensions:per_time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SMALL_TIME** = 1e-9ms$  $ dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageIsi**$ The average interspike interval $dimensions:time
 ```
 **averageIsi** = 1 / averageRate
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **spikeTarget**$ The target of the spikes, i.e. the synapse
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ basesynapse
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 **isi**$ The interval until the next spike $dimensions:time
@@ -16550,27 +17045,29 @@ Poisson spike generator firing at **averageRate,** which is connected to single 
 **tsince**$ Time since the last spike was emitted *(from basevoltagedeppointcurrentspiking)* $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 **spike**$ Port on which spikes are emitted$Direction: out
 **spike**$ Port on which spikes are emitted *(from basevoltagedeppointcurrentspiking)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **this** AS **a**
@@ -16632,9 +17129,9 @@ Poisson spike generator firing at **averageRate,** which is connected to single 
     : d **tnextIdeal** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="PoissonFiringSynapse">
   <xs:complexContent>
@@ -16647,9 +17144,9 @@ Poisson spike generator firing at **averageRate,** which is connected to single 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=PoissonFiringSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import PoissonFiringSynapse
@@ -16667,13 +17164,13 @@ variable = component_factory(
     spike_target: 'a string (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <poissonFiringSynapse id="poissonFiringSyn" averageRate="10 Hz" synapse="synInput" spikeTarget="./synInput"/>
 ```
-````
-`````
+
+
 
 
 ## transientPoissonFiringSynapse
@@ -16688,60 +17185,67 @@ extends *basevoltagedeppointcurrentspiking*
 Poisson spike generator firing at **averageRate** after a **delay** and for a **duration,** connected to single **synapse** that is triggered every time a spike is generated, providing an input current. Similar to ComponentType  poissonfiringsynapse.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageRate**$  $dimensions:per_time
 **delay**$  $dimensions:time
 **duration**$  $dimensions:time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **SMALL_TIME** = 1e-9ms$  $ dimensions:time
 **LONG_TIME** = 1e9hour$  $ dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **averageIsi**$  $dimensions:time
 ```
 **averageIsi** = 1 / averageRate
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **spikeTarget**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ basesynapse
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 **isi**$  $dimensions:time
@@ -16750,27 +17254,29 @@ Poisson spike generator firing at **averageRate** after a **delay** and for a **
 **tsince**$ Time since the last spike was emitted *(from basevoltagedeppointcurrentspiking)* $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 **spike**$ Port on which spikes are emitted$Direction: out
 **spike**$ Port on which spikes are emitted *(from basevoltagedeppointcurrentspiking)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **this** AS **a**
@@ -16832,9 +17338,9 @@ Poisson spike generator firing at **averageRate** after a **delay** and for a **
     : d **tnextIdeal** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="TransientPoissonFiringSynapse">
   <xs:complexContent>
@@ -16849,9 +17355,9 @@ Poisson spike generator firing at **averageRate** after a **delay** and for a **
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=TransientPoissonFiringSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import TransientPoissonFiringSynapse
@@ -16871,16 +17377,16 @@ variable = component_factory(
     spike_target: 'a string (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <transientPoissonFiringSynapse id="transPoissonFiringSyn" delay="50ms" duration="50ms" averageRate="300 Hz" synapse="synInputFast" spikeTarget="./synInputFast"/>
 ```
 ``` xml
 <transientPoissonFiringSynapse id="transPoissonFiringSyn2" delay="50ms" duration="500ms" averageRate="10 Hz" synapse="synInputFastTwo" spikeTarget="./synInputFastTwo"/>
 ```
-````
-`````
+
+
 
 
 ## timedSynapticInput
@@ -16895,65 +17401,72 @@ extends *basevoltagedeppointcurrentspiking*
 Spike array connected to a single **synapse,** producing a current triggered by each  spike in the array.
 
 
-`````
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **spikeTarget**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ basesynapse
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **spikes**$  $ spike
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 **tsince**$ Time since the last spike was emitted *(from basevoltagedeppointcurrentspiking)* $dimensions:time
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ This will receive events from the children$Direction: in
 **spike**$ Port on which spikes are emitted *(from basevoltagedeppointcurrentspiking)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **this** AS **a**
@@ -17001,9 +17514,9 @@ Spike array connected to a single **synapse,** producing a current triggered by 
     : d **tsince** /dt = 1
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="TimedSynapticInput">
   <xs:complexContent>
@@ -17018,9 +17531,9 @@ Spike array connected to a single **synapse,** producing a current triggered by 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=TimedSynapticInput" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import TimedSynapticInput
@@ -17038,8 +17551,8 @@ variable = component_factory(
     spikes: 'list of Spike(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <timedSynapticInput id="synTrain" synapse="synInputFastTwo" spikeTarget="./synInputFastTwo">
     <spike id="0" time="2 ms"/>
@@ -17060,8 +17573,8 @@ variable = component_factory(
     <spike id="15" time="55.2 ms"/>
 </timedSynapticInput>
 ```
-````
-`````
+
+
 
 
 ## spikeArray
@@ -17076,33 +17589,36 @@ extends *basespikesource*
 Set of spike ComponentTypes, each emitting one spike at a certain time. Can be used to feed a predetermined spike train into a cell.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **spikes**$  $ spike
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ This will receive events from the children$Direction: in
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17138,9 +17654,9 @@ Set of spike ComponentTypes, each emitting one spike at a certain time. Can be u
     : d **tsince** /dt = 1
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeArray">
   <xs:complexContent>
@@ -17153,9 +17669,9 @@ Set of spike ComponentTypes, each emitting one spike at a certain time. Can be u
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeArray" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeArray
@@ -17171,8 +17687,8 @@ variable = component_factory(
     spikes: 'list of Spike(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spikeArray id="spkArr">
     <spike id="0" time="50 ms"/>
@@ -17182,8 +17698,8 @@ variable = component_factory(
     <spike id="4" time="250 ms"/>
 </spikeArray>
 ```
-````
-`````
+
+
 
 
 ## spike
@@ -17198,33 +17714,36 @@ extends *basespikesource*
 Emits a single spike at the specified **time**.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **time**$ Time at which to emit one spike event $dimensions:time
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **spiked**$ 0 signals not yet spiked, 1 signals has spiked $Dimensionless
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 **Structure**
 : WITH **this** AS **a**
@@ -17270,9 +17789,9 @@ Emits a single spike at the specified **time**.
     : d **tsince** /dt = 1
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Spike">
   <xs:complexContent>
@@ -17283,9 +17802,9 @@ Emits a single spike at the specified **time**.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Spike" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Spike
@@ -17297,8 +17816,8 @@ variable = component_factory(
     time: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <spike id="0" time="50 ms"/>
 ```
@@ -17308,8 +17827,8 @@ variable = component_factory(
 ``` xml
 <spike id="2" time="150 ms"/>
 ```
-````
-`````
+
+
 
 
 ## pulseGenerator
@@ -17324,42 +17843,46 @@ extends *basepointcurrent*
 Generates a constant current pulse of a certain **amplitude** for a specified **duration** after a **delay.** Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **amplitude**$ Amplitude of current pulse $dimensions:current
 **delay**$ Delay before change in current. Current is zero  prior to this. $dimensions:time
 **duration**$ Duration for holding current at amplitude. Current is zero after delay + duration. $dimensions:time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note: this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17400,9 +17923,9 @@ Generates a constant current pulse of a certain **amplitude** for a specified **
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="PulseGenerator">
   <xs:complexContent>
@@ -17415,9 +17938,9 @@ Generates a constant current pulse of a certain **amplitude** for a specified **
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=PulseGenerator" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import PulseGenerator
@@ -17435,8 +17958,8 @@ variable = component_factory(
     amplitude: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <pulseGenerator id="pulseGen1" delay="50ms" duration="200ms" amplitude="0.0032nA"/>
 ```
@@ -17446,8 +17969,8 @@ variable = component_factory(
 ``` xml
 <pulseGenerator id="pulseGen3" delay="700ms" duration="200ms" amplitude="0.0010nA"/>
 ```
-````
-`````
+
+
 
 
 ## compoundInput
@@ -17462,40 +17985,44 @@ extends *basepointcurrent*
 Generates a current which is the sum of all its child  basepointcurrent element, e.g. can be a combination of  pulsegenerator,  sinegenerator elements producing a single **i.** Scaled by **weight,** if set.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **currents**$  $ basepointcurrent
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17525,9 +18052,9 @@ Generates a current which is the sum of all its child  basepointcurrent element,
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="CompoundInput">
   <xs:complexContent>
@@ -17542,9 +18069,9 @@ Generates a current which is the sum of all its child  basepointcurrent element,
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=CompoundInput" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import CompoundInput
@@ -17562,8 +18089,8 @@ variable = component_factory(
     ramp_generators: 'list of RampGenerator(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <compoundInput id="ci0">
     <pulseGenerator id="pg1" delay="50ms" duration="200ms" amplitude=".8 nA"/>
@@ -17571,8 +18098,8 @@ variable = component_factory(
     <sineGenerator id="sg0" phase="0" delay="125ms" duration="50ms" amplitude=".4nA" period="25ms"/>
 </compoundInput>
 ```
-````
-`````
+
+
 
 
 ## compoundInputDL
@@ -17587,40 +18114,44 @@ extends *basepointcurrentdl*
 Generates a current which is the sum of all its child  basepointcurrentdl elements, e.g. can be a combination of  pulsegeneratordl,  sinegeneratordl elements producing a single **i.** Scaled by **weight,** if set.
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **currents**$  $ basepointcurrentdl
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17650,9 +18181,9 @@ Generates a current which is the sum of all its child  basepointcurrentdl elemen
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="CompoundInputDL">
   <xs:complexContent>
@@ -17667,9 +18198,9 @@ Generates a current which is the sum of all its child  basepointcurrentdl elemen
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=CompoundInputDL" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import CompoundInputDL
@@ -17687,8 +18218,8 @@ variable = component_factory(
     ramp_generator_dls: 'list of RampGeneratorDL(s) (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## pulseGeneratorDL
@@ -17703,42 +18234,46 @@ extends *basepointcurrentdl*
 Dimensionless equivalent of  pulsegenerator. Generates a constant current pulse of a certain **amplitude** for a specified **duration** after a **delay.** Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **amplitude**$ Amplitude of current pulse $Dimensionless
 **delay**$ Delay before change in current. Current is zero  prior to this. $dimensions:time
 **duration**$ Duration for holding current at amplitude. Current is zero after delay + duration. $dimensions:time
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17779,9 +18314,9 @@ Dimensionless equivalent of  pulsegenerator. Generates a constant current pulse 
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="PulseGeneratorDL">
   <xs:complexContent>
@@ -17794,9 +18329,9 @@ Dimensionless equivalent of  pulsegenerator. Generates a constant current pulse 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=PulseGeneratorDL" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import PulseGeneratorDL
@@ -17814,8 +18349,8 @@ variable = component_factory(
     amplitude: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## sineGenerator
@@ -17830,9 +18365,10 @@ extends *basepointcurrent*
 Generates a sinusoidally varying current after a time **delay,** for a fixed **duration.** The **period** and maximum **amplitude** of the current can be set as well as the **phase** at which to start. Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **amplitude**$ Maximum amplitude of current $dimensions:current
 **delay**$ Delay before change in current. Current is zero  prior to this. $dimensions:time
@@ -17841,33 +18377,36 @@ Generates a sinusoidally varying current after a time **delay,** for a fixed **d
 **phase**$ Phase (between 0 and 2*pi) at which to start the varying current (i.e. at time given by delay) $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -17908,9 +18447,9 @@ Generates a sinusoidally varying current after a time **delay,** for a fixed **d
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SineGenerator">
   <xs:complexContent>
@@ -17925,9 +18464,9 @@ Generates a sinusoidally varying current after a time **delay,** for a fixed **d
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SineGenerator" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SineGenerator
@@ -17947,16 +18486,16 @@ variable = component_factory(
     period: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <sineGenerator id="sg0" phase="0" delay="50ms" duration="200ms" amplitude="1.4nA" period="50ms"/>
 ```
 ``` xml
 <sineGenerator id="sg0" phase="0" delay="125ms" duration="50ms" amplitude=".4nA" period="25ms"/>
 ```
-````
-`````
+
+
 
 
 ## sineGeneratorDL
@@ -17971,9 +18510,10 @@ extends *basepointcurrentdl*
 Dimensionless equivalent of  sinegenerator. Generates a sinusoidally varying current after a time **delay,** for a fixed **duration.** The **period** and maximum **amplitude** of the current can be set as well as the **phase** at which to start. Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **amplitude**$ Maximum amplitude of current $Dimensionless
 **delay**$ Delay before change in current. Current is zero  prior to this. $dimensions:time
@@ -17982,33 +18522,36 @@ Dimensionless equivalent of  sinegenerator. Generates a sinusoidally varying cur
 **phase**$ Phase (between 0 and 2*pi) at which to start the varying current (i.e. at time given by delay) $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -18049,9 +18592,9 @@ Dimensionless equivalent of  sinegenerator. Generates a sinusoidally varying cur
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SineGeneratorDL">
   <xs:complexContent>
@@ -18066,9 +18609,9 @@ Dimensionless equivalent of  sinegenerator. Generates a sinusoidally varying cur
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SineGeneratorDL" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SineGeneratorDL
@@ -18088,8 +18631,8 @@ variable = component_factory(
     period: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## rampGenerator
@@ -18104,9 +18647,10 @@ extends *basepointcurrent*
 Generates a ramping current after a time **delay,** for a fixed **duration.** During this time the current steadily changes from **startAmplitude** to **finishAmplitude.** Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **baselineAmplitude**$ Amplitude of current before time delay, and after time delay + duration $dimensions:current
 **delay**$ Delay before change in current. Current is baselineAmplitude prior to this. $dimensions:time
@@ -18115,33 +18659,36 @@ Generates a ramping current after a time **delay,** for a fixed **duration.** Du
 **startAmplitude**$ Amplitude of linearly varying current at time delay $dimensions:current
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -18184,9 +18731,9 @@ Generates a ramping current after a time **delay,** for a fixed **duration.** Du
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="RampGenerator">
   <xs:complexContent>
@@ -18201,9 +18748,9 @@ Generates a ramping current after a time **delay,** for a fixed **duration.** Du
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=RampGenerator" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import RampGenerator
@@ -18223,13 +18770,13 @@ variable = component_factory(
     baseline_amplitude: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <rampGenerator id="rg0" delay="50ms" duration="200ms" startAmplitude="0.5nA" finishAmplitude="4nA" baselineAmplitude="0nA"/>
 ```
-````
-`````
+
+
 
 
 ## rampGeneratorDL
@@ -18244,9 +18791,10 @@ extends *basepointcurrentdl*
 Dimensionless equivalent of  rampgenerator. Generates a ramping current after a time **delay,** for a fixed **duration.** During this time the dimensionless current steadily changes from **startAmplitude** to **finishAmplitude.** Scaled by **weight,** if set.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **baselineAmplitude**$ Amplitude of current before time delay, and after time delay + duration $Dimensionless
 **delay**$ Delay before change in current. Current is baselineAmplitude prior to this. $dimensions:time
@@ -18255,33 +18803,36 @@ Dimensionless equivalent of  rampgenerator. Generates a ramping current after a 
 **startAmplitude**$ Amplitude of linearly varying current at time delay $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **I**$ The total (time varying) current produced by this ComponentType *(from basepointcurrentdl)* $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -18324,9 +18875,9 @@ Dimensionless equivalent of  rampgenerator. Generates a ramping current after a 
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="RampGeneratorDL">
   <xs:complexContent>
@@ -18341,9 +18892,9 @@ Dimensionless equivalent of  rampgenerator. Generates a ramping current after a 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=RampGeneratorDL" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import RampGeneratorDL
@@ -18363,8 +18914,8 @@ variable = component_factory(
     baseline_amplitude: 'a Nml2Quantity_current (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## voltageClamp
@@ -18379,9 +18930,10 @@ extends *basevoltagedeppointcurrent*
 Voltage clamp. Applies a variable current **i** to try to keep parent at **targetVoltage.** Not yet fully tested!!! Consider using voltageClampTriple!!
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **delay**$ Delay before change in current. Current is zero prior to this. $dimensions:time
 **duration**$ Duration for attempting to keep parent at targetVoltage. Current is zero after delay + duration. $dimensions:time
@@ -18389,41 +18941,45 @@ Voltage clamp. Applies a variable current **i** to try to keep parent at **targe
 **targetVoltage**$ Current will be applied to try to get parent to this target voltage $dimensions:voltage
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -18464,9 +19020,9 @@ Voltage clamp. Applies a variable current **i** to try to keep parent at **targe
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="VoltageClamp">
   <xs:complexContent>
@@ -18480,9 +19036,9 @@ Voltage clamp. Applies a variable current **i** to try to keep parent at **targe
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=VoltageClamp" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import VoltageClamp
@@ -18501,8 +19057,8 @@ variable = component_factory(
     simple_series_resistance: 'a Nml2Quantity_resistance (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## voltageClampTriple
@@ -18517,9 +19073,10 @@ extends *basevoltagedeppointcurrent*
 Voltage clamp with 3 clamp levels. Applies a variable current **i** ( through **simpleSeriesResistance** ) to try to keep parent cell at **conditioningVoltage** until time **delay,** **testingVoltage** until **delay** + **duration,** and **returnVoltage** afterwards. Only enabled if **active** = 1.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **active**$ Whether the voltage clamp is active (1) or inactive (0). $Dimensionless
 **conditioningVoltage**$ Target voltage before time delay $dimensions:voltage
@@ -18530,41 +19087,45 @@ Voltage clamp with 3 clamp levels. Applies a variable current **i** ( through **
 **testingVoltage**$ Target voltage between times delay and delay + duration $dimensions:voltage
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedeppointcurrent)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ Note this is not used here. Will be removed in future$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -18605,9 +19166,9 @@ Voltage clamp with 3 clamp levels. Applies a variable current **i** ( through **
 
 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="VoltageClampTriple">
   <xs:complexContent>
@@ -18624,9 +19185,9 @@ Voltage clamp with 3 clamp levels. Applies a variable current **i** ( through **
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=VoltageClampTriple" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import VoltageClampTriple
@@ -18648,13 +19209,13 @@ variable = component_factory(
     simple_series_resistance: 'a Nml2Quantity_resistance (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <voltageClampTriple id="vClamp0" active="1" delay="50ms" duration="200ms" conditioningVoltage="-70mV" testingVoltage="-50mV" returnVoltage="-70mV" simpleSeriesResistance="1e6ohm"/>
 ```
-````
-`````
+
+
 
 # Networks
 
@@ -18683,9 +19244,10 @@ extends *basestandalone*
 Network containing:  populations ( potentially of type  populationlist, and so specifying a list of cell  locations );  projections ( with lists of  connections ) and/or  explicitconnections; and  inputlists ( with lists of  inputs ) and/or  explicitinputs. Note: often in NeuroML this will be of type  networkwithtemperature if there are temperature dependent elements ( e.g. ion channels ).
 
 
-`````
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **regions**$  $ region
 **populations**$  $ basepopulation
@@ -18697,9 +19259,9 @@ Network containing:  populations ( potentially of type  populationlist, and so s
 **inputs**$  $ inputlist
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Network">
   <xs:complexContent>
@@ -18725,9 +19287,9 @@ Network containing:  populations ( potentially of type  populationlist, and so s
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Network" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Network
@@ -18756,8 +19318,8 @@ variable = component_factory(
     input_lists: 'list of InputList(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <network id="net1">
     <population id="iafPop1" component="iaf" size="1"/>
@@ -18803,8 +19365,8 @@ variable = component_factory(
         </projection>
 </network>
 ```
-````
-`````
+
+
 
 
 ## networkWithTemperature
@@ -18819,15 +19381,16 @@ extends network
 Same as  network, but with an explicit **temperature** for temperature dependent elements ( e.g. ion channels ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **temperature**$  $dimensions:temperature
 
 ```
-````
-`````
+
+
 
 
 ## *basePopulation*
@@ -18842,32 +19405,35 @@ extends *basestandalone*
 A population of multiple instances of a specific **component,** which anything which extends  basecell.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **component**$  $ basecell
 
 ```
-````
 
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **notes**$  $ notes
 **annotation**$  $ annotation
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **property**$  $ property
 
 ```
-````
-`````
+
+
 
 
 ## population
@@ -18882,16 +19448,17 @@ extends *basepopulation*
 A population of components, with just one parameter for the **size,** i.e. number of components to create. Note: quite often this is used with type= populationlist which means the size is determined by the number of  instances ( with  locations ) in the list. The **size** attribute is still set, and there will be a validation error if this does not match the number in the list.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **size**$ Number of instances of this Component to create when the population is instantiated $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Population">
   <xs:complexContent>
@@ -18910,9 +19477,9 @@ A population of components, with just one parameter for the **size,** i.e. numbe
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Population" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Population
@@ -18934,8 +19501,8 @@ variable = component_factory(
     instances: 'list of Instance(s) (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <population id="iafPop1" component="iaf" size="1"/>
 ```
@@ -18945,8 +19512,8 @@ variable = component_factory(
 ``` xml
 <population id="iafPop3" component="iaf" size="1"/>
 ```
-````
-`````
+
+
 
 
 ## populationList
@@ -18961,22 +19528,24 @@ extends *basepopulation*
 An explicit list of  instances ( with  locations ) of components in the population.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **size**$ Note: the size of the populationList to create is set by the number of explicitly defined instances. The size attribute is still set, and there will be a validation error if this does not match the number in the list.
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **instances**$  $ instance
 
 ```
-````
-`````
+
+
 
 
 ## instance
@@ -18987,16 +19556,17 @@ An explicit list of  instances ( with  locations ) of components in the populati
 Specifies a single instance of a component in a  population ( placed at  location ).
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **location**$  $ location
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Instance">
   <xs:complexContent>
@@ -19013,9 +19583,9 @@ Specifies a single instance of a component in a  population ( placed at  locatio
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Instance" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Instance
@@ -19030,8 +19600,8 @@ variable = component_factory(
     location: 'a Location (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <instance id="0">
     <location x="0" y="0" z="0"/>
@@ -19047,8 +19617,8 @@ variable = component_factory(
     <location x="0" y="0" z="0"/>
 </instance>
 ```
-````
-`````
+
+
 
 
 ## location
@@ -19059,18 +19629,19 @@ variable = component_factory(
 Specifies the ( x, y, z ) location of a single  instance of a component in a  population.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **x**$  $Dimensionless
 **y**$  $Dimensionless
 **z**$  $Dimensionless
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Location">
   <xs:complexContent>
@@ -19083,9 +19654,9 @@ Specifies the ( x, y, z ) location of a single  instance of a component in a  po
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Location" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Location
@@ -19098,8 +19669,8 @@ variable = component_factory(
     z: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <location x="0" y="0" z="0"/>
 ```
@@ -19109,8 +19680,8 @@ variable = component_factory(
 ``` xml
 <location x="0" y="0" z="0"/>
 ```
-````
-`````
+
+
 
 
 ## region
@@ -19121,16 +19692,17 @@ variable = component_factory(
 Initial attempt to specify 3D region for placing cells. Work in progress...
 
 
-`````
-```` Child list
-```Table:
+
+Table of Child list (separator='$')
+```
+Name $ description $ reference
 
 **rectangularExtent**$  $ rectangularextent
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Region">
   <xs:complexContent>
@@ -19144,9 +19716,9 @@ Initial attempt to specify 3D region for placing cells. Work in progress...
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Region" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Region
@@ -19159,8 +19731,8 @@ variable = component_factory(
     anytypeobjs_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## rectangularExtent
@@ -19171,9 +19743,10 @@ variable = component_factory(
 For defining a 3D rectangular box.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **xLength**$  $Dimensionless
 **xStart**$  $Dimensionless
@@ -19183,8 +19756,8 @@ For defining a 3D rectangular box.
 **zStart**$  $Dimensionless
 
 ```
-````
-`````
+
+
 
 
 ## projection
@@ -19195,33 +19768,36 @@ For defining a 3D rectangular box.
 Projection from one population, **presynapticPopulation** to another, **postsynapticPopulation,** through **synapse.** Contains lists of  connection or  connectionwd elements.
 
 
-`````
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **presynapticPopulation**$ 
 **postsynapticPopulation**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ basesynapse
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **connections**$  $ connection
 **connectionsWD**$  $ connectionwd
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Projection">
   <xs:complexContent>
@@ -19236,9 +19812,9 @@ Projection from one population, **presynapticPopulation** to another, **postsyna
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Projection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Projection
@@ -19254,8 +19830,8 @@ variable = component_factory(
     connection_wds: 'list of ConnectionWD(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <projection id="Proj1" presynapticPopulation="Population1" postsynapticPopulation="Population1" synapse="AMPA">
            
@@ -19272,8 +19848,8 @@ variable = component_factory(
     <connection id="0" preCellId="../iafCells/0/iaf" postCellId="../iafCells/2/iaf"/>
 </projection>
 ```
-````
-`````
+
+
 
 
 ## explicitConnection
@@ -19284,22 +19860,24 @@ variable = component_factory(
 Explicit event connection between components.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **targetPort**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **from**$ 
 **to**$ 
 
-````
-`````
+
+
 
 
 ## connection
@@ -19310,9 +19888,10 @@ Explicit event connection between components.
 Event connection directly between named components, which gets processed via a new instance of a **synapse** component which is created on the target component. Normally contained inside a  projection element.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **destination**$ 
 **preFractionAlong**$ 
@@ -19320,17 +19899,18 @@ Event connection directly between named components, which gets processed via a n
 **preSegmentId**$ 
 **postSegmentId**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCellId**$ 
 **postCellId**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Connection">
   <xs:complexContent>
@@ -19340,9 +19920,9 @@ Event connection directly between named components, which gets processed via a n
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Connection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Connection
@@ -19360,8 +19940,8 @@ variable = component_factory(
     post_fraction_along: 'a ZeroToOne (optional)' = '0.5',
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <connection id="0" preCellId="../iafCells/0/iaf" postCellId="../iafCells/1/iaf"/>
 ```
@@ -19371,8 +19951,8 @@ variable = component_factory(
 ``` xml
 <connection id="0" preCellId="../pop0/0/MultiCompCell" postCellId="../pop0/1/MultiCompCell" preSegmentId="0" preFractionAlong="0.5" postSegmentId="0" postFractionAlong="0.5"/>
 ```
-````
-`````
+
+
 
 
 ## synapticConnection
@@ -19387,31 +19967,34 @@ extends explicitconnection
 Explicit event connection between named components, which gets processed via a new instance of a **synapse** component which is created on the target component.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **destination**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **from**$ 
 **to**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ basesynapse
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SynapticConnection">
   <xs:complexContent>
@@ -19426,9 +20009,9 @@ Explicit event connection between named components, which gets processed via a n
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SynapticConnection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SynapticConnection
@@ -19443,8 +20026,8 @@ variable = component_factory(
     destination: 'a NmlId (optional)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## synapticConnectionWD
@@ -19459,24 +20042,26 @@ extends synapticconnection
 Explicit event connection between named components, which gets processed via a new instance of a **synapse** component which is created on the target component, includes setting of **weight** and **delay** for the synaptic connection.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **delay**$  $dimensions:time
 **weight**$  $Dimensionless
 
 ```
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **from**$ 
 **to**$ 
 
-````
-`````
+
+
 
 
 ## connectionWD
@@ -19491,18 +20076,20 @@ extends connection
 Event connection between named components, which gets processed via a new instance of a synapse component which is created on the target component, includes setting of **weight** and **delay** for the synaptic connection.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **delay**$  $dimensions:time
 **weight**$  $Dimensionless
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **destination**$ 
 **preFractionAlong**$ 
@@ -19510,17 +20097,18 @@ Event connection between named components, which gets processed via a new instan
 **preSegmentId**$ 
 **postSegmentId**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCellId**$ 
 **postCellId**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ConnectionWD">
   <xs:complexContent>
@@ -19532,9 +20120,9 @@ Event connection between named components, which gets processed via a new instan
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ConnectionWD" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ConnectionWD
@@ -19554,8 +20142,8 @@ variable = component_factory(
     delay: 'a Nml2Quantity_time (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <connectionWD id="0" preCellId="../pop_EIF_cond_exp_isfa_ista[0]" postCellId="../pop_target[0]" weight="0.01" delay="10ms"/>
 ```
@@ -19565,8 +20153,8 @@ variable = component_factory(
 ``` xml
 <connectionWD id="0" preCellId="../pop_IF_curr_alpha[0]" postCellId="../pop_target[2]" weight="1" delay="30ms"/>
 ```
-````
-`````
+
+
 
 
 ## electricalConnection
@@ -19577,16 +20165,17 @@ variable = component_factory(
 To enable connections between populations through gap junctions.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ gapjunction
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ElectricalConnection">
   <xs:complexContent>
@@ -19597,9 +20186,9 @@ To enable connections between populations through gap junctions.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ElectricalConnection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ElectricalConnection
@@ -19619,13 +20208,13 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <electricalConnection id="0" preCell="0" postCell="0" synapse="gj1"/>
 ```
-````
-`````
+
+
 
 
 ## electricalConnectionInstance
@@ -19636,34 +20225,37 @@ variable = component_factory(
 To enable connections between populations through gap junctions. Populations need to be of type  populationlist and contain  instance and  location elements.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **preFractionAlong**$ 
 **postFractionAlong**$ 
 **preSegment**$ 
 **postSegment**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCell**$ 
 **postCell**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **synapse**$  $ gapjunction
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ElectricalConnectionInstance">
   <xs:complexContent>
@@ -19672,9 +20264,9 @@ To enable connections between populations through gap junctions. Populations nee
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ElectricalConnectionInstance" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ElectricalConnectionInstance
@@ -19694,13 +20286,13 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <electricalConnectionInstance id="0" preCell="../iafPop1/0/iaf" postCell="../iafPop2/0/iaf" preSegment="0" preFractionAlong="0.5" postSegment="0" postFractionAlong="0.5" synapse="gj1"/>
 ```
-````
-`````
+
+
 
 
 ## electricalConnectionInstanceW
@@ -19715,34 +20307,37 @@ extends electricalconnectioninstance
 To enable connections between populations through gap junctions. Populations need to be of type  populationlist and contain  instance and  location elements. Includes setting of **weight** for the connection.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **weight**$  $Dimensionless
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **preFractionAlong**$ 
 **postFractionAlong**$ 
 **preSegment**$ 
 **postSegment**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCell**$ 
 **postCell**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ElectricalConnectionInstanceW">
   <xs:complexContent>
@@ -19753,9 +20348,9 @@ To enable connections between populations through gap junctions. Populations nee
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ElectricalConnectionInstanceW" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ElectricalConnectionInstanceW
@@ -19775,8 +20370,8 @@ variable = component_factory(
     weight: 'a float (required)' = None,
 )
 ```
-````
-`````
+
+
 
 
 ## electricalProjection
@@ -19787,26 +20382,28 @@ variable = component_factory(
 A projection between **presynapticPopulation** to another **postsynapticPopulation** through gap junctions.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **presynapticPopulation**$  $ population
 **postsynapticPopulation**$  $ population
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **connections**$  $ electricalconnection
 **connectionInstances**$  $ electricalconnectioninstance
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ElectricalProjection">
   <xs:complexContent>
@@ -19821,9 +20418,9 @@ A projection between **presynapticPopulation** to another **postsynapticPopulati
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ElectricalProjection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ElectricalProjection
@@ -19839,8 +20436,8 @@ variable = component_factory(
     electrical_connection_instance_ws: 'list of ElectricalConnectionInstanceW(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <electricalProjection id="testGJconn" presynapticPopulation="iafPop1" postsynapticPopulation="iafPop2">
     <electricalConnectionInstance id="0" preCell="../iafPop1/0/iaf" postCell="../iafPop2/0/iaf" preSegment="0" preFractionAlong="0.5" postSegment="0" postFractionAlong="0.5" synapse="gj1"/>
@@ -19851,8 +20448,8 @@ variable = component_factory(
     <electricalConnection id="0" preCell="0" postCell="0" synapse="gj1"/>
 </electricalProjection>
 ```
-````
-`````
+
+
 
 
 ## continuousConnection
@@ -19863,17 +20460,18 @@ variable = component_factory(
 An instance of a connection in a  continuousprojection between **presynapticPopulation** to another **postsynapticPopulation** through a **preComponent** at the start and **postComponent** at the end. Can be used for analog synapses.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **preComponent**$  $ basegradedsynapse
 **postComponent**$  $ basegradedsynapse
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ContinuousConnection">
   <xs:complexContent>
@@ -19885,9 +20483,9 @@ An instance of a connection in a  continuousprojection between **presynapticPopu
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ContinuousConnection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ContinuousConnection
@@ -19908,16 +20506,16 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <continuousConnection id="0" preCell="0" postCell="0" preComponent="silent1" postComponent="gs1"/>
 ```
 ``` xml
 <continuousConnection id="0" preCell="0" postCell="0" preComponent="silent2" postComponent="gs2"/>
 ```
-````
-`````
+
+
 
 
 ## continuousConnectionInstance
@@ -19928,35 +20526,38 @@ variable = component_factory(
 An instance of a connection in a  continuousprojection between **presynapticPopulation** to another **postsynapticPopulation** through a **preComponent** at the start and **postComponent** at the end. Populations need to be of type  populationlist and contain  instance and  location elements. Can be used for analog synapses.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **preFractionAlong**$ 
 **postFractionAlong**$ 
 **preSegment**$ 
 **postSegment**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCell**$ 
 **postCell**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **preComponent**$  $ basegradedsynapse
 **postComponent**$  $ basegradedsynapse
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ContinuousConnectionInstance">
   <xs:complexContent>
@@ -19965,9 +20566,9 @@ An instance of a connection in a  continuousprojection between **presynapticPopu
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ContinuousConnectionInstance" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ContinuousConnectionInstance
@@ -19988,8 +20589,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## continuousConnectionInstanceW
@@ -20004,34 +20605,37 @@ extends continuousconnectioninstance
 An instance of a connection in a  continuousprojection between **presynapticPopulation** to another **postsynapticPopulation** through a **preComponent** at the start and **postComponent** at the end. Populations need to be of type  populationlist and contain  instance and  location elements. Can be used for analog synapses. Includes setting of **weight** for the connection.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **weight**$  $Dimensionless
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **preFractionAlong**$ 
 **postFractionAlong**$ 
 **preSegment**$ 
 **postSegment**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **preCell**$ 
 **postCell**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ContinuousConnectionInstanceW">
   <xs:complexContent>
@@ -20042,9 +20646,9 @@ An instance of a connection in a  continuousprojection between **presynapticPopu
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ContinuousConnectionInstanceW" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ContinuousConnectionInstanceW
@@ -20065,13 +20669,13 @@ variable = component_factory(
     weight: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <continuousConnectionInstanceW id="0" preCell="../hhPop1/0/hhcell" postCell="../hhPop2/0/hhcell" preComponent="silent1" postComponent="gs1" weight="1"/>
 ```
-````
-`````
+
+
 
 
 ## continuousProjection
@@ -20082,26 +20686,28 @@ variable = component_factory(
 A projection between **presynapticPopulation** and **postsynapticPopulation** through components **preComponent** at the start and **postComponent** at the end of a  continuousconnection or  continuousconnectioninstance. Can be used for analog synapses.
 
 
-`````
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **presynapticPopulation**$  $ population
 **postsynapticPopulation**$  $ population
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **connections**$  $ continuousconnection
 **connectionInstances**$  $ continuousconnectioninstance
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ContinuousProjection">
   <xs:complexContent>
@@ -20116,9 +20722,9 @@ A projection between **presynapticPopulation** and **postsynapticPopulation** th
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ContinuousProjection" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ContinuousProjection
@@ -20134,8 +20740,8 @@ variable = component_factory(
     continuous_connection_instance_ws: 'list of ContinuousConnectionInstanceW(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <continuousProjection id="testLinearGradedConn" presynapticPopulation="iafPop1" postsynapticPopulation="iafPop2">
     <continuousConnection id="0" preCell="0" postCell="0" preComponent="silent1" postComponent="gs1"/>
@@ -20151,8 +20757,8 @@ variable = component_factory(
     <continuousConnectionInstanceW id="0" preCell="../hhPop1/0/hhcell" postCell="../hhPop2/0/hhcell" preComponent="silent1" postComponent="gs1" weight="1"/>
 </continuousProjection>
 ```
-````
-`````
+
+
 
 
 ## explicitInput
@@ -20163,32 +20769,35 @@ variable = component_factory(
 An explicit input ( anything which extends  basepointcurrent ) to a target cell in a population.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **destination**$ 
 **sourcePort**$ 
 **targetPort**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **target**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **input**$  $ basepointcurrent
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExplicitInput">
   <xs:complexContent>
@@ -20201,9 +20810,9 @@ An explicit input ( anything which extends  basepointcurrent ) to a target cell 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExplicitInput" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExplicitInput
@@ -20216,8 +20825,8 @@ variable = component_factory(
     destination: 'a NmlId (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <explicitInput target="iafPop1[0]" input="pulseGen1" destination="synapses"/>
 ```
@@ -20227,8 +20836,8 @@ variable = component_factory(
 ``` xml
 <explicitInput target="iafPop1[0]" input="pulseGen3" destination="synapses"/>
 ```
-````
-`````
+
+
 
 
 ## inputList
@@ -20239,31 +20848,34 @@ variable = component_factory(
 An explicit list of  inputs to a **population.**.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **population**$ 
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **component**$  $ basepointcurrent
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **inputs**$  $ input
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InputList">
   <xs:complexContent>
@@ -20279,9 +20891,9 @@ An explicit list of  inputs to a **population.**.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=InputList" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import InputList
@@ -20296,8 +20908,8 @@ variable = component_factory(
     input_ws: 'list of InputW(s) (optional)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <inputList id="i1" component="pulseGen1" population="hhPop1">
     <input id="0" target="../hhPop1/0/hhcell" destination="synapses"/>
@@ -20313,8 +20925,8 @@ variable = component_factory(
     <input id="0" target="../iafPop2/0/iaf" destination="synapses"/>
 </inputList>
 ```
-````
-`````
+
+
 
 
 ## input
@@ -20325,24 +20937,26 @@ variable = component_factory(
 Specifies a single input to a **target,** optionally giving the **segmentId** ( default 0 ) and **fractionAlong** the segment ( default 0.5 ).
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **segmentId**$ Optional specification of the segment to target, default 0
 **fractionAlong**$ Optional specification of the fraction along the specified segment, default 0.5
 **destination**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **target**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Input">
   <xs:complexContent>
@@ -20356,9 +20970,9 @@ Specifies a single input to a **target,** optionally giving the **segmentId** ( 
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=Input" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import Input
@@ -20374,8 +20988,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <input id="0" target="../hhPop1/0/hhcell" destination="synapses"/>
 ```
@@ -20385,8 +20999,8 @@ variable = component_factory(
 ``` xml
 <input id="0" target="../iafPop2/0/iaf" destination="synapses"/>
 ```
-````
-`````
+
+
 
 
 ## inputW
@@ -20401,30 +21015,33 @@ extends input
 Specifies input lists. Can set **weight** to scale individual inputs.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **weight**$  $Dimensionless
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **destination**$ 
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **target**$ 
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InputW">
   <xs:complexContent>
@@ -20435,9 +21052,9 @@ Specifies input lists. Can set **weight** to scale individual inputs.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=InputW" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import InputW
@@ -20453,8 +21070,8 @@ variable = component_factory(
     weight: 'a float (required)' = None,
 )
 ```
-````
-`````
+
+
 
 # PyNN
 
@@ -20483,9 +21100,10 @@ extends *basecellmembpot*
 Base type of any PyNN standard cell model. Note: membrane potential **v** has dimensions voltage, but all other parameters are dimensionless. This is to facilitate translation to and from PyNN scripts in Python, where these parameters have implicit units, see http://neuralensemble.org/trac/PyNN/wiki/StandardModels.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  $Dimensionless
 **i_offset**$  $Dimensionless
@@ -20494,38 +21112,41 @@ Base type of any PyNN standard cell model. Note: membrane potential **v** has di
 **v_init**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1ms$  $ dimensions:time
 **MVOLT** = 1mV$  $ dimensions:voltage
 **NFARAD** = 1nF$  $ dimensions:capacitance
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$ $Direction: in
 **spike_in_I**$ $Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="basePyNNCell">
   <xs:complexContent>
@@ -20540,8 +21161,8 @@ Base type of any PyNN standard cell model. Note: membrane potential **v** has di
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## *basePyNNIaFCell*
@@ -20556,9 +21177,10 @@ extends *basepynncell*
 Base type of any PyNN standard integrate and fire model.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **i_offset**$  *(from basepynncell)* $Dimensionless
@@ -20572,28 +21194,30 @@ Base type of any PyNN standard integrate and fire model.
 **v_thresh**$  $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="basePyNNIaFCell">
   <xs:complexContent>
@@ -20608,8 +21232,8 @@ Base type of any PyNN standard integrate and fire model.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## *basePyNNIaFCondCell*
@@ -20624,9 +21248,10 @@ extends *basepynniafcell*
 Base type of conductance based PyNN IaF cell models.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **e_rev_E**$ This parameter is never used in the NeuroML2 description of this cell! Any synapse producing a current can be placed on this cell $Dimensionless
@@ -20642,28 +21267,30 @@ Base type of conductance based PyNN IaF cell models.
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="basePyNNIaFCondCell">
   <xs:complexContent>
@@ -20675,8 +21302,8 @@ Base type of conductance based PyNN IaF cell models.
 </xs:complexType>
 
 ```
-````
-`````
+
+
 
 
 ## IF_curr_alpha
@@ -20691,9 +21318,10 @@ extends *basepynniafcell*
 Leaky integrate and fire model with fixed threshold and alpha-function-shaped post-synaptic current.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **i_offset**$  *(from basepynncell)* $Dimensionless
@@ -20707,36 +21335,39 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -20783,9 +21414,9 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * ((i_offset/cm) +  ((v_rest - (v/MVOLT)) / tau_m))/MSEC) + (iSyn / (cm * NFARAD))
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IF_curr_alpha">
   <xs:complexContent>
@@ -20795,9 +21426,9 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IF_curr_alpha" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IF_curr_alpha
@@ -20823,13 +21454,13 @@ variable = component_factory(
     v_thresh: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <IF_curr_alpha id="IF_curr_alpha" cm="1.0" i_offset="0.9" tau_m="20.0" tau_refrac="10.0" tau_syn_E="0.5" tau_syn_I="0.5" v_init="-65" v_reset="-62.0" v_rest="-65.0" v_thresh="-52.0"/>
 ```
-````
-`````
+
+
 
 
 ## IF_curr_exp
@@ -20844,9 +21475,10 @@ extends *basepynniafcell*
 Leaky integrate and fire model with fixed threshold and decaying-exponential post-synaptic current.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **i_offset**$  *(from basepynncell)* $Dimensionless
@@ -20860,36 +21492,39 @@ Leaky integrate and fire model with fixed threshold and decaying-exponential pos
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -20936,9 +21571,9 @@ Leaky integrate and fire model with fixed threshold and decaying-exponential pos
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * (((i_offset)/cm) +  ((v_rest - (v/MVOLT)) / tau_m))/MSEC) + (iSyn / (cm * NFARAD))
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IF_curr_exp">
   <xs:complexContent>
@@ -20948,9 +21583,9 @@ Leaky integrate and fire model with fixed threshold and decaying-exponential pos
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IF_curr_exp" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IF_curr_exp
@@ -20976,13 +21611,13 @@ variable = component_factory(
     v_thresh: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <IF_curr_exp id="IF_curr_exp" cm="1.0" i_offset="1.0" tau_m="20.0" tau_refrac="8.0" tau_syn_E="5.0" tau_syn_I="5.0" v_init="-65" v_reset="-70.0" v_rest="-65.0" v_thresh="-50.0"/>
 ```
-````
-`````
+
+
 
 
 ## IF_cond_alpha
@@ -20997,9 +21632,10 @@ extends *basepynniafcondcell*
 Leaky integrate and fire model with fixed threshold and alpha-function-shaped post-synaptic conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **e_rev_E**$ This parameter is never used in the NeuroML2 description of this cell! Any synapse producing a current can be placed on this cell *(from basepynniafcondcell)* $Dimensionless
@@ -21015,36 +21651,39 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -21091,9 +21730,9 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * (((i_offset) / cm) +  ((v_rest - (v / MVOLT)) / tau_m)) / MSEC) + (iSyn / (cm * NFARAD))
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IF_cond_alpha">
   <xs:complexContent>
@@ -21103,9 +21742,9 @@ Leaky integrate and fire model with fixed threshold and alpha-function-shaped po
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IF_cond_alpha" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IF_cond_alpha
@@ -21133,16 +21772,16 @@ variable = component_factory(
     e_rev_I: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <IF_cond_alpha id="IF_cond_alpha" cm="1.0" e_rev_E="0.0" e_rev_I="-70.0" i_offset="0.9" tau_m="20.0" tau_refrac="5.0" tau_syn_E="0.3" tau_syn_I="0.5" v_init="-65" v_reset="-65.0" v_rest="-65.0" v_thresh="-50.0"/>
 ```
 ``` xml
 <IF_cond_alpha id="silent_cell" cm="1.0" e_rev_E="0.0" e_rev_I="-70.0" i_offset="0" tau_m="20.0" tau_refrac="5.0" tau_syn_E="5" tau_syn_I="10" v_init="-65" v_reset="-65.0" v_rest="-65.0" v_thresh="-50.0"/>
 ```
-````
-`````
+
+
 
 
 ## IF_cond_exp
@@ -21157,9 +21796,10 @@ extends *basepynniafcondcell*
 Leaky integrate and fire model with fixed threshold and exponentially-decaying post-synaptic conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **e_rev_E**$ This parameter is never used in the NeuroML2 description of this cell! Any synapse producing a current can be placed on this cell *(from basepynniafcondcell)* $Dimensionless
@@ -21175,36 +21815,39 @@ Leaky integrate and fire model with fixed threshold and exponentially-decaying p
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -21251,9 +21894,9 @@ Leaky integrate and fire model with fixed threshold and exponentially-decaying p
 : TRANSITION to REGIME **refractory**
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * (((i_offset)/cm) +  ((v_rest - (v / MVOLT)) / tau_m)) / MSEC) + (iSyn / (cm * NFARAD))
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IF_cond_exp">
   <xs:complexContent>
@@ -21263,9 +21906,9 @@ Leaky integrate and fire model with fixed threshold and exponentially-decaying p
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=IF_cond_exp" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import IF_cond_exp
@@ -21293,13 +21936,13 @@ variable = component_factory(
     e_rev_I: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <IF_cond_exp id="IF_cond_exp" cm="1.0" e_rev_E="0.0" e_rev_I="-70.0" i_offset="1.0" tau_m="20.0" tau_refrac="5.0" tau_syn_E="5.0" tau_syn_I="5.0" v_init="-65" v_reset="-68.0" v_rest="-65.0" v_thresh="-52.0"/>
 ```
-````
-`````
+
+
 
 
 ## EIF_cond_exp_isfa_ista
@@ -21314,9 +21957,10 @@ extends *basepynniafcondcell*
 Adaptive exponential integrate and fire neuron according to Brette R and Gerstner W ( 2005 ) with exponentially-decaying post-synaptic conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **a**$  $Dimensionless
 **b**$  $Dimensionless
@@ -21337,46 +21981,50 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **eif_threshold**$  $Dimensionless
 ```
 **eif_threshold** = v_spike * H(delta_T-1e-12) + v_thresh * H(-1*delta_T+1e-9)
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 **w**$  $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -21435,9 +22083,9 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * ((-1 * ((v / MVOLT) - v_rest) + delta_I) / tau_m + (i_offset - w) / cm) / MSEC) + (iSyn / (cm * NFARAD))
 :  d **w** /dt = (1 / tau_w) * (a * ((v / MVOLT) - v_rest) - w) / MSEC
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EIF_cond_exp_isfa_ista">
   <xs:complexContent>
@@ -21452,9 +22100,9 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=EIF_cond_exp_isfa_ista" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import EIF_cond_exp_isfa_ista
@@ -21488,13 +22136,13 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <EIF_cond_exp_isfa_ista id="EIF_cond_exp_isfa_ista" a="0.0" b="0.0805" cm="0.281" delta_T="2.0" e_rev_E="0.0" e_rev_I="-80.0" i_offset="0.6" tau_m="9.3667" tau_refrac="5" tau_syn_E="5.0" tau_syn_I="5.0" tau_w="144.0" v_init="-65" v_reset="-68.0" v_rest="-70.6" v_spike="-40.0" v_thresh="-52.0"/>
 ```
-````
-`````
+
+
 
 
 ## EIF_cond_alpha_isfa_ista
@@ -21509,9 +22157,10 @@ extends *basepynniafcondcell*
 Adaptive exponential integrate and fire neuron according to Brette R and Gerstner W ( 2005 ) with alpha-function-shaped post-synaptic conductance.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **a**$  $Dimensionless
 **b**$  $Dimensionless
@@ -21532,46 +22181,50 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 **v_thresh**$  *(from basepynniafcell)* $Dimensionless
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **eif_threshold**$  $Dimensionless
 ```
 **eif_threshold** = v_spike * H(delta_T-1e-12) + v_thresh * H(-1*delta_T+1e-9)
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **iSyn**$  *(from basepynncell)* $dimensions:current
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 **w**$  $Dimensionless
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -21630,9 +22283,9 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 : **Time Derivatives**
 :  d **v** /dt = (MVOLT * ((-1 * ( (v / MVOLT) - v_rest) + delta_I) / tau_m + (i_offset - w) / cm) / MSEC) + (iSyn / (cm * NFARAD))
 :  d **w** /dt = (1/ tau_w) * (a*((v/MVOLT)-v_rest) - w) /MSEC
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EIF_cond_alpha_isfa_ista">
   <xs:complexContent>
@@ -21642,9 +22295,9 @@ Adaptive exponential integrate and fire neuron according to Brette R and Gerstne
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=EIF_cond_alpha_isfa_ista" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import EIF_cond_alpha_isfa_ista
@@ -21677,13 +22330,13 @@ variable = component_factory(
     v_spike: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <EIF_cond_alpha_isfa_ista id="EIF_cond_alpha_isfa_ista" a="0.0" b="0.0805" cm="0.281" delta_T="0" e_rev_E="0.0" e_rev_I="-80.0" i_offset="0.6" tau_m="9.3667" tau_refrac="5" tau_syn_E="5.0" tau_syn_I="5.0" tau_w="144.0" v_init="-65" v_reset="-68.0" v_rest="-70.6" v_spike="-40.0" v_thresh="-52.0"/>
 ```
-````
-`````
+
+
 
 
 ## HH_cond_exp
@@ -21698,9 +22351,10 @@ extends *basepynncell*
 Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents using the ion channel models from Traub.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **cm**$  *(from basepynncell)* $Dimensionless
 **e_rev_E**$  $Dimensionless
@@ -21718,10 +22372,11 @@ Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-
 **v_offset**$  $Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **h**$  $Dimensionless
 **iSyn**$  *(from basepynncell)* $dimensions:current
@@ -21730,27 +22385,29 @@ Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-
 **v**$ Membrane potential *(from basecellmembpot)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **spike**$ Spike event *(from basespikingcell)*$Direction: out
 **spike_in_E**$  *(from basepynncell)*$Direction: in
 **spike_in_I**$  *(from basepynncell)*$Direction: in
 
 ```
-````
 
-```` Attachments
-```Table:
+
+Table of Attachments (separator='$')
+```
+Name $ description $ reference
 
 **synapses**$  $ basesynapse
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -21800,9 +22457,9 @@ Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-
     : d **n** /dt = (alphan * (1 - n) - betan * n) / MSEC
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="HH_cond_exp">
   <xs:complexContent>
@@ -21821,9 +22478,9 @@ Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=HH_cond_exp" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import HH_cond_exp
@@ -21853,13 +22510,13 @@ variable = component_factory(
     gbar_Na: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <HH_cond_exp id="HH_cond_exp" cm="0.2" e_rev_E="0.0" e_rev_I="-80.0" e_rev_K="-90.0" e_rev_Na="50.0" e_rev_leak="-65.0" g_leak="0.01" gbar_K="6.0" gbar_Na="20.0" i_offset="0.2" tau_syn_E="0.2" tau_syn_I="2.0" v_init="-65" v_offset="-63.0"/>
 ```
-````
-`````
+
+
 
 
 ## *basePynnSynapse*
@@ -21874,50 +22531,55 @@ extends *basevoltagedepsynapse*
 Base type for all PyNN synapses. Note, the current **I** produced is dimensionless, but it requires a membrane potential **v** with dimension voltage.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **tau_syn**$  $Dimensionless
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **MSEC** = 1ms$  $ dimensions:time
 **MVOLT** = 1mV$  $ dimensions:voltage
 **NAMP** = 1nA$  $ dimensions:current
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="BasePynnSynapse">
   <xs:complexContent>
@@ -21928,9 +22590,9 @@ Base type for all PyNN synapses. Note, the current **I** produced is dimensionle
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=BasePynnSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import BasePynnSynapse
@@ -21948,8 +22610,8 @@ variable = component_factory(
     extensiontype_=None,
 )
 ```
-````
-`````
+
+
 
 
 ## expCondSynapse
@@ -21964,50 +22626,55 @@ extends *basepynnsynapse*
 Conductance based synapse with instantaneous rise and single exponential decay ( with time constant tau_syn ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **e_rev**$  $Dimensionless
 **tau_syn**$  *(from basepynnsynapse)* $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **g**$  $Dimensionless
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22045,9 +22712,9 @@ Conductance based synapse with instantaneous rise and single exponential decay (
     : d **g** /dt = -g / (tau_syn*MSEC)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExpCondSynapse">
   <xs:complexContent>
@@ -22058,9 +22725,9 @@ Conductance based synapse with instantaneous rise and single exponential decay (
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExpCondSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExpCondSynapse
@@ -22078,13 +22745,13 @@ variable = component_factory(
     e_rev: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <expCondSynapse id="syn1" tau_syn="5" e_rev="0"/>
 ```
-````
-`````
+
+
 
 
 ## expCurrSynapse
@@ -22099,48 +22766,53 @@ extends *basepynnsynapse*
 Current based synapse with instantaneous rise and single exponential decay ( with time constant tau_syn ).
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **tau_syn**$  *(from basepynnsynapse)* $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22178,9 +22850,9 @@ Current based synapse with instantaneous rise and single exponential decay ( wit
     : d **I** /dt = -I / (tau_syn*MSEC)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ExpCurrSynapse">
   <xs:complexContent>
@@ -22191,9 +22863,9 @@ Current based synapse with instantaneous rise and single exponential decay ( wit
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=ExpCurrSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import ExpCurrSynapse
@@ -22210,13 +22882,13 @@ variable = component_factory(
     tau_syn: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <expCurrSynapse id="syn3" tau_syn="5"/>
 ```
-````
-`````
+
+
 
 
 ## alphaCondSynapse
@@ -22231,51 +22903,56 @@ extends *basepynnsynapse*
 Alpha synapse: rise time and decay time are both tau_syn. Conductance based synapse.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **e_rev**$  $Dimensionless
 **tau_syn**$  *(from basepynnsynapse)* $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **A**$  $Dimensionless
 **g**$  $Dimensionless
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22315,9 +22992,9 @@ Alpha synapse: rise time and decay time are both tau_syn. Conductance based syna
     : d **A** /dt = -A /(tau_syn*MSEC)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="AlphaCondSynapse">
   <xs:complexContent>
@@ -22328,9 +23005,9 @@ Alpha synapse: rise time and decay time are both tau_syn. Conductance based syna
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=AlphaCondSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import AlphaCondSynapse
@@ -22348,13 +23025,13 @@ variable = component_factory(
     e_rev: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <alphaCondSynapse id="syn2" tau_syn="5" e_rev="0"/>
 ```
-````
-`````
+
+
 
 
 ## alphaCurrSynapse
@@ -22369,49 +23046,54 @@ extends *basepynnsynapse*
 Alpha synapse: rise time and decay time are both tau_syn. Current based synapse.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **tau_syn**$  *(from basepynnsynapse)* $Dimensionless
 
 ```
-````
 
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **weight** (default: 1)$  $ Dimensionless
 
 ```
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **A**$  $dimensions:current
 **i**$ The total (usually time varying) current produced by this ComponentType *(from basepointcurrent)* $dimensions:current
 
 ```
-````
 
-```` Requirements
-```Table:
+
+Table of Requirements (separator='$')
+```
+Name $ description $ reference
 
 **v**$ The current may vary with the voltage exposed by the ComponentType on which this is placed *(from basevoltagedepsynapse)* $dimensions:voltage
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$  *(from basesynapse)*$Direction: in
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22451,9 +23133,9 @@ Alpha synapse: rise time and decay time are both tau_syn. Current based synapse.
     : d **A** /dt = -A /(tau_syn*MSEC)
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="AlphaCurrSynapse">
   <xs:complexContent>
@@ -22464,9 +23146,9 @@ Alpha synapse: rise time and decay time are both tau_syn. Current based synapse.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=AlphaCurrSynapse" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import AlphaCurrSynapse
@@ -22483,13 +23165,13 @@ variable = component_factory(
     tau_syn: 'a float (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <alphaCurrSynapse id="syn4" tau_syn="5"/>
 ```
-````
-`````
+
+
 
 
 ## SpikeSourcePoisson
@@ -22504,37 +23186,41 @@ extends *basespikesource*
 Spike source, generating spikes according to a Poisson process.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **duration**$  $dimensions:time
 **rate**$  $dimensions:per_time
 **start**$  $dimensions:time
 
 ```
-````
 
-```` Constants
-```Table:
+
+Table of Constants (separator='$')
+```
+Name $ description $ reference
 
 **LONG_TIME** = 1e9hour$  $ dimensions:time
 **SMALL_TIME** = 1e-9ms$  $ dimensions:time
 
 ```
-````
 
-```` Derived parameters
-```Table:
+
+Table of Derived parameters (separator='$')
+```
+Name $ description $ reference
 
 **end**$  $dimensions:time
 ```
 **end** = start + duration
 
-````
 
-```` Exposures
-```Table:
+
+Table of Exposures (separator='$')
+```
+Name $ description $ reference
 
 **isi**$  $dimensions:time
 **tnextIdeal**$  $dimensions:time
@@ -22542,18 +23228,19 @@ Spike source, generating spikes according to a Poisson process.
 **tsince**$ Time since the last spike was emitted *(from basespikesource)* $dimensions:time
 
 ```
-````
 
-```` Event Ports
-```Table:
+
+Table of Event Ports (separator='$')
+```
+Name $ description $ reference
 
 **in**$ $Direction: in
 **spike**$ Port on which spikes are emitted *(from basespikesource)*$Direction: out
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22601,9 +23288,9 @@ Spike source, generating spikes according to a Poisson process.
     : d **tnextIdeal** /dt = 0
     
 
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="SpikeSourcePoisson">
   <xs:complexContent>
@@ -22616,9 +23303,9 @@ Spike source, generating spikes according to a Poisson process.
 </xs:complexType>
 
 ```
-````
 
-```` Usage: Python
+
+Usage: Python
 *<a href="https://libneuroml.readthedocs.io/en/latest/search.html?q=SpikeSourcePoisson" target="_blank">Go to the libNeuroML documentation</a>*
 ``` python
 from neuroml import SpikeSourcePoisson
@@ -22636,16 +23323,16 @@ variable = component_factory(
     rate: 'a Nml2Quantity_pertime (required)' = None,
 )
 ```
-````
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <SpikeSourcePoisson id="spikes1" start="50ms" duration="400ms" rate="50Hz"/>
 ```
 ``` xml
 <SpikeSourcePoisson id="spikes2" start="50ms" duration="300ms" rate="80Hz"/>
 ```
-````
-`````
+
+
 
 # Simulation
 
@@ -22670,33 +23357,37 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 The main element in a LEMS Simulation file. Defines the **length** of simulation, the timestep ( dt ) **step** and an optional **seed** to use for stochastic elements, as well as  displays,  outputfiles and  eventoutputfiles to record. Specifies a **target** component to run, usually the id of a  network.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **length**$ Duration of the simulation run $dimensions:time
 **step**$ Time step (dt) to use in the simulation $dimensions:time
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **seed**$ The seed to use in the random number generator for stochastic entities
 
-````
 
-```` Component References
-```Table:
+
+Table of Component References (separator='$')
+```
+Name $ description $ reference
 
 **target**$  $ component
 
 ```
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **metas**$  $ meta
 **displays**$  $ display
@@ -22704,9 +23395,9 @@ The main element in a LEMS Simulation file. Defines the **length** of simulation
 **events**$  $ eventoutputfile
 
 ```
-````
 
-```` Dynamics
+
+Dynamics
 
 
 
@@ -22722,8 +23413,8 @@ The main element in a LEMS Simulation file. Defines the **length** of simulation
 
 
 
-````
-`````
+
+
 
 
 ## Display
@@ -22734,9 +23425,10 @@ The main element in a LEMS Simulation file. Defines the **length** of simulation
 Details of a display to generate ( usually a set of traces given by  lines in a newly opened window ) on completion of the simulation.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **timeScale**$ A scaling of the time axis, e.g. 1ms means display in milliseconds. Note: all quantities are recorded in SI units $dimensions:time
 **xmax**$ The maximum value on the x axis (i.e time variable) of the display $Dimensionless
@@ -22745,23 +23437,25 @@ Details of a display to generate ( usually a set of traces given by  lines in a 
 **ymin**$ The minimum value on the y axis of the display $Dimensionless
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **title**$ The title of the display, e.g. to use for the window
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **lines**$  $ line
 
 ```
-````
-`````
+
+
 
 
 ## Line
@@ -22772,30 +23466,33 @@ Details of a display to generate ( usually a set of traces given by  lines in a 
 Specification of a single time varying **quantity** to plot on the  display. Note that all quantities are handled internally in LEMS in SI units, and so a **scale** should be used if it is to be displayed in other units.
 
 
-`````
-```` Parameters
-```Table:
+
+Table of Parameters (separator='$')
+```
+Name $ description $ reference
 
 **scale**$ A scaling factor to DIVIDE the quantity by. Can be dimensional, so using scale=1mV means a value of -0.07V is displayed as -70. Alternatively, scale=0.001 would achieve the same thing. $dimensions:*
 **timeScale**$ An optional scaling of the time axis, e.g. 1ms means display in milliseconds. Note: if present, this overrides timeScale from _Display_ $dimensions:*
 
 ```
-````
 
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **color**$ A hex string for the color to display the trace for this quantity, e.g. #aa33ff
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **quantity**$ Path to the quantity to display, see see https://docs.neuroml.org/Userdocs/Paths.html.
 
-````
-`````
+
+
 
 
 ## OutputFile
@@ -22806,23 +23503,25 @@ Specification of a single time varying **quantity** to plot on the  display. Not
 A file in which to save recorded values from the simulation.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **path**$ Optional path to the directory in which to store the file
 **fileName**$ Name of the file to generate. Can include a relative path (from the LEMS Simulation file location).
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **outputColumn**$  $ outputcolumn
 
 ```
-````
-`````
+
+
 
 
 ## OutputColumn
@@ -22833,14 +23532,15 @@ A file in which to save recorded values from the simulation.
 Specification of a single time varying **quantity** to record during the simulation. Note that all quantities are handled internally in LEMS in SI units, and so the value for the quantity in the file ( as well as time ) will be in SI units.
 
 
-`````
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **quantity**$ Path to the quantity to save, see see https://docs.neuroml.org/Userdocs/Paths.html. Note that all quantities are saved in SI units.
 
-````
-`````
+
+
 
 
 ## EventOutputFile
@@ -22851,24 +23551,26 @@ Specification of a single time varying **quantity** to record during the simulat
 A file in which to save event information ( e.g. spikes from cells in a population ) in a specified **format**.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **path**$ Optional path to the directory in which to store the file
 **fileName**$ Name of the file to generate. Can include a relative path (from the LEMS Simulation file location).
 **format**$ Takes values TIME_ID or ID_TIME, depending on the preferred order of the time or event id (from _EventSelection_) in each row of the file
 
-````
 
-```` Children list
-```Table:
+
+Table of Children list (separator='$')
+```
+Name $ description $ reference
 
 **eventSelection**$  $ eventselection
 
 ```
-````
-`````
+
+
 
 
 ## EventSelection
@@ -22879,21 +23581,23 @@ A file in which to save event information ( e.g. spikes from cells in a populati
 A specific source of events with an associated **id,** which will be recorded inside the file specified in the parent  eventoutputfile. The attribute **select** should point to a cell inside a  population ( e.g. hhpop[0], see https://docs.neuroml.org/Userdocs/Paths.html ), and the **eventPort** specifies the port for the emitted events, which usually has id: spike. Note: the **id** used on this element ( and appearing in the file alongside the event time ) can be different from the id/index of the cell in the population.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **eventPort**$ The port on the cell which generates the events, usually: spike
 
-````
 
-```` Paths
-```Table:
+
+Table of Paths (separator='$')
+```
+Name $ description $ reference
 
 **select**$ The cell which will be emitting the events
 
-````
-`````
+
+
 
 
 ## Meta
@@ -22904,17 +23608,18 @@ A specific source of events with an associated **id,** which will be recorded in
 Metadata to add to simulation.
 
 
-`````
-```` Text fields
-```Table:
+
+Table of Text fields (separator='$')
+```
+Name $ description $ reference
 
 **for**$ Simulator name
 **method**$ Integration method to use
 **abs_tolerance**$ Absolute tolerance for NEURON's cvode method
 **rel_tolerance**$ Relative tolerance for NEURON's cvode method
 
-````
-`````
+
+
 # Index
 
 <a name="adexiafcell"/>

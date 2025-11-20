@@ -57,8 +57,10 @@ def runner(source: str):
         ":delim: ",
         "%"
     )
-    refs  = {}
 
+    # note that the order in which these are listed is important, since the
+    # regular expression substitutions are done sequentially in multiple passes
+    refs = {}
     replacements = {
         r"{ref}`(.+?)>`": r"\1>",
         r"{ref}`(.+?)`": r"\1",
@@ -66,11 +68,19 @@ def runner(source: str):
         r"{eq}`(.+?)>`": r" (see equation \1)",
         r"{cite}`(.+?)`": r"[citation: \1]",
         r"{superscript}`(.+?)`": r"^\1",
-        r"````((.+)\n```{csv-table})??": r"Table of \1 (separator='$')\n",
+        # table inside tabs
+        r"`{4}{tab-item} (.+)\n`{3}{csv-table}\n": r"Table of \1 (separator='$')\n```\nName $ description $ reference\n",
+        # simple tabs
+        r"`{4}{tab-item} (.+)\n": r"\1\n",
+        # figures
         r"{(image|figure)} (.+)": r"\nFigure: \2",
+        # admons
         r"{(admonition|tip|warning|note|important)}": r"\nNOTE: ",
-        r"{(code|code-block|download|tab-item|grid-item-card|grid|tab-set)}": r"",
-        r"(schema:|units:|<i>|</i>|&emsp;)": r""
+        # other bracketed bits
+        r"{(code|code-block|download|grid-item-card|grid|tab-set|csv-table)}": r"",
+        # misc
+        r"(schema:|units:|<i>|</i>|&emsp;|`{5}|`{4})": r"",
+        r"(`{4})": r"\n"
     }
 
     for srcfile in filelist:
@@ -113,17 +123,13 @@ def runner(source: str):
         else:
             text += adding_text_to
 
-
-
     for pat, rep in replacements.items():
         text = re.sub(pat, rep, text, count=0, flags=re.M)
-
     for pat, rep in refs.items():
         text = re.sub(pat, rep, text, count=0)
 
     for pat, rep in replacements.items():
         schema_text = re.sub(pat, rep, schema_text, count=0, flags=re.M)
-
     for pat, rep in refs.items():
         schema_text = re.sub(pat, rep, schema_text, count=0)
 

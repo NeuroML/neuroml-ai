@@ -24499,9 +24499,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 Root element for any lems content
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **dimensions**$ lemsdimension_
 **constants**$ lemsconstant_
@@ -24512,24 +24513,25 @@ Root element for any lems content
 **targets**$ lemstarget_
 
 ```
-````
-`````
+
+
 ## Target
 
 A lems file can contain many component definitions. A Target elements specifies that a components should be treated as the entry point for simulation or other processing
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **component**$ String$ Reference to the entry point component
 **reportFile**$ String$ Optional attribute specifying file in which to save short report of simulation
 **timesFile**$ String$ Optional attribute specifying file in which to save times used in simulation
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Target">
   <xs:attribute name="component" type="xs:string" use="required"/>
@@ -24546,10 +24548,10 @@ A lems file can contain many component definitions. A Target elements specifies 
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Target component="sim1"/>
 ```
@@ -24565,15 +24567,16 @@ A lems file can contain many component definitions. A Target elements specifies 
 ``` xml
 <Target component="sim1"/>
 ```
-````
-`````
+
+
 ## Constant
 
 A constant quantity: like a parameter for which the value is supplied in the class definition itself rather than when a component is defined.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ A readable name for the constant.
 **symbol**$ String$ The symbol used in expressions to refer to this constant.
@@ -24581,9 +24584,9 @@ A constant quantity: like a parameter for which the value is supplied in the cla
 **dimension**$ String$ 
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Constant">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -24593,42 +24596,43 @@ A constant quantity: like a parameter for which the value is supplied in the cla
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Constant name="kte" dimension="voltage" value="25.3mV"/>
 ```
 ``` xml
 <Constant name="kte" dimension="voltage" value="25.3mV"/>
 ```
-````
-`````
+
+
 ## Include
 
 Include LEMS files in other LEMS files. Files are included where the Include declaration occurs.  The enclosing Lems block is stripped off and the rest of the content included as is
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **file**$ String$ the name or relative path of a file to be included
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Include">
   <xs:attribute name="file" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Include file="SimpleNetwork.xml"/>
 ```
@@ -24644,8 +24648,8 @@ Include LEMS files in other LEMS files. Files are included where the Include dec
 ``` xml
 <Include file="hhcell.xml"/>
 ```
-````
-`````
+
+
 # Units and dimensions
 
 
@@ -24660,9 +24664,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 A Dimenson element associated a name with a particular combination of  the standards SI base dimensions, mass, lenght, time, current, temperature and amount if substance (moles). Fractional dimensions are not currently supported.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name to be used when referring to this dimension from variable declaration or units
 **m**$ int$ Mass
@@ -24674,9 +24679,9 @@ A Dimenson element associated a name with a particular combination of  the stand
 **j**$ int$ Luminous intensity
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Dimension">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -24689,10 +24694,10 @@ A Dimenson element associated a name with a particular combination of  the stand
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
 ```
@@ -24708,15 +24713,16 @@ A Dimenson element associated a name with a particular combination of  the stand
 ``` xml
 <Dimension name="current" i="1"/>
 ```
-````
-`````
+
+
 ## Unit
 
 A Unit asociates a symbol with a dimension and a power of ten. For non-metric units a scale can be provided, as in '1 inch = 0.0254 m'. In this case there is a degeneracy between the power and the scale which is best resolved by not using the two together. The offset parameter is available for units which are not zero-offset, such as farenheit.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ As with constants, units are only referred to within expressions using their symbols, so the name is just for readability.
 **symbol**$ String$ The symbol is used to refer to this unit inside compound expressions coutaining a number and a unit symbol. Such expressions can only occur on the right hand side of assignments statements.
@@ -24726,9 +24732,9 @@ A Unit asociates a symbol with a dimension and a power of ten. For non-metric un
 **offset**$ double$ Offset for non zero-offset units
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Unit">
   <xs:attribute name="symbol" type="xs:string" use="required"/>
@@ -24743,10 +24749,10 @@ A Unit asociates a symbol with a dimension and a power of ten. For non-metric un
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Unit symbol="mV" dimension="voltage" power="-3"/>
 ```
@@ -24762,22 +24768,23 @@ A Unit asociates a symbol with a dimension and a power of ten. For non-metric un
 ``` xml
 <Unit symbol="uF" dimension="capacitance" power="-6"/>
 ```
-````
-`````
+
+
 ## Assertion
 
 Assertions are not strictly part of the model, but can be included in a file as a consistency check.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **dimension**$ String$ The name of a dimension
 **matches**$ String$ An expression involving dimensions. The dimensionality of the expression should match the dimensionality of the dimension reference.
 
 ```
-````
-`````
+
+
 # Defining component types
 
 
@@ -24792,18 +24799,20 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 Root element for defining LEMS Component Types.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the component type. This can be uses as an XML element name in the shorthand form whendefining components.
 **eXtends**$ String$ The component type that this type inherits field definitions for, if any
 
 ```
-````
 
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **parameters**$ lemsparameter_
 **indexParameters**$ lemsindexparameter_
@@ -24838,9 +24847,9 @@ Root element for defining LEMS Component Types.
 **metas**$ lemsmeta_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ComponentType">
   <xs:sequence>
@@ -24872,10 +24881,10 @@ Root element for defining LEMS Component Types.
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <ComponentType name="Population">
     <ComponentReference name="component" type="Component"/>
@@ -24912,24 +24921,25 @@ Root element for defining LEMS Component Types.
 ``` xml
 <ComponentType name="ConnectionPattern"/>
 ```
-````
-`````
+
+
 ## Parameter
 
 A quantity, defined by name and dimension, that must be supplied when a Component of the enclosing ComponentType is defined
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the parameter. This is the name of the attribute to be used when the parameter is supplied in a component definition
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
 **description**$ String$ An optional description of the parameter
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Parameter">
   <xs:complexContent>
@@ -24938,10 +24948,10 @@ A quantity, defined by name and dimension, that must be supplied when a Componen
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Parameter name="size" dimension="none"/>
 ```
@@ -24957,37 +24967,39 @@ A quantity, defined by name and dimension, that must be supplied when a Componen
 ``` xml
 <Parameter name="ymax" dimension="none"/>
 ```
-````
-`````
+
+
 ## PathParameter
 
 A parameter of which the value is a path expression. When a ComponentType declares a PathParameter, a corresponding Component definition should have an attibute with that name whose value is a path expression that evaluates within the instance tree of the built model. This is used, for example, in the definition of a group component class, where the coresponding component specifies a path over the instance tree which selectesthe items that should go in the group.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the parameter
 
 ```
-````
-`````
+
+
 ## Property
 
 An property on an instance of a component. Unlike a Parameter, a Property can very from instance to instance. It should be set with an Assign element within the build specification.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 **dimension**$ String$ 
 **defaultValue**$ String$ The defaultValue for the property must be a plain number (no units) giving the SI magnitude of the quantity.
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Property">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -24997,15 +25009,16 @@ An property on an instance of a component. Unlike a Parameter, a Property can ve
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## DerivedParameter
 
 A parameter that is a function of the Component's Parameters, which does not change with time. Its value can be supplied either with the 'value' attribute that evaluates within the scope of the definition, or with the 'select' attribute which gives a path to 'primary' version of the parameter. For example,  setting select='//MembranePotential[species=channel/species]/reversal' within the appropriate context allows  a channel's reversal potential to taken from a single global setting according to its permeant ion, rather than explicitly supplied locally.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the derived parameter
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
@@ -25014,9 +25027,9 @@ A parameter that is a function of the Component's Parameters, which does not cha
 **value**$ String$ A string defining the value of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DerivedParameter">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25026,30 +25039,31 @@ A parameter that is a function of the Component's Parameters, which does not cha
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <DerivedParameter name="erev" dimension="voltage" select="//MembranePotential[species=channel/species]/reversal"/>
 ```
-````
-`````
+
+
 ## Fixed
 
 Fixes the value of a parameter in the parent class, so that it does not have to be supplied separately in component definitions.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **parameter**$ String$ 
 **value**$ String$ 
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Fixed">
   <xs:attribute name="parameter" type="xs:string" use="required"/>
@@ -25058,10 +25072,10 @@ Fixes the value of a parameter in the parent class, so that it does not have to 
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Fixed parameter="threshold" value="-45mV"/>
 ```
@@ -25077,24 +25091,25 @@ Fixes the value of a parameter in the parent class, so that it does not have to 
 ``` xml
 <Fixed parameter="relativeConductance" value="1"/>
 ```
-````
-`````
+
+
 ## Requirement
 
 A Requirement gives the name and dimension of a quantity (parameter or variable) that should be accessible within the scope of a model component. This is only applicable for elements that can be included as children of other elements, where the scope comprises its own parameters and those in the scope of its enclosing element. Once a requirement has been declared, then the quantity can be used within the Dynamics definition of the component. It is the responsibility of an implementation to check that the component is only used in a context in which the requirement is met. A typical example is in defining membrand bound components which require access to the membrane potential  but where the variable that holds the potential itself is defined in the top level component.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ name
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
 **description**$ String$ An optional description of the requirement
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Requirement">
   <xs:complexContent>
@@ -25103,10 +25118,10 @@ A Requirement gives the name and dimension of a quantity (parameter or variable)
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Requirement name="v" dimension="voltage"/>
 ```
@@ -25122,44 +25137,46 @@ A Requirement gives the name and dimension of a quantity (parameter or variable)
 ``` xml
 <Requirement name="v" dimension="voltage"/>
 ```
-````
-`````
+
+
 ## ComponentRequirement
 
 The name of a component or component reference that must exist in the component hierarchy
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ name
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ComponentRequirement">
   <xs:attribute name="name" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## InstanceRequirement
 
 An instance that must be supplied at build time. Expressions can contain references to quantities in the instance
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ name
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="InstanceRequirement">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25167,24 +25184,25 @@ An instance that must be supplied at build time. Expressions can contain referen
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## Exposure
 
 A quantity that is made available to other components in the simulation. Note that all variables in a Dynamics definition are private. If other components need access to them, then the definition should explicitly link them to an exposure defined in the component class
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the exposure element
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
 **description**$ String$ An optional description of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Exposure">
   <xs:complexContent>
@@ -25193,10 +25211,10 @@ A quantity that is made available to other components in the simulation. Note th
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Exposure name="v" dimension="voltage"/>
 ```
@@ -25212,24 +25230,25 @@ A quantity that is made available to other components in the simulation. Note th
 ``` xml
 <Exposure name="fcond" dimension="none"/>
 ```
-````
-`````
+
+
 ## Child
 
 Specifies that a component can have a child of a particular type. The name supplied here can be used in path expressions to access the component. This is useful, for example, where a component can have multiple children of the same type but with different roles, such as the forward and reverse transition rates in a channel.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the child
 **type**$ String$ Reference to a component class, the value should be the name of the target class.
 **description**$ String$ An optional description of the child
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Child">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25238,10 +25257,10 @@ Specifies that a component can have a child of a particular type. The name suppl
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Child name="Connections" type="ConnectionPattern"/>
 ```
@@ -25257,23 +25276,24 @@ Specifies that a component can have a child of a particular type. The name suppl
 ``` xml
 <Child name="Reverse" type="HHRate"/>
 ```
-````
-`````
+
+
 ## Children
 
 Specifies that a component can have children of a particular class. The class may refer to an extendedtype, in which case components of any class that extends the specified target class should be valid as child components
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the children
 **type**$ String$ The class of component allowed as children.
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Children">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25284,10 +25304,10 @@ Specifies that a component can have children of a particular class. The class ma
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Children name="populations" type="Population"/>
 ```
@@ -25303,24 +25323,25 @@ Specifies that a component can have children of a particular class. The class ma
 ``` xml
 <Children name="displays" type="Display"/>
 ```
-````
-`````
+
+
 ## Link
 
 Like a ComponentRef, but resolved relative to the enclosing object so the target must already be in the model. One or the other should be deprecated. The Link element has the same properties as ComponentRef. The Link element just establishes a connection with the target component, but leaves it in its existing place in the hierarchy. Variables in the target component can be accessed via the name of the link element.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ A name for the ComponentReference
 **type**$ String$ The type of the target Component
 **description**$ String$ An optional description of the ComponentReference
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Link">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25329,10 +25350,10 @@ Like a ComponentRef, but resolved relative to the enclosing object so the target
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Link name="source" type="Population"/>
 ```
@@ -25348,24 +25369,25 @@ Like a ComponentRef, but resolved relative to the enclosing object so the target
 ``` xml
 <Link name="from" type="KSState"/>
 ```
-````
-`````
+
+
 ## ComponentReference
 
 A reference to another component. The target component can be accessed with path expressions in the same way as a child component, but can be defined independently
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ A name for the ComponentReference
 **type**$ String$ The type of the target Component
 **description**$ String$ An optional description of the ComponentReference
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ComponentReference">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25375,10 +25397,10 @@ A reference to another component. The target component can be accessed with path
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <ComponentReference name="component" type="Component"/>
 ```
@@ -25394,63 +25416,67 @@ A reference to another component. The target component can be accessed with path
 ``` xml
 <ComponentReference name="synapse" type="Synapse"/>
 ```
-````
-`````
+
+
 ## ComponentTypeReference
 
 This is used in conjunction with PathParameter elements to specify the target class of selections defined within components operating over the instance tree.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 
 ```
-````
-`````
+
+
 ## Collection
 
 Specifies that instances of components based on this class can containe a named collection of other instances. This provides for containers for oprating on groups of instances with path and filter expressions defined in components to operate over the instance tree.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 
 ```
-````
-`````
+
+
 ## PairCollection
 
 Defines a named collection of paris of instances, similar to the Collection element.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 
 ```
-````
-`````
+
+
 ## EventPort
 
 A port on a component that can send or receive events, depending on the direction specified
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the EventPort
 **direction**$ String$ 'IN' or 'OUT'
 **description**$ String$ An optional description of the EventPort
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EventPort">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25459,10 +25485,10 @@ A port on a component that can send or receive events, depending on the directio
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <EventPort name="spikes-in" direction="in"/>
 ```
@@ -25478,23 +25504,24 @@ A port on a component that can send or receive events, depending on the directio
 ``` xml
 <EventPort name="in" direction="in"/>
 ```
-````
-`````
+
+
 ## Text
 
 Holds textual information that does not change the model but is needed for other purposes such as labelling graphs.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The textual content
 **description**$ String$ An optional description of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Text">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25502,10 +25529,10 @@ Holds textual information that does not change the model but is needed for other
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Text name="title"/>
 ```
@@ -25521,22 +25548,23 @@ Holds textual information that does not change the model but is needed for other
 ``` xml
 <Text name="destination"/>
 ```
-````
-`````
+
+
 ## Path
 
 Duplicates some functionality of PathParameter - the two should be merged.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Path">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25544,10 +25572,10 @@ Duplicates some functionality of PathParameter - the two should be merged.
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Path name="quantity"/>
 ```
@@ -25563,23 +25591,24 @@ Duplicates some functionality of PathParameter - the two should be merged.
 ``` xml
 <Path name="quantity"/>
 ```
-````
-`````
+
+
 ## Attachments
 
 Specifies that a component can accept attached components of a particular class. Attached components can be added at build time dependent on other events. For scoping and access purposes they are like child components. The cannonical use of attachments is in adding synapses to a cell when a network connection is made.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ A name for the Attachments
 **type**$ String$ The type of the Attachments
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Attachments">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25588,15 +25617,15 @@ Specifies that a component can accept attached components of a particular class.
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Attachments name="synapses" type="Synapse"/>
 ```
-````
-`````
+
+
 ## Insertion
 
 
@@ -25606,41 +25635,43 @@ Specifies that a component can accept attached components of a particular class.
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the parameter. This is the name of the attribute to be used when the parameter is supplied in a component definition
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
 **description**$ String$ An optional description of the parameter
 
 ```
-````
-`````
+
+
 ## IndexParameter
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the parameter. This is the name of the attribute to be used when the parameter is supplied in a component definition
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
 **description**$ String$ An optional description of the parameter
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="IndexParameter">
   <xs:attribute name="name" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## About
 
 
@@ -25650,8 +25681,8 @@ Specifies that a component can accept attached components of a particular class.
 
 Meta element to provide arbitrary metadata to LEMS simulations. Note that this is not processed by the LEMS interpreter.
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Meta">
   <xs:sequence>
@@ -25661,8 +25692,8 @@ Meta element to provide arbitrary metadata to LEMS simulations. Note that this i
 </xs:complexType>
 
 ```
-````
-`````
+
+
 # Dynamics
 
 
@@ -25677,9 +25708,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 Specifies the dynamical behavior of components build from this ComponentType. Note that all variables in a Dynamics definition are private. If other components need access to them, then the definition should explicitly link them to an Exposure defined in the component class
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **supers**$ lemssuper_
 **derivedVariables**$ lemsderivedvariable_
@@ -25696,9 +25728,9 @@ Specifies the dynamical behavior of components build from this ComponentType. No
 **regimes**$ lemsregime_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Dynamics">
   <xs:sequence>
@@ -25715,10 +25747,10 @@ Specifies the dynamical behavior of components build from this ComponentType. No
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Dynamics>
     <StateVariable name="t" dimension="time"/>
@@ -25763,15 +25795,16 @@ Specifies the dynamical behavior of components build from this ComponentType. No
     </OnEvent>
 </Dynamics>
 ```
-````
-`````
+
+
 ## StateVariable
 
 Specifies a state variable that stores values that define the state of the system at a point in time. The dynamics of state variables may be defined as Ordinary Differential Equations (ODEs) using the *TimeDerivative* entity. They can also be discontinuously modified using elements in *Dynamics* such as *OnStart*s, *OnEvent*s, and *OnCondition*s. StateVariables may be linked to exposures.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the state variable
 **dimension**$ String$ The dimension, or 'none'. This should be the name of an already defined dimension element
@@ -25779,9 +25812,9 @@ Specifies a state variable that stores values that define the state of the syste
 **description**$ String$ An optional description of the state variable
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="StateVariable">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25791,10 +25824,10 @@ Specifies a state variable that stores values that define the state of the syste
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <StateVariable name="t" dimension="time"/>
 ```
@@ -25810,23 +25843,24 @@ Specifies a state variable that stores values that define the state of the syste
 ``` xml
 <StateVariable name="q" dimension="none"/>
 ```
-````
-`````
+
+
 ## StateAssignment
 
 Has 'variable' and 'value' fields
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **variable**$ String$ The name of the variable
 **value**$ String$ A string defining the value of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="StateAssignment">
   <xs:attribute name="variable" type="xs:string" use="required"/>
@@ -25834,10 +25868,10 @@ Has 'variable' and 'value' fields
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <StateAssignment variable="v" value="v + deltaV"/>
 ```
@@ -25853,23 +25887,24 @@ Has 'variable' and 'value' fields
 ``` xml
 <StateAssignment variable="geff" value="0"/>
 ```
-````
-`````
+
+
 ## TimeDerivative
 
 First order differential equations, functions of StateVariables and Parameters, for how StateVariables change with time. Has a variable and a value. The value is the rate of change of the variable.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **variable**$ String$ The name of the variable
 **value**$ String$ A string defining the value of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="TimeDerivative">
   <xs:attribute name="variable" type="xs:string" use="required"/>
@@ -25877,10 +25912,10 @@ First order differential equations, functions of StateVariables and Parameters, 
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <TimeDerivative variable="v" value="leakConductance * (leakReversal - v) / capacitance"/>
 ```
@@ -25896,15 +25931,16 @@ First order differential equations, functions of StateVariables and Parameters, 
 ``` xml
 <TimeDerivative variable="v" value="(totcurrent + injection) / capacitance"/>
 ```
-````
-`````
+
+
 ## DerivedVariable
 
 A quantity that depends algebraically on other quantities in the model. The 'value' field can be set to a mathematical expression, or the 'select' field to a path expression. If the path expression produces multiple matches, then the 'reduce' field says how these are reduced to a single value by taking the sum or product.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of the derived variable
 **select**$ String$ A path to the variable that supplies the value. Note that to select a variable from another component, the variable must be marked as an Exposure. Exactly one of 'select' and 'value' is required
@@ -25916,9 +25952,9 @@ A quantity that depends algebraically on other quantities in the model. The 'val
 **value**$ String$ A string defining the value of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DerivedVariable">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -25932,10 +25968,10 @@ A quantity that depends algebraically on other quantities in the model. The 'val
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <DerivedVariable name="tsince" dimension="time" exposure="tsince" value="t - tlast"/>
 ```
@@ -25951,24 +25987,25 @@ A quantity that depends algebraically on other quantities in the model. The 'val
 ``` xml
 <DerivedVariable name="r" dimension="per_time" exposure="r" value="rate * x / (1 - exp(-x))"/>
 ```
-````
-`````
+
+
 ## OnStart
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **stateAssignments**$ lemsstateassignment_
 **eventOuts**$ lemseventout_
 **transitions**$ lemstransition_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="OnStart">
   <xs:sequence>
@@ -25977,10 +26014,10 @@ A quantity that depends algebraically on other quantities in the model. The 'val
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <OnStart>
     <StateAssignment variable="v" value="v0"/>
@@ -26006,24 +26043,25 @@ A quantity that depends algebraically on other quantities in the model. The 'val
     <StateAssignment variable="v" value="v0"/>
 </OnStart>
 ```
-````
-`````
+
+
 ## OnCondition
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **stateAssignments**$ lemsstateassignment_
 **eventOuts**$ lemseventout_
 **transitions**$ lemstransition_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="OnCondition">
   <xs:sequence>
@@ -26035,10 +26073,10 @@ A quantity that depends algebraically on other quantities in the model. The 'val
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <OnCondition test="tsince .gt. period">
     <StateAssignment variable="tsince" value="0"/>
@@ -26068,32 +26106,34 @@ A quantity that depends algebraically on other quantities in the model. The 'val
     <EventOut port="a"/>
 </OnCondition>
 ```
-````
-`````
+
+
 ## OnEvent
 
 Event handler block
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **port**$ String$ the port to listen on
 
 ```
-````
 
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **stateAssignments**$ lemsstateassignment_
 **eventOuts**$ lemseventout_
 **transitions**$ lemstransition_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="OnEvent">
   <xs:sequence>
@@ -26104,10 +26144,10 @@ Event handler block
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <OnEvent port="spikes-in">
     <StateAssignment variable="v" value="v + deltaV"/>
@@ -26128,24 +26168,24 @@ Event handler block
     <StateAssignment variable="v" value="v + deltaV"/>
 </OnEvent>
 ```
-````
-`````
+
+
 ## EventOut
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EventOut">
   <xs:attribute name="port" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <EventOut port="a"/>
 ```
@@ -26161,15 +26201,16 @@ Event handler block
 ``` xml
 <EventOut port="a"/>
 ```
-````
-`````
+
+
 ## KineticScheme
 
 Allows the specification of systems that can be in one of a small number of states at any time with probabilistic transitions between states. This includes continuous time Markov processes as are used for stochastic models of ion channels. A kinetic scheme does not itself introduce any new elements or state variables. It is rather a way of connecting quantities in existing components by saying that quantities in the edge elements should be interpreted as transition rates among quantities in the node elements.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ Name of kinetic scheme
 **nodes**$ String$ Source of notes for scheme
@@ -26181,9 +26222,9 @@ Allows the specification of systems that can be in one of a small number of stat
 **reverseRate**$ String$ Name of reverse rate exposure
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="KineticScheme">
   <xs:attribute name="name" type="xs:string" use="required"/>
@@ -26197,34 +26238,36 @@ Allows the specification of systems that can be in one of a small number of stat
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <KineticScheme name="ks" nodes="states" stateVariable="occupancy" edges="transitions" edgeSource="from" edgeTarget="to" forwardRate="rf" reverseRate="rr"/>
 ```
 ``` xml
 <KineticScheme name="ks" nodes="states" stateVariable="occupancy" edges="transitions" edgeSource="from" edgeTarget="to" forwardRate="rf" reverseRate="rr" dependency="v" step="deltaV"/>
 ```
-````
-`````
+
+
 ## Regime
 
 Allows the dynamics of a ComponentType to be expressed via a finite state machine. Each regime has its internal dynamics, and conditions on which transitions between regimes occur are specified using the OnCondition element
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ The name of the regime
 **initial**$ String$ 'True' if this is the initial regime of the system
 
 ```
-````
 
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **derivedVariables**$ lemsderivedvariable_
 **stateVariables**$ lemsstatevariable_
@@ -26236,9 +26279,9 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 **requiredVars**$ lemsrequiredvar_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Regime">
   <xs:sequence>
@@ -26251,10 +26294,10 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Regime name="int" initial="true">
     <TimeDerivative variable="v" value="(current + gleak * (vleak - v)) / capacitance"/>
@@ -26278,24 +26321,25 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
     </OnCondition>
 </Regime>
 ```
-````
-`````
+
+
 ## OnEntry
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **stateAssignments**$ lemsstateassignment_
 **eventOuts**$ lemseventout_
 **transitions**$ lemstransition_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="OnEntry">
   <xs:sequence>
@@ -26304,42 +26348,42 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <OnEntry>
     <StateAssignment variable="tin" value="t"/>
     <StateAssignment variable="v" value="vreset"/>
 </OnEntry>
 ```
-````
-`````
+
+
 ## Transition
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Transition">
   <xs:attribute name="regime" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Transition regime="int"/>
 ```
 ``` xml
 <Transition regime="refr"/>
 ```
-````
-`````
+
+
 ## Super
 
 
@@ -26349,26 +26393,28 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **name**$ String$ 
 **dimension**$ String$ 
 **exposure**$ String$ 
 
 ```
-````
 
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **cases**$ lemscase_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ConditionalDerivedVariable">
   <xs:sequence>
@@ -26380,22 +26426,23 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## Case
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **value**$ String$ A string defining the value of the element
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Case">
   <xs:attribute name="condition" type="xs:string" use="optional"/>
@@ -26403,21 +26450,22 @@ Allows the dynamics of a ComponentType to be expressed via a finite state machin
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## Equilibrium
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **derivedVariables**$ lemsderivedvariable_
 
 ```
-````
-`````
+
+
 ## StateScalarField
 
 
@@ -26447,16 +26495,17 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 By default, each Component in a model gives rise to a single instance of its state variables when the model is executed. The state variables are then governed by the dynamics definition in the associated ComponentType. Elements in the Structure declaration  can be used to change this behavior, for example to make multiple instances of the state variables, or to instantiate a different component. A typical application for the latter would be a Component that defines a population of cells. The population Component might define the number of cells it contains but would refer to a Component defined elsewhere for the actual cell model to use.
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Structure">
   <xs:sequence>
@@ -26470,10 +26519,10 @@ By default, each Component in a model gives rise to a single instance of its sta
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Structure>
     <MultiInstantiate number="size" component="component"/>
@@ -26505,36 +26554,38 @@ By default, each Component in a model gives rise to a single instance of its sta
     <MultiInstantiate number="size" component="component"/>
 </Structure>
 ```
-````
-`````
+
+
 ## BuildElement
 
 Base class for elements that can be used in Structures
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## MultiInstantiate
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **assigns**$ lemsassign_
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="MultiInstantiate">
   <xs:attribute name="component" type="xs:string" use="required"/>
@@ -26542,10 +26593,10 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <MultiInstantiate number="size" component="component"/>
 ```
@@ -26558,28 +26609,29 @@ Base class for elements that can be used in Structures
 ``` xml
 <MultiInstantiate number="size" component="component"/>
 ```
-````
-`````
+
+
 ## CoInstantiate
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **assigns**$ lemsassign_
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## Assign
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Assign">
   <xs:attribute name="property" type="xs:string" use="required"/>
@@ -26587,46 +26639,48 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## Choose
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## ChildInstance
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **assigns**$ lemsassign_
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ChildInstance">
   <xs:attribute name="component" type="xs:string" use="required"/>
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <ChildInstance component="channel"/>
 ```
@@ -26639,22 +26693,23 @@ Base class for elements that can be used in Structures
 ``` xml
 <ChildInstance component="channel"/>
 ```
-````
-`````
+
+
 ## ForEach
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="ForEach">
   <xs:sequence>
@@ -26665,10 +26720,10 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <ForEach instances="../source" as="a">
     <ForEach instances="../target" as="b">
@@ -26700,23 +26755,24 @@ Base class for elements that can be used in Structures
     </ForEach>
 </ForEach>
 ```
-````
-`````
+
+
 ## EventConnection
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **assigns**$ lemsassign_
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EventConnection">
   <xs:sequence>
@@ -26732,10 +26788,10 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <EventConnection from="a" to="b"/>
 ```
@@ -26748,23 +26804,24 @@ Base class for elements that can be used in Structures
 ``` xml
 <EventConnection from="a" to="b"/>
 ```
-````
-`````
+
+
 ## Tunnel
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **assigns**$ lemsassign_
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Tunnel">
   <xs:sequence>
@@ -26778,61 +26835,65 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## PairsEventConnection
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## PairFilter
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## IncludePair
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## With
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="With">
   <xs:attribute name="instance" type="xs:string" use="optional"/>
@@ -26842,70 +26903,74 @@ Base class for elements that can be used in Structures
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <With instance="from" as="a"/>
 ```
 ``` xml
 <With instance="to" as="b"/>
 ```
-````
-`````
+
+
 ## If
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## Apply
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## Gather
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 ## GatherPairs
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **buildElements**$ lemsbuildelement_
 
 ```
-````
-`````
+
+
 # Simulation
 
 
@@ -26920,9 +26985,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **records**$ lemsrecord_
 **eventRecords**$ lemseventrecord_
@@ -26932,9 +26998,9 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 **eventWriters**$ lemseventwriter_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Simulation">
   <xs:sequence>
@@ -26949,10 +27015,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Simulation>
     <DataDisplay title="title" dataRegion="xmin,xmax,ymin,ymax"/>
@@ -26978,24 +27044,25 @@ Please file any issues or questions at the [issue tracker here](https://github.c
     <Run component="target" variable="t" increment="step" total="length"/>
 </Simulation>
 ```
-````
-`````
+
+
 ## Record
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **quantity**$ String$ path to the parameter that will contain the path to the quantity to be recorded
 **scale**$ String$ path to the element that defines the scale for rendering the quantity dimensionless
 **color**$ String$ hex format color suggestion for how the data should be displayed
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Record">
   <xs:attribute name="quantity" type="xs:string" use="required"/>
@@ -27005,10 +27072,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Record quantity="quantity" timeScale="timeScale" scale="scale" color="color"/>
 ```
@@ -27018,23 +27085,24 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 ``` xml
 <Record quantity="quantity" timeScale="timeScale" scale="scale" color="color"/>
 ```
-````
-`````
+
+
 ## EventRecord
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **quantity**$ String$ path for the component which will emit spikes to be recorded
 **eventPort**$ String$ event port for the component which will emit spikes
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EventRecord">
   <xs:attribute name="quantity" type="xs:string" use="required"/>
@@ -27042,14 +27110,14 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## DataDisplay
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DataDisplay">
   <xs:attribute name="title" type="xs:string" use="required"/>
@@ -27057,24 +27125,24 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <DataDisplay title="title" dataRegion="xmin,xmax,ymin,ymax"/>
 ```
 ``` xml
 <DataDisplay title="title" dataRegion="xmin,xmax,ymin,ymax"/>
 ```
-````
-`````
+
+
 ## DataWriter
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="DataWriter">
   <xs:attribute name="path" type="xs:string" use="required"/>
@@ -27082,21 +27150,21 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <DataWriter path="path" fileName="fileName"/>
 ```
-````
-`````
+
+
 ## EventWriter
 
 
 
-`````
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="EventWriter">
   <xs:attribute name="path" type="xs:string" use="required"/>
@@ -27105,15 +27173,16 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
-`````
+
+
 ## Run
 
 The run element provides a way to make a model runnable. It should point to the parameters that set the step size etc. The target parameters have to be dimensionally consistent.
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **component**$ String$ name of the component reference that will set the component to be run
 **variable**$ String$ 
@@ -27121,9 +27190,9 @@ The run element provides a way to make a model runnable. It should point to the 
 **total**$ String$ path to the parameter that sets the total span of the independent variable to be run
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Run">
   <xs:attribute name="component" type="xs:string" use="required"/>
@@ -27133,18 +27202,18 @@ The run element provides a way to make a model runnable. It should point to the 
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Run component="target" variable="t" increment="step" total="length"/>
 ```
 ``` xml
 <Run component="target" variable="t" increment="step" total="length"/>
 ```
-````
-`````
+
+
 # Procedure
 
 
@@ -27159,15 +27228,16 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **statements**$ lemsstatement_
 
 ```
-````
-`````
+
+
 ## Equilibrate
 
 
@@ -27177,15 +27247,16 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **statements**$ lemsstatement_
 
 ```
-````
-`````
+
+
 ## Print
 
 
@@ -27205,9 +27276,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 
 
-`````
-```` Properties
-```Table:
+
+Table of Properties (separator='$')
+```
+Name $ description $ reference
 
 **id**$ String$ 
 **name**$ String$ Name by which the component was declared - this shouldn't be accessible.
@@ -27216,10 +27288,11 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 **eXtends**$ String$ 
 
 ```
-````
 
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **insertions**$ lemsinsertion_
 **components**$ lemscomponent_
@@ -27227,9 +27300,9 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 **metas**$ lemsmeta_
 
 ```
-````
 
-```` Schema
+
+Schema
 ``` xml
 <xs:complexType name="Component">
   <xs:sequence>
@@ -27239,10 +27312,10 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 </xs:complexType>
 
 ```
-````
 
 
-```` Usage: XML
+
+Usage: XML
 ``` xml
 <Component id="ctb" type="iaf1" threshold="-30 mV" refractoryPeriod="2 ms" capacitance="1uF"/>
 ```
@@ -27258,8 +27331,8 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 ``` xml
 <Component id="iaf3cpt" type="iaf3" leakReversal="-50mV" deltaV="50mV" threshold="-30mV" leakConductance="50pS" refractoryPeriod="4ms" capacitance="1pF"/>
 ```
-````
-`````
+
+
 # Geometry
 
 
@@ -27274,17 +27347,18 @@ Please file any issues or questions at the [issue tracker here](https://github.c
 
 Specifies the geometrical interpretation of the properties of components realizing this ComponentType.
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **frustums**$ lemsfrustum_
 **solids**$ lemssolid_
 **skeletons**$ lemsskeleton_
 
 ```
-````
-`````
+
+
 ## Frustum
 
 
@@ -27304,15 +27378,16 @@ Specifies the geometrical interpretation of the properties of components realizi
 
 
 
-`````
-```` can contain these elements
-```Table:
+
+Table of can contain these elements (separator='$')
+```
+Name $ description $ reference
 
 **scalarFields**$ lemsscalarfield_
 
 ```
-````
-`````
+
+
 ## ScalarField
 
 
