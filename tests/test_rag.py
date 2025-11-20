@@ -9,9 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import unittest
-from langchain_core.messages import AIMessage
 from neuroml_ai.rag import NML_RAG
-from neuroml_ai.schemas import AgentState
 
 
 class TestRAG(unittest.TestCase):
@@ -24,27 +22,11 @@ class TestRAG(unittest.TestCase):
         """
         self.nml_ai = NML_RAG()
         self.nml_ai.setup()
-        self.state = AgentState()
 
     def test_retrieval(self):
         """Test retrieval"""
         self.nml_ai._load_vector_stores()
-        self.state.query = "NeuroML community"
-        # uses previous message for tool call id
-        self.state.messages.append(
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "name": "_retrieve_docs",
-                        "args": {"query": "NeuroML community"},
-                        "id": "tool_call_id",
-                        "type": "tool_call",
-                    }
-                ],
-            )
-        )
-        self.nml_ai._retrieve_docs(self.state)
+        self.nml_ai._retrieve_docs("NeuroML community")
 
 
 if __name__ == "__main__":
