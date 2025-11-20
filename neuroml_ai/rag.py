@@ -573,6 +573,7 @@ class NML_RAG(object):
 
         # updated reference material
         res = self._retrieve_docs(state.messages[-1].content)
+        # TODO: deduplicate
         reference_material.extend(res)
 
         reference_material_text = self._serialize_reference(reference_material)
