@@ -16,7 +16,7 @@ from glob import glob
 from hashlib import sha256
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional, Any
+from typing import Any, Optional
 
 import chromadb
 import ollama
@@ -25,10 +25,13 @@ from langchain.embeddings import init_embeddings
 from langchain_chroma import Chroma
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import (MarkdownHeaderTextSplitter,
-                                      RecursiveCharacterTextSplitter)
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
+from typing_extensions import List, Tuple
 
 from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
 
@@ -74,13 +77,16 @@ class NML_RAG(object):
         self.embedding_model = embedding_model
         self.embeddings = None
 
-        self.text_vector_stores: dict[str, Any] = {}
+        self.text_vector_stores: dict[str, Chroma] = {}
         self.image_vector_stores: dict[str, Any] = {}
 
-        # per vector store
-        self.default_k = 2
-        self.k_max = 5
+        # per store
+        self.default_k = 6
+        self.k_max = 12
         self.k = self.default_k
+        self.vectore_store_similarity_threshold = 0.15
+        self.chunk_size = 600
+        self.chunk_overlap = 60
 
         # toggle for answer generator
         self.modify_query = False
@@ -322,7 +328,7 @@ class NML_RAG(object):
             "query_type": QueryTypeSchema(),
             "text_response_eval": EvaluateAnswerSchema(),
             "message_for_user": "",
-            "reference_material": []
+            "reference_material": [],
         }
 
     def _classify_query_node(self, state: AgentState) -> dict:
@@ -496,8 +502,9 @@ class NML_RAG(object):
         question_prompt_template = ChatPromptTemplate(
             [("system", system_prompt), ("human", "User query: {query}")]
         )
-        prompt = question_prompt_template.invoke({"query": state.query,
-                                                  "feedback": state.text_response_eval.summary})
+        prompt = question_prompt_template.invoke(
+            {"query": state.query, "feedback": state.text_response_eval.summary}
+        )
         self.logger.debug(f"{prompt =}")
 
         output = self.model.invoke(prompt)
@@ -518,10 +525,10 @@ class NML_RAG(object):
         You are a NeuroML expert and experienced modeller in computational
         neuroscience. You specialise in NeuroML, LEMS, and data-driven
         modelling of detailed neurons, neuronal circuits and its
-        components---ion channels, active and passive conductances, detailed
+        components: ion channels, active and passive conductances, detailed
         cells with morphologies, synapse models, networks including these
         components. Your goal is to provide clear, accurate guidance to users
-        based strictly on the information available in the retrieved context.
+        based strictly on the information provided in the retrieved context.
 
         If the context is missing some information to answer the question,
         say so.
@@ -540,7 +547,7 @@ class NML_RAG(object):
           "follow the tutorial"). Instead, restate the necessary information
           directly to the user in clear natural language.
 
-        # Context (reference material not visible to the user):
+        # Context (reference material not visible to the user, ordered from most relevant to least relevant):
 
         {reference_material}
 
@@ -561,24 +568,17 @@ class NML_RAG(object):
 
         self.logger.debug(f"retrieval query: {state.messages[-1].content}")
 
-        res = self._retrieve_docs(state.messages[-1].content)
-        serialized = ""
-
-        for rs in res:
-            for r in rs:
-                metadata = [f"{key}: {val}" for key, val in r.metadata.items() if "header" in key.lower()]
-                metadata_str = "Document: " + " | ".join(metadata)
-                serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
-        self.logger.debug(f"{serialized =}")
-
+        # current reference material
         reference_material = state.reference_material
-        reference_material.append(serialized.replace("{", "{{").replace( "}", "}}"))
+
+        # updated reference material
+        res = self._retrieve_docs(state.messages[-1].content)
+        reference_material.extend(res)
+
+        reference_material_text = self._serialize_reference(reference_material)
 
         prompt = generate_answer_template.invoke(
-            {
-                "question": question,
-                "reference_material": "\n\n".join(reference_material)
-            }
+            {"question": question, "reference_material": reference_material_text}
         )
         self.logger.debug(f"{prompt =}")
         output = self.model.invoke(prompt)
@@ -588,6 +588,34 @@ class NML_RAG(object):
         messages.append(output)
 
         return {"messages": messages, "reference_material": reference_material}
+
+    def _serialize_reference(self, reference_material: List[Tuple]) -> str:
+        """serialize references into text for use in context
+
+        We also sort the documents based on their relevance scores.
+
+        :param reference_material:  list of tuples (doc, relevance score)
+        :returns: str representation of reference
+
+        """
+        # sort all refs
+        sorted_refs = sorted(reference_material, key=lambda tup: tup[1], reverse=True)
+        serialized = ""
+        ctr = 1
+        for r, score in sorted_refs:
+            metadata = [
+                f"{key}: {val}"
+                for key, val in r.metadata.items()
+                if "header" in key.lower()
+            ]
+            metadata_str = f"Document {ctr}/{len(sorted_refs)}: " + " | ".join(metadata)
+            serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
+            ctr += 1
+
+        reference_material_text = serialized.replace("{", "{{").replace("}", "}}")
+        self.logger.debug(f"{reference_material_text =}")
+
+        return reference_material_text
 
     def _evaluate_answer_node(self, state: AgentState) -> dict:
         """Evaluate the answer"""
@@ -669,7 +697,7 @@ class NML_RAG(object):
 
         question = state.query
 
-        context = state.reference_material
+        context = self._serialize_reference(state.reference_material)
         answer = state.messages[-1].content
         assert len(question)
         assert len(context)
@@ -721,16 +749,22 @@ class NML_RAG(object):
         resp = state.text_response_eval
         next_step = resp.next_step
 
-        if (next_step == "continue" and (resp.coverage >= 0.5 and
-                resp.confidence >= 0.5 and resp.relevance >= 0.5 and
-                resp.groundedness >= 0.5 and resp.coherence >= 0.5 and
-                resp.conciseness >= 0.5)):
+        if next_step == "continue" and (
+            resp.coverage >= 0.5
+            and resp.confidence >= 0.5
+            and resp.relevance >= 0.5
+            and resp.groundedness >= 0.5
+            and resp.coherence >= 0.5
+            and resp.conciseness >= 0.5
+        ):
             self.k = self.default_k
             return "continue"
-        elif (next_step == "modify_query" or resp.coverage < 0.3):
+        elif next_step == "modify_query" or resp.coverage < 0.3:
             self.modify_query = True
             return "modify_query"
-        elif (next_step == "retrieve_more_info" or (resp.coverage >= 0.5 and resp.confidence < 0.5)):
+        elif next_step == "retrieve_more_info" or (
+            resp.coverage >= 0.5 and resp.confidence < 0.5
+        ):
             # limit what max k we can have, otherwise, we end up pulling the
             # whole store..
             if self.k < self.k_max:
@@ -741,12 +775,16 @@ class NML_RAG(object):
                 # to get a better result
                 self.modify_query = True
                 return "modify_query"
-        elif next_step == "rewrite_answer" or (resp.coverage >= 0.5 and
-                                               resp.confidence >= 0.5 and
-                                               (resp.relevance < 0.5 and
-                                                resp.groundedness < 0.5 and
-                                                resp.coherence < 0.5 and
-                                                resp.conciseness < 0.5)):
+        elif next_step == "rewrite_answer" or (
+            resp.coverage >= 0.5
+            and resp.confidence >= 0.5
+            and (
+                resp.relevance < 0.5
+                and resp.groundedness < 0.5
+                and resp.coherence < 0.5
+                and resp.conciseness < 0.5
+            )
+        ):
             return "rewrite_answer"
         else:
             return "undefined"
@@ -773,7 +811,9 @@ class NML_RAG(object):
         """Ask the user for clarification or a different question"""
         self.logger.debug(f"{state =}")
 
-        answer = AIMessage("Apologies. I could not answer that question. Can you please ask another one or try to reword it and I will try again?")
+        answer = AIMessage(
+            "Apologies. I could not answer that question. Can you please ask another one or try to reword it and I will try again?"
+        )
 
         self.logger.info(f"Asking user for clarification: {answer.content}")
 
@@ -785,7 +825,9 @@ class NML_RAG(object):
         self.workflow.add_node("init_rag_state", self._init_rag_state_node)
         self.workflow.add_node("classify_query", self._classify_query_node)
 
-        self.workflow.add_node("generate_retrieval_query", self._generate_retrieval_query_node)
+        self.workflow.add_node(
+            "generate_retrieval_query", self._generate_retrieval_query_node
+        )
         self.workflow.add_node(
             "answer_general_question", self._answer_general_question_node
         )
@@ -830,7 +872,9 @@ class NML_RAG(object):
             },
         )
 
-        self.workflow.add_edge("generate_retrieval_query", "generate_answer_from_context")
+        self.workflow.add_edge(
+            "generate_retrieval_query", "generate_answer_from_context"
+        )
         self.workflow.add_edge("generate_answer_from_context", "evaluate_answer")
         self.workflow.add_edge("give_neuroml_answer_to_user", "summarise_history")
         self.workflow.add_edge("ask_user_for_clarification", "summarise_history")
@@ -884,7 +928,9 @@ class NML_RAG(object):
         self.logger.debug("Setting up/loading Chroma vector store")
 
         self.logger.debug(f"{self.vector_stores_sources_path =}")
-        vec_store_sources = glob(f"{self.vector_stores_sources_path}/*", recursive=False)
+        vec_store_sources = glob(
+            f"{self.vector_stores_sources_path}/*", recursive=False
+        )
         self.logger.debug(f"{vec_store_sources =}")
 
         assert len(vec_store_sources)
@@ -971,7 +1017,7 @@ class NML_RAG(object):
             )
             md_splits = md_splitter.split_text(md_doc)
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000, chunk_overlap=200
+                chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
             )
             splits = text_splitter.split_documents(md_splits)
             for split in splits:
@@ -990,7 +1036,7 @@ class NML_RAG(object):
         """Retrieve embeddings from documentation to answer a query
 
         :param query: user query
-        :returns: serialised metadata/page content and vector_store look up result
+        :returns: list of tuples (document, score)
 
         """
         self._load_vector_stores()
@@ -1000,9 +1046,11 @@ class NML_RAG(object):
         res = []
 
         for sname, store in self.text_vector_stores.items():
-            data = store.similarity_search(query, k=self.k)
+            data = store.similarity_search_with_relevance_scores(
+                query, k=self.k, score_threshold=self.vectore_store_similarity_threshold
+            )
             self.logger.debug(f"{data =}")
-            res.append(data)
+            res.extend(data)
 
         return res
 

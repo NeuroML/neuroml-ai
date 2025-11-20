@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
-from typing_extensions import List, Literal
+from typing_extensions import List, Literal, Tuple
 
 
 class QueryTypeSchema(BaseModel):
@@ -51,4 +51,4 @@ class AgentState(BaseModel):
     # index till which summarised
     summarised_till: int = 0
     message_for_user: str = ""
-    reference_material: List[str] = Field(default_factory=list)
+    reference_material: List[Tuple] = Field(default_factory=list)
