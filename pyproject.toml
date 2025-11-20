@@ -8,3 +8,6 @@ build-backend = "setuptools.build_meta"
 ignore = ["F403", "F405"]
 
 [tool.pytest.ini_options]
+markers = [
+    "localonly", # test to not be run on GH actions: they require an LLM.
+]

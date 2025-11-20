@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 import mimetypes
+import shutil
 import sys
 from glob import glob
 from hashlib import sha256
@@ -860,8 +861,23 @@ class NML_RAG(object):
             self.logger.error("Could not connect to Ollama.")
             sys.exit(-1)
 
+    def _remove_vector_stores(self):
+        """Remove all vector stores.
+        Usually needed when they need to be regenerated
+        """
+        sure = input("NeuroML-AI >>> Delete all vector stores, are you sure? [Y/N] ")
+        if sure.lower() == "y":
+            vec_stores = glob(f"{self.vector_stores_path}/*.db", recursive=False)
+            for store in vec_stores:
+                self.logger.info(f"Deleting vector {store}")
+                shutil.rmtree(store)
+        else:
+            self.logger.info("Did not delete any vector stores. Exiting.")
+
     def _load_vector_stores(self):
         """Create/load the vector store"""
+        assert self.embeddings
+
         self.logger.debug("Setting up/loading Chroma vector store")
 
         self.logger.debug(f"{self.vector_stores_sources_path =}")

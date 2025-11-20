@@ -8,13 +8,14 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import typer
 import logging
 import subprocess
-from pathlib import Path
 from contextlib import chdir
-from neuroml_ai.rag import NML_RAG
+from pathlib import Path
 
+import typer
+
+from neuroml_ai.rag import NML_RAG
 
 nml_ai_app = typer.Typer()
 
@@ -24,7 +25,8 @@ def nml_ai_cli(
     chat_model: str = "ollama:qwen3:1.7b",
     embedding_model: str = "ollama:bge-m3",
     gui: bool = False,
-    single_query: str = ""
+    single_query: str = "",
+    regen_vector_stores: bool = False,
 ):
     """NeuroML AI cli wrapper function"""
 
@@ -43,13 +45,22 @@ def nml_ai_cli(
             embedding_model=embedding_model,
             logging_level=logging.DEBUG,
         )
+
         nml_ai.setup()
+
+        if regen_vector_stores:
+            nml_ai._remove_vector_stores()
+            nml_ai._load_vector_stores()
 
         if len(single_query):
             print(f"NeuroML-AI (USER) >>> {single_query}\n\n")
-            with yaspin(text="Working ..."):
-                response = nml_ai.run_graph_invoke(single_query)
-                print(f"NeuroML-AI (AI) >>> {response}\n\n")
+
+            if single_query == "quit":
+                pass
+            else:
+                with yaspin(text="Working ..."):
+                    response = nml_ai.run_graph_invoke(single_query)
+                    print(f"NeuroML-AI (AI) >>> {response}\n\n")
 
         else:
             while (query := input("NeuroML-AI (USER) >>> ")) != "quit":
