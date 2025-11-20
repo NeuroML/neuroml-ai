@@ -20,7 +20,7 @@ class TestRAG(unittest.TestCase):
         :returns: TODO
 
         """
-        self.nml_ai = NML_RAG()
+        self.nml_ai = NML_RAG(chat_model="ollama:qwen3:0.6b", embedding_model="ollama:bge-m3")
         self.nml_ai.setup()
 
     def test_retrieval(self):
