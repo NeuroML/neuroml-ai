@@ -919,7 +919,7 @@ class NML_RAG(object):
                 self.logger.info(f"Deleting vector {store}")
                 shutil.rmtree(store)
         else:
-            self.logger.info("Did not delete any vector stores. Exiting.")
+            self.logger.info("Did not delete any vector stores. Continuing.")
 
     def _load_vector_stores(self):
         """Create/load the vector store"""
