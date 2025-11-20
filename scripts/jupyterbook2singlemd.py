@@ -40,6 +40,7 @@ def runner(source: str):
                 filelist.append(source_file_full)
 
     text = ""
+    schema_text = ""
     # ignore lines starting with these
     start_ignores = (
         "----",
@@ -49,23 +50,34 @@ def runner(source: str):
         ":align: ",
         ":alt: ",
         ":scale: ",
+        ":gutter: ",
+        ":columns: ",
+        ":widths: ",
+        ":width: ",
+        ":delim: ",
         "%"
     )
     refs  = {}
 
     replacements = {
         r"{ref}`(.+?)>`": r"\1>",
+        r"{ref}`(.+?)`": r"\1",
         r"{doc}`(.+?)>`": r"\1>",
         r"{eq}`(.+?)>`": r" (see equation \1)",
         r"{cite}`(.+?)`": r"[citation: \1]",
+        r"{superscript}`(.+?)`": r"^\1",
+        r"{csv-table}": r"Table:",
         r"{(image|figure)} (.+)": r"\nFigure: \2",
         r"{(admonition|tip|warning|note|important)}": r"\nNOTE: ",
-        r"{(code|code-block|download)}": r""
+        r"{(code|code-block|download|tab-item|grid-item-card|grid|tab-set)}": r"",
+        r"(schema:|units:|<i>|</i>|&emsp;)": r""
     }
 
     for srcfile in filelist:
         srcfilepath = Path(f"{source}/{srcfile}")
         print(f"Processing {srcfilepath}")
+        adding_text_to = ""
+
         with open(srcfilepath, 'r') as srcfile_f:
             in_block = False
             section_ref = ""
@@ -88,13 +100,20 @@ def runner(source: str):
                     file_to_include = line.split("{literalinclude}")[1].strip()
                     with open(f"{srcfilepath.parent}/{file_to_include}", 'r') as incfile_f:
                         included_cont = incfile_f.read()
-                        text += f"```\n\n{included_cont}\n\n```\n"
+                        adding_text_to += f"```\n\n{included_cont}\n\n```\n"
                 # exit the block
                 elif "```" in line and in_block:
-                    text += "\n"
+                    adding_text_to += "\n"
                     in_block = False
                 else:
-                    text += line
+                    adding_text_to += line
+
+        if "Schemas/" in str(srcfilepath):
+            schema_text += adding_text_to
+        else:
+            text += adding_text_to
+
+
 
     for pat, rep in replacements.items():
         text = re.sub(pat, rep, text, count=0)
@@ -102,8 +121,17 @@ def runner(source: str):
     for pat, rep in refs.items():
         text = re.sub(pat, rep, text, count=0)
 
+    for pat, rep in replacements.items():
+        schema_text = re.sub(pat, rep, schema_text, count=0)
+
+    for pat, rep in refs.items():
+        schema_text = re.sub(pat, rep, schema_text, count=0)
+
     with open("single-page-markdown.md", 'w') as out:
         print(text, file=out)
+
+    with open("single-page-markdown-schema.md", 'w') as out:
+        print(schema_text, file=out)
 
     # print(refs)
 

@@ -9,5 +9,6 @@
 git clone --depth 1 https://github.com/NeuroML/Documentation nml-docs
 python3 jupyterbook2singlemd.py "nml-docs/source"
 mv -v single-page-markdown.md nml-docs-single-page.md
+mv -v single-page-markdown-schema.md nml-docs-single-page-schema.md
 
 echo "Please delete the nml-docs folder and copy the generated file over to the data/files folder"
