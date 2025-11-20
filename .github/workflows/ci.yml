@@ -61,11 +61,11 @@ jobs:
     - name: Pull default models
       run: |
         ollama pull qwen3:0.6b
-        ollam pull bge-m3
+        ollama pull bge-m3
 
     - name: Run unit tests
       run: |
-        pytest
+        pytest -v
 
     - name: Lint with ruff
       run: |
