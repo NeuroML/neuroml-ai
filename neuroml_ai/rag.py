@@ -897,16 +897,21 @@ class NML_RAG(object):
 
             for info_file in info_files:
                 try:
-                    file_type = mimetypes.guess_file_type(Path(info_file))[0]
+                    file_type = mimetypes.guess_file_type(info_file)[0]
                 except AttributeError:
                     # for py<3.13
-                    file_type = mimetypes.guess_type(Path(info_file))[0]
+                    file_type = mimetypes.guess_type(info_file)[0]
 
-                if "markdown" in file_type:
-                    self._add_md_file_to_store(store, info_file)
+                if file_type:
+                    if "markdown" in file_type:
+                        self._add_md_file_to_store(store, info_file)
+                    else:
+                        self.logger.warning(
+                            f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
+                        )
                 else:
                     self.logger.warning(
-                        f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
+                        f"Could not guess file type for file {info_file}. Skipping"
                     )
 
     def _add_md_file_to_store(self, store, file):
