@@ -896,7 +896,11 @@ class NML_RAG(object):
             self.logger.debug(f"Loaded {len(info_files)} files from {src}")
 
             for info_file in info_files:
-                file_type = mimetypes.guess_file_type(info_file)[0]
+                try:
+                    file_type = mimetypes.guess_file_type(Path(info_file))[0]
+                except AttributeError:
+                    # for py<3.13
+                    file_type = mimetypes.guess_type(Path(info_file))[0]
 
                 if "markdown" in file_type:
                     self._add_md_file_to_store(store, info_file)
