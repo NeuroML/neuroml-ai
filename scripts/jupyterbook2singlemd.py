@@ -66,7 +66,7 @@ def runner(source: str):
         r"{eq}`(.+?)>`": r" (see equation \1)",
         r"{cite}`(.+?)`": r"[citation: \1]",
         r"{superscript}`(.+?)`": r"^\1",
-        r"{csv-table}": r"Table:",
+        r"````((.+)\n```{csv-table})??": r"Table of \1 (separator='$')\n",
         r"{(image|figure)} (.+)": r"\nFigure: \2",
         r"{(admonition|tip|warning|note|important)}": r"\nNOTE: ",
         r"{(code|code-block|download|tab-item|grid-item-card|grid|tab-set)}": r"",
@@ -116,13 +116,13 @@ def runner(source: str):
 
 
     for pat, rep in replacements.items():
-        text = re.sub(pat, rep, text, count=0)
+        text = re.sub(pat, rep, text, count=0, flags=re.M)
 
     for pat, rep in refs.items():
         text = re.sub(pat, rep, text, count=0)
 
     for pat, rep in replacements.items():
-        schema_text = re.sub(pat, rep, schema_text, count=0)
+        schema_text = re.sub(pat, rep, schema_text, count=0, flags=re.M)
 
     for pat, rep in refs.items():
         schema_text = re.sub(pat, rep, schema_text, count=0)
