@@ -141,6 +141,9 @@ class NML_RAG(object):
         assert self.model
         assert self.embeddings
 
+        self.logger.info(f"Using chat model: {self.chat_model}")
+        self.logger.info(f"Using embedding model: {self.embedding_model}")
+
         self._create_graph()
 
     def _summarise_history_node(self, state: AgentState) -> dict:
