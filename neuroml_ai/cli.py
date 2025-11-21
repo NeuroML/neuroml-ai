@@ -49,8 +49,8 @@ def nml_ai_cli(
         nml_ai.setup()
 
         if regen_vector_stores:
-            nml_ai._remove_vector_stores()
-            nml_ai._load_vector_stores()
+            nml_ai.stores.remove()
+            nml_ai.stores.load()
 
         if len(single_query):
             print(f"NeuroML-AI (USER) >>> {single_query}\n\n")

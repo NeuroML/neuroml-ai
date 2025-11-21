@@ -9,84 +9,49 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-import mimetypes
-import shutil
 import sys
-from glob import glob
-from hashlib import sha256
-from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Optional
 
-import chromadb
-import ollama
 from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
-from langchain_chroma import Chroma
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import List, Tuple
 
 from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
+from .stores import NML_Stores
+from .utils import (
+    LoggerInfoFilter,
+    LoggerNotInfoFilter,
+    check_ollama_model,
+    logger_formatter_info,
+    logger_formatter_other,
+)
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
 
 
-class LoggerNotInfoFilter(logging.Filter):
-    """Allow only non INFO messages"""
-
-    def filter(self, record):
-        return record.levelno != logging.INFO
-
-
-class LoggerInfoFilter(logging.Filter):
-    """Allow only INFO messages"""
-
-    def filter(self, record):
-        return record.levelno == logging.INFO
-
-
 class NML_RAG(object):
     """NeuroML RAG implementation"""
-
-    md_headers_to_split_on = [
-        ("#", "Header 1"),
-        ("##", "Header 2"),
-        ("###", "Header 3"),
-        ("####", "Header 4"),
-    ]
 
     checkpointer = InMemorySaver()
 
     def __init__(
         self,
-        chat_model: str = "ollama:qwen3:1.7b",
+        # chat_model: str = "ollama:qwen3:1.7b",
+        chat_model: str = "ollama:gemma3:1b",
         embedding_model: str = "ollama:bge-m3",
         logging_level: int = logging.DEBUG,
     ):
         """Initialise"""
         self.chat_model = chat_model
         self.model = None
-        self.embedding_model = embedding_model
-        self.embeddings = None
-
-        self.text_vector_stores: dict[str, Chroma] = {}
-        self.image_vector_stores: dict[str, Any] = {}
-
-        # per store
-        self.default_k = 6
-        self.k_max = 12
-        self.k = self.default_k
-        self.vectore_store_similarity_threshold = 0.15
-        self.chunk_size = 600
-        self.chunk_overlap = 60
+        self.stores = NML_Stores(embedding_model)
+        # total number of reference documents
+        self.num_refs_max = 10
 
         # toggle for answer generator
         self.modify_query = False
@@ -96,60 +61,39 @@ class NML_RAG(object):
         # 5 rounds: 10 messages
         self.num_recent_messages = 10
 
-        # we prefer markdown because the one page PDF that is available for the
-        # documentation does not work too well with embeddings
-        my_path = Path(__file__).parent
-        self.data_dir = f"{my_path}/data/"
-        self.vector_stores_path = f"{self.data_dir}/vector-stores"
-        self.vector_stores_sources_path = f"{self.vector_stores_path}/sources"
-
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
         self.logger.propagate = False
 
-        formatter_info = logging.Formatter(
-            "%(name)s (%(levelname)s) >>> %(message)s\n\n"
-        )
-        formatter_other = logging.Formatter(
-            "%(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n"
-        )
-
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(logging.INFO)
         stdout_handler.addFilter(LoggerInfoFilter())
-        stdout_handler.setFormatter(formatter_info)
+        stdout_handler.setFormatter(logger_formatter_info)
         self.logger.addHandler(stdout_handler)
 
         stderr_handler = logging.StreamHandler(sys.stderr)
         stderr_handler.setLevel(logging_level)
         stderr_handler.addFilter(LoggerNotInfoFilter())
-        stderr_handler.setFormatter(formatter_other)
+        stderr_handler.setFormatter(logger_formatter_other)
         self.logger.addHandler(stderr_handler)
 
     def setup(self):
         """Set up basics."""
 
         if self.chat_model.lower().startswith("ollama:"):
-            self.__check_ollama_model(self.chat_model.lower().replace("ollama:", ""))
+            check_ollama_model(
+                self.logger, self.chat_model.lower().replace("ollama:", "")
+            )
 
         self.model = init_chat_model(
             self.chat_model,
             temperature=0.3,
         )
-
-        if self.embedding_model.lower().startswith("ollama:"):
-            self.__check_ollama_model(
-                self.embedding_model.lower().replace("ollama:", "")
-            )
-
-        self.embeddings = init_embeddings(self.embedding_model)
-
         assert self.model
-        assert self.embeddings
+
+        self.stores.setup()
 
         self.logger.info(f"Using chat model: {self.chat_model}")
-        self.logger.info(f"Using embedding model: {self.embedding_model}")
-
         self._create_graph()
 
     def _summarise_history_node(self, state: AgentState) -> dict:
@@ -572,9 +516,11 @@ class NML_RAG(object):
         reference_material = state.reference_material
 
         # updated reference material
-        res = self._retrieve_docs(state.messages[-1].content)
-        # TODO: deduplicate
-        reference_material.extend(res)
+        res = self.stores.retrieve(state.messages[-1].content)
+        docs = [r[0] for r in reference_material]
+        for r in res:
+            if r[0] not in docs:
+                reference_material.append(r)
 
         reference_material_text = self._serialize_reference(reference_material)
 
@@ -601,6 +547,10 @@ class NML_RAG(object):
         """
         # sort all refs
         sorted_refs = sorted(reference_material, key=lambda tup: tup[1], reverse=True)
+
+        # TODO: take top X per concept, otherwise a new retrieval may overwrite
+        # the info for the past one. Needs some thinking.
+        sorted_refs = sorted_refs[:self.num_refs_max]
         serialized = ""
         ctr = 1
         for r, score in sorted_refs:
@@ -758,7 +708,7 @@ class NML_RAG(object):
             and resp.coherence >= 0.5
             and resp.conciseness >= 0.5
         ):
-            self.k = self.default_k
+            self.stores.reset_k()
             return "continue"
         elif next_step == "modify_query" or resp.coverage < 0.3:
             self.modify_query = True
@@ -768,8 +718,7 @@ class NML_RAG(object):
         ):
             # limit what max k we can have, otherwise, we end up pulling the
             # whole store..
-            if self.k < self.k_max:
-                self.k += 1
+            if self.stores.inc_k():
                 return "retrieve_more_info"
             else:
                 # we are already at max context, so we need to modify the query
@@ -887,173 +836,6 @@ class NML_RAG(object):
         self.graph.get_graph().draw_mermaid_png(
             output_file_path="nml-ai-lang-graph.png"
         )
-
-    def __check_ollama_model(self, model):
-        """Check if ollama model is available
-
-        :param model: ollama model name
-        :type model: str
-        :returns: None
-
-        :throws ollama.ResponseError: if `model` is not available
-        :throws ConnectionError: if cannot connect to an Ollama server
-
-        """
-        try:
-            _ = ollama.show(model)
-        except ollama.ResponseError:
-            self.logger.error(f"Could not find ollama model: {model}")
-            self.logger.error("Please ensure you have pulled the model")
-            sys.exit(-1)
-        except ConnectionError:
-            self.logger.error("Could not connect to Ollama.")
-            sys.exit(-1)
-
-    def _remove_vector_stores(self):
-        """Remove all vector stores.
-        Usually needed when they need to be regenerated
-        """
-        sure = input("NeuroML-AI >>> Delete all vector stores, are you sure? [Y/N] ")
-        if sure.lower() == "y":
-            vec_stores = glob(f"{self.vector_stores_path}/*.db", recursive=False)
-            for store in vec_stores:
-                self.logger.info(f"Deleting vector {store}")
-                shutil.rmtree(store)
-        else:
-            self.logger.info("Did not delete any vector stores. Continuing.")
-
-    def _load_vector_stores(self):
-        """Create/load the vector store"""
-        assert self.embeddings
-
-        self.logger.debug("Setting up/loading Chroma vector store")
-
-        self.logger.debug(f"{self.vector_stores_sources_path =}")
-        vec_store_sources = glob(
-            f"{self.vector_stores_sources_path}/*", recursive=False
-        )
-        self.logger.debug(f"{vec_store_sources =}")
-
-        assert len(vec_store_sources)
-
-        for src in vec_store_sources:
-            self.logger.debug(f"Setting up vector store: {src}")
-            src_path = Path(src)
-
-            assert src_path.is_dir()
-
-            vs_persist_dir = f"{self.vector_stores_path}/{src_path.name}_{self.embedding_model.replace(':', '_')}.db"
-            self.logger.debug(f"{vs_persist_dir =}")
-
-            chroma_client_settings_text = chromadb.config.Settings(
-                is_persistent=True,
-                persist_directory=vs_persist_dir,
-                anonymized_telemetry=False,
-            )
-            store = Chroma(
-                collection_name=src_path.name,
-                embedding_function=self.embeddings,
-                client_settings=chroma_client_settings_text,
-            )
-
-            self.text_vector_stores[src_path.name] = store
-
-            info_files = glob(f"{src}/*", recursive=True)
-            self.logger.debug(f"Loaded {len(info_files)} files from {src}")
-
-            for info_file in info_files:
-                try:
-                    file_type = mimetypes.guess_file_type(info_file)[0]
-                except AttributeError:
-                    # for py<3.13
-                    file_type = mimetypes.guess_type(info_file)[0]
-
-                if file_type:
-                    if "markdown" in file_type:
-                        self._add_md_file_to_store(store, info_file)
-                    else:
-                        self.logger.warning(
-                            f"File {info_file} is of type {file_type} which is not currently supported. Skipping"
-                        )
-                else:
-                    self.logger.warning(
-                        f"Could not guess file type for file {info_file}. Skipping"
-                    )
-
-    def _add_md_file_to_store(self, store, file):
-        """Add a markdown file to the vector store
-
-        We add the file hash as extra metadata so that we can filter on it
-        later.
-
-        TODO: Handle images referenced in the markdown file.
-
-        For this, we need to use the same metadata for the chunks and for the
-        images in those chunks when they're added to the text and image stores.
-        The text chunks need to have an id each, and a list of figures too. The
-        images being added will need to have the document/file id, and the
-        figure ids.
-
-        For retrieval, we will first run the similarity search on both the text
-        and images. For text results, we will retrieve any linked images.
-
-        Note that for text only LLMs, only the associated metadata of the
-        obtained images (captions and so on) can be used in the context. To use
-        the images too, we need to use multi-modal LLMs.
-        """
-        file_path = Path(file)
-        file_hash = sha256(file_path.name.encode("utf-8")).hexdigest()
-        already_added = store.get(where={"file_hash": file_hash})
-
-        if already_added and already_added["ids"]:
-            self.logger.debug(f"File already exists in vector store: {file_path}")
-            return
-
-        self.logger.debug(f"Adding markdown file to text vector store: {file_path}")
-        with open(file, "r") as f:
-            md_doc = f.read()
-            self.logger.debug(f"Length of loaded file: {len(md_doc.split())}")
-            md_splitter = MarkdownHeaderTextSplitter(
-                self.md_headers_to_split_on, strip_headers=False
-            )
-            md_splits = md_splitter.split_text(md_doc)
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
-            )
-            splits = text_splitter.split_documents(md_splits)
-            for split in splits:
-                split.metadata.update(
-                    {
-                        "file_hash": file_hash,
-                        "file_name": file_path.name,
-                        "file_path": str(file_path),
-                    }
-                )
-
-            self.logger.debug(f"Length of split docs: {len(splits)}")
-            _ = store.add_documents(documents=splits)
-
-    def _retrieve_docs(self, query: str) -> list:
-        """Retrieve embeddings from documentation to answer a query
-
-        :param query: user query
-        :returns: list of tuples (document, score)
-
-        """
-        self._load_vector_stores()
-
-        assert self.text_vector_stores
-
-        res = []
-
-        for sname, store in self.text_vector_stores.items():
-            data = store.similarity_search_with_relevance_scores(
-                query, k=self.k, score_threshold=self.vectore_store_similarity_threshold
-            )
-            self.logger.debug(f"{data =}")
-            res.extend(data)
-
-        return res
 
     def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
         """Run the graph but accept and return states"""
