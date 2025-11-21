@@ -112,6 +112,7 @@ class NML_Stores(object):
         """
         if (self.k + inc) <= self.k_max:
             self.k += inc
+            self.logger.debug(f"k increased to {self.k =}")
             return True
 
         return False
@@ -119,6 +120,7 @@ class NML_Stores(object):
     def reset_k(self):
         """Reset k to default value"""
         self.k = self.default_k
+        self.logger.debug(f"k reset to {self.k =}")
 
     def remove(self):
         """Remove all vector stores.

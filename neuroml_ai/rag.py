@@ -18,7 +18,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
-from typing_extensions import List, Tuple
+from typing_extensions import List, Tuple, Dict
 
 from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
 from .stores import NML_Stores
@@ -272,7 +272,7 @@ class NML_RAG(object):
             "query_type": QueryTypeSchema(),
             "text_response_eval": EvaluateAnswerSchema(),
             "message_for_user": "",
-            "reference_material": [],
+            "reference_material": {}
         }
 
     def _classify_query_node(self, state: AgentState) -> dict:
@@ -409,25 +409,25 @@ class NML_RAG(object):
         self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
-        Generate a concise retrieval query from the user's question. If the
-        user question contains multiple parts or asks about multiple concepts
-        or items, select ONLY one and create a retrieval query for it; other
-        parts will be handled individually in later iterations.
+        Generate a concise retrieval query from the user's question.  Think
+        about the user's intent step by step.
 
-        Think about the user's intent step by step.
+        Directives:
+        - a concept is a single technical entity or noun phrase
+        - extract all concepts from the query
+        - split multiple concepts that are joined by 'and', commas and other
+          conjunctions into separate, individual concepts
+        - generate a query for EXACTLY one concept
 
+        For the rewritten query:
         - only include content words (nouns, verbs, adjectives)
         - do NOT include stop words: a, an, the, in, of, for, on, at, and
-        - include relevant NeuroML concepts
         - limit yourself to 3-8 words
         - no sentences
         - no explanations
         - ignore sentency fluency, only use keywords
-        - use any provided past conversation history to understand the context
-          of the user's query
 
-        Only return the rewritten query. Remove all stop words before returning
-        it.
+        Only return the rewritten query.
         """)
 
         system_prompt += self._add_memory_to_prompt(state)
@@ -435,9 +435,8 @@ class NML_RAG(object):
         if self.modify_query:
             # toggle off
             system_prompt += dedent("""
-            Take the evaluator's feedback into account. Focus on exactly one of
-            the missing parts of the user's question to generate the retrieval
-            query. Do not include content that has already been answered:
+            Generate a new query on EXACTLY one of concepts that the
+            evaluator's feedback says is missing.
 
             Evaluator feedback:
             {feedback}
@@ -515,13 +514,19 @@ class NML_RAG(object):
         # current reference material
         reference_material = state.reference_material
 
-        # updated reference material
-        res = self.stores.retrieve(state.messages[-1].content)
-        docs = [r[0] for r in reference_material]
-        for r in res:
-            if r[0] not in docs:
-                reference_material.append(r)
+        cleaned_query = state.messages[-1].content
 
+        # new references, or more references for an existing query from all
+        # stores
+        res = self.stores.retrieve(cleaned_query)
+        # rank info from all stores, keep top N
+        # remember that when asking for more ks from the vector store, they'll
+        # still return the initial ones, so we don't need to do any manual
+        # merging here for more refs for a particular query
+        sorted_res = sorted(res, key=lambda tup: tup[1], reverse=True)
+        new_ref = {cleaned_query: sorted_res[:self.num_refs_max]}
+
+        reference_material.update(new_ref)
         reference_material_text = self._serialize_reference(reference_material)
 
         prompt = generate_answer_template.invoke(
@@ -536,32 +541,28 @@ class NML_RAG(object):
 
         return {"messages": messages, "reference_material": reference_material}
 
-    def _serialize_reference(self, reference_material: List[Tuple]) -> str:
+    def _serialize_reference(self, reference_material: Dict[str, List[Tuple]]) -> str:
         """serialize references into text for use in context
 
         We also sort the documents based on their relevance scores.
 
-        :param reference_material:  list of tuples (doc, relevance score)
+        :param reference_material:  Dict {cleaned query: list of tuples (doc, relevance score)}
         :returns: str representation of reference
 
         """
-        # sort all refs
-        sorted_refs = sorted(reference_material, key=lambda tup: tup[1], reverse=True)
-
-        # TODO: take top X per concept, otherwise a new retrieval may overwrite
-        # the info for the past one. Needs some thinking.
-        sorted_refs = sorted_refs[:self.num_refs_max]
         serialized = ""
-        ctr = 1
-        for r, score in sorted_refs:
-            metadata = [
-                f"{key}: {val}"
-                for key, val in r.metadata.items()
-                if "header" in key.lower()
-            ]
-            metadata_str = f"Document {ctr}/{len(sorted_refs)}: " + " | ".join(metadata)
-            serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
-            ctr += 1
+        for q, sorted_refs in reference_material.items():
+            ctr = 1
+            serialized += f"## {q}\n"
+            for r, score in sorted_refs:
+                metadata = [
+                    f"{key}: {val}"
+                    for key, val in r.metadata.items()
+                    if "header" in key.lower()
+                ]
+                metadata_str = f"### Document {ctr}/{len(sorted_refs)}: " + " | ".join(metadata)
+                serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
+                ctr += 1
 
         reference_material_text = serialized.replace("{", "{{").replace("}", "}}")
         self.logger.debug(f"{reference_material_text =}")
@@ -644,6 +645,8 @@ class NML_RAG(object):
             3. high coverage,  low confidence: return "retrieve_more_info".
             4. high coverage and confidence, low relevance, groundedness, coherence, or conciseness: return "rewrite_answer"
             5. all coverage, confidence, relevance and groundedness are low: return "undefined".
+
+            Always return a brief summary.
             """)
 
         question = state.query
