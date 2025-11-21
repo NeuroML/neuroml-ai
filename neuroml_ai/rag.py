@@ -527,8 +527,9 @@ class NML_RAG(object):
         new_ref = {cleaned_query: sorted_res[:self.num_refs_max]}
 
         reference_material.update(new_ref)
-        reference_material_text = self._serialize_reference(reference_material)
+        self.logger.debug(f"{reference_material =}")
 
+        reference_material_text = self._serialize_reference(reference_material)
         prompt = generate_answer_template.invoke(
             {"question": question, "reference_material": reference_material_text}
         )
@@ -550,6 +551,7 @@ class NML_RAG(object):
         :returns: str representation of reference
 
         """
+
         serialized = ""
         for q, sorted_refs in reference_material.items():
             ctr = 1
