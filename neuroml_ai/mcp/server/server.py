@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MCP server for answers from docs
+MCP server factory class
 
 File: neuroml_ai/mcp/server/answers.py
 
@@ -12,9 +12,9 @@ import inspect
 from mcp.server.fastmcp import FastMCP
 
 
-class MCPServer(object):
+class MCPServerFactory(object):
 
-    """MCP class for NML RAG"""
+    """MCP factory"""
 
     def __init__(self, name: str):
         self._mcp = FastMCP(name, json_response=True)

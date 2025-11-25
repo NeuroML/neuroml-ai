@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Tools for answering questions
+Tools for generating NeuroML code
 
-File: answer_tools.py
+File: codegen_tools.py
 
 Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>

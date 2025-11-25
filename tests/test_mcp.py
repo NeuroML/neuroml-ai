@@ -11,8 +11,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import unittest
 
 import asyncio
-from neuroml_ai.mcp.server.server import MCPServer
-from neuroml_ai.mcp.tools import answer_tools
+from neuroml_ai.mcp.server.server import MCPServerFactory
+from neuroml_ai.mcp.tools import codegen_tools
 
 
 class TestMCP(unittest.TestCase):
@@ -20,9 +20,9 @@ class TestMCP(unittest.TestCase):
 
     def test_answers_server(self):
         """Test the Answers MCP server"""
-        answers_server = MCPServer("answers")
-        answers_server.register_tools([answer_tools])
-        mcp = answers_server.mcp
+        aserver = MCPServerFactory("codegen")
+        aserver.register_tools([codegen_tools])
+        mcp = aserver.mcp
         all_tools = asyncio.run(mcp.list_tools())
         tool_names = [t.name for t in all_tools]
         self.assertIn("dummy_tool", tool_names)

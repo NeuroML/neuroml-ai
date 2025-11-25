@@ -12,6 +12,7 @@ import logging
 import sys
 from textwrap import dedent
 from typing import Optional
+from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage
@@ -29,6 +30,12 @@ from .utils import (
     logger_formatter_info,
     logger_formatter_other,
 )
+from .mcp.server import codegen
+
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -61,6 +68,8 @@ class NML_RAG(object):
         # 5 rounds: 10 messages
         self.num_recent_messages = 10
 
+        self.mcp_client: ClientSession = None
+
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
         self.logger.propagate = False
@@ -90,11 +99,19 @@ class NML_RAG(object):
             temperature=0.3,
         )
         assert self.model
+        self.logger.info(f"Using chat model: {self.chat_model}")
 
         self.stores.setup()
-
-        self.logger.info(f"Using chat model: {self.chat_model}")
+        self._setup_mcp()
         self._create_graph()
+
+    def _setup_mcp(self):
+        """Set up the tools and MCP client """
+        self.logger.debug("Setting up MCP client")
+        self.mcp_client = StdioServerParameters(
+            command="python",
+            path=Path(codegen.__file__).absolute()
+        )
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""
@@ -306,7 +323,6 @@ class NML_RAG(object):
         if "neuroml" not in state.query.lower():
             system_prompt += dedent("""
                 - If the query is unrelated to NeuroML, only then respond "general_question".
-                - If it is general conversation unrelated to NeuroML, respond "undefined".
                 """)
 
         system_prompt += dedent("""
@@ -349,42 +365,35 @@ class NML_RAG(object):
         messages = state.messages
         messages.append(AIMessage("I can generate code for you"))
 
-        return {"messages": messages}
+        return {"messages": messages, "message_for_user": "yes, I can generate code for you"}
 
     def _answer_general_question_node(self, state: AgentState) -> dict:
         """Answer a general question"""
         assert self.model
         self.logger.debug(f"{state =}")
 
-        if state.query_type == "general_question":
-            system_prompt = dedent("""
-            You are an AI assistant. Answer questions to the best of your knowledge.
-            This is a general query, not related to NeuroML.
+        system_prompt = dedent("""
+        You are a warm, easy-going conversational assistant.
+        The user has asked something unrelated to NeuroML.
+        Engage with the user and answer questions to the best of your ability.
+        Reflect their tone, acknowledge what they say, and continue the conversation naturally.
 
-            ## Core directives
+        ## Core directives
 
-            - Do not assume this question is related to NeuroML or other technical domains.
-            - Only provide information you are confident about. If you are unsuare, clearly say so.
-            - Avoid inventing facts. If a fact is not known or uncertain, respond with "I was unable to find factual information about this query".
-            - Keep answers clear, concise, and user-friendly.
-            - Respond in a formal, academic style.
+        - Do not assume this question is related to NeuroML or other technical domains.
+        - Only provide information you are confident about. If you are unsuare, clearly say so.
+        - Avoid inventing facts. If a fact is not known or uncertain, respond with "I was unable to find factual information about this query".
+        - Keep answers clear, concise, and user-friendly.
+        - Respond in a formal, academic style.
+        - Note that you can only provide certain information or carry out certain tasks if the user is asking about NeuroML, or about generating NeuroML code.
 
-            Examples:
-            User: Thank you.
-            Assistant: You are welcome.
-            User: I like cats.
-            Assistant: That's great, I like cats too. I also like dogs.
+        Examples:
+        User: Thank you.
+        Assistant: You are welcome.
+        User: I like cats.
+        Assistant: That's great, I like cats too. I also like dogs.
 
-            """)
-        else:
-            system_prompt = dedent(
-                """
-            You are a warm, easy-going conversational assistant.
-            Engage with the user even if they are simply talking rather than asking questions.
-            Reflect their tone, acknowledge what they say, and continue the conversation naturally.
-
-            """
-            )
+        """)
 
         system_prompt += self._add_memory_to_prompt(state)
 
@@ -811,6 +820,8 @@ class NML_RAG(object):
                 "general_question": "answer_general_question",
                 "neuroml_question": "generate_retrieval_query",
                 "neuroml_code_generation": "generate_neuroml_code",
+                # for completeness: the classifier should rarely return
+                # undefined
                 "undefined": "answer_general_question",
             },
         )
