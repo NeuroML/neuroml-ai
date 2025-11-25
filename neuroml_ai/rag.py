@@ -108,6 +108,8 @@ class NML_RAG(object):
     def _setup_mcp(self):
         """Set up the tools and MCP client """
         self.logger.debug("Setting up MCP client")
+        # TODO: use multiserver if we set up a different server for file system
+        # access
         self.mcp_client = StdioServerParameters(
             command="python",
             path=Path(codegen.__file__).absolute()
