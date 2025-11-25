@@ -8,6 +8,7 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import asyncio
 import logging
 import sys
 from textwrap import dedent
@@ -19,6 +20,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_mcp_adapters.tools import load_mcp_tools
 from typing_extensions import List, Tuple, Dict
 
 from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
@@ -69,6 +72,7 @@ class NML_RAG(object):
         self.num_recent_messages = 10
 
         self.mcp_client: ClientSession = None
+        self.mcp_tools = None
 
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
@@ -102,18 +106,27 @@ class NML_RAG(object):
         self.logger.info(f"Using chat model: {self.chat_model}")
 
         self.stores.setup()
-        self._setup_mcp()
+        asyncio.run(self._setup_mcp())
+
+        assert self.mcp_tools
+
         self._create_graph()
 
-    def _setup_mcp(self):
+    async def _setup_mcp(self):
         """Set up the tools and MCP client """
         self.logger.debug("Setting up MCP client")
         # TODO: use multiserver if we set up a different server for file system
         # access
-        self.mcp_client = StdioServerParameters(
+        server_parameters = StdioServerParameters(
             command="python",
             path=Path(codegen.__file__).absolute()
         )
+
+        async with stdio_client(server_parameters) as (read, write):
+            self.mcp_client = ClientSession(read, write)
+
+        async with self.mcp_client as session:
+            self.mcp_tools = await load_mcp_tools(session)
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""
@@ -800,6 +813,7 @@ class NML_RAG(object):
         self.workflow.add_node(
             "generate_neuroml_code", self._generate_neuroml_code_node
         )
+        self.workflow.add_node("mcp_tools_node", ToolNode(self.mcp_tools))
         self.workflow.add_node(
             "generate_answer_from_context", self._generate_answer_from_context_node
         )
@@ -829,6 +843,13 @@ class NML_RAG(object):
         )
 
         self.workflow.add_conditional_edges(
+            "generate_neuroml_code",
+            tools_condition,
+            {"tools": "mcp_tools_node", "__end__": "summarise_history"}
+        )
+        self.workflow.add_edge("mcp_tools_node", "generate_neuroml_code")
+
+        self.workflow.add_conditional_edges(
             "evaluate_answer",
             self._route_answer_evaluator_node,
             {
@@ -847,7 +868,6 @@ class NML_RAG(object):
         self.workflow.add_edge("give_neuroml_answer_to_user", "summarise_history")
         self.workflow.add_edge("ask_user_for_clarification", "summarise_history")
         self.workflow.add_edge("answer_general_question", "summarise_history")
-        self.workflow.add_edge("generate_neuroml_code", "summarise_history")
         self.workflow.add_edge("summarise_history", END)
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
