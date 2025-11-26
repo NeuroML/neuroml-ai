@@ -33,12 +33,9 @@ from .utils import (
     logger_formatter_info,
     logger_formatter_other,
 )
-from .mcp.server import codegen
-
-
+from neuroml_ai.mcp.server import codegen
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -51,6 +48,7 @@ class NML_RAG(object):
 
     def __init__(
         self,
+        mcp_client: ClientSession,
         # chat_model: str = "ollama:qwen3:1.7b",
         chat_model: str = "ollama:gemma3:1b",
         embedding_model: str = "ollama:bge-m3",
@@ -71,7 +69,7 @@ class NML_RAG(object):
         # 5 rounds: 10 messages
         self.num_recent_messages = 10
 
-        self.mcp_client: ClientSession = None
+        self.mcp_client: ClientSession = mcp_client
         self.mcp_tools = None
 
         self.logger = logging.getLogger("NeuroML-AI")
@@ -90,7 +88,7 @@ class NML_RAG(object):
         stderr_handler.setFormatter(logger_formatter_other)
         self.logger.addHandler(stderr_handler)
 
-    def setup(self):
+    async def setup(self):
         """Set up basics."""
 
         if self.chat_model.lower().startswith("ollama:"):
@@ -106,27 +104,16 @@ class NML_RAG(object):
         self.logger.info(f"Using chat model: {self.chat_model}")
 
         self.stores.setup()
-        asyncio.run(self._setup_mcp())
 
+        # mcp
+        self.logger.debug("Setting up MCP client")
+        assert self.mcp_client
+        # returns LangChain Tools
+        self.mcp_tools = await load_mcp_tools(self.mcp_client)
+        self.logger.debug(f"{self.mcp_tools =}")
         assert self.mcp_tools
 
-        self._create_graph()
-
-    async def _setup_mcp(self):
-        """Set up the tools and MCP client """
-        self.logger.debug("Setting up MCP client")
-        # TODO: use multiserver if we set up a different server for file system
-        # access
-        server_parameters = StdioServerParameters(
-            command="python",
-            path=Path(codegen.__file__).absolute()
-        )
-
-        async with stdio_client(server_parameters) as (read, write):
-            self.mcp_client = ClientSession(read, write)
-
-        async with self.mcp_client as session:
-            self.mcp_tools = await load_mcp_tools(session)
+        await self._create_graph()
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""
@@ -798,7 +785,7 @@ class NML_RAG(object):
 
         return {"message_for_user": answer.content}
 
-    def _create_graph(self):
+    async def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(AgentState)
         self.workflow.add_node("init_rag_state", self._init_rag_state_node)
@@ -875,36 +862,40 @@ class NML_RAG(object):
             output_file_path="nml-ai-lang-graph.png"
         )
 
-    def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
+    async def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
         """Run the graph but accept and return states"""
 
+        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
         if "query" not in state:
             self.logger.error(f"Provided state should include the key 'query': {state}")
             sys.exit(-1)
 
-        final_state = self.graph.invoke(state, config=config)
+        final_state = await self.graph.ainvoke(state, config=config)
         self.logger.debug(final_state)
         return final_state
 
-    def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
+    async def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
         """Run the graph by using and returning string input"""
+        await self.setup()
 
         config = {"configurable": {"thread_id": thread_id}}
 
-        final_state = self.graph.invoke({"query": query}, config=config)
+        final_state = await self.graph.ainvoke({"query": query}, config=config)
+
         self.logger.debug(f"{final_state =}")
         if message := final_state.get("message_for_user", None):
             return message
         else:
             return "I was unable to answer"
 
-    def run_graph_stream(self, query: str, thread_id: str = "default_thread"):
+    async def run_graph_stream(self, query: str, thread_id: str = "default_thread"):
         """Run the graph but return the stream"""
+        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
-        for chunk in self.graph.stream({"query": query}, config=config):
+        for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 # all nodes must return dicts
@@ -914,21 +905,33 @@ class NML_RAG(object):
                 else:
                     self.logger.debug(f"Working in node: {node}")
 
-    def graph_stream(self, query: str, thread_id: str = "default_threaD"):
+    async def graph_stream(self, query: str, thread_id: str = "default_threaD"):
         """Run the graph but return the stream"""
+        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
-        return self.graph.stream({"query": query}, config=config)
+        res = await self.graph.astream({"query": query}, config=config)
+        return res
 
 
 if __name__ == "__main__":
-    nml_ai = NML_RAG(
-        chat_model="ollama:qwen3:1.7b",
-        embedding_model="ollama:bge-m3",
-        logging_level=logging.DEBUG,
+    server_parameters = StdioServerParameters(
+        command="python",
+        args=[str(Path(codegen.__file__).absolute())]
     )
-    nml_ai.setup()
-    # nml_ai.test_retrieval()
-    nml_ai.run_graph_invoke(
-        "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
-    )
+
+    async def runner():
+        async with asyncio.timeout(5):
+            async with stdio_client(server_parameters) as (read, write):
+                async with ClientSession(read, write) as mcp_client:
+                    mcp_client.list_tools()
+                    nml_ai = NML_RAG(
+                        mcp_client,
+                        chat_model="ollama:qwen3:1.7b",
+                        embedding_model="ollama:bge-m3",
+                        logging_level=logging.DEBUG,
+                    )
+                    await nml_ai.run_graph_invoke(
+                        "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
+            )
+    asyncio.run(runner())
