@@ -49,8 +49,7 @@ class NML_RAG(object):
     def __init__(
         self,
         mcp_client: ClientSession,
-        # chat_model: str = "ollama:qwen3:1.7b",
-        chat_model: str = "ollama:gemma3:1b",
+        chat_model: str = "ollama:qwen3:1.7b",
         embedding_model: str = "ollama:bge-m3",
         logging_level: int = logging.DEBUG,
     ):
@@ -865,7 +864,6 @@ class NML_RAG(object):
     async def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
         """Run the graph but accept and return states"""
 
-        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
         if "query" not in state:
@@ -878,7 +876,6 @@ class NML_RAG(object):
 
     async def run_graph_invoke(self, query: str, thread_id: str = "default_thread"):
         """Run the graph by using and returning string input"""
-        await self.setup()
 
         config = {"configurable": {"thread_id": thread_id}}
 
@@ -892,7 +889,6 @@ class NML_RAG(object):
 
     async def run_graph_stream(self, query: str, thread_id: str = "default_thread"):
         """Run the graph but return the stream"""
-        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
         for chunk in self.graph.astream({"query": query}, config=config):
@@ -907,7 +903,6 @@ class NML_RAG(object):
 
     async def graph_stream(self, query: str, thread_id: str = "default_threaD"):
         """Run the graph but return the stream"""
-        await self.setup()
         config = {"configurable": {"thread_id": thread_id}}
 
         res = await self.graph.astream({"query": query}, config=config)
@@ -931,6 +926,7 @@ if __name__ == "__main__":
                         embedding_model="ollama:bge-m3",
                         logging_level=logging.DEBUG,
                     )
+                    await nml_ai.setup()
                     await nml_ai.run_graph_invoke(
                         "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
             )

@@ -16,8 +16,8 @@ class MCPServerFactory(object):
 
     """MCP factory"""
 
-    def __init__(self, name: str):
-        self._mcp = FastMCP(name, json_response=True)
+    def __init__(self, name: str, host: str = "127.0.0.1", port: int = 8000):
+        self._mcp = FastMCP(name, json_response=True, host=host, port=port)
 
     @property
     def mcp(self) -> FastMCP:
