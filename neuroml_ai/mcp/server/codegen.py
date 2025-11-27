@@ -2,13 +2,13 @@
 """
 MCP server for NeuroML code generation
 
-File: neuroml_ai/mcp/server/answers.py
+File: neuroml_ai/mcp/server/codegen.py
 
 Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from neuroml_ai.mcp.server.server import MCPServerFactory
+from neuroml_ai.mcp.server.factory import MCPServerFactory
 from neuroml_ai.mcp.tools import codegen_tools
 
 def main():
