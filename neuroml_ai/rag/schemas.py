@@ -14,7 +14,7 @@ from typing_extensions import List, Literal, Tuple, Dict
 
 
 class QueryTypeSchema(BaseModel):
-    """Docstring for QueryTypeSchema."""
+    """Schema for query type."""
 
     query_type: Literal[
         "undefined", "general_question", "neuroml_question", "neuroml_code_generation"
@@ -52,3 +52,14 @@ class AgentState(BaseModel):
     summarised_till: int = 0
     message_for_user: str = ""
     reference_material: Dict[str, List[Tuple]] = Field(default_factory=dict)
+
+
+class ToolCallSchema(BaseModel):
+    """Schema for tool call response."""
+
+    action: Literal["tool_call", "text_reply", "undefined"] = Field(
+        default="undefined",
+    )
+    tool: str = ""
+    args: Dict[str, str] = Field(default_factory=dict)
+    reason: str = ""
