@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import inspect
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 
 class MCPServerFactory(object):
