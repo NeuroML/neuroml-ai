@@ -17,9 +17,6 @@ from pathlib import Path
 import typer
 
 from neuroml_ai.rag.rag import NML_RAG
-from neuroml_ai.mcp.server import codegen
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.streamable_http import StreamableHTTPTransport
 
 nml_ai_app = typer.Typer()
 
@@ -45,15 +42,9 @@ def nml_ai_cli(
             """Cli main async"""
             from yaspin import yaspin
 
-            # TODO: continue here: define a client, but check whether we want
-            # to stick to the python sdk or move to fastmcp
-            mpc_client = 
-            await mcp_client.initialize()
-            tools = await mcp_client.list_tools()
-            print(f"Available tools: {[tool.name for tool in tools.tools]}")
-
+            client_url = "http://127.0.0.1:8000/mcp"
             nml_ai = NML_RAG(
-                mcp_client,
+                client_url,
                 chat_model=chat_model,
                 embedding_model=embedding_model,
                 logging_level=logging.DEBUG,
@@ -67,7 +58,7 @@ def nml_ai_cli(
             if len(single_query):
                 print(f"NeuroML-AI (USER) >>> {single_query}\n\n")
 
-                if single_query == "quit":
+                if single_query.lower() == "quit":
                     pass
                 else:
                     with yaspin(text="Working ..."):

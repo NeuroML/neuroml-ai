@@ -13,7 +13,7 @@ from textwrap import dedent
 
 async def dummy_tool(astring: str) -> str:
     """Dummy tool that returns the string given to it. Doesn't do anything
-    else. Only here for unit testing.
+    else. Only here for unit testing. Ignore me.
 
     :param astring: a string
     :type astring: str

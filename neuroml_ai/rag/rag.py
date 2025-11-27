@@ -8,23 +8,19 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import asyncio
 import logging
 import sys
 from textwrap import dedent
 from typing import Optional
-from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_mcp_adapters.tools import load_mcp_tools
 from typing_extensions import List, Tuple, Dict
 
-from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema
+from .schemas import AgentState, EvaluateAnswerSchema, QueryTypeSchema, ToolCallSchema
 from .stores import NML_Stores
 from .utils import (
     LoggerInfoFilter,
@@ -33,9 +29,8 @@ from .utils import (
     logger_formatter_info,
     logger_formatter_other,
 )
-from neuroml_ai.mcp.server import codegen
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+
+from fastmcp import Client
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -48,7 +43,7 @@ class NML_RAG(object):
 
     def __init__(
         self,
-        mcp_client: ClientSession,
+        mcp_client: Client,
         chat_model: str = "ollama:qwen3:1.7b",
         embedding_model: str = "ollama:bge-m3",
         logging_level: int = logging.DEBUG,
@@ -68,8 +63,9 @@ class NML_RAG(object):
         # 5 rounds: 10 messages
         self.num_recent_messages = 10
 
-        self.mcp_client: ClientSession = mcp_client
+        self.mcp_client: Client = mcp_client
         self.mcp_tools = None
+        self.tool_description = ""
 
         self.logger = logging.getLogger("NeuroML-AI")
         self.logger.setLevel(logging_level)
@@ -104,14 +100,29 @@ class NML_RAG(object):
 
         self.stores.setup()
 
-        # mcp
-        self.logger.debug("Setting up MCP client")
-        assert self.mcp_client
-        # returns LangChain Tools
-        self.mcp_tools = await load_mcp_tools(self.mcp_client)
+        async with self.mcp_client:
+            self.mcp_tools = await self.mcp_client.list_tools()
+        # Persists because it's only holding the return value
+        # To make the call, though, we will need the context again
         self.logger.debug(f"{self.mcp_tools =}")
-        assert self.mcp_tools
 
+        # Generate tool description
+        # Note: we remove the param/type information from the description and
+        # use the type hints directly instead
+        ctr = 0
+        for t in self.mcp_tools:
+            ctr += 1
+            self.tool_description += (
+                f"## {ctr}. {t.name}\n{t.description.split(':param')[0].strip()}"
+            )
+            args = t.inputSchema.get("properties", [])
+            if len(args):
+                self.tool_description += " Inputs:\n"
+                for arg, arginfo in args.items():
+                    self.tool_description += f"- {arg}: {arginfo.get('type')}"
+                self.tool_description += "\n"
+
+        self.logger.debug(f"{self.tool_description =}")
         await self._create_graph()
 
     def _summarise_history_node(self, state: AgentState) -> dict:
@@ -245,6 +256,19 @@ class NML_RAG(object):
             """
             )
 
+        if len(state.code):
+            ret_string += dedent(
+                f"""
+            -----
+
+            This is the generated code so far:
+
+            {state.code}
+
+            -----
+            """
+            )
+
         if len(ret_string):
             ret_string += directive
 
@@ -290,7 +314,7 @@ class NML_RAG(object):
             "query_type": QueryTypeSchema(),
             "text_response_eval": EvaluateAnswerSchema(),
             "message_for_user": "",
-            "reference_material": {}
+            "reference_material": {},
         }
 
     def _classify_query_node(self, state: AgentState) -> dict:
@@ -359,14 +383,127 @@ class NML_RAG(object):
             "messages": messages,
         }
 
-    def _generate_neuroml_code_node(self, state: AgentState) -> dict:
+    def _neuroml_code_tool_decider_node(self, state: AgentState) -> dict:
         """Generate code"""
+        assert self.model
         self.logger.debug(f"{state =}")
 
-        messages = state.messages
-        messages.append(AIMessage("I can generate code for you"))
+        system_prompt = dedent("""
+        You are a NeuroML code generation assistant. You are proficient in
+        Python, and in developing biophysically detailed computational models
+        of the brain. Think step by step about how to generate the code
+        requested by the user.
 
-        return {"messages": messages, "message_for_user": "yes, I can generate code for you"}
+        You have access to these tools:
+
+        # Tools
+
+        {tool_description}
+
+
+        # Output format:
+
+        {{
+            action: "tool_call" if a tool is to be called, "update_code" if the
+            code needs to be updated, "final_answer" if the code is ready to be
+            returned to the user.
+            tool: name of the tool to call
+            args: arguments to be given to the tool
+            reason: a short concise text string explaining your decision
+        }}
+
+        """)
+
+        system_prompt += self._add_memory_to_prompt(state)
+        prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+        )
+
+        # can use | to merge these lines
+        query_node_llm = self.model.with_structured_output(ToolCallSchema)
+        prompt = prompt_template.invoke({"query": state.query, "tool_description":
+                                         self.tool_description})
+
+        self.logger.debug(f"{prompt = }")
+
+        output = query_node_llm.invoke(prompt)
+
+        return {
+            "tool_call": ToolCallSchema(
+                action=output.action,
+                tool=output.tool,
+                args=output.args,
+                reason=output.reason,
+            ),
+        }
+
+    async def _neuroml_code_tools_node(self, state: AgentState) -> dict:
+        """Node that does the tool calling"""
+        tool = state.tool_call.tool
+        tool_args = state.tool_call.args
+
+        async with self.mcp_client:
+            result = await self.mcp_client.call_tool(tool, tool_args)
+
+        tool_call = state.tool_call
+        tool_call.output = result
+
+        return {"tool_call": tool_call}
+
+    def _neuroml_code_tool_router(self, state: AgentState) -> str:
+        """Tool router """
+        tool_call = state.tool_call
+        return tool_call.action
+
+    def _neuroml_code_generator_node(self, state: AgentState) -> dict:
+        """Code generator node"""
+        assert self.model
+        self.logger.debug(f"{state =}")
+
+        system_prompt = dedent("""
+        You are a NeuroML code generation assistant. You are proficient in
+        Python, and in developing biophysically detailed computational models
+        of the brain.
+
+        Use the existing code and the output from the tool call to generate
+        code to answer the user's query.
+
+        # Existing code:
+
+        {current_code}
+
+
+        # Tool output:
+
+        {tool_output}
+
+        """)
+
+        system_prompt += self._add_memory_to_prompt(state)
+
+        prompt_template = ChatPromptTemplate(
+            [("system", system_prompt), ("human", "User query: {query}")]
+        )
+
+        # can use | to merge these lines
+        prompt = prompt_template.invoke({"query": state.query, "current_code":
+                                         state.code, "tool_output":
+                                         state.tool_call.output})
+
+        self.logger.debug(f"{prompt = }")
+        output = self.model.invoke(prompt)
+
+        return {
+            "code": output.content,
+        }
+
+
+    def _give_neuroml_code_to_user_node(self, state: AgentState) -> dict:
+        """Return the answer message to the user"""
+        self.logger.debug(f"{state =}")
+        self.logger.info(f"Returning code to user: {state.code}")
+
+        return {"message_for_user": state.code}
 
     def _answer_general_question_node(self, state: AgentState) -> dict:
         """Answer a general question"""
@@ -534,7 +671,7 @@ class NML_RAG(object):
         # still return the initial ones, so we don't need to do any manual
         # merging here for more refs for a particular query
         sorted_res = sorted(res, key=lambda tup: tup[1], reverse=True)
-        new_ref = {cleaned_query: sorted_res[:self.num_refs_max]}
+        new_ref = {cleaned_query: sorted_res[: self.num_refs_max]}
 
         reference_material.update(new_ref)
         self.logger.debug(f"{reference_material =}")
@@ -572,7 +709,9 @@ class NML_RAG(object):
                     for key, val in r.metadata.items()
                     if "header" in key.lower()
                 ]
-                metadata_str = f"### Document {ctr}/{len(sorted_refs)}: " + " | ".join(metadata)
+                metadata_str = f"### Document {ctr}/{len(sorted_refs)}: " + " | ".join(
+                    metadata
+                )
                 serialized += "\n\n" + f"{metadata_str}\n\n:{r.page_content}"
                 ctr += 1
 
@@ -797,9 +936,13 @@ class NML_RAG(object):
             "answer_general_question", self._answer_general_question_node
         )
         self.workflow.add_node(
-            "generate_neuroml_code", self._generate_neuroml_code_node
+            "neuroml_code_tool_decider", self._neuroml_code_tool_decider_node
         )
-        self.workflow.add_node("mcp_tools_node", ToolNode(self.mcp_tools))
+        self.workflow.add_node("neuroml_code_tools", self._neuroml_code_tools_node)
+        self.workflow.add_node("neuroml_code_generator", self._neuroml_code_generator_node)
+        self.workflow.add_node(
+            "give_neuroml_code_to_user", self._give_neuroml_code_to_user_node
+        )
         self.workflow.add_node(
             "generate_answer_from_context", self._generate_answer_from_context_node
         )
@@ -821,19 +964,24 @@ class NML_RAG(object):
             {
                 "general_question": "answer_general_question",
                 "neuroml_question": "generate_retrieval_query",
-                "neuroml_code_generation": "generate_neuroml_code",
+                "neuroml_code_generation": "neuroml_code_tool_decider",
                 # for completeness: the classifier should rarely return
                 # undefined
                 "undefined": "answer_general_question",
             },
         )
-
         self.workflow.add_conditional_edges(
-            "generate_neuroml_code",
-            tools_condition,
-            {"tools": "mcp_tools_node", "__end__": "summarise_history"}
+            "neuroml_code_tool_decider",
+            self._neuroml_code_tool_router,
+            {
+                "tool_call": "neuroml_code_tools",
+                "update_code": "neuroml_code_generator",
+                "final_answer": "give_neuroml_code_to_user"
+            }
         )
-        self.workflow.add_edge("mcp_tools_node", "generate_neuroml_code")
+        self.workflow.add_edge("neuroml_code_tools", "neuroml_code_generator")
+        self.workflow.add_edge("neuroml_code_generator",
+                               "neuroml_code_tool_decider")
 
         self.workflow.add_conditional_edges(
             "evaluate_answer",
@@ -861,7 +1009,9 @@ class NML_RAG(object):
             output_file_path="nml-ai-lang-graph.png"
         )
 
-    async def run_graph_invoke_state(self, state: dict, thread_id: str = "default_thread"):
+    async def run_graph_invoke_state(
+        self, state: dict, thread_id: str = "default_thread"
+    ):
         """Run the graph but accept and return states"""
 
         config = {"configurable": {"thread_id": thread_id}}
@@ -907,27 +1057,3 @@ class NML_RAG(object):
 
         res = await self.graph.astream({"query": query}, config=config)
         return res
-
-
-if __name__ == "__main__":
-    server_parameters = StdioServerParameters(
-        command="python",
-        args=[str(Path(codegen.__file__).absolute())]
-    )
-
-    async def runner():
-        async with asyncio.timeout(5):
-            async with stdio_client(server_parameters) as (read, write):
-                async with ClientSession(read, write) as mcp_client:
-                    mcp_client.list_tools()
-                    nml_ai = NML_RAG(
-                        mcp_client,
-                        chat_model="ollama:qwen3:1.7b",
-                        embedding_model="ollama:bge-m3",
-                        logging_level=logging.DEBUG,
-                    )
-                    await nml_ai.setup()
-                    await nml_ai.run_graph_invoke(
-                        "Give me a summary of the NeuroML project's primary goals and also detail the exact steps required to install the core Python library"
-            )
-    asyncio.run(runner())

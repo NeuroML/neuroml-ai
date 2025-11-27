@@ -38,28 +38,38 @@ class EvaluateAnswerSchema(BaseModel):
     summary: str = ""
 
 
+class ToolCallSchema(BaseModel):
+    """Schema for tool call response."""
+
+    action: Literal["tool_call", "update_code", "final_answer"] = Field(
+        default="final_answer",
+    )
+    tool: str = ""
+    args: Dict[str, str] = Field(default_factory=dict)
+    reason: str = ""
+    output: str = ""
+
+
 class AgentState(BaseModel):
     """The state of the graph"""
 
     query: str = ""
     query_type: QueryTypeSchema = QueryTypeSchema()
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
-    # TODO: code_response_eval: EvaluateAnswerSchema
     messages: List[AnyMessage] = Field(default_factory=list)
+
+    # code string if any
+    code: str = ""
+
+    # tool call response
+    tool_call: ToolCallSchema = ToolCallSchema()
+
     # summarised version of context so far
     context_summary: str = ""
+
     # index till which summarised
     summarised_till: int = 0
     message_for_user: str = ""
+
+    # reference material from retrievals
     reference_material: Dict[str, List[Tuple]] = Field(default_factory=dict)
-
-
-class ToolCallSchema(BaseModel):
-    """Schema for tool call response."""
-
-    action: Literal["tool_call", "text_reply", "undefined"] = Field(
-        default="undefined",
-    )
-    tool: str = ""
-    args: Dict[str, str] = Field(default_factory=dict)
-    reason: str = ""
