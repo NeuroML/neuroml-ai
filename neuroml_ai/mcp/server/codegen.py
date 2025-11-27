@@ -8,14 +8,22 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from neuroml_ai.mcp.server.factory import MCPServerFactory
+from neuroml_ai.mcp.utils import register_tools
 from neuroml_ai.mcp.tools import codegen_tools
+from textwrap import dedent
+from fastmcp import FastMCP
+
 
 def main():
     """main runner"""
-    answers_server = MCPServerFactory("nml_codegen")
-    answers_server.register_tools([codegen_tools])
-    mcp = answers_server.mcp
+    usage = dedent(
+        """
+        NeuroML coding assistant server.
+
+        """
+    )
+    mcp = FastMCP("nml_codegen", instructions=usage)
+    register_tools(mcp, [codegen_tools])
     mcp.run(transport="streamable-http")
 
 
