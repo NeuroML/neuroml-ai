@@ -8,9 +8,8 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import logging
 import streamlit as st
-from neuroml_ai.rag import NML_RAG
+import requests
 
 
 def runner():
@@ -19,10 +18,6 @@ def runner():
     st.info(
         "The answers are generated using an LLM. They may be inaccurate.  Please check with the documentation at https://docs.neuroml.org."
     )
-
-    if "nml_ai" not in st.session_state:
-        st.session_state.nml_ai = NML_RAG(logging_level=logging.INFO)
-        st.session_state.nml_ai.setup()
 
     # get history and re-write it
     if "history" not in st.session_state:
@@ -41,8 +36,9 @@ def runner():
             # stream = st.session_state.nml_ai.run_graph_stream(query)
             # response = st.write_stream(stream)
             with st.spinner("Working..."):
-                response = st.session_state.nml_ai.run_graph_invoke(query)
-                st.markdown(response)
+                response = requests.post('http://127.0.0.1:8005/query', params={'query': query})
+                response_result = response.json().get("result")
+                st.markdown(response_result)
         st.session_state.history.append({"role": "assistant", "content": response})
 
 

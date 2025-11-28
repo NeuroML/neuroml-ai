@@ -22,7 +22,7 @@ def main():
 
         """
     )
-    mcp = FastMCP("nml_codegen", instructions=usage)
+    mcp = FastMCP("nml_codegen", instructions=usage, port=8542)
     register_tools(mcp, [codegen_tools])
     mcp.run(transport="streamable-http")
 

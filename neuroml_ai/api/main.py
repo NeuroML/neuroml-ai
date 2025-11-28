@@ -17,10 +17,11 @@ from neuroml_ai.api.chat import router
 
 app = FastAPI()
 
+# TODO: use lifespan
 @app.on_event("startup")
 async def startup():
 
-    client_url = "http://127.0.0.1:8000/mcp"
+    client_url = "http://127.0.0.1:8542/mcp"
     mcp_client = Client(client_url)
 
     # check that client is up

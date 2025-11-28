@@ -13,3 +13,4 @@ pgrep -fa nml-mcp && pkill -f --signal SIGINT nml-mcp || echo "No running NeuroM
 nml-mcp &
 
 
+fastapi dev neuroml_ai/api/main.py --port 8005
