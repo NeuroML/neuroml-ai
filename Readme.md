@@ -17,29 +17,17 @@ Please note that this project is under active development and does not currently
 
 ## Set up
 
-The package is `pip` installable:
+The package consists of three services:
 
-```
-git clone https://github.com/NeuroML/neuroml-ai.git
-cd neuroml-ai
-pip install .
-```
+- the AI assistant backend: this includes the RAG and LLM/agentic logic. This is exposed to users via a FastAPI based REST API.
+- the MCP server: this is where we define various "tools" that the LLM can use in its agents.
+- the frontend: currently, there's a streamlit UI, but one can use anything to communicate with the REST API---even just the swagger interface.
 
-Please remember to use a virtual environment.
+So, before using the frontend, one must start the MCP server and the FastAPI server.
+The `devstack.sh` script in the `scripts` folder does this for now.
+Please take a look at it and feel free to modify it for your own deployments.
 
-Usage:
-
-A cli is provided:
-
-```
-nml-ai
-```
-
-To use the streamlit chat interface, you can pass the `--gui` option:
-
-```
-nml-ai --gui
-```
+Please note that the ports are currently hard-coded in the code.
 
 ### Models
 
@@ -53,10 +41,14 @@ You can modify these to use different models to suit your hardware.
 However, do note that picking smaller models will most certainly affect the correctness/performance of the RAG.
 To install Ollama and pull the models, please follow the official documentation: https://ollama.com/download
 
-#### Gemini
+#### Other services
 
-You can use the Gemini chat model and embeddings.
-For this, please export the `GOOGLE_API_KEY` environment variable.
+Since this project uses LangChain, you can use any model that is supported by LangChain.
+In most cases, you will need to declare some environment variables that will contain your API keys.
+Please see the LangChain documentation for more information:
+
+https://docs.langchain.com/oss/python/integrations/providers/overview
+
 
 ## License
 
