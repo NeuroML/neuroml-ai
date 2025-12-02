@@ -28,6 +28,9 @@ from .utils import (
     check_ollama_model,
     logger_formatter_info,
     logger_formatter_other,
+    parse_output_with_thought,
+    split_thought_and_output,
+    check_model_works,
 )
 
 from fastmcp import Client
@@ -86,18 +89,7 @@ class NML_RAG(object):
     async def setup(self):
         """Set up basics."""
 
-        if self.chat_model.lower().startswith("ollama:"):
-            check_ollama_model(
-                self.logger, self.chat_model.lower().replace("ollama:", "")
-            )
-
-        self.model = init_chat_model(
-            self.chat_model,
-            temperature=0.3,
-        )
-        assert self.model
-        self.logger.info(f"Using chat model: {self.chat_model}")
-
+        self._setup_chat_model()
         self.stores.setup()
 
         async with self.mcp_client:
@@ -124,6 +116,48 @@ class NML_RAG(object):
 
         self.logger.debug(f"{self.tool_description =}")
         await self._create_graph()
+
+    def _setup_chat_model(self):
+        """Set up a chat model"""
+        if self.chat_model.lower().startswith("huggingface:"):
+            from langchain_huggingface import HuggingFaceEndpoint
+            # from huggingface_hub import login
+            # login()
+
+            _, model_name, provider = self.chat_model.split(":")
+            self.logger.debug(f"Using huggingface model: {model_name}")
+
+            llm = HuggingFaceEndpoint(
+                repo_id=f"{model_name}",
+                provider="auto",
+                task="text-generation",
+                max_new_tokens=512,
+                do_sample=False,
+                repetition_penalty=1.03,
+            )
+
+            self.model = init_chat_model(
+                model_name,
+                model_provider="huggingface",
+                llm=llm,
+                configurable_fields=("temperature"),
+            )
+        else:
+            if self.chat_model.lower().startswith("ollama:"):
+                check_ollama_model(
+                    self.logger, self.chat_model.lower().replace("ollama:", "")
+                )
+
+            self.model = init_chat_model(
+                self.chat_model, configurable_fields=("temperature")
+            )
+
+        assert self.model
+
+        state, msg = check_model_works(self.model)
+        assert state
+
+        self.logger.info(f"Using chat model: {self.chat_model}")
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""
@@ -195,13 +229,17 @@ class NML_RAG(object):
 
         self.logger.debug(f"{prompt =}")
 
-        output = self.model.invoke(prompt)
+        output = self.model.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
         self.logger.debug(f"Current history summary is:\n{output.content}")
+
+        thought, answer = split_thought_and_output(output)
 
         # Do not update messages here, since we don't want this to be noted as
         # an AI response to a user query
         return {
-            "context_summary": output.content,
+            "context_summary": answer,
             "summarised_till": len(state.messages),
         }
 
@@ -329,8 +367,8 @@ class NML_RAG(object):
             You are an expert query classifier. Analyse the user's request and
             determine its intent.
 
-            Provide your answer as a JSON object matching the requested schema.
-            Do not add any explanation or text.
+            Provide your answer ONLY as a JSON object matching the requested
+            schema. Do not give any explanations or note your thinking.
 
             # Classification rules:
 
@@ -371,15 +409,26 @@ class NML_RAG(object):
         )
 
         # can use | to merge these lines
-        query_node_llm = self.model.with_structured_output(QueryTypeSchema)
+        query_node_llm = self.model.with_structured_output(
+            QueryTypeSchema, method="json_schema", include_raw=True
+        )
         prompt = prompt_template.invoke({"query": state.query})
 
         self.logger.debug(f"{prompt = }")
 
-        output = query_node_llm.invoke(prompt)
+        output = query_node_llm.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
+        if output["parsing_error"]:
+            query_type_result = parse_output_with_thought(
+                output["raw"], QueryTypeSchema
+            )
+        else:
+            query_type_result = output["parsed"]
 
+        self.logger.debug(f"{query_type_result =}")
         return {
-            "query_type": QueryTypeSchema(query_type=output.query_type),
+            "query_type": QueryTypeSchema(query_type=query_type_result["query_type"]),
             "messages": messages,
         }
 
@@ -420,20 +469,30 @@ class NML_RAG(object):
         )
 
         # can use | to merge these lines
-        query_node_llm = self.model.with_structured_output(ToolCallSchema)
-        prompt = prompt_template.invoke({"query": state.query, "tool_description":
-                                         self.tool_description})
+        query_node_llm = self.model.with_structured_output(
+            ToolCallSchema, method="json_schema", include_raw=True
+        )
+        prompt = prompt_template.invoke(
+            {"query": state.query, "tool_description": self.tool_description}
+        )
 
         self.logger.debug(f"{prompt = }")
 
-        output = query_node_llm.invoke(prompt)
+        output = query_node_llm.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
+
+        if output["parsing_error"]:
+            result = parse_output_with_thought(output["raw"], ToolCallSchema)
+        else:
+            result = output["parsed"]
 
         return {
             "tool_call": ToolCallSchema(
-                action=output.action,
-                tool=output.tool,
-                args=output.args,
-                reason=output.reason,
+                action=result.action,
+                tool=result.tool,
+                args=result.args,
+                reason=result.reason,
             ),
         }
 
@@ -451,7 +510,7 @@ class NML_RAG(object):
         return {"tool_call": tool_call}
 
     def _neuroml_code_tool_router(self, state: AgentState) -> str:
-        """Tool router """
+        """Tool router"""
         tool_call = state.tool_call
         return tool_call.action
 
@@ -486,17 +545,24 @@ class NML_RAG(object):
         )
 
         # can use | to merge these lines
-        prompt = prompt_template.invoke({"query": state.query, "current_code":
-                                         state.code, "tool_output":
-                                         state.tool_call.output})
+        prompt = prompt_template.invoke(
+            {
+                "query": state.query,
+                "current_code": state.code,
+                "tool_output": state.tool_call.output,
+            }
+        )
 
         self.logger.debug(f"{prompt = }")
-        output = self.model.invoke(prompt)
+        output = self.model.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
+
+        thought, answer = split_thought_and_output(output)
 
         return {
-            "code": output.content,
+            "code": answer,
         }
-
 
     def _give_neuroml_code_to_user_node(self, state: AgentState) -> dict:
         """Return the answer message to the user"""
@@ -541,11 +607,15 @@ class NML_RAG(object):
         self.logger.debug(f"{question_prompt_template =}")
         prompt = question_prompt_template.invoke({"query": state.query})
 
-        output = self.model.invoke(prompt)
+        output = self.model.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
         # self.logger.debug(f"{output =}")
         self.logger.debug(output)
+        thought, answer = split_thought_and_output(output)
 
         messages = state.messages
+        output.content = answer
         messages.append(output)
 
         return {"messages": messages, "message_for_user": output.content}
@@ -597,11 +667,15 @@ class NML_RAG(object):
         )
         self.logger.debug(f"{prompt =}")
 
-        output = self.model.invoke(prompt)
+        output = self.model.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
 
         self.logger.debug(f"{output =}")
+        thought, answer = split_thought_and_output(output)
 
         messages = state.messages
+        output.content = answer
         messages.append(output)
 
         return {"messages": messages}
@@ -636,6 +710,7 @@ class NML_RAG(object):
         - Do not refer to documents indirectly (e.g., "as described above",
           "follow the tutorial"). Instead, restate the necessary information
           directly to the user in clear natural language.
+        - Do not include your thinking in your response.
 
         # Context (reference material not visible to the user, ordered from most relevant to least relevant):
 
@@ -681,7 +756,11 @@ class NML_RAG(object):
             {"question": question, "reference_material": reference_material_text}
         )
         self.logger.debug(f"{prompt =}")
-        output = self.model.invoke(prompt)
+        output = self.model.invoke(
+            prompt, config={"configurable": {"temperature": 0.3}}
+        )
+        thought, answer = split_thought_and_output(output)
+        output.content = answer
         self.logger.debug(output.pretty_repr())
 
         messages = state.messages
@@ -722,11 +801,7 @@ class NML_RAG(object):
 
     def _evaluate_answer_node(self, state: AgentState) -> dict:
         """Evaluate the answer"""
-        evaluator_model = init_chat_model(
-            self.chat_model.replace("ollama:", ""),
-            model_provider="ollama",
-            temperature=0,
-        )
+        assert self.model
 
         evaluator_prompt = dedent("""
             You are a critical grader evaluating an answer produced by a retrieval-augmented generation (RAG) system.
@@ -739,7 +814,7 @@ class NML_RAG(object):
             Your job:
             - Judge the answer strictly based on the context.
             - DO NOT use external knowledge.
-            - Provide your answer as a JSON object matching the provided
+            - ALWAYS provide your answer as a JSON object matching the provided
               schema, with these values:
 
             {{
@@ -753,11 +828,11 @@ class NML_RAG(object):
               "summary": "A brief natural-language justification for the grades."
             }}
 
+            Guidance for values:
+
             "coverage" and "confidence" are based ONLY on the context, NOT on
             the generated answer. Relevance, groundedness, coherence,
             conciseness are related only to the generated answer.
-
-            Guidance for values:
 
             coverage:
             * 0.8 - 1.0: all sub-questions/topics/concepts present in context
@@ -833,7 +908,9 @@ class NML_RAG(object):
         )
 
         # can use | to merge these lines
-        query_node_llm = evaluator_model.with_structured_output(EvaluateAnswerSchema)
+        query_node_llm = self.model.with_structured_output(
+            EvaluateAnswerSchema, method="json_schema", include_raw=True
+        )
         prompt = prompt_template.invoke(
             {
                 "question": question,
@@ -842,11 +919,18 @@ class NML_RAG(object):
             }
         )
 
-        output = query_node_llm.invoke(prompt)
+        output = query_node_llm.invoke(
+            prompt, config={"configurable": {"temperature": 0.0}}
+        )
         self.logger.debug(f"{output =}")
 
+        if output["parsing_error"]:
+            result = parse_output_with_thought(output["raw"], EvaluateAnswerSchema)
+        else:
+            result = output["parsed"]
+
         # do not store the evaluation message in state
-        return {"text_response_eval": output, "messages": state.messages}
+        return {"text_response_eval": result, "messages": state.messages}
 
     def _route_answer_evaluator_node(self, state: AgentState) -> str:
         """Route depending on evaluation of answer"""
@@ -939,7 +1023,9 @@ class NML_RAG(object):
             "neuroml_code_tool_decider", self._neuroml_code_tool_decider_node
         )
         self.workflow.add_node("neuroml_code_tools", self._neuroml_code_tools_node)
-        self.workflow.add_node("neuroml_code_generator", self._neuroml_code_generator_node)
+        self.workflow.add_node(
+            "neuroml_code_generator", self._neuroml_code_generator_node
+        )
         self.workflow.add_node(
             "give_neuroml_code_to_user", self._give_neuroml_code_to_user_node
         )
@@ -976,12 +1062,11 @@ class NML_RAG(object):
             {
                 "tool_call": "neuroml_code_tools",
                 "update_code": "neuroml_code_generator",
-                "final_answer": "give_neuroml_code_to_user"
-            }
+                "final_answer": "give_neuroml_code_to_user",
+            },
         )
         self.workflow.add_edge("neuroml_code_tools", "neuroml_code_generator")
-        self.workflow.add_edge("neuroml_code_generator",
-                               "neuroml_code_tool_decider")
+        self.workflow.add_edge("neuroml_code_generator", "neuroml_code_tool_decider")
 
         self.workflow.add_conditional_edges(
             "evaluate_answer",
