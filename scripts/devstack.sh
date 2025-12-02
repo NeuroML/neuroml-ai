@@ -14,7 +14,7 @@ pgrep -fa nml-mcp && pkill -f --signal SIGINT nml-mcp || echo "No running NeuroM
 nml-mcp &
 
 echo "Starting fastapi"
-fastapi dev neuroml_ai/api/main.py --port 8005
+fastapi dev neuroml_ai/api/main.py --port 8005 &
 
 echo "Starting streamlit frontend"
 streamlit run neuroml_ai/streamlit_ui.py
