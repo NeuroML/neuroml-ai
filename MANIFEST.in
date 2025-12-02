@@ -1,3 +1,3 @@
 include Readme.md
 include LICENSE*
-recursive-include neuroml_ai/data *
+recursive-include neuroml_ai/rag/data *
