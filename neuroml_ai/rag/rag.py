@@ -46,7 +46,7 @@ class NML_RAG(object):
 
     def __init__(
         self,
-        mcp_client: Client,
+        mcp_client: Client = None,
         chat_model: str = "ollama:qwen3:1.7b",
         embedding_model: str = "ollama:bge-m3",
         logging_level: int = logging.DEBUG,
@@ -92,11 +92,12 @@ class NML_RAG(object):
         self._setup_chat_model()
         self.stores.setup()
 
-        async with self.mcp_client:
-            self.mcp_tools = await self.mcp_client.list_tools()
-        # Persists because it's only holding the return value
-        # To make the call, though, we will need the context again
-        self.logger.debug(f"{self.mcp_tools =}")
+        if self.mcp_client:
+            async with self.mcp_client:
+                self.mcp_tools = await self.mcp_client.list_tools()
+            # Persists because it's only holding the return value
+            # To make the call, though, we will need the context again
+            self.logger.debug(f"{self.mcp_tools =}")
 
         # Generate tool description
         # Note: we remove the param/type information from the description and
@@ -498,6 +499,8 @@ class NML_RAG(object):
 
     async def _neuroml_code_tools_node(self, state: AgentState) -> dict:
         """Node that does the tool calling"""
+        assert self.mcp_client
+
         tool = state.tool_call.tool
         tool_args = state.tool_call.args
 
