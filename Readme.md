@@ -41,6 +41,15 @@ You can modify these to use different models to suit your hardware.
 However, do note that picking smaller models will most certainly affect the correctness/performance of the RAG.
 To install Ollama and pull the models, please follow the official documentation: https://ollama.com/download
 
+#### HuggingFace
+
+Models via inference providers on [HuggingFace](https://huggingface.co/models) are also supported.
+Before using these, please ensure that you have a token on HuggingFace and are logged in:
+
+```
+hf auth login
+```
+
 #### Other services
 
 Since this project uses LangChain, you can use any model that is supported by LangChain.
