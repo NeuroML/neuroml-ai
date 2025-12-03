@@ -8,6 +8,7 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import os
 import logging
 import sys
 from textwrap import dedent
@@ -128,6 +129,9 @@ class NML_RAG(object):
             _, model_name, provider = self.chat_model.split(":")
             self.logger.debug(f"Using huggingface model: {model_name}")
 
+            hf_token = os.environ.get("HF_TOKEN_NML_AI", None)
+            assert hf_token
+
             llm = HuggingFaceEndpoint(
                 repo_id=f"{model_name}",
                 provider="auto",
@@ -135,6 +139,7 @@ class NML_RAG(object):
                 max_new_tokens=512,
                 do_sample=False,
                 repetition_penalty=1.03,
+                token=hf_token
             )
 
             self.model = init_chat_model(
