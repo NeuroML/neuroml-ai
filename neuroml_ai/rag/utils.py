@@ -114,7 +114,6 @@ def setup_embedding(model_name_full, logger):
         logger.debug(f"Using huggingface model: {model_name}")
 
         hf_token = os.environ.get("HF_TOKEN_NML_AI", None)
-        logger.debug(f"{hf_token =}")
         assert hf_token
 
         model_var = HuggingFaceEndpointEmbeddings(
