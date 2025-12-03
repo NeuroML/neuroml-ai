@@ -1,0 +1,3 @@
+[submodule "huggingface"]
+	path = huggingface
+	url = git@hf.co:spaces/sanjayankur31/NeuroML-AI
