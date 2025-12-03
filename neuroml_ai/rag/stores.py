@@ -18,20 +18,14 @@ from pathlib import Path
 from typing import Any
 
 import chromadb
-from langchain_core.documents import Document
 from langchain_chroma import Chroma
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
+from langchain_core.documents import Document
+from langchain_text_splitters import (MarkdownHeaderTextSplitter,
+                                      RecursiveCharacterTextSplitter)
 
-from .utils import (
-    LoggerInfoFilter,
-    LoggerNotInfoFilter,
-    logger_formatter_info,
-    logger_formatter_other,
-    setup_llm
-)
+from .utils import (LoggerInfoFilter, LoggerNotInfoFilter,
+                    logger_formatter_info, logger_formatter_other,
+                    setup_embedding)
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -92,8 +86,7 @@ class NML_Stores(object):
 
     def setup(self):
         """Setup stores"""
-        self.embeddings = setup_llm(self.embedding_model, self.logger, True)
-
+        self.embeddings = setup_embedding(self.embedding_model, self.logger)
 
     def inc_k(self, inc: int = 1):
         """Increase k by inc

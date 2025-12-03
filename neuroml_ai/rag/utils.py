@@ -8,15 +8,18 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import os
-import time
-import sys
 import logging
+import os
+import sys
+import time
+
 import ollama
 from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_huggingface import (HuggingFaceEndpoint)
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 
 
 class LoggerNotInfoFilter(logging.Filter):
@@ -104,11 +107,34 @@ def check_model_works(model, timeout=30, retries=3):
                 return False, f"Model unavailable after {retries} attempts: {error_msg}"
     return False, "Unknown error"
 
-def setup_llm(model_name_full, logger, embedding=False):
+
+def setup_embedding(model_name_full, logger):
+    # need to use inference providers
+    if model_name_full.lower().startswith("huggingface:"):
+        _, model_name, provider = model_name_full.split(":")
+        logger.debug(f"Using huggingface model: {model_name}")
+
+        hf_token = os.environ.get("HF_TOKEN_NML_AI", None)
+        logger.debug(f"{hf_token =}")
+        assert hf_token
+
+        model_var = HuggingFaceInferenceAPIEmbeddings(
+            model_name=f"{model_name}",
+            provider="auto",
+            task="feature-extraction",
+            huggingfacehub_api_token=hf_token,
+        )
+    else:
+        model_var = init_embeddings(model_name_full)
+
+    assert model_var
+    logger.info(f"Using embedding model: {model_name_full}")
+    return model_var
+
+
+def setup_llm(model_name_full, logger):
     """Set up a chat model"""
     if model_name_full.lower().startswith("huggingface:"):
-        from langchain_huggingface import HuggingFaceEndpoint
-
         _, model_name, provider = model_name_full.split(":")
         logger.debug(f"Using huggingface model: {model_name}")
 
@@ -122,38 +148,26 @@ def setup_llm(model_name_full, logger, embedding=False):
             max_new_tokens=512,
             do_sample=False,
             repetition_penalty=1.03,
-            huggingfacehub_api_token=hf_token
+            huggingfacehub_api_token=hf_token,
         )
 
-        if not embedding:
-            model_var = init_chat_model(
-                model_name,
-                model_provider="huggingface",
-                llm=llm,
-                configurable_fields=("temperature"),
-            )
-        else:
-            model_var = init_embeddings(model_name, model_provider="huggingface", llm=llm)
+        model_var = init_chat_model(
+            model_name,
+            model_provider="huggingface",
+            llm=llm,
+            configurable_fields=("temperature"),
+        )
     else:
         if model_name_full.lower().startswith("ollama:"):
-            check_ollama_model(
-                logger, model_name_full.lower().replace("ollama:", "")
-            )
+            check_ollama_model(logger, model_name_full.lower().replace("ollama:", ""))
 
-        if not embedding:
-            model_var = init_chat_model(
-                model_name_full, configurable_fields=("temperature")
-            )
-        else:
-            model_var = init_embeddings(model_name_full)
-
+        model_var = init_chat_model(
+            model_name_full, configurable_fields=("temperature")
+        )
     assert model_var
 
-    if not embedding:
-        state, msg = check_model_works(model_var)
-        assert state
-        logger.info(f"Using chat model: {model_name_full}")
-    else:
-        logger.info(f"Using embedding model: {model_name_full}")
+    state, msg = check_model_works(model_var)
+    assert state
+    logger.info(f"Using chat model: {model_name_full}")
 
     return model_var

@@ -8,6 +8,7 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import os
 import logging
 import sys
 from textwrap import dedent
@@ -28,7 +29,7 @@ from .utils import (
     logger_formatter_other,
     parse_output_with_thought,
     split_thought_and_output,
-    setup_llm
+    setup_llm,
 )
 
 from fastmcp import Client
@@ -52,7 +53,9 @@ class NML_RAG(object):
         """Initialise"""
         self.chat_model = "ollama:qwen3:1.7b" if chat_model is None else chat_model
         self.model = None
-        self.stores = NML_Stores("ollama:bge-m3" if embedding_model is None else embedding_model)
+        self.stores = NML_Stores(
+            "ollama:bge-m3" if embedding_model is None else embedding_model
+        )
         # total number of reference documents
         self.num_refs_max = 10
 
@@ -117,8 +120,8 @@ class NML_RAG(object):
         await self._create_graph()
 
     def _setup_chat_model(self):
-        """Set up the LLM chat model """
-        self.model = setup_llm(self.chat_model, self.logger, False)
+        """Set up the LLM chat model"""
+        self.model = setup_llm(self.chat_model, self.logger)
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""
@@ -1055,9 +1058,10 @@ class NML_RAG(object):
         self.workflow.add_edge("summarise_history", END)
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
-        self.graph.get_graph().draw_mermaid_png(
-            output_file_path="nml-ai-lang-graph.png"
-        )
+        if not os.environ.get("RUNNING_IN_DOCKER", 0):
+            self.graph.get_graph().draw_mermaid_png(
+                output_file_path="nml-ai-lang-graph.png"
+            )
 
     async def run_graph_invoke_state(
         self, state: dict, thread_id: str = "default_thread"
