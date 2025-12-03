@@ -1,3 +1,0 @@
-[submodule "neuroml_ai/rag/data"]
-	path = neuroml_ai/rag/data
-	url = https://github.com/NeuroML/nml-ai-data.git
