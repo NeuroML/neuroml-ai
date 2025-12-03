@@ -8,13 +8,11 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import os
 import logging
 import sys
 from textwrap import dedent
 from typing import Optional
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.checkpoint.memory import InMemorySaver
@@ -26,12 +24,11 @@ from .stores import NML_Stores
 from .utils import (
     LoggerInfoFilter,
     LoggerNotInfoFilter,
-    check_ollama_model,
     logger_formatter_info,
     logger_formatter_other,
     parse_output_with_thought,
     split_thought_and_output,
-    check_model_works,
+    setup_llm
 )
 
 from fastmcp import Client
@@ -48,14 +45,14 @@ class NML_RAG(object):
     def __init__(
         self,
         mcp_client: Client = None,
-        chat_model: str = "ollama:qwen3:1.7b",
-        embedding_model: str = "ollama:bge-m3",
+        chat_model: Optional[str] = None,
+        embedding_model: Optional[str] = None,
         logging_level: int = logging.DEBUG,
     ):
         """Initialise"""
-        self.chat_model = chat_model
+        self.chat_model = "ollama:qwen3:1.7b" if chat_model is None else chat_model
         self.model = None
-        self.stores = NML_Stores(embedding_model)
+        self.stores = NML_Stores("ollama:bge-m3" if embedding_model is None else embedding_model)
         # total number of reference documents
         self.num_refs_max = 10
 
@@ -120,50 +117,8 @@ class NML_RAG(object):
         await self._create_graph()
 
     def _setup_chat_model(self):
-        """Set up a chat model"""
-        if self.chat_model.lower().startswith("huggingface:"):
-            from langchain_huggingface import HuggingFaceEndpoint
-            # from huggingface_hub import login
-            # login()
-
-            _, model_name, provider = self.chat_model.split(":")
-            self.logger.debug(f"Using huggingface model: {model_name}")
-
-            hf_token = os.environ.get("HF_TOKEN_NML_AI", None)
-            assert hf_token
-
-            llm = HuggingFaceEndpoint(
-                repo_id=f"{model_name}",
-                provider="auto",
-                task="text-generation",
-                max_new_tokens=512,
-                do_sample=False,
-                repetition_penalty=1.03,
-                token=hf_token
-            )
-
-            self.model = init_chat_model(
-                model_name,
-                model_provider="huggingface",
-                llm=llm,
-                configurable_fields=("temperature"),
-            )
-        else:
-            if self.chat_model.lower().startswith("ollama:"):
-                check_ollama_model(
-                    self.logger, self.chat_model.lower().replace("ollama:", "")
-                )
-
-            self.model = init_chat_model(
-                self.chat_model, configurable_fields=("temperature")
-            )
-
-        assert self.model
-
-        state, msg = check_model_works(self.model)
-        assert state
-
-        self.logger.info(f"Using chat model: {self.chat_model}")
+        """Set up the LLM chat model """
+        self.model = setup_llm(self.chat_model, self.logger, False)
 
     def _summarise_history_node(self, state: AgentState) -> dict:
         """Clean ups after every round of conversation"""

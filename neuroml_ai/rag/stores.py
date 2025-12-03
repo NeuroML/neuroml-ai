@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import chromadb
-from langchain.embeddings import init_embeddings
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_text_splitters import (
@@ -29,9 +28,9 @@ from langchain_text_splitters import (
 from .utils import (
     LoggerInfoFilter,
     LoggerNotInfoFilter,
-    check_ollama_model,
     logger_formatter_info,
     logger_formatter_other,
+    setup_llm
 )
 
 logging.basicConfig()
@@ -50,7 +49,7 @@ class NML_Stores(object):
 
     def __init__(
         self,
-        embedding_model: str = "ollama:bge-m3",
+        embedding_model: str,
         logging_level: int = logging.DEBUG,
     ):
         """Init"""
@@ -93,15 +92,8 @@ class NML_Stores(object):
 
     def setup(self):
         """Setup stores"""
-        if self.embedding_model.lower().startswith("ollama:"):
-            check_ollama_model(
-                self.logger, self.embedding_model.lower().replace("ollama:", "")
-            )
+        self.embeddings = setup_llm(self.embedding_model, self.logger, True)
 
-        self.embeddings = init_embeddings(self.embedding_model)
-        assert self.embeddings
-
-        self.logger.info(f"Using embedding model: {self.embedding_model}")
 
     def inc_k(self, inc: int = 1):
         """Increase k by inc
