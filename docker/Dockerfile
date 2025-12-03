@@ -16,10 +16,6 @@ RUN ls -lash
 
 COPY --chown=user . /app
 
-# add data from different repo
-ADD --chown=user https://github.com/NeuroML/nml-ai-data.git /app/neuroml_ai/rag/data
-RUN chmod -R 0755 /app/neuroml_ai/rag/data
-
 RUN uv venv /app/nml-ai-venv
 ENV VIRTUAL_ENV=/app/nml-ai-venv
 ENV PATH="/app/nml-ai-venv/bin:$PATH"
