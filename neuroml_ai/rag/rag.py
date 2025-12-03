@@ -395,7 +395,9 @@ class NML_RAG(object):
                 query_type_result = QueryTypeSchema(**query_type_result)
             else:
                 if not isinstance(query_type_result, QueryTypeSchema):
-                    self.logger.critical(f"Received unexpected query classification: {query_type_result =}")
+                    self.logger.critical(
+                        f"Received unexpected query classification: {query_type_result =}"
+                    )
                     query_type_result = QueryTypeSchema(query_type="undefined")
 
         self.logger.debug(f"{query_type_result =}")
@@ -403,6 +405,17 @@ class NML_RAG(object):
             "query_type": query_type_result,
             "messages": messages,
         }
+
+    def _wip_node(self, state: AgentState) -> dict:
+        """Just a node that says things are WIP"""
+        assert self.model
+        self.logger.debug(f"{state =}")
+
+        # For the moment
+        amessage = "I cannot currently generate NeuroML related code. This is a work in progress. Can I help you with something else."
+        messages = state.messages
+        messages.append(AIMessage(amessage))
+        return {"messages": messages, "message_for_user": amessage}
 
     def _neuroml_code_tool_decider_node(self, state: AgentState) -> dict:
         """Generate code"""
@@ -993,6 +1006,7 @@ class NML_RAG(object):
         self.workflow.add_node(
             "answer_general_question", self._answer_general_question_node
         )
+        self.workflow.add_node("wip", self._wip_node)
         self.workflow.add_node(
             "neuroml_code_tool_decider", self._neuroml_code_tool_decider_node
         )
@@ -1024,7 +1038,8 @@ class NML_RAG(object):
             {
                 "general_question": "answer_general_question",
                 "neuroml_question": "generate_retrieval_query",
-                "neuroml_code_generation": "neuroml_code_tool_decider",
+                "neuroml_code_generation": "wip",
+                # "neuroml_code_generation": "neuroml_code_tool_decider",
                 # for completeness: the classifier should rarely return
                 # undefined
                 "undefined": "answer_general_question",
@@ -1061,6 +1076,7 @@ class NML_RAG(object):
         self.workflow.add_edge("give_neuroml_answer_to_user", "summarise_history")
         self.workflow.add_edge("ask_user_for_clarification", "summarise_history")
         self.workflow.add_edge("answer_general_question", "summarise_history")
+        self.workflow.add_edge("wip", "summarise_history")
         self.workflow.add_edge("summarise_history", END)
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
