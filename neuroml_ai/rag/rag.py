@@ -389,8 +389,14 @@ class NML_RAG(object):
             )
         else:
             query_type_result = output["parsed"]
-            if not isinstance(query_type_result, QueryTypeSchema):
+            if isinstance(query_type_result, str):
                 query_type_result = QueryTypeSchema(query_type=query_type_result)
+            elif isinstance(query_type_result, dict):
+                query_type_result = QueryTypeSchema(**query_type_result)
+            else:
+                if not isinstance(query_type_result, QueryTypeSchema):
+                    self.logger.critical(f"Received unexpected query classification: {query_type_result =}")
+                    query_type_result = QueryTypeSchema(query_type="undefined")
 
         self.logger.debug(f"{query_type_result =}")
         return {

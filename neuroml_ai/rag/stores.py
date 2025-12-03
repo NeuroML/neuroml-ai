@@ -20,12 +20,18 @@ from typing import Any
 import chromadb
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_text_splitters import (MarkdownHeaderTextSplitter,
-                                      RecursiveCharacterTextSplitter)
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 
-from .utils import (LoggerInfoFilter, LoggerNotInfoFilter,
-                    logger_formatter_info, logger_formatter_other,
-                    setup_embedding)
+from .utils import (
+    LoggerInfoFilter,
+    LoggerNotInfoFilter,
+    logger_formatter_info,
+    logger_formatter_other,
+    setup_embedding,
+)
 
 logging.basicConfig()
 logging.root.setLevel(logging.WARNING)
@@ -87,6 +93,20 @@ class NML_Stores(object):
     def setup(self):
         """Setup stores"""
         self.embeddings = setup_embedding(self.embedding_model, self.logger)
+        # extract model name
+        if self.embedding_model.lower().startswith("huggingface:"):
+            # strip suffix/prefix
+            self.embedding_model = (
+                self.embedding_model.replace("huggingface:", "")
+                .replace(":cheapest", "")
+                .replace(":fastest", "")
+            )
+            # strip collection name
+            splits = self.embedding_model.split("/")
+            self.embedding_model = "".join(splits[1:])
+        elif self.embedding_model.lower().startswith("ollama:"):
+            # strip prefix
+            self.embedding_model = self.embedding_model.replace("ollama:", "")
 
     def inc_k(self, inc: int = 1):
         """Increase k by inc

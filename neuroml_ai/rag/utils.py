@@ -18,8 +18,7 @@ from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_huggingface import (HuggingFaceEndpoint)
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_huggingface import (HuggingFaceEndpoint, HuggingFaceEndpointEmbeddings)
 
 
 class LoggerNotInfoFilter(logging.Filter):
@@ -118,13 +117,15 @@ def setup_embedding(model_name_full, logger):
         logger.debug(f"{hf_token =}")
         assert hf_token
 
-        model_var = HuggingFaceInferenceAPIEmbeddings(
-            model_name=f"{model_name}",
+        model_var = HuggingFaceEndpointEmbeddings(
+            model=f"{model_name}",
             provider="auto",
             task="feature-extraction",
-            huggingfacehub_api_token=hf_token,
+            huggingfacehub_api_token=hf_token
         )
     else:
+        if model_name_full.lower().startswith("ollama:"):
+            check_ollama_model(logger, model_name_full.lower().replace("ollama:", ""))
         model_var = init_embeddings(model_name_full)
 
     assert model_var
