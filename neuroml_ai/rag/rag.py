@@ -386,10 +386,12 @@ class NML_RAG(object):
             )
         else:
             query_type_result = output["parsed"]
+            if not isinstance(query_type_result, QueryTypeSchema):
+                query_type_result = QueryTypeSchema(query_type=query_type_result)
 
         self.logger.debug(f"{query_type_result =}")
         return {
-            "query_type": QueryTypeSchema(query_type=query_type_result["query_type"]),
+            "query_type": query_type_result,
             "messages": messages,
         }
 
