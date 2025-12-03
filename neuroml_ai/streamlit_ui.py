@@ -39,7 +39,7 @@ def runner():
                 response = requests.post('http://127.0.0.1:8005/query', params={'query': query})
                 response_result = response.json().get("result")
                 st.markdown(response_result)
-        st.session_state.history.append({"role": "assistant", "content": response})
+        st.session_state.history.append({"role": "assistant", "content": response_result})
 
 
 if __name__ == "__main__":

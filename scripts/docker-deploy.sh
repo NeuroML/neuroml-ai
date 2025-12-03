@@ -14,4 +14,4 @@ echo "Starting fastapi"
 fastapi dev neuroml_ai/api/main.py --port 8005 &
 
 echo "Starting streamlit frontend"
-streamlit run neuroml_ai/streamlit_ui.py
+streamlit run neuroml_ai/streamlit_ui.py --server.port=7860 --server.address=0.0.0.0
