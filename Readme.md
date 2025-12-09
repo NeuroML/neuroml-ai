@@ -58,6 +58,11 @@ Please see the LangChain documentation for more information:
 
 https://docs.langchain.com/oss/python/integrations/providers/overview
 
+## Contributing
+
+Due to the very early stage at which this project currently is, it is undergoing major changes/refactoring on a regular basis.
+This, unfortunately, means that this project is not currently in a state to take on external contributions, especially for GSoC and other internships.
+
 
 ## License
 
