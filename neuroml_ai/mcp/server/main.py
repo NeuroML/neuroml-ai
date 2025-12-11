@@ -40,7 +40,11 @@ def create_server():
 
     return mcp
 
-
-if __name__ == "__main__":
+def main():
+    """main runner method"""
     mcp = create_server()
     mcp.run(transport="streamable-http")
+
+
+if __name__ == "__main__":
+    main()
