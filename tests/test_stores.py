@@ -18,8 +18,7 @@ class TestStores(unittest.TestCase):
 
     def test_retrieval(self):
         """Test retrieval"""
-        # model = "bge-m3"
-        model = "lol"
+        model = "bge-m3"
 
         try:
             stores = NML_Stores(f"ollama:{model}")
