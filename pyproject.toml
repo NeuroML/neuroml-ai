@@ -11,3 +11,4 @@ ignore = ["F403", "F405"]
 markers = [
     "localonly", # test to not be run on GH actions: they require an LLM.
 ]
+asyncio_mode = "auto"
