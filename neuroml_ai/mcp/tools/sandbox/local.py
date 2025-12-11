@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import asyncio
+from functools import singledispatchmethod
 from tempfile import NamedTemporaryFile
 
 from neuroml_ai.mcp.tools.sandbox.sandbox import AsyncSandbox, RunCommand, RunPythonCode
@@ -32,11 +33,12 @@ class LocalSandbox(AsyncSandbox):
     async def __aexit__(self, exc_type, exc, tb):
         return False
 
+    @singledispatchmethod
     async def run(self, request):
         """Dummy fallback"""
         raise NotImplementedError("Not implemented")
 
-    @AsyncSandbox.run.register  # type: ignore
+    @run.register  # type: ignore
     async def _(self, request: RunPythonCode):
         with NamedTemporaryFile(prefix="nml_ai", mode="w") as f:
             print(request.code, file=f)
@@ -51,10 +53,10 @@ class LocalSandbox(AsyncSandbox):
             stdout, stderr = await process.communicate()
             return [stdout, stderr]
 
-    @AsyncSandbox.run.register  # type: ignore
+    @run.register  # type: ignore
     async def _(self, request: RunCommand):
         process = await asyncio.create_subprocess_shell(
-            " ".join(request.cmd),
+            " ".join(request.command),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
