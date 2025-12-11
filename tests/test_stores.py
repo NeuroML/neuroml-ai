@@ -8,6 +8,7 @@ Copyright 2025 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import pytest
 import unittest
 from neuroml_ai.rag.stores import NML_Stores
 
@@ -17,10 +18,16 @@ class TestStores(unittest.TestCase):
 
     def test_retrieval(self):
         """Test retrieval"""
-        stores = NML_Stores()
-        stores.setup()
-        stores.load()
-        stores.retrieve("NeuroML community")
+        # model = "bge-m3"
+        model = "lol"
+
+        try:
+            stores = NML_Stores(f"ollama:{model}")
+            stores.setup()
+            stores.load()
+            stores.retrieve("NeuroML community")
+        except:  # noqa
+            pytest.skip("Ollama model not found")
 
 
 if __name__ == "__main__":

@@ -43,11 +43,15 @@ logger_formatter_other = logging.Formatter(
 )
 
 
-def check_ollama_model(logger, model):
+def check_ollama_model(logger, model, exit=True):
     """Check if ollama model is available
 
+    :param logger: logger instance
+    :type logger: logging
     :param model: ollama model name
     :type model: str
+    :param exit: if we should call sys.exit if check fails
+    :type exit: bool
     :returns: None
 
     :throws ollama.ResponseError: if `model` is not available
@@ -59,10 +63,12 @@ def check_ollama_model(logger, model):
     except ollama.ResponseError:
         logger.error(f"Could not find ollama model: {model}")
         logger.error("Please ensure you have pulled the model")
-        sys.exit(-1)
+        if exit:
+            sys.exit(-1)
     except ConnectionError:
         logger.error("Could not connect to Ollama.")
-        sys.exit(-1)
+        if exit:
+            sys.exit(-1)
 
 
 def parse_output_with_thought(message: AIMessage, schema) -> dict:
