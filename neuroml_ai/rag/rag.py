@@ -105,6 +105,8 @@ class NML_RAG(object):
         # use the type hints directly instead
         ctr = 0
         for t in self.mcp_tools:
+            if "dummy" in t.name:
+                continue
             ctr += 1
             self.tool_description += (
                 f"## {ctr}. {t.name}\n{t.description.split(':param')[0].strip()}"
