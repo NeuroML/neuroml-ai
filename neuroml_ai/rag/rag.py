@@ -1065,9 +1065,13 @@ class NML_RAG(object):
 
         self.graph = self.workflow.compile(checkpointer=self.checkpointer)
         if not os.environ.get("RUNNING_IN_DOCKER", 0):
-            self.graph.get_graph().draw_mermaid_png(
-                output_file_path="nml-ai-lang-graph.png"
-            )
+            try:
+                self.graph.get_graph().draw_mermaid_png(
+                    output_file_path="nml-ai-lang-graph.png"
+                )
+            except BaseException as e:
+                self.logger.error("Something went wrong generating lang graph png")
+                self.logger.error(e)
 
     async def run_graph_invoke_state(
         self, state: dict, thread_id: str = "default_thread"
