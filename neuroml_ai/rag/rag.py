@@ -342,9 +342,11 @@ class NML_RAG(object):
             conversation history and context into account to identify the
             objective of the query.
 
-            - If the query is a NeuroML code generation request, respond 'neuroml_code_generation'
-            - If the query mentions NeuroML at all in its text, always respond 'neuroml_question'.
-            - If the query is asking for information related to NeuroML, always respond 'neuroml_question'
+            - If the query is related to NeuroML, it can either be a factual question ("neuroml_question"), or it can be related to writing
+              code ("neuroml_code_generation"):
+
+                - If the query asks for some information about NeuroML, respond 'neuroml_question'.
+                - If the query is related to coding tasks: for example, writing code or running commands, respond 'neuroml_code_generation'
             """)
 
         # only if neuroml is not mentioned, do we even bother with non neuroml
@@ -412,10 +414,8 @@ class NML_RAG(object):
         self.logger.debug(f"{state =}")
 
         system_prompt = dedent("""
-        You are a NeuroML code generation assistant. You are proficient in
-        Python, and in developing biophysically detailed computational models
-        of the brain. Think step by step about how to generate the code
-        requested by the user.
+        You are a coding assistant. You are proficient in writing and running
+        code, especially in Python.
 
         You have access to these tools:
 
@@ -423,13 +423,12 @@ class NML_RAG(object):
 
         {tool_description}
 
-
         # Output format:
 
         {{
             action: "tool_call" if a tool is to be called, "update_code" if the
-            code needs to be updated, "final_answer" if the code is ready to be
-            returned to the user.
+            code needs to be updated, "final_answer" if the code or generated
+            output is ready to be returned to the user.
             tool: name of the tool to call
             args: arguments to be given to the tool
             reason: a short concise text string explaining your decision
@@ -473,6 +472,7 @@ class NML_RAG(object):
     async def _neuroml_code_tools_node(self, state: AgentState) -> dict:
         """Node that does the tool calling"""
         assert self.mcp_client
+        self.logger.debug(f"{state =}")
 
         tool = state.tool_call.tool
         tool_args = state.tool_call.args
@@ -487,6 +487,7 @@ class NML_RAG(object):
 
     def _neuroml_code_tool_router(self, state: AgentState) -> str:
         """Tool router"""
+        self.logger.debug(f"{state =}")
         tool_call = state.tool_call
         return tool_call.action
 
