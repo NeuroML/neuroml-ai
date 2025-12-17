@@ -109,11 +109,11 @@ class NML_RAG(object):
                 continue
             ctr += 1
             self.tool_description += (
-                f"## {ctr}. {t.name}\n{t.description.split(':param')[0].strip()}"
+                f"## {ctr}.  {t.name}\n{t.description.split(':param')[0].strip()}"
             )
             args = t.inputSchema.get("properties", [])
             if len(args):
-                self.tool_description += " Inputs:\n"
+                self.tool_description += "\n\nInputs:\n"
                 for arg, arginfo in args.items():
                     self.tool_description += f"- {arg}: {arginfo.get('type')}"
                 self.tool_description += "\n"
@@ -1039,10 +1039,10 @@ class NML_RAG(object):
             {
                 "tool_call": "neuroml_code_tools",
                 "update_code": "neuroml_code_generator",
-                "final_answer": "give_neuroml_code_to_user",
+                "give_answer_to_user": "give_neuroml_code_to_user",
             },
         )
-        self.workflow.add_edge("neuroml_code_tools", "neuroml_code_generator")
+        self.workflow.add_edge("neuroml_code_tools", "neuroml_code_tool_decider")
         self.workflow.add_edge("neuroml_code_generator", "neuroml_code_tool_decider")
 
         self.workflow.add_conditional_edges(
