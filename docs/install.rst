@@ -41,12 +41,18 @@ klea-utils extras
    * - ``qdrant``
      - ``langchain-qdrant``
      - `Qdrant <https://github.com/qdrant/qdrant>`_ vector store support
+   * - ``huggingface``
+     - ``langchain-huggingface``
+     - HuggingFace inference provider
+   * - ``ollama``
+     - ``langchain-ollama``, ``ollama``
+     - Ollama inference provider (local models)
    * - ``ingest``
      - ``docling``, ``typer``, ``xxhash``
      - Document ingestion pipeline
    * - ``full``
      - All of the above
-     - All optional extras
+     - All optional extras (vector stores + inference providers)
 
 Usage::
 
@@ -70,8 +76,14 @@ klea-rag extras
    * - ``qdrant``
      - ``klea_utils[qdrant]``
      - `Qdrant <https://github.com/qdrant/qdrant>`_ support for RAG
+   * - ``huggingface``
+     - ``klea_utils[huggingface]``
+     - HuggingFace inference provider for RAG
+   * - ``ollama``
+     - ``klea_utils[ollama]``
+     - Ollama inference provider for RAG
    * - ``full``
-     - All vector store extras
+     - All vector store and inference provider extras
      - All RAG optional extras
 
 Usage::
@@ -109,15 +121,21 @@ Example env file::
 Choosing models
 ~~~~~~~~~~~~~~~
 
-Each model provider requires its corresponding LangChain integration
-package to be installed.  For example, for Ollama::
+Each model provider requires its corresponding :mod:`klea_utils` extra
+to be installed::
 
-   pip install langchain-ollama
+   # For Ollama:
+   pip install klea-utils[ollama]
+   # or via klea-rag:
+   pip install klea-rag[ollama]
+
+   # For HuggingFace:
+   pip install klea-utils[huggingface]
 
 See the `LangChain provider docs
 <https://docs.langchain.com/oss/python/integrations/providers/overview>`_
-for other providers and their package names.  ``langchain-huggingface``
-is included automatically via ``klea_utils``.
+for other providers and their package names.  The needed extras
+(``huggingface``, ``ollama``) are documented in the extras tables above.
 
 Model names are prefixed according to their provider:
 

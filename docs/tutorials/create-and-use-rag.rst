@@ -26,9 +26,13 @@ Prerequisites
 
    .. code-block:: bash
 
-      pip install klea_rag[chroma] klea_utils[ingest]
+      pip install klea_rag[chroma,ollama] klea_utils[ingest]
 
    .. note::
+
+      ``klea_rag[chroma]`` provides Chroma vector store support.
+
+      ``klea_rag[ollama]`` provides the Ollama inference provider.
 
       ``klea_utils[ingest]`` pulls in `Docling <https://docling-project.github.io/docling/>`_
       and its PyTorch dependency.  The download is several hundred MB.

@@ -26,14 +26,14 @@ def make_app(
     """Create a FastAPI instance with a standard lifespan.
 
     The lifespan:
+
     1. Creates an in-memory session cache (TTLCache, 2 hour TTL)
     2. Instantiates and sets up the graph via *graph_factory*
-    3. Stores the graph at ``app.state.graph`` and
-       ``app.state.sessions`` for the chat router
+    3. Stores the graph and session cache on ``app.state``
 
     :param graph_factory: Callable that returns a configured
         :class:`~klea_utils.graph.base.BaseLangGraph` instance
-    :param title: FastAPI title
+    :param title: API title (appears in OpenAPI docs)
     :param version: API version (appears in OpenAPI docs)
     :param routers: List of APIRouters to include on the app
     :returns: Configured FastAPI app
