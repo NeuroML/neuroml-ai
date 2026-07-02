@@ -58,7 +58,7 @@ def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
             last_node = ""
 
             def event_iter():
-                nonlocal full_response, last_node
+                nonlocal full_response, last_node, progress
 
                 with httpx.Client(timeout=None) as client:
                     with client.stream(
@@ -82,13 +82,21 @@ def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
                             if event["type"] == "progress":
                                 if event["node"] != last_node:
                                     last_node = event["node"]
-                                    progress.info(f"**{event['node']}**")
+                                    progress.caption(f"**{event['node']}**")
                             elif event["type"] == "complete":
+                                progress.empty()
                                 full_response = event.get("message_for_user", "")
                                 yield full_response
                                 return
                             elif event["type"] == "error":
                                 msg = event.get("message", "Unknown server error")
+                                progress.caption(f":red[Error: {msg}]")
+                                full_response = f"Error: {msg}"
+                                yield full_response
+                                return
+                            elif event["type"] == "error":
+                                msg = event.get("message", "Unknown server error")
+                                progress.update(state="error", label=msg)
                                 full_response = f"Error: {msg}"
                                 yield full_response
                                 return
