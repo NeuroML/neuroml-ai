@@ -345,17 +345,18 @@ Subclasses must set this to their AppEnv class.</p>
 <dd><p>Run the graph and yield structured streaming events.</p>
 <p>Yields dicts with:</p>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;progress&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>When the graph enters a new node (LLM or custom-event non-LLM)</p>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;progress&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>When the graph enters a new node (via <code class="docutils literal notranslate"><span class="pre">write_custom_stream</span></code>)</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;token&quot;,</span> <span class="pre">&quot;content&quot;:</span> <span class="pre">&quot;&lt;chunk&gt;&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>LLM token chunk from the current node</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;complete&quot;,</span> <span class="pre">&quot;message_for_user&quot;:</span> <span class="pre">&quot;&lt;answer&gt;&quot;}</span></code></dt><dd><p>Final answer from the completed graph</p>
 </dd>
 </dl>
-<p>Uses LangGraph’s <code class="docutils literal notranslate"><span class="pre">astream_events</span></code> v3 protocol.  LLM output is read
-from the <code class="docutils literal notranslate"><span class="pre">messages</span></code> channel; non-LLM nodes emit <code class="docutils literal notranslate"><span class="pre">custom</span></code> events
-via <code class="docutils literal notranslate"><span class="pre">get_stream_writer()</span></code>.  A <code class="docutils literal notranslate"><span class="pre">StreamTransformer</span></code> enables the
-custom channel so those events flow through.</p>
+<p>Uses LangGraph’s <code class="docutils literal notranslate"><span class="pre">astream_events</span></code> v3 protocol.  Progress events
+from all nodes (LLM and non-LLM) arrive via the <code class="docutils literal notranslate"><span class="pre">custom</span></code> channel.
+LLM token output is read from the <code class="docutils literal notranslate"><span class="pre">messages</span></code> channel.
+A <code class="docutils literal notranslate"><span class="pre">StreamTransformer</span></code> enables the custom channel so those events
+flow through.</p>
 <p>Reference: <a class="reference external" href="https://docs.langchain.com/oss/python/langgraph/event-streaming">https://docs.langchain.com/oss/python/langgraph/event-streaming</a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

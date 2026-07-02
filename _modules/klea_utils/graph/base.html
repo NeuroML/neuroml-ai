@@ -721,16 +721,17 @@
 <span class="sd">        Yields dicts with:</span>
 
 <span class="sd">        ``{&quot;type&quot;: &quot;progress&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
-<span class="sd">            When the graph enters a new node (LLM or custom-event non-LLM)</span>
+<span class="sd">            When the graph enters a new node (via ``write_custom_stream``)</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;&lt;chunk&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
 <span class="sd">            LLM token chunk from the current node</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;complete&quot;, &quot;message_for_user&quot;: &quot;&lt;answer&gt;&quot;}``</span>
 <span class="sd">            Final answer from the completed graph</span>
 
-<span class="sd">        Uses LangGraph&#39;s ``astream_events`` v3 protocol.  LLM output is read</span>
-<span class="sd">        from the ``messages`` channel; non-LLM nodes emit ``custom`` events</span>
-<span class="sd">        via ``get_stream_writer()``.  A ``StreamTransformer`` enables the</span>
-<span class="sd">        custom channel so those events flow through.</span>
+<span class="sd">        Uses LangGraph&#39;s ``astream_events`` v3 protocol.  Progress events</span>
+<span class="sd">        from all nodes (LLM and non-LLM) arrive via the ``custom`` channel.</span>
+<span class="sd">        LLM token output is read from the ``messages`` channel.</span>
+<span class="sd">        A ``StreamTransformer`` enables the custom channel so those events</span>
+<span class="sd">        flow through.</span>
 
 <span class="sd">        Reference: https://docs.langchain.com/oss/python/langgraph/event-streaming</span>
 
@@ -783,20 +784,6 @@
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                         <span class="k">continue</span>
-
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;langgraph_node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">node</span> <span class="ow">and</span> <span class="n">node</span> <span class="o">!=</span> <span class="n">current_node</span><span class="p">:</span>
-                        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="n">current_node</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;Node [</span><span class="si">%s</span><span class="s2">] took </span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span>
-                                <span class="n">current_node</span><span class="p">,</span>
-                                <span class="n">now</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span>
-                            <span class="p">)</span>
-                        <span class="n">node_start</span> <span class="o">=</span> <span class="n">now</span>
-                        <span class="n">current_node</span> <span class="o">=</span> <span class="n">node</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Progress: </span><span class="si">{</span><span class="n">current_node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                        <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">current_node</span><span class="p">}</span>
 
                     <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;content-block-delta&quot;</span><span class="p">:</span>
                         <span class="n">delta</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="p">{})</span>
