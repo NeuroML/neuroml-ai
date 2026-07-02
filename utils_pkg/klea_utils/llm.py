@@ -18,16 +18,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import NamedTuple, Type
 
-import ollama
-from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_huggingface import (
-    ChatHuggingFace,
-    HuggingFaceEndpoint,
-    HuggingFaceEndpointEmbeddings,
-)
 from pydantic import BaseModel
 
 logging.basicConfig(
@@ -100,6 +91,8 @@ def check_ollama_model(logger, model, exit=False):
     :throws ConnectionError: if cannot connect to an Ollama server
 
     """
+    import ollama
+
     try:
         _ = ollama.show(model)
     except ollama.ResponseError:
@@ -117,6 +110,9 @@ def parse_output_with_thought[TSchema: BaseModel](
     message: AIMessage, schema: Type[TSchema]
 ) -> tuple[TSchema, str]:
     """Parse AI message with thought to a dict based on given schema"""
+    # Lazy: JsonOutputParser pulls in langchain parsers
+    from langchain_core.output_parsers import JsonOutputParser
+
     thought = ""
     answer = ""
 
@@ -246,10 +242,16 @@ def check_model_works(model, timeout=30, retries=5):
 
 
 def setup_embedding(model_name_full, logger):
+    # Lazy: init_embeddings and HuggingFaceEndpointEmbeddings pull in
+    # langchain provider packages that may not be installed
+    from langchain.embeddings import init_embeddings
+
     parsed = parse_model_name(model_name_full)
 
     if parsed.provider == "huggingface":
         logger.debug(f"Using huggingface model: {parsed.model_name}")
+
+        from langchain_huggingface import HuggingFaceEndpointEmbeddings
 
         hf_token = os.environ.get("HF_TOKEN", None)
         assert hf_token
@@ -272,9 +274,15 @@ def setup_embedding(model_name_full, logger):
 
 def setup_llm(model_name_full: str, logger: logging.Logger):
     """Set up a chat model"""
+    # Lazy: init_chat_model and huggingface classes pull in provider
+    # packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)
+    from langchain.chat_models import init_chat_model
+
     parsed = parse_model_name(model_name_full)
 
     if parsed.provider == "huggingface":
+        from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+
         model_name = parsed.model_name
         provider = parsed.suffix or "auto"
 
