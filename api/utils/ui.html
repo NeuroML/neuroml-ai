@@ -2,10 +2,11 @@
 <html class="no-js" lang="en" data-content_root="../../">
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Logging" href="plogging.html"><link rel="prev" title="API" href="api.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>klea_utils.plogging - Klea</title>
+        <title>UI - Klea</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -172,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -212,18 +213,18 @@
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/graph.html">Orchestrator framework</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/stores.html">Vector stores</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/api.html">API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/ui.html">UI</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/plogging.html">Logging</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/errors.html">Error types</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../api/utils/tools.html">Tool formatting</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="graph.html">Orchestrator framework</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">UI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="plogging.html">Logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="errors.html">Error types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tools.html">Tool formatting</a></li>
 </ul>
 </li>
 </ul>
@@ -252,7 +253,13 @@
           <span>Back to top</span>
         </a>
         <div class="content-icon-container">
-          <div class="theme-toggle-container theme-toggle-content">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/api/utils/ui.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
             <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
               <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
               <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
@@ -260,99 +267,85 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for klea_utils.plogging</h1><div class="highlight"><pre>
-<span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Logging related utils</span>
+          <section id="module-klea_utils.ui.web.streamlit.runner">
+<span id="ui"></span><h1>UI<a class="headerlink" href="#module-klea_utils.ui.web.streamlit.runner" title="Link to this heading">¶</a></h1>
+<p>Shared Streamlit chat runner.</p>
+<p>File: klea_utils/ui/web/streamlit/runner.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.web.streamlit.runner.run_streamlit_app">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.web.streamlit.runner.</span></span><span class="sig-name descname"><span class="pre">run_streamlit_app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtitle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/ui/web/streamlit/runner.html#run_streamlit_app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.web.streamlit.runner.run_streamlit_app" title="Link to this definition">¶</a></dt>
+<dd><p>Run the Streamlit chat interface.</p>
+<p>Waits for the backend to be ready, displays the chat history, and
+handles user queries via the SSE <code class="docutils literal notranslate"><span class="pre">/query/stream</span></code> endpoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>title</strong> – App title displayed at the top of the page</p></li>
+<li><p><strong>url</strong> – Base URL of the API server (e.g. <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code>)</p></li>
+<li><p><strong>subtitle</strong> – Optional subtitle / disclaimer shown below the title</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-<span class="sd">File: klea_utils/logging.py</span>
+<p id="module-klea_utils.ui.tui.repl">Shared async REPL for Klea chat interfaces.</p>
+<p>File: klea_utils/ui/tui/repl.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.tui.repl.run_repl">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.ui.tui.repl.</span></span><span class="sig-name descname"><span class="pre">run_repl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">single_query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">app_prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'klea'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/ui/tui/repl.html#run_repl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.tui.repl.run_repl" title="Link to this definition">¶</a></dt>
+<dd><p>Run an interactive or single-query chat REPL.</p>
+<p>Connects to the API server’s SSE <code class="docutils literal notranslate"><span class="pre">/query/stream</span></code> endpoint and
+displays progress labels and the final answer.</p>
+<p>In interactive mode each query is sent as the user types it;
+the REPL does not batch queries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> – Base URL of the API server (e.g. <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code>)</p></li>
+<li><p><strong>title</strong> – Application title displayed on start</p></li>
+<li><p><strong>single_query</strong> – If set, run one query and exit instead of REPL loop</p></li>
+<li><p><strong>app_prefix</strong> – Prefix for user/assistant labels (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;klea&quot;</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
-<span class="sd">Copyright 2026 Ankur Sinha</span>
-<span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+</section>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-
-
-<div class="viewcode-block" id="LoggerNotInfoFilter">
-<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerNotInfoFilter">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">LoggerNotInfoFilter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Filter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Allow only non INFO messages&quot;&quot;&quot;</span>
-
-<div class="viewcode-block" id="LoggerNotInfoFilter.filter">
-<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerNotInfoFilter.filter">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">record</span><span class="o">.</span><span class="n">levelno</span> <span class="o">!=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span></div>
-</div>
-
-
-
-<div class="viewcode-block" id="LoggerInfoFilter">
-<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerInfoFilter">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">LoggerInfoFilter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Filter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Allow only INFO messages&quot;&quot;&quot;</span>
-
-<div class="viewcode-block" id="LoggerInfoFilter.filter">
-<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerInfoFilter.filter">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">record</span><span class="o">.</span><span class="n">levelno</span> <span class="o">==</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span></div>
-</div>
-
-
-
-<span class="n">logger_formatter_info</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-<span class="p">)</span>
-<span class="n">logger_formatter_other</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in &#39;</span><span class="si">%(funcName)s</span><span class="s2">&#39; &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-<span class="p">)</span>
-
-
-<div class="viewcode-block" id="setup_logger">
-<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.setup_logger">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">setup_logger</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">stderr_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configure a dual-stream logger.</span>
-
-<span class="sd">    INFO-level messages go to stdout with a simple format.  All other</span>
-<span class="sd">    levels (DEBUG, WARNING, ERROR, CRITICAL) go to stderr with a</span>
-<span class="sd">    format that includes the function name.</span>
-
-<span class="sd">    :param name: Name of the logger (passed to ``logging.getLogger``)</span>
-<span class="sd">    :param stderr_level: Level for the stderr handler (default ``DEBUG``)</span>
-<span class="sd">    :returns: Configured logger with handlers attached</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
-
-    <span class="n">stdout_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
-    <span class="n">stdout_handler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
-    <span class="n">stdout_handler</span><span class="o">.</span><span class="n">addFilter</span><span class="p">(</span><span class="n">LoggerInfoFilter</span><span class="p">())</span>
-    <span class="n">stdout_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logger_formatter_info</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">stdout_handler</span><span class="p">)</span>
-
-    <span class="n">stderr_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
-    <span class="n">stderr_handler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">stderr_level</span><span class="p">)</span>
-    <span class="n">stderr_handler</span><span class="o">.</span><span class="n">addFilter</span><span class="p">(</span><span class="n">LoggerNotInfoFilter</span><span class="p">())</span>
-    <span class="n">stderr_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logger_formatter_other</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">stderr_handler</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">logger</span></div>
-
-</pre></div>
         </article>
       </div>
       <footer>
         
         <div class="related-pages">
-          
-          
+          <a class="next-page" href="plogging.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Logging</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="api.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">API</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -370,8 +363,28 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">UI</a><ul>
+<li><a class="reference internal" href="#klea_utils.ui.web.streamlit.runner.run_streamlit_app"><code class="docutils literal notranslate"><span class="pre">run_streamlit_app()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.ui.tui.repl.run_repl"><code class="docutils literal notranslate"><span class="pre">run_repl()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Logging" href="plogging.html"><link rel="prev" title="LLM utilities" href="llm.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="UI" href="ui.html"><link rel="prev" title="LLM utilities" href="llm.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Networking - Klea</title>
+        <title>API - Klea</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -220,7 +220,8 @@
 <li class="toctree-l3"><a class="reference internal" href="graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Networking</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ui.html">UI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tools.html">Tool formatting</a></li>
@@ -266,13 +267,121 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-klea_utils.api">
-<span id="networking"></span><h1>Networking<a class="headerlink" href="#module-klea_utils.api" title="Link to this heading">¶</a></h1>
+          <section id="module-klea_utils.api.chat">
+<span id="api"></span><h1>API<a class="headerlink" href="#module-klea_utils.api.chat" title="Link to this heading">¶</a></h1>
+<p>Shared chat endpoint factory for Klea packages.</p>
+<p>File: klea_utils/api/chat.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="klea_utils.api.chat.ChatPayload">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.api.chat.</span></span><span class="sig-name descname"><span class="pre">ChatPayload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">session_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/api/chat.html#ChatPayload"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.chat.ChatPayload" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.api.chat.ChatPayload.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#klea_utils.api.chat.ChatPayload.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.chat.create_chat_router">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.chat.</span></span><span class="sig-name descname"><span class="pre">create_chat_router</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">APIRouter</span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/chat.html#create_chat_router"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.chat.create_chat_router" title="Link to this definition">¶</a></dt>
+<dd><p>Create an APIRouter with <code class="docutils literal notranslate"><span class="pre">/query</span></code> and <code class="docutils literal notranslate"><span class="pre">/query/stream</span></code> endpoints.</p>
+<p>The router reads the graph instance from <code class="docutils literal notranslate"><span class="pre">request.app.state.graph</span></code>
+(set by <a class="reference internal" href="#klea_utils.api.app.make_app" title="klea_utils.api.app.make_app"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.api.app.make_app()</span></code></a>).</p>
+</dd></dl>
+
+<p id="module-klea_utils.api.health">Shared health check endpoint factory for Klea packages.</p>
+<p>File: klea_utils/api/health.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.health.create_health_router">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.health.</span></span><span class="sig-name descname"><span class="pre">create_health_router</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">APIRouter</span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/health.html#create_health_router"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.health.create_health_router" title="Link to this definition">¶</a></dt>
+<dd><p>Create an APIRouter with <code class="docutils literal notranslate"><span class="pre">/health/live</span></code> and <code class="docutils literal notranslate"><span class="pre">/health/ready</span></code> endpoints.</p>
+</dd></dl>
+
+<p id="module-klea_utils.api.app">Shared FastAPI app factory for Klea packages.</p>
+<p>File: klea_utils/api/app.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.app.make_app">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.app.</span></span><span class="sig-name descname"><span class="pre">make_app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph_factory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable" title="(in Python v3.14)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><span class="pre">BaseLangGraph</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Klea</span> <span class="pre">API'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'0.1.0'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">routers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">APIRouter</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">FastAPI</span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/app.html#make_app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.app.make_app" title="Link to this definition">¶</a></dt>
+<dd><p>Create a FastAPI instance with a standard lifespan.</p>
+<p>The lifespan:</p>
+<ol class="arabic simple">
+<li><p>Creates an in-memory session cache (TTLCache, 2 hour TTL)</p></li>
+<li><p>Instantiates and sets up the graph via <em>graph_factory</em></p></li>
+<li><p>Stores the graph and session cache on <code class="docutils literal notranslate"><span class="pre">app.state</span></code></p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>graph_factory</strong> – Callable that returns a configured
+<a class="reference internal" href="graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a> instance</p></li>
+<li><p><strong>title</strong> – API title (appears in OpenAPI docs)</p></li>
+<li><p><strong>version</strong> – API version (appears in OpenAPI docs)</p></li>
+<li><p><strong>routers</strong> – List of APIRouters to include on the app</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Configured FastAPI app</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-klea_utils.api.server">Shared server launcher factory for Klea packages.</p>
+<p>File: klea_utils/api/server.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.server.make_serve_app">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.server.</span></span><span class="sig-name descname"><span class="pre">make_serve_app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_module</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8005</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Typer</span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/server.html#make_serve_app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.server.make_serve_app" title="Link to this definition">¶</a></dt>
+<dd><p>Create a Typer app that runs uvicorn on the given <em>app_module</em>.</p>
+<p>The module string should be the importable path to a FastAPI <code class="docutils literal notranslate"><span class="pre">app</span></code>
+instance, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;klea_rag.api.main:app&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>app_module</strong> – Uvicorn module string</p></li>
+<li><p><strong>default_port</strong> – Default port number</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">typer.Typer</span></code> app for use as a CLI entry point</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-klea_utils.api.utils">Utility functions for the Klea API layer.</p>
+<p>File: klea_utils/api/utils.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.utils.check_api_is_ready">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.api.utils.</span></span><span class="sig-name descname"><span class="pre">check_api_is_ready</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/api/utils.html#check_api_is_ready"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.utils.check_api_is_ready" title="Link to this definition">¶</a></dt>
+<dd><p>Exponentially back off checking that the API is ready.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>url</strong> – Health check endpoint URL</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.utils.validate_url">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.utils.</span></span><span class="sig-name descname"><span class="pre">validate_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/api/utils.html#validate_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.utils.validate_url" title="Link to this definition">¶</a></dt>
+<dd><p>Return <em>value</em> if it is a valid HTTP(S) URL, else raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+</dd></dl>
+
 </section>
 
         </article>
@@ -280,12 +389,12 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="plogging.html">
+          <a class="next-page" href="ui.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Logging</div>
+                <div class="title">UI</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -317,8 +426,36 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">API</a><ul>
+<li><a class="reference internal" href="#klea_utils.api.chat.ChatPayload"><code class="docutils literal notranslate"><span class="pre">ChatPayload</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.api.chat.ChatPayload.model_config"><code class="docutils literal notranslate"><span class="pre">ChatPayload.model_config</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#klea_utils.api.chat.create_chat_router"><code class="docutils literal notranslate"><span class="pre">create_chat_router()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.health.create_health_router"><code class="docutils literal notranslate"><span class="pre">create_health_router()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.app.make_app"><code class="docutils literal notranslate"><span class="pre">make_app()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.server.make_serve_app"><code class="docutils literal notranslate"><span class="pre">make_serve_app()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.utils.check_api_is_ready"><code class="docutils literal notranslate"><span class="pre">check_api_is_ready()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.utils.validate_url"><code class="docutils literal notranslate"><span class="pre">validate_url()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

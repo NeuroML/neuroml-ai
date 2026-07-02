@@ -10,6 +10,7 @@ Shared utilities used by all Klea packages.
    utils/stores
    utils/llm
    utils/api
+   utils/ui
    utils/plogging
    utils/errors
    utils/tools

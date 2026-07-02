@@ -220,7 +220,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/ui.html">UI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/tools.html">Tool formatting</a></li>
@@ -294,11 +295,13 @@ retrieval-augmented generation works and why you might use it.</p>
 <li><p>Packages installed (see <a class="reference internal" href="../install.html"><span class="doc">install guide</span></a>) with Chroma and ingestion
 extras:</p>
 <blockquote>
-<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>klea_rag<span class="o">[</span>chroma<span class="o">]</span><span class="w"> </span>klea_utils<span class="o">[</span>ingest<span class="o">]</span>
+<div><div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>klea_rag<span class="o">[</span>chroma,ollama<span class="o">]</span><span class="w"> </span>klea_utils<span class="o">[</span>ingest<span class="o">]</span>
 </pre></div>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">klea_rag[chroma]</span></code> provides Chroma vector store support.</p>
+<p><code class="docutils literal notranslate"><span class="pre">klea_rag[ollama]</span></code> provides the Ollama inference provider.</p>
 <p><code class="docutils literal notranslate"><span class="pre">klea_utils[ingest]</span></code> pulls in <a class="reference external" href="https://docling-project.github.io/docling/">Docling</a>
 and its PyTorch dependency.  The download is several hundred MB.
 On systems with a CUDA-capable GPU, PyTorch will use the GPU

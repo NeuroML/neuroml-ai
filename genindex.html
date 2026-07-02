@@ -218,7 +218,8 @@
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/ui.html">UI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/tools.html">Tool formatting</a></li>
@@ -298,6 +299,10 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="glossary.html#term-Chat-model"><strong>Chat model</strong></a>
 </li>
+        <li><a href="api/utils/api.html#klea_utils.api.chat.ChatPayload">ChatPayload (class in klea_utils.api.chat)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.utils.check_api_is_ready">check_api_is_ready() (in module klea_utils.api.utils)</a>
+</li>
         <li><a href="api/utils/llm.html#klea_utils.llm.check_model_works">check_model_works() (in module klea_utils.llm)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.check_ollama_model">check_ollama_model() (in module klea_utils.llm)</a>
@@ -311,6 +316,10 @@
         <li><a href="glossary.html#term-Collection"><strong>Collection</strong></a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.config_class">config_class (klea_utils.graph.base.BaseLangGraph attribute)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.chat.create_chat_router">create_chat_router() (in module klea_utils.api.chat)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.health.create_health_router">create_health_router() (in module klea_utils.api.health)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -399,10 +408,38 @@
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li>
-    klea_utils.api
+    klea_utils.api.app
 
         <ul>
-          <li><a href="api/utils/api.html#module-klea_utils.api">module</a>
+          <li><a href="api/utils/api.html#module-klea_utils.api.app">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.api.chat
+
+        <ul>
+          <li><a href="api/utils/api.html#module-klea_utils.api.chat">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.api.health
+
+        <ul>
+          <li><a href="api/utils/api.html#module-klea_utils.api.health">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.api.server
+
+        <ul>
+          <li><a href="api/utils/api.html#module-klea_utils.api.server">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.api.utils
+
+        <ul>
+          <li><a href="api/utils/api.html#module-klea_utils.api.utils">module</a>
 </li>
         </ul></li>
         <li>
@@ -419,6 +456,8 @@
           <li><a href="api/utils/llm.html#module-klea_utils.llm">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.plogging
 
@@ -426,8 +465,6 @@
           <li><a href="api/utils/plogging.html#module-klea_utils.plogging">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.stores.config
 
@@ -447,6 +484,20 @@
 
         <ul>
           <li><a href="api/utils/tools.html#module-klea_utils.tools">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.ui.tui.repl
+
+        <ul>
+          <li><a href="api/utils/ui.html#module-klea_utils.ui.tui.repl">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.ui.web.streamlit.runner
+
+        <ul>
+          <li><a href="api/utils/ui.html#module-klea_utils.ui.web.streamlit.runner">module</a>
 </li>
         </ul></li>
     </ul></td>
@@ -481,11 +532,17 @@
   <h2>M</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/api.html#klea_utils.api.app.make_app">make_app() (in module klea_utils.api.app)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.server.make_serve_app">make_serve_app() (in module klea_utils.api.server)</a>
+</li>
         <li><a href="glossary.html#term-MCP-server"><strong>MCP server</strong></a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig.model_config">model_config (klea_utils.stores.config.PerDomainConfig attribute)</a>
+        <li><a href="api/utils/api.html#klea_utils.api.chat.ChatPayload.model_config">model_config (klea_utils.api.chat.ChatPayload attribute)</a>
 
         <ul>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig.model_config">(klea_utils.stores.config.PerDomainConfig attribute)</a>
+</li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo.model_config">(klea_utils.stores.config.VectorStoreInfo attribute)</a>
 </li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoresConfig.model_config">(klea_utils.stores.config.VectorStoresConfig attribute)</a>
@@ -497,7 +554,15 @@
     module
 
         <ul>
-          <li><a href="api/utils/api.html#module-klea_utils.api">klea_utils.api</a>
+          <li><a href="api/utils/api.html#module-klea_utils.api.app">klea_utils.api.app</a>
+</li>
+          <li><a href="api/utils/api.html#module-klea_utils.api.chat">klea_utils.api.chat</a>
+</li>
+          <li><a href="api/utils/api.html#module-klea_utils.api.health">klea_utils.api.health</a>
+</li>
+          <li><a href="api/utils/api.html#module-klea_utils.api.server">klea_utils.api.server</a>
+</li>
+          <li><a href="api/utils/api.html#module-klea_utils.api.utils">klea_utils.api.utils</a>
 </li>
           <li><a href="api/utils/errors.html#module-klea_utils.errors">klea_utils.errors</a>
 </li>
@@ -510,6 +575,10 @@
           <li><a href="api/utils/stores.html#module-klea_utils.stores.utils">klea_utils.stores.utils</a>
 </li>
           <li><a href="api/utils/tools.html#module-klea_utils.tools">klea_utils.tools</a>
+</li>
+          <li><a href="api/utils/ui.html#module-klea_utils.ui.tui.repl">klea_utils.ui.tui.repl</a>
+</li>
+          <li><a href="api/utils/ui.html#module-klea_utils.ui.web.streamlit.runner">klea_utils.ui.web.streamlit.runner</a>
 </li>
         </ul></li>
     </ul></td>
@@ -548,13 +617,17 @@
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">run_graph_astream_events() (klea_utils.graph.base.BaseLangGraph method)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_invoke">run_graph_invoke() (klea_utils.graph.base.BaseLangGraph method)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state">run_graph_invoke_state() (klea_utils.graph.base.BaseLangGraph method)</a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_stream">run_graph_stream() (klea_utils.graph.base.BaseLangGraph method)</a>
+</li>
+        <li><a href="api/utils/ui.html#klea_utils.ui.tui.repl.run_repl">run_repl() (in module klea_utils.ui.tui.repl)</a>
+</li>
+        <li><a href="api/utils/ui.html#klea_utils.ui.web.streamlit.runner.run_streamlit_app">run_streamlit_app() (in module klea_utils.ui.web.streamlit.runner)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -602,6 +675,8 @@
   <h2>V</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/api.html#klea_utils.api.utils.validate_url">validate_url() (in module klea_utils.api.utils)</a>
+</li>
         <li><a href="glossary.html#term-Vector-store"><strong>Vector store</strong></a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo">VectorStoreInfo (class in klea_utils.stores.config)</a>

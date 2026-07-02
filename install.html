@@ -220,7 +220,8 @@
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/ui.html">UI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/tools.html">Tool formatting</a></li>
@@ -315,13 +316,21 @@ listed below — add them with e.g. <code class="docutils literal notranslate"><
 <td><p><code class="docutils literal notranslate"><span class="pre">langchain-qdrant</span></code></p></td>
 <td><p><a class="reference external" href="https://github.com/qdrant/qdrant">Qdrant</a> vector store support</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">huggingface</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">langchain-huggingface</span></code></p></td>
+<td><p>HuggingFace inference provider</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ollama</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">langchain-ollama</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code></p></td>
+<td><p>Ollama inference provider (local models)</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ingest</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">docling</span></code>, <code class="docutils literal notranslate"><span class="pre">typer</span></code>, <code class="docutils literal notranslate"><span class="pre">xxhash</span></code></p></td>
 <td><p>Document ingestion pipeline</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">full</span></code></p></td>
 <td><p>All of the above</p></td>
-<td><p>All optional extras</p></td>
+<td><p>All optional extras (vector stores + inference providers)</p></td>
 </tr>
 </tbody>
 </table>
@@ -354,8 +363,16 @@ listed below — add them with e.g. <code class="docutils literal notranslate"><
 <td><p><code class="docutils literal notranslate"><span class="pre">klea_utils[qdrant]</span></code></p></td>
 <td><p><a class="reference external" href="https://github.com/qdrant/qdrant">Qdrant</a> support for RAG</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">huggingface</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea_utils[huggingface]</span></code></p></td>
+<td><p>HuggingFace inference provider for RAG</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ollama</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea_utils[ollama]</span></code></p></td>
+<td><p>Ollama inference provider for RAG</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">full</span></code></p></td>
-<td><p>All vector store extras</p></td>
+<td><p>All vector store and inference provider extras</p></td>
 <td><p>All RAG optional extras</p></td>
 </tr>
 </tbody>
@@ -398,14 +415,20 @@ To install them, clone the repository and follow the
 </div>
 <section id="choosing-models">
 <h3>Choosing models<a class="headerlink" href="#choosing-models" title="Link to this heading">¶</a></h3>
-<p>Each model provider requires its corresponding LangChain integration
-package to be installed.  For example, for Ollama:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">langchain</span><span class="o">-</span><span class="n">ollama</span>
+<p>Each model provider requires its corresponding <code class="xref py py-mod docutils literal notranslate"><span class="pre">klea_utils</span></code> extra
+to be installed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># For Ollama:</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">klea</span><span class="o">-</span><span class="n">utils</span><span class="p">[</span><span class="n">ollama</span><span class="p">]</span>
+<span class="c1"># or via klea-rag:</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">klea</span><span class="o">-</span><span class="n">rag</span><span class="p">[</span><span class="n">ollama</span><span class="p">]</span>
+
+<span class="c1"># For HuggingFace:</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">klea</span><span class="o">-</span><span class="n">utils</span><span class="p">[</span><span class="n">huggingface</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>See the <a class="reference external" href="https://docs.langchain.com/oss/python/integrations/providers/overview">LangChain provider docs</a>
-for other providers and their package names.  <code class="docutils literal notranslate"><span class="pre">langchain-huggingface</span></code>
-is included automatically via <code class="docutils literal notranslate"><span class="pre">klea_utils</span></code>.</p>
+for other providers and their package names.  The needed extras
+(<code class="docutils literal notranslate"><span class="pre">huggingface</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code>) are documented in the extras tables above.</p>
 <p>Model names are prefixed according to their provider:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">ollama:&lt;model_name&gt;:&lt;tag&gt;</span></code> for Ollama models</p></li>
