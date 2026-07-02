@@ -339,6 +339,37 @@ Subclasses must set this to their AppEnv class.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">run_graph_astream_events</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default_thread'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph.run_graph_astream_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events" title="Link to this definition">¶</a></dt>
+<dd><p>Run the graph and yield structured streaming events.</p>
+<p>Yields dicts with:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;progress&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>When the graph enters a new node (LLM or custom-event non-LLM)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;token&quot;,</span> <span class="pre">&quot;content&quot;:</span> <span class="pre">&quot;&lt;chunk&gt;&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>LLM token chunk from the current node</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;complete&quot;,</span> <span class="pre">&quot;message_for_user&quot;:</span> <span class="pre">&quot;&lt;answer&gt;&quot;}</span></code></dt><dd><p>Final answer from the completed graph</p>
+</dd>
+</dl>
+<p>Uses LangGraph’s <code class="docutils literal notranslate"><span class="pre">astream_events</span></code> v3 protocol.  LLM output is read
+from the <code class="docutils literal notranslate"><span class="pre">messages</span></code> channel; non-LLM nodes emit <code class="docutils literal notranslate"><span class="pre">custom</span></code> events
+via <code class="docutils literal notranslate"><span class="pre">get_stream_writer()</span></code>.  A <code class="docutils literal notranslate"><span class="pre">StreamTransformer</span></code> enables the
+custom channel so those events flow through.</p>
+<p>Reference: <a class="reference external" href="https://docs.langchain.com/oss/python/langgraph/event-streaming">https://docs.langchain.com/oss/python/langgraph/event-streaming</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> – User query string</p></li>
+<li><p><strong>thread_id</strong> – Session/thread identifier for checkpointing</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields<span class="colon">:</span></dt>
+<dd class="field-even"><p>Structured event dicts</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.run_graph_invoke">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">run_graph_invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default_thread'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph.run_graph_invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke" title="Link to this definition">¶</a></dt>
 <dd><p>Run the graph with a simple string query.</p>
@@ -469,6 +500,7 @@ Subclasses must set this to their AppEnv class.</p>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_var"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_var</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_stream()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.logger_name"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.logger_name</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_astream_events()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke_state()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_stream()</span></code></a></li>

@@ -285,16 +285,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">textwrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">dedent</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Type</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_chat_model</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_embeddings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">HumanMessage</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.output_parsers</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonOutputParser</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_huggingface</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">ChatHuggingFace</span><span class="p">,</span>
-    <span class="n">HuggingFaceEndpoint</span><span class="p">,</span>
-    <span class="n">HuggingFaceEndpointEmbeddings</span><span class="p">,</span>
-<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
 <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
@@ -375,6 +366,8 @@
 <span class="sd">    :throws ConnectionError: if cannot connect to an Ollama server</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
+
     <span class="k">try</span><span class="p">:</span>
         <span class="n">_</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">ollama</span><span class="o">.</span><span class="n">ResponseError</span><span class="p">:</span>
@@ -395,6 +388,9 @@
     <span class="n">message</span><span class="p">:</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TSchema</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse AI message with thought to a dict based on given schema&quot;&quot;&quot;</span>
+    <span class="c1"># Lazy: JsonOutputParser pulls in langchain parsers</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.output_parsers</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonOutputParser</span>
+
     <span class="n">thought</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">answer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
@@ -531,10 +527,16 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">setup_embedding</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="c1"># Lazy: init_embeddings and HuggingFaceEndpointEmbeddings pull in</span>
+    <span class="c1"># langchain provider packages that may not be installed</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.embeddings</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_embeddings</span>
+
     <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using huggingface model: </span><span class="si">{</span><span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_huggingface</span><span class="w"> </span><span class="kn">import</span> <span class="n">HuggingFaceEndpointEmbeddings</span>
 
         <span class="n">hf_token</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HF_TOKEN&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">hf_token</span>
@@ -559,9 +561,15 @@
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.setup_llm">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">setup_llm</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up a chat model&quot;&quot;&quot;</span>
+    <span class="c1"># Lazy: init_chat_model and huggingface classes pull in provider</span>
+    <span class="c1"># packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_chat_model</span>
+
     <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_huggingface</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatHuggingFace</span><span class="p">,</span> <span class="n">HuggingFaceEndpoint</span>
+
         <span class="n">model_name</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span>
         <span class="n">provider</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">&quot;auto&quot;</span>
 

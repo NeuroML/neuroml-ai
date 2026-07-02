@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -266,34 +266,13 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="module-klea_utils.api">
 <span id="networking"></span><h1>Networking<a class="headerlink" href="#module-klea_utils.api" title="Link to this heading">¶</a></h1>
-<p>API related common utils</p>
-<p>File: klea_utils/api.py</p>
-<p>Copyright 2026 Ankur Sinha
-Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
-<dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.api.check_api_is_ready">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.api.</span></span><span class="sig-name descname"><span class="pre">check_api_is_ready</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/api.html#check_api_is_ready"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.check_api_is_ready" title="Link to this definition">¶</a></dt>
-<dd><p>Exponentially drop off checking that API is ready</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – url of health end point</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.api.validate_url">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.api.</span></span><span class="sig-name descname"><span class="pre">validate_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/api.html#validate_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.validate_url" title="Link to this definition">¶</a></dt>
-<dd><p>Return <em>value</em> if it is a valid HTTP(S) URL, else raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
-</dd></dl>
-
 </section>
 
         </article>
@@ -338,28 +317,8 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Networking</a><ul>
-<li><a class="reference internal" href="#klea_utils.api.check_api_is_ready"><code class="docutils literal notranslate"><span class="pre">check_api_is_ready()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.api.validate_url"><code class="docutils literal notranslate"><span class="pre">validate_url()</span></code></a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
