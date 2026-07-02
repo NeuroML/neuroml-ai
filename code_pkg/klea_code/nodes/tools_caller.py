@@ -34,7 +34,6 @@ class ToolsCaller(AbstractLangGraphNode[KleaCodeState, CallToolResult]):
 
     @override
     async def execute(self, state: KleaCodeState) -> dict[str, Any]:
-        self.write_custom_stream({"type": "progress", "node": self.label})
         self.logger.debug(f"{state =}")
         result: dict[str, Any] = {}
 
@@ -48,6 +47,8 @@ class ToolsCaller(AbstractLangGraphNode[KleaCodeState, CallToolResult]):
         if not self._mcp_client:
             self.logger.warning("No MCP client available, skipping tool call")
             return {}
+
+        self.write_custom_stream({"type": "progress", "node": self.label})
 
         tool_call = state.tool_call
         async with self._mcp_client:

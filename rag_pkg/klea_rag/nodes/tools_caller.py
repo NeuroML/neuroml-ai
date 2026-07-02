@@ -34,14 +34,14 @@ class ToolsCaller(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
 
     @override
     async def execute(self, state: RAGState) -> Dict[str, Any]:
-        self.write_custom_stream({"type": "progress", "node": self.label})
-
         self.logger.debug(f"{state =}")
 
         # no _pre_exec here
         if not state.tool_calls or not self._mcp_client:
             self.logger.debug("Pre-exec check failed, skipping execution")
             return {}
+
+        self.write_custom_stream({"type": "progress", "node": self.label})
 
         results: list[CallToolResult] = []
 
