@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import sys
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import dedent
@@ -461,6 +462,8 @@ class BaseLangGraph(ABC):
         )
 
         current_node = ""
+        node_start = time.monotonic()
+        total_start = time.monotonic()
         last_values: dict = {}
 
         async for event in stream:
@@ -475,6 +478,14 @@ class BaseLangGraph(ABC):
                 ):
                     node = data["node"]
                     if node != current_node:
+                        now = time.monotonic()
+                        if current_node:
+                            self.logger.debug(
+                                "Node [%s] took %.2fs",
+                                current_node,
+                                now - node_start,
+                            )
+                        node_start = now
                         current_node = node
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
@@ -487,6 +498,14 @@ class BaseLangGraph(ABC):
 
                     node = item.get("langgraph_node", "")
                     if node and node != current_node:
+                        now = time.monotonic()
+                        if current_node:
+                            self.logger.debug(
+                                "Node [%s] took %.2fs",
+                                current_node,
+                                now - node_start,
+                            )
+                        node_start = now
                         current_node = node
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
@@ -502,6 +521,15 @@ class BaseLangGraph(ABC):
 
             elif method == "values":
                 last_values = event["params"]["data"]
+
+        total_elapsed = time.monotonic() - total_start
+        if current_node:
+            self.logger.debug(
+                "Node [%s] took %.2fs",
+                current_node,
+                time.monotonic() - node_start,
+            )
+        self.logger.info("Graph completed in %.2fs", total_elapsed)
 
         message = ""
         if last_values:
