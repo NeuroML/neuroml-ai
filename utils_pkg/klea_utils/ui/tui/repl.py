@@ -48,6 +48,7 @@ async def run_repl(
     async def _query_one(query: str) -> None:
         full_response = ""
         error_msg = ""
+        print()
 
         with yaspin(text="Working ...", timer=True) as spinner:
             async with httpx.AsyncClient(timeout=None) as client:
@@ -67,14 +68,16 @@ async def run_repl(
                             spinner.text = event["node"]
                         elif event["type"] == "complete":
                             full_response = event.get("message_for_user", "")
-                            spinner.ok("Done")
+                            spinner.ok("")
                         elif event["type"] == "error":
                             error_msg = event.get("message", "Unknown server error")
                             spinner.fail("Fail")
                             break
 
         output = error_msg or full_response
-        print(f"{app_prefix} (AI) >>> {output}\n")
+        print(f"{app_prefix} (AI) >>> {output}")
+        print("-" * 40)
+        print()
 
     if single_query:
         print(f"{app_prefix} (USER) >>> {single_query}")

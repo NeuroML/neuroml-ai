@@ -59,8 +59,6 @@ def cli(
     except KeyboardInterrupt:
         print("\nInterrupted. Exiting.")
 
-    print("klea >>> Bye!")
-
 
 @rag_app.command()
 def web(
