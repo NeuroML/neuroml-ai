@@ -432,12 +432,13 @@ class BaseLangGraph(ABC):
         """Run the graph and yield structured streaming events.
 
         Yields dicts with:
-        - ``{"type": "progress", "node": "<label>"}`` -- when the graph enters
-          a new node (LLM or custom-event non-LLM)
-        - ``{"type": "token", "content": "<chunk>", "node": "<label>"}`` -- LLM
-          token chunk from the current node
-        - ``{"type": "complete", "message_for_user": "<answer>"}`` -- final
-          answer from the completed graph
+
+        ``{"type": "progress", "node": "<label>"}``
+            When the graph enters a new node (LLM or custom-event non-LLM)
+        ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
+            LLM token chunk from the current node
+        ``{"type": "complete", "message_for_user": "<answer>"}``
+            Final answer from the completed graph
 
         Uses LangGraph's ``astream_events`` v3 protocol.  LLM output is read
         from the ``messages`` channel; non-LLM nodes emit ``custom`` events
