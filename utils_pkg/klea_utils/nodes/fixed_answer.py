@@ -11,7 +11,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
-from klea_rag.schemas import RAGState
 from pydantic import BaseModel
 
 from klea_utils.nodes.abstract import AbstractLangGraphNode
@@ -34,7 +33,7 @@ class FixedAnswer(AbstractLangGraphNode[BaseModel, Dict[str, Any]]):
         self.state_attr = state_attr
 
     @override
-    async def execute(self, state: RAGState) -> Dict[str, Any]:
+    async def execute(self, state: BaseModel) -> Dict[str, Any]:
         """Return fixed message."""
         self.write_custom_stream({"type": "progress", "node": self.label})
         self.logger.debug({self.state_attr: self.message})
