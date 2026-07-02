@@ -404,7 +404,7 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
-        for chunk in self.graph.astream({"query": query}, config=config):
+        async for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
                 self.logger.debug(f"{node}: {repr(state)}")
                 if message := state.get("message_for_user", None):
@@ -503,5 +503,10 @@ class BaseLangGraph(ABC):
             elif method == "values":
                 last_values = event["params"]["data"]
 
-        message = (last_values or {}).get("message_for_user", "")
+        message = ""
+        if last_values:
+            if isinstance(last_values, dict):
+                message = last_values.get("message_for_user", "")
+            elif hasattr(last_values, "message_for_user"):
+                message = last_values.message_for_user
         yield {"type": "complete", "message_for_user": message}
