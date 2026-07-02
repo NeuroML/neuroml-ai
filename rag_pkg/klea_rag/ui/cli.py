@@ -16,7 +16,7 @@ from contextlib import chdir
 from pathlib import Path
 
 import typer
-from klea_utils.api import validate_url
+from klea_utils.api.utils import validate_url
 
 rag_app = typer.Typer(help="Simple KLEA RAG user client")
 
@@ -58,7 +58,7 @@ def cli(
         # Lazy: avoids importing httpx + klea_utils.api (and their deps)
         # at module level, which would slow down --help.
         import httpx
-        from klea_utils.api import check_api_is_ready
+        from klea_utils.api.utils import check_api_is_ready
         from yaspin import yaspin
 
         session_id = str(uuid.uuid4())

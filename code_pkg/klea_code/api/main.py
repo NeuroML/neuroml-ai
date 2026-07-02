@@ -8,32 +8,20 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from contextlib import asynccontextmanager
+from klea_utils.api.app import make_app
+from klea_utils.api.chat import create_chat_router
+from klea_utils.api.health import create_health_router
 
-from cachetools import TTLCache
-from fastapi import FastAPI
-
-from klea_code.api.chat import chat_router
-from klea_code.api.health import health_router
 from klea_code.klea_code import KleaCode
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    app.state.is_ready = False
-    app.state.sessions = TTLCache(maxsize=1000, ttl=7200)
-
-    klea_code = KleaCode(memory=True)
-    await klea_code.setup()
-
-    app.state.klea_code = klea_code
-    app.state.is_ready = True
-
-    yield
-
-    app.state.is_ready = False
+def _create_kleacode() -> KleaCode:
+    return KleaCode(memory=True)
 
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(chat_router)
-app.include_router(health_router)
+app = make_app(
+    graph_factory=_create_kleacode,
+    title="Klea Code API",
+    version="0.0.1",
+    routers=[create_chat_router(), create_health_router()],
+)

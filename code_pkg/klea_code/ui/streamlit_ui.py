@@ -14,7 +14,7 @@ import uuid
 
 import httpx
 import streamlit as st
-from klea_utils.api import check_api_is_ready
+from klea_utils.api.utils import check_api_is_ready
 
 
 def runner():
