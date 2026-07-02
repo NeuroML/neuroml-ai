@@ -115,6 +115,8 @@ class AbstractLLMNode[TSchema: BaseModel](
             self.logger.debug("Pre-exec check failed, skipping execution")
             return {}
 
+        self.write_custom_stream({"type": "progress", "node": self.label})
+
         human_prompt = self._get_human_prompt(state)
         system_prompt = self._get_system_prompt(state)
         template = self._create_prompt_template(system_prompt, human_prompt)

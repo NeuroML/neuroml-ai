@@ -434,16 +434,17 @@ class BaseLangGraph(ABC):
         Yields dicts with:
 
         ``{"type": "progress", "node": "<label>"}``
-            When the graph enters a new node (LLM or custom-event non-LLM)
+            When the graph enters a new node (via ``write_custom_stream``)
         ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
             LLM token chunk from the current node
         ``{"type": "complete", "message_for_user": "<answer>"}``
             Final answer from the completed graph
 
-        Uses LangGraph's ``astream_events`` v3 protocol.  LLM output is read
-        from the ``messages`` channel; non-LLM nodes emit ``custom`` events
-        via ``get_stream_writer()``.  A ``StreamTransformer`` enables the
-        custom channel so those events flow through.
+        Uses LangGraph's ``astream_events`` v3 protocol.  Progress events
+        from all nodes (LLM and non-LLM) arrive via the ``custom`` channel.
+        LLM token output is read from the ``messages`` channel.
+        A ``StreamTransformer`` enables the custom channel so those events
+        flow through.
 
         Reference: https://docs.langchain.com/oss/python/langgraph/event-streaming
 
@@ -496,20 +497,6 @@ class BaseLangGraph(ABC):
                 for item in data:
                     if not isinstance(item, dict):
                         continue
-
-                    node = item.get("langgraph_node", "")
-                    if node and node != current_node:
-                        now = time.monotonic()
-                        if current_node:
-                            self.logger.debug(
-                                "Node [%s] took %.2fs",
-                                current_node,
-                                now - node_start,
-                            )
-                        node_start = now
-                        current_node = node
-                        self.logger.debug(f"Progress: {current_node}")
-                        yield {"type": "progress", "node": current_node}
 
                     if item.get("event") == "content-block-delta":
                         delta = item.get("delta", {})

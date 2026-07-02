@@ -162,19 +162,18 @@ class TestGraphBase:
 
         Event flow for the toy graph (AnswerGeneral -> FixedAnswer):
 
-          1. AnswerGeneral (LLM node) is detected via the ``messages``
-             channel when LangGraph emits the first ``langgraph_node``
-             metadata.  Yields a ``{"type": "progress", "node": "..."}``
-             event.
+          1. AnswerGeneral (LLM node) calls ``write_custom_stream()`` at
+             the top of ``execute()``, emitting a progress event via the
+             ``custom`` channel.
 
           2. Token chunks from AnswerGeneral are yielded as ``type="token"``
-             events (if the LLM supports content-block-delta streaming).
+             events (from the ``messages`` channel).
 
-          3. FixedAnswer (non-LLM node) calls ``write_custom_stream()``,
-             which emits a progress event via the ``custom`` channel.
-             Yields a ``{"type": "progress", "node": "..."}`` event.
+          3. FixedAnswer (non-LLM node) also calls ``write_custom_stream()``,
+             emitting another progress event via the ``custom`` channel.
 
           4. After the graph completes, the final state is read from the
+             ``values`` channel and yielded as ``type="complete"``.
              ``values`` channel and yielded as ``type="complete"``.
         """
         toy_graph = await self._make_graph()
@@ -207,14 +206,12 @@ class TestGraphBase:
         progress_nodes = [e["node"] for e in progress_events]
         self.logger.info(f"Progress nodes: {progress_nodes}")
 
-        # "Saying hello" appears via the messages channel (LLM node)
+        # Both nodes appear via the custom channel (write_custom_stream).
+        # "Saying hello" is emitted by AbstractLLMNode.execute() in its
+        # template method; "Fixed answer" is emitted in its own execute().
+        # Every node with a label now emits via the custom channel, so the
+        # messages channel is only used for token content.
         assert "Saying hello" in progress_nodes
-
-        # "Fixed answer" appears via the custom channel (non-LLM node calls
-        # write_custom_stream()).  This is how we verify the custom channel
-        # works -- LangGraph only emits metadata for LLM nodes on the
-        # messages channel; non-LLM nodes must use write_custom_stream()
-        # to surface at all.
         assert "Fixed answer" in progress_nodes
 
         assert len(complete_events) == 1
