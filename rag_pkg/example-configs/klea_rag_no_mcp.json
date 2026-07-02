@@ -1,0 +1,22 @@
+{
+    "general":
+    {
+        "default_k": 5,
+        "k_max": 10,
+        "non_domain_chat": true,
+        "pre_prompt": "",
+        "fallback_to_training_data": true,
+        "fallback_warning": "Note: information on the query could not be found in the vector stores; this answer is generated from the LLM's training data and should be verified."
+    },
+    "domains": {
+        "NeuroML": {
+            "description": "The NeuroML standard for computational modelling in neuroscience and the associated software ecosystem",
+            "vector_stores": [
+                {
+                    "name": "nml-docs",
+                    "path": "chroma:../deployments/huggingface/vector-stores/nml-docs_bge-m3.db"
+                }
+            ]
+        }
+    }
+}
