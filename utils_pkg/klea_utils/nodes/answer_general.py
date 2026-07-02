@@ -78,9 +78,14 @@ class AnswerGeneral(BaseLLMNode):
             if getattr(state, "query_domain", "undefined") != "undefined":
                 answer += f"\n\n{fallback.warning}\n\n"
 
-        thought, answer_text = split_output_by_section(
-            result.content, "<think>", "</think>"
-        )
+        content = result.content
+        if isinstance(content, list):
+            content = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in content
+            )
+
+        thought, answer_text = split_output_by_section(content, "<think>", "</think>")
         answer += answer_text
 
         messages = list(state.messages)  # type: ignore
