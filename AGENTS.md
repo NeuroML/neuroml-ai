@@ -121,6 +121,18 @@ Git log has the step-by-step edits. Omit routine work.
 - Show `git diff --stat` first, then full diff before committing so scope is clear at a glance.
 - Conventional commit messages with issue numbers when applicable.
 
+## Versioning
+
+- Version is tracked in each package's ``setup.cfg`` (``version`` field).
+- ``klea_utils`` and ``klea_rag`` are published to PyPI; ``klea_code`` and
+  ``neuroml_mcp`` are not yet published.
+- Pre-1.0 (0.x.y) releases: bump minor for new features, patch for bug fixes.
+- When cutting a release:
+  1. ``git tag v<version>`` and ``git push --tags``
+  2. The OIDC trusted publisher workflow builds and publishes to PyPI
+- After a release, bump to the next dev version in ``setup.cfg``.
+- ``CHANGELOG.md`` is kept at the repo root, covering all packages.
+
 ## File conventions
 
 - Use ASCII-only text. No unicode dashes, arrows, ellipsis, or emoticons.
