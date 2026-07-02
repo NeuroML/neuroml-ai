@@ -73,6 +73,8 @@ def create_chat_router() -> APIRouter:
                 ):
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
+                detail = f"{e}\n{traceback.format_exc()}"
+                logger.error(detail)
                 error_event = json.dumps({"type": "error", "message": str(e)})
                 yield f"data: {error_event}\n\n"
 
