@@ -39,7 +39,17 @@ logging.root.setLevel(logging.WARNING)
 
 @final
 class KleaCode(BaseLangGraph):
-    """Klea Code implementation"""
+    """Klea Code implementation
+
+    TODO: Multi-user support - Currently a single KleaCode instance serves all users
+    with the same model configuration. For multi-user deployment with per-user model
+    selection, this class needs to be refactored to:
+    - Support per-user KleaCode instances with different model configurations
+    - Implement instance pooling and resource management
+    - Add session-based instance lifecycle management
+    - Handle model loading/unloading for memory efficiency
+    - Consider using a session manager or instance registry
+    """
 
     env_class = AppEnv
     env_var = "KLEA_CODE_ENV_FILE"
