@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 
 from klea_rag.schemas import RAGState, ToolCallsSchema
@@ -85,3 +86,47 @@ class ToolsPicker(BaseLLMNode[RAGState]):
     def _get_default_error_result(self) -> ToolCallsSchema:
         """Return default result when processing fails."""
         return ToolCallsSchema()
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return selected tools."""
+        assert self._last_state_updates is not None
+        tool_calls = self._last_state_updates.get("tool_calls", [])
+        tool_names = [tc.name for tc in tool_calls]
+        if tool_names:
+            summary = f"Selected {len(tool_names)} tool(s): {', '.join(tool_names)}"
+        else:
+            summary = "No tools selected"
+        return NodeStreamData(
+            summary=summary,
+            details={
+                "tool_names": tool_names,
+                "tool_count": len(tool_names),
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + query, prompts, and full tool calls."""
+        assert self._last_state is not None
+        assert self._last_system_prompt is not None
+        assert self._last_human_prompt is not None
+        assert self._last_state_updates is not None
+        info = self._get_info()
+        details = info.details.copy()
+        state: RAGState = self._last_state  # type: ignore[assignment]
+        details.update(
+            {
+                "query": state.query,
+                "system_prompt": self._last_system_prompt,
+                "human_prompt": self._last_human_prompt,
+            }
+        )
+        # Add full tool calls with arguments
+        tool_calls = self._last_state_updates.get("tool_calls", [])
+        if tool_calls:
+            details["tool_calls"] = [
+                {"name": tc.name, "arguments": tc.arguments, "reason": tc.reason}
+                for tc in tool_calls
+            ]
+        return NodeStreamData(summary=info.summary, details=details)
