@@ -109,28 +109,48 @@ class AbstractLLMNode[TSchema: BaseModel](
     @final
     async def execute(self, state: BaseModel) -> Dict[str, Any]:
         """Template method defining standard execution flow"""
+        # Clear previous execution context to prevent stale data.
+        # These are instance variables (not locals) so that streaming hooks
+        # (_pre_exec_stream, _post_exec_stream, _get_info, _get_debug) can
+        # access intermediate values for progress reporting.
+        self._last_state = None
+        self._last_human_prompt = None
+        self._last_system_prompt = None
+        self._last_template = None
+        self._last_variables = None
+        self._last_prompt = None
+        self._last_llm = None
+        self._last_output = None
+        self._last_result = None
+        self._last_state_updates = None
+
         self.logger.debug(f"{state =}")
 
         if not self._pre_exec(state):
             self.logger.debug("Pre-exec check failed, skipping execution")
             return {}
 
-        self.write_custom_stream({"type": "progress", "node": self.label})
+        self._last_state = state
+        self._pre_exec_stream()
 
-        human_prompt = self._get_human_prompt(state)
-        system_prompt = self._get_system_prompt(state)
-        template = self._create_prompt_template(system_prompt, human_prompt)
-        variables = self._get_prompt_variables(state)
-        prompt = self._invoke_prompt(template, variables)
-        llm = self._configure_llm()
-        output = self._invoke_llm(llm, prompt)
+        self._last_human_prompt = self._get_human_prompt(state)
+        self._last_system_prompt = self._get_system_prompt(state)
+        self._last_template = self._create_prompt_template(
+            self._last_system_prompt, self._last_human_prompt
+        )
+        self._last_variables = self._get_prompt_variables(state)
+        self._last_prompt = self._invoke_prompt(
+            self._last_template, self._last_variables
+        )
+        self._last_llm = self._configure_llm()
+        self._last_output = self._invoke_llm(self._last_llm, self._last_prompt)
+        self._last_result = self._process_output(self._last_output)
+        self._last_state_updates = self._update_state(self._last_result, state)
 
-        result = self._process_output(output)
-        state_updates = self._update_state(result, state)
+        self._post_exec_stream()
 
-        self.logger.debug(f"{state_updates =}")
-
-        return state_updates
+        self.logger.debug(f"{self._last_state_updates =}")
+        return self._last_state_updates
 
     @abstractmethod
     def _pre_exec(self, state: BaseModel) -> bool:
@@ -140,6 +160,48 @@ class AbstractLLMNode[TSchema: BaseModel](
         Return True (default) to proceed with the standard flow.
         """
         ...
+
+    def _pre_exec_stream(self) -> None:
+        """Emit streaming event before LLM invocation.
+
+        Default: emits a ``progress`` event with the node label.
+        Override to customise pre-execution streaming.
+        """
+        self.write_custom_stream({"type": "progress", "node": self.label})
+
+    def _post_exec_stream(self) -> None:
+        """Emit streaming events after LLM invocation.
+
+        Default: emits ``info`` and ``debug`` events from ``_get_info`` and
+        ``_get_debug`` if they return non-empty dicts.
+        Override to customise post-execution streaming.
+        """
+        info = self._get_info()
+        if info:
+            self.write_custom_stream({"type": "info", "node": self.label, "data": info})
+        debug = self._get_debug()
+        if debug:
+            self.write_custom_stream(
+                {"type": "debug", "node": self.label, "data": debug}
+            )
+
+    def _get_info(self) -> Dict[str, Any]:
+        """Return structured summary data for an ``info`` stream event.
+
+        Override in subclasses to provide node-specific summary data.
+        Has access to all ``self._last_*`` values.
+        Return empty dict to skip the info event.
+        """
+        return {}
+
+    def _get_debug(self) -> Dict[str, Any]:
+        """Return full data dump for a ``debug`` stream event.
+
+        Override in subclasses to provide node-specific debug data.
+        Has access to all ``self._last_*`` values.
+        Return empty dict to skip the debug event.
+        """
+        return {}
 
     @abstractmethod
     def _configure_llm(self) -> Runnable:
