@@ -435,6 +435,10 @@ class BaseLangGraph(ABC):
 
         ``{"type": "progress", "node": "<label>"}``
             When the graph enters a new node (via ``write_custom_stream``)
+        ``{"type": "info", "node": "<label>", "data": {...}}``
+            Structured summary data from a node after execution
+        ``{"type": "debug", "node": "<label>", "data": {...}}``
+            Full data dump from a node after execution
         ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
             LLM token chunk from the current node
         ``{"type": "complete", "message_for_user": "<answer>"}``
@@ -473,11 +477,12 @@ class BaseLangGraph(ABC):
 
             if method == "custom":
                 data = event["params"]["data"]
-                if (
-                    isinstance(data, dict)
-                    and data.get("type") == "progress"
-                    and data.get("node")
-                ):
+                if not isinstance(data, dict) or not data.get("node"):
+                    continue
+
+                event_type = data.get("type")
+
+                if event_type == "progress":
                     node = data["node"]
                     if node != current_node:
                         now = time.monotonic()
@@ -491,6 +496,13 @@ class BaseLangGraph(ABC):
                         current_node = node
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
+
+                elif event_type in ("info", "debug"):
+                    yield {
+                        "type": event_type,
+                        "node": data["node"],
+                        "data": data.get("data", {}),
+                    }
 
             elif method == "messages":
                 data = event["params"]["data"]
