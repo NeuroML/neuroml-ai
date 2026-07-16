@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from klea_utils.stores.utils import serialize_vs_retrieval
 
@@ -65,3 +66,48 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     def _get_default_error_result(self) -> EvaluateAnswerSchema:
         """Return default result when processing fails."""
         return EvaluateAnswerSchema(next_step="undefined", summary="Evaluation failed")
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return evaluation scores, next step, and summary."""
+        assert self._last_state_updates is not None
+        eval_result = self._last_state_updates.get("text_response_eval")
+        if eval_result is None:
+            return NodeStreamData(summary="Evaluation failed", details={})
+
+        # Extract scores from the evaluation result
+        scores = {
+            "confidence": eval_result.confidence,
+            "coverage": eval_result.coverage,
+            "relevance": eval_result.relevance,
+            "groundedness": eval_result.groundedness,
+            "coherence": eval_result.coherence,
+            "conciseness": eval_result.conciseness,
+        }
+
+        return NodeStreamData(
+            summary=f"Evaluation complete: {eval_result.summary}",
+            details={
+                "scores": scores,
+                "next_step": eval_result.next_step,
+                "summary": eval_result.summary,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + query, prompts, and evaluation context."""
+        assert self._last_state is not None
+        assert self._last_system_prompt is not None
+        assert self._last_human_prompt is not None
+        info = self._get_info()
+        details = info.details.copy()
+        state: RAGState = self._last_state  # type: ignore[assignment]
+        details.update(
+            {
+                "query": state.query,
+                "system_prompt": self._last_system_prompt,
+                "human_prompt": self._last_human_prompt,
+            }
+        )
+        return NodeStreamData(summary=info.summary, details=details)
