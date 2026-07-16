@@ -722,6 +722,10 @@
 
 <span class="sd">        ``{&quot;type&quot;: &quot;progress&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
 <span class="sd">            When the graph enters a new node (via ``write_custom_stream``)</span>
+<span class="sd">        ``{&quot;type&quot;: &quot;info&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">            Structured summary data from a node after execution</span>
+<span class="sd">        ``{&quot;type&quot;: &quot;debug&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">            Full data dump from a node after execution</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;&lt;chunk&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
 <span class="sd">            LLM token chunk from the current node</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;complete&quot;, &quot;message_for_user&quot;: &quot;&lt;answer&gt;&quot;}``</span>
@@ -760,11 +764,12 @@
 
             <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
-                <span class="k">if</span> <span class="p">(</span>
-                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
-                    <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span>
-                    <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">)</span>
-                <span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+                <span class="n">event_type</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
                     <span class="n">node</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">node</span> <span class="o">!=</span> <span class="n">current_node</span><span class="p">:</span>
                         <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
@@ -778,6 +783,13 @@
                         <span class="n">current_node</span> <span class="o">=</span> <span class="n">node</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Progress: </span><span class="si">{</span><span class="n">current_node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                         <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">current_node</span><span class="p">}</span>
+
+                <span class="k">elif</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;debug&quot;</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="p">{</span>
+                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">event_type</span><span class="p">,</span>
+                        <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                    <span class="p">}</span>
 
             <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;messages&quot;</span><span class="p">:</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
