@@ -10,13 +10,39 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type, final
+from typing import Any, Dict, Literal, Type, final
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class NodeStreamData(BaseModel):
+    """Data payload for node streaming events.
+
+    This is the contract between nodes and the frontend.
+    """
+
+    summary: str = Field(
+        description="Human-readable summary, always rendered by frontend"
+    )
+    details: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured data, rendered as collapsible JSON",
+    )
+
+
+class NodeStreamEvent(BaseModel):
+    """Full streaming event emitted by nodes.
+
+    This is the contract between the graph infrastructure and the frontend.
+    """
+
+    type: Literal["info", "debug"] = Field(description="Event type")
+    node: str = Field(description="Node label")
+    data: NodeStreamData = Field(description="Event payload")
 
 
 class AbstractLangGraphNode[TSchema: BaseModel, TReturn](ABC):
@@ -173,35 +199,51 @@ class AbstractLLMNode[TSchema: BaseModel](
         """Emit streaming events after LLM invocation.
 
         Default: emits ``info`` and ``debug`` events from ``_get_info`` and
-        ``_get_debug`` if they return non-empty dicts.
+        ``_get_debug`` if they return non-None values.
         Override to customise post-execution streaming.
         """
         info = self._get_info()
         if info:
-            self.write_custom_stream({"type": "info", "node": self.label, "data": info})
+            event = NodeStreamEvent(type="info", node=self.label, data=info)
+            self.write_custom_stream(event.model_dump())
         debug = self._get_debug()
         if debug:
-            self.write_custom_stream(
-                {"type": "debug", "node": self.label, "data": debug}
-            )
+            event = NodeStreamEvent(type="debug", node=self.label, data=debug)
+            self.write_custom_stream(event.model_dump())
 
-    def _get_info(self) -> Dict[str, Any]:
+    def _get_info(self) -> NodeStreamData | None:
         """Return structured summary data for an ``info`` stream event.
 
         Override in subclasses to provide node-specific summary data.
         Has access to all ``self._last_*`` values.
-        Return empty dict to skip the info event.
-        """
-        return {}
 
-    def _get_debug(self) -> Dict[str, Any]:
-        """Return full data dump for a ``debug`` stream event.
+        :returns: NodeStreamData with summary and details, or None to skip
+
+        Example::
+
+            return NodeStreamData(
+                summary="Classified into: neuron, morphology",
+                details={"classified_domains": ["neuron", "morphology"]}
+            )
+        """
+        return None
+
+    def _get_debug(self) -> NodeStreamData | None:
+        """Return structured debug data for a ``debug`` stream event.
 
         Override in subclasses to provide node-specific debug data.
         Has access to all ``self._last_*`` values.
-        Return empty dict to skip the debug event.
+
+        :returns: NodeStreamData with summary and details, or None to skip
+
+        Example::
+
+            info = self._get_info()
+            details = info.details.copy()
+            details["system_prompt"] = self._last_system_prompt
+            return NodeStreamData(summary=info.summary, details=details)
         """
-        return {}
+        return None
 
     @abstractmethod
     def _configure_llm(self) -> Runnable:
