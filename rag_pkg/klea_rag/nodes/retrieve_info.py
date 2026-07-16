@@ -11,7 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
-from klea_utils.nodes.abstract import AbstractLangGraphNode
+from klea_utils.nodes.abstract import (
+    AbstractLangGraphNode,
+    NodeStreamData,
+    NodeStreamEvent,
+)
 from klea_utils.stores.retrieval import VSRetriever
 
 from klea_rag.schemas import RAGState
@@ -77,5 +81,30 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
             reference_material.update(new_ref)
 
         self.logger.debug(f"{reference_material =}")
+
+        # Emit info event
+        per_domain_counts = {
+            domain: len(docs) for domain, docs in reference_material.items()
+        }
+        total_docs = sum(per_domain_counts.values())
+        info_data = NodeStreamData(
+            summary=f"Retrieved {total_docs} documents from {len(per_domain_counts)} domains",
+            details={"per_domain_counts": per_domain_counts},
+        )
+        info_event = NodeStreamEvent(type="info", node=self.label, data=info_data)
+        self.write_custom_stream(info_event.model_dump())
+
+        # Emit debug event
+        debug_details = info_data.details.copy()
+        debug_details["reference_material"] = {
+            domain: [
+                {"content": doc.page_content, "metadata": doc.metadata, "score": score}
+                for doc, score in docs
+            ]
+            for domain, docs in reference_material.items()
+        }
+        debug_data = NodeStreamData(summary=info_data.summary, details=debug_details)
+        debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
+        self.write_custom_stream(debug_event.model_dump())
 
         return {"reference_material": reference_material}
