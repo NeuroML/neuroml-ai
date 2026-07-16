@@ -68,12 +68,13 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
         for d, desc in self.domains.items():
             if not desc or len(desc) == 0:
-                desc = f"if the question is about {d}"
-            else:
-                desc = f"if the question is about {desc}"
-            domain_str += f"\n- {d}: {desc}"
+                desc = f"If the question is about {d}"
 
-        domain_str += "\n- undefined: otherwise (if no other domain)"
+            domain_str += f"\n### {d}\n{desc}"
+
+        domain_str += (
+            "\n### undefined\nUse 'undefined' only if no other domain applies.\n\n"
+        )
         return domain_str
 
     @override
