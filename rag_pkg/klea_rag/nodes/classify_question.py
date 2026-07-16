@@ -12,6 +12,7 @@ import logging
 from textwrap import dedent
 from typing import Any, Dict, Type, override
 
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel
@@ -135,6 +136,38 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
             "query_domains": valid_domains,
             "messages": messages,
         }
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return classification summary and details."""
+        assert self._last_state_updates is not None
+        classified = self._last_state_updates.get("query_domains", [])
+        available = list(self.domains.keys())
+        return NodeStreamData(
+            summary=f"Classified into: {', '.join(classified)} (from {len(available)} available domains)",
+            details={
+                "classified_domains": classified,
+                "available_domains": available,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + prompts."""
+        assert self._last_state is not None
+        assert self._last_system_prompt is not None
+        assert self._last_human_prompt is not None
+        info = self._get_info()
+        details = info.details.copy()
+        state: RAGState = self._last_state  # type: ignore[assignment]
+        details.update(
+            {
+                "query": state.query,
+                "system_prompt": self._last_system_prompt,
+                "human_prompt": self._last_human_prompt,
+            }
+        )
+        return NodeStreamData(summary=info.summary, details=details)
 
     # TODO: may need updating
     @override
