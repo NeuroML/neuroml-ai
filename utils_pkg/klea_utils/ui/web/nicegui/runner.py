@@ -412,7 +412,7 @@ def setup_layout(
                         query, _current_session[0], server_url
                     ):
                         if event["type"] == "progress":
-                            pg_label.set_text(f"Processing: {event.get('node', '')}")
+                            pg_label.set_text(f"{event.get('node', '')}")
                         elif event["type"] == "info":
                             pg_label.set_text(
                                 f"{event.get('node', '')}: {event.get('data', {}).get('summary', '')}"
