@@ -14,7 +14,7 @@ from typing import Any, Dict, override
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
-from ..llm import split_output_by_section
+from ..llm import content_to_str, split_output_by_section
 from .base import BaseLLMNode
 
 
@@ -78,13 +78,7 @@ class AnswerGeneral(BaseLLMNode):
             if getattr(state, "query_domain", "undefined") != "undefined":
                 answer += f"\n\n{fallback.warning}\n\n"
 
-        content = result.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else str(block)
-                for block in content
-            )
-
+        content = content_to_str(result.content)
         thought, answer_text = split_output_by_section(content, "<think>", "</think>")
         answer += answer_text
 

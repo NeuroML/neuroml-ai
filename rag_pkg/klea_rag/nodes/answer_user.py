@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
+from klea_utils.llm import content_to_str
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 from klea_rag.schemas import RAGState
@@ -42,4 +43,4 @@ class AnswerUser(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
 
         self.logger.info(f"Returning final answer to user: {answer}")
 
-        return {"message_for_user": answer.content}
+        return {"message_for_user": content_to_str(answer.content)}

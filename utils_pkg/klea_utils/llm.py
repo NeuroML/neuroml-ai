@@ -128,7 +128,18 @@ def parse_output_with_thought[TSchema: BaseModel](
         parser.pydantic_object = schema()
         result = parser.parse(answer)
     else:
-        logger.warning(f"Unexpected message content: {message.content}")
+        message.content = content_to_str(message.content)
+        # Now a string -- re-run the string parsing above.
+        if "</think>" in message.content:
+            splits = message.content.split("</think>")
+            thought = splits[0].strip()
+            answer = splits[1].strip()
+        else:
+            answer = message.content
+
+        parser = JsonOutputParser()
+        parser.pydantic_object = schema()
+        result = parser.parse(answer)
 
     logger.debug(f"{thought = }")
     logger.debug(f"{answer = }")
@@ -199,6 +210,28 @@ def split_output_by_section(
         other_text += "\nNOTE: NO START MARKER FOUND"
 
     return delimited_text, other_text
+
+
+def content_to_str(
+    content: str | list[dict | str] | None,
+) -> str:
+    """Normalise an ``AIMessage.content`` value to a plain string.
+
+    AIMessage.content can be a plain string, a list of content blocks
+    (when the LLM returns tool calls or structured output), or ``None``.
+    This helper always returns a string suitable for downstream text
+    processing (regex, ``in`` checks, prompt interpolation, etc.).
+
+    :param content: The raw ``.content`` value from an AIMessage.
+    :returns: A plain string.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return "".join(
+            b.get("text", "") if isinstance(b, dict) else str(b) for b in content
+        )
+    return str(content)
 
 
 def check_model_works(model, timeout=30, retries=5):

@@ -12,6 +12,7 @@ import logging
 from textwrap import dedent
 from typing import Any, Dict, override
 
+from klea_utils.llm import content_to_str
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from langchain_core.messages import AIMessage
@@ -80,13 +81,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     @override
     def _update_state(self, result: Output, state: RAGState) -> Dict[str, Any]:
         """Update state with the generated retrieval query."""
-        content = result.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else str(block)
-                for block in content
-            )
-
+        content = content_to_str(result.content)
         thought, answer = (
             content.split("</think>", 1) if "</think>" in content else ("", content)
         )

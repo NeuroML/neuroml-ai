@@ -46,6 +46,10 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
         question = state.query
         context = serialize_vs_retrieval(state.reference_material)
         answer = state.messages[-1].content
+        if isinstance(answer, list):
+            answer = "".join(
+                b.get("text", "") if isinstance(b, dict) else str(b) for b in answer
+            )
 
         return {
             "question": question,

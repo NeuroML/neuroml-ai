@@ -14,6 +14,7 @@ from typing import Any, Dict, override
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
+from ..llm import content_to_str
 from .base import BaseLLMNode
 
 
@@ -65,7 +66,8 @@ class GuardNode(BaseLLMNode):
         """Check result for safety and return routing decision."""
         self.logger.debug(f"{result = }")
 
-        if "unsafe" in result.content:
+        content = content_to_str(result.content)
+        if "unsafe" in content:
             return {"guard_decision": "unsafe"}
         return {"guard_decision": "safe"}
 
