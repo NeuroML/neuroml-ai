@@ -15,6 +15,10 @@ import uuid
 from datetime import datetime
 
 from nicegui import app, ui
+from nicegui.events import GenericEventArguments
+
+# Avatar for system / bot messages (uses static robohash URL).
+SYSTEM_AVATAR = "https://robohash.org/klea-system?bgset=bg1"
 
 # Per-session message store.
 # Keyed by session_id so that switching sessions preserves history.
@@ -49,17 +53,18 @@ def _chat_messages(session_id: str, own_id: str, avatar_url: str) -> None:
     messages = _ensure_messages(session_id)
     if messages:
         for user_id, msg_avatar, text, stamp in messages:
+            is_sent = own_id == user_id
             ui.chat_message(
                 text=text,
                 stamp=stamp,
                 avatar=msg_avatar,
-                sent=own_id == user_id,
-            ).classes("w-full")
+                sent=is_sent,
+            ).classes("w-full" if not is_sent else "w-11/12")
     else:
         ui.chat_message(
             "Welcome! Type a message below to start chatting.",
-            name="System",
             stamp="now",
+            avatar=SYSTEM_AVATAR,
         ).classes("w-full")
     # Scroll to bottom after rendering so new messages are visible.
     ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
@@ -95,6 +100,14 @@ def setup_layout(
     :param disclaimer: Optional text shown below the chat input.
     :param footer_text: HTML content for the footer bar.
     """
+    # --- Global CSS overrides ---
+    # Remove bubble background from system/bot messages so they appear
+    # inline with the page background.  User messages keep their default
+    # Quasar styling for visual distinction.
+    ui.add_css(
+        ".q-message-text--received { background: none !important; box-shadow: none !important; }"
+    )
+
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
     if "dark_mode" not in app.storage.user:
@@ -194,8 +207,8 @@ def setup_layout(
         # Message input row (pinned to the bottom of the center column).
         with ui.row().classes("w-full no-wrap items-center py-4"):
             text = (
-                ui.input(placeholder="Type your message...")
-                .props("rounded outlined input-class=mx-3")
+                ui.textarea(placeholder="Type your message...")
+                .props("rounded outlined input-class=mx-3 autogrow")
                 .classes("flex-grow")
             )
 
@@ -210,8 +223,24 @@ def setup_layout(
                 text.value = ""
                 _chat_messages.refresh()
 
-            text.on("keydown.enter", send)
             ui.button("Send", on_click=send).props("unelevated color=primary")
+
+        # Plain Enter sends the message and prevents the default newline
+        # insertion.  The .exact modifier ensures this fires only when NO
+        # modifier keys (Shift, Ctrl, Alt, Meta) are pressed, so
+        # Shift+Enter / Ctrl+Enter fall through to the default textarea
+        # behaviour (newline insertion).
+        def handle_enter(e: GenericEventArguments):
+            # e.args contains the client-side JavaScript event properties
+            if e.args.get("shiftKey"):
+                # The user pressed Shift + Enter.
+                # We manually append a newline character because .prevent stopped it.
+                text.value += "\n"
+            else:
+                # The user pressed Enter alone.
+                send()
+
+        text.on("keydown.enter.exact.prevent", handle_enter)
 
         if disclaimer:
             ui.label(disclaimer).classes("text-xs text-grey-5 pb-2 w-full text-center")
