@@ -14,7 +14,7 @@
             "vector_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "chroma:../deployments/huggingface/vector-stores/nml-docs_bge-m3.db"
+                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs_bge-m3.db"
                 }
             ]
         }
