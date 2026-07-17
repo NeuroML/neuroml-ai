@@ -8,7 +8,7 @@ and delegates to :func:`klea_utils.ui.web.nicegui.runner.run_nicegui_app`.
 
 Usage::
 
-    python app.py <title> <subtitle> <server_url>
+    python app.py <title> <subtitle> <server_url> [--debug]
 
 File: klea_utils/ui/web/nicegui/app.py
 
@@ -16,12 +16,16 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import sys
-
+from klea_utils.cli.parser import make_parser
 from klea_utils.ui.web.nicegui.runner import run_nicegui_app
 
-if __name__ == "__main__":
-    title = sys.argv[1]
-    subtitle = sys.argv[2] if len(sys.argv) > 2 else ""
-    url = sys.argv[3]
-    run_nicegui_app(title, url, subtitle)
+if __name__ in {"__main__", "__mp_main__"}:
+    args = make_parser("Klea NiceGUI web interface").parse_args()
+    run_nicegui_app(
+        args.title,
+        args.url,
+        subtitle=args.subtitle,
+        disclaimer=args.disclaimer,
+        footer_text=args.footer,
+        debug=args.debug,
+    )
