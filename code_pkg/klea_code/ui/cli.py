@@ -74,6 +74,7 @@ def web(
     disclaimer: str = typer.Option(
         "Answers use LLM technology and may be incorrect. Please re-confirm.",
         "--disclaimer",
+        "-c",
         help="Disclaimer text shown below interface",
     ),
     server_url: str = typer.Option(
@@ -91,7 +92,7 @@ def web(
     with chdir(cwd):
         subprocess.run(
             shlex.split(
-                f"streamlit run app.py '{title}' '{subtitle}' '{server_url}'"
+                f"streamlit run app.py -- '{title}' '{subtitle}' '{server_url}'"
                 + f" --disclaimer '{disclaimer}'"
             )
         )
@@ -111,6 +112,7 @@ def web_nicegui(
     disclaimer: str = typer.Option(
         "Answers use LLM technology and may be incorrect. Please re-confirm.",
         "--disclaimer",
+        "-c",
         help="Disclaimer text shown below the chat area",
     ),
     footer_text: str = typer.Option(
