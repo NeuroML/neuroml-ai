@@ -223,7 +223,8 @@ def setup_layout(
                 text.value = ""
                 _chat_messages.refresh()
 
-            ui.button("Send", on_click=send).props("unelevated color=primary")
+            with ui.button("Send", on_click=send).props("unelevated color=primary"):
+                ui.tooltip("Enter to send, Shift+Enter for newline")
 
         # Plain Enter sends the message and prevents the default newline
         # insertion.  The .exact modifier ensures this fires only when NO
