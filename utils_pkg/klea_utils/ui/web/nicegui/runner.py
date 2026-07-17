@@ -17,63 +17,42 @@ from datetime import datetime
 from nicegui import app, ui
 from nicegui.events import GenericEventArguments
 
-# Avatar for system / bot messages (uses static robohash URL).
-SYSTEM_AVATAR = "https://robohash.org/klea-system?bgset=bg1"
-
-# Per-session message store.
-# Keyed by session_id so that switching sessions preserves history.
-# Tuple format: (user_id, avatar_url, text, timestamp).
-_messages: dict[str, list[tuple[str, str, str, str]]] = {}
+# Per-session data store.
+# Keyed by session_id.
+_sessions: dict[str, dict] = {}
 
 
-def _ensure_messages(
-    session_id: str,
-) -> list[tuple[str, str, str, str]]:
-    """Return the message list for *session_id*, creating it if missing."""
-    if session_id not in _messages:
-        _messages[session_id] = []
-    return _messages[session_id]
+def _ensure_session(session_id: str) -> dict:
+    """Return the session dict for *session_id*, creating it if missing.
 
+    Each session dict has the following keys::
 
-@ui.refreshable
-def _chat_messages(session_id: str, own_id: str, avatar_url: str) -> None:
-    """Render the message list for the given session.
-
-    This function is decorated with ``@ui.refreshable`` so that
-    ``_chat_messages.refresh()`` can be called after a new message
-    is appended to the store.  The entire list is rebuilt on every
-    refresh, which means the scroll position is lost -- the
-    ``run_javascript`` call at the end scrolls back to the bottom.
-
-    :param session_id: Session whose messages to display.
-    :param own_id: Current user's UUID (compared against each
-        message's *user_id* to determine ``sent`` styling).
-    :param avatar_url: Avatar URL for the current user's messages.
+        name        Human-readable display name (auto-generated from
+                    the creation timestamp).
+        created     ``datetime.timestamp()`` of creation (float).
+        pinned      Whether the session is pinned to the top of the list.
+        messages    List of ``(text, stamp)`` tuples.
     """
-    messages = _ensure_messages(session_id)
-    if messages:
-        for user_id, msg_avatar, text, stamp in messages:
-            is_sent = own_id == user_id
-            ui.chat_message(
-                text=text,
-                stamp=stamp,
-                avatar=msg_avatar,
-                sent=is_sent,
-            ).classes("w-full" if not is_sent else "w-11/12")
-    else:
-        ui.chat_message(
-            "Welcome! Type a message below to start chatting.",
-            stamp="now",
-            avatar=SYSTEM_AVATAR,
-        ).classes("w-full")
-    # Scroll to bottom after rendering so new messages are visible.
-    ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
+    if session_id not in _sessions:
+        now = datetime.now()
+        _sessions[session_id] = {
+            "name": now.strftime("%a %d %b %Y at %X"),
+            "created": now.timestamp(),
+            "pinned": False,
+            "messages": [],
+        }
+    return _sessions[session_id]
+
+
+def _get_sessions_sorted() -> list[tuple[str, dict]]:
+    """Return (session_id, data) pairs, pinned first, then by creation desc."""
+    items = list(_sessions.items())
+    items.sort(key=lambda x: (not x[1]["pinned"], -x[1]["created"]))
+    return items
 
 
 def setup_layout(
     session_id: str,
-    own_id: str,
-    avatar_url: str,
     title: str = "Klea",
     subtitle: str = "",
     disclaimer: str = "",
@@ -81,7 +60,11 @@ def setup_layout(
 ) -> None:
     """Build the full page UI: header, drawers, chat area, and footer.
 
-    Layout (left to right):
+    User messages appear as right-aligned bubbles (grey background);
+    system / bot messages are left-aligned, full-width and transparent,
+    matching the Gemini/ChatGPT model without avatars.
+
+    Layout (left to right)::
 
         [left_drawer | center_column | right_drawer]
 
@@ -91,9 +74,6 @@ def setup_layout(
 
     :param session_id: Opaque session identifier persisted in
         ``app.storage.user``.
-    :param own_id: Per-page-instance UUID used to distinguish
-        sent vs. received messages.
-    :param avatar_url: Robohash URL for the current user's avatar.
     :param title: Bold application title in the header bar.
     :param subtitle: Optional smaller text shown next to *title*
         in the header.
@@ -104,8 +84,15 @@ def setup_layout(
     # Remove bubble background from system/bot messages so they appear
     # inline with the page background.  User messages keep their default
     # Quasar styling for visual distinction.
+    # Make q-page a flex container so the nicegui-content can flex-fill
+    # the available page height, which in turn lets the center column
+    # grow and pin the input row to the bottom.
     ui.add_css(
         ".q-message-text--received { background: none !important; box-shadow: none !important; }"
+    )
+    ui.add_css(".q-page { display: flex; flex-direction: column; }")
+    ui.add_css(
+        ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
     )
 
     # --- Persistent dark mode ---
@@ -115,11 +102,57 @@ def setup_layout(
     dark.bind_value(app.storage.user, "dark_mode")
 
     mini_state = True
-    # Mutable container to capture the toggle-icon element reference.
-    # The icon is created inside the drawer ``with`` block (after this
-    # variable is defined), so we store it in a single-element list to
-    # allow assignment from the enclosing scope.
+    # Mutable containers so refreshable functions can pick up changes.
+    _current_session = [session_id]
     toggle_icon_ref = [None]
+
+    @ui.refreshable
+    def _chat_messages() -> None:
+        """Render the message list for the currently active session.
+
+        User messages appear as right-aligned bubbles with a grey
+        background (``sent=True``).  System / bot messages appear as
+        left-aligned, full-width, transparent text (``sent=False``),
+        matching the Gemini/ChatGPT model where only user input has a
+        visible bubble.
+        """
+        session = _sessions.get(_current_session[0])
+        msgs = session["messages"] if session else []
+        if msgs:
+            for text, stamp in msgs:
+                ui.chat_message(text=text, stamp=stamp, sent=True).classes("w-11/12")
+        ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
+
+    def _switch_session(sid: str) -> None:
+        """Switch the active session without a page reload."""
+        app.storage.user["session_id"] = sid
+        _current_session[0] = sid
+        _chat_messages.refresh()
+        _render_session_list.refresh()
+
+    def _delete_session(sid: str) -> None:
+        """Remove a session from the store.
+
+        If the currently active session is deleted, the next available
+        session becomes active (or a fresh one is created).
+        """
+        _sessions.pop(sid, None)
+        if _current_session[0] == sid:
+            remaining = _get_sessions_sorted()
+            if remaining:
+                _switch_session(remaining[0][0])
+            else:
+                new_sid = str(uuid.uuid4())
+                _ensure_session(new_sid)
+                _switch_session(new_sid)
+        else:
+            _render_session_list.refresh()
+
+    def _toggle_pin(sid: str) -> None:
+        """Flip the pinned flag for a session and refresh the list."""
+        session = _ensure_session(sid)
+        session["pinned"] = not session["pinned"]
+        _render_session_list.refresh()
 
     def _toggle_left_drawer():
         """Switch the left drawer between mini (rail) and full width.
@@ -137,6 +170,89 @@ def setup_layout(
         else:
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
+
+    def _new_session():
+        """Create a fresh session and switch to it."""
+        sid = str(uuid.uuid4())
+        _ensure_session(sid)
+        _switch_session(sid)
+
+    def _rename_session(sid: str) -> None:
+        """Open a dialog to rename a session."""
+        session = _ensure_session(sid)
+        dialog = ui.dialog()
+
+        def _save():
+            session["name"] = inp.value
+            dialog.close()
+            _render_session_list.refresh()
+
+        with dialog:
+            with ui.card():
+                ui.label("Rename session").classes("text-lg font-bold")
+                inp = ui.input(value=session["name"]).on("keydown.enter", _save)
+                with ui.row().classes("w-full justify-end"):
+                    ui.button("Cancel", on_click=dialog.close)
+                    ui.button("Save", on_click=_save).props("unelevated color=primary")
+        dialog.open()
+
+    @ui.refreshable
+    def _render_session_list():
+        """Render the sorted list of session entries in the left drawer.
+
+        Each entry shows the session name (bold for the active session),
+        a tooltip with the creation timestamp, and a three-dot context
+        menu for rename / pin / delete.  Refresh this to pick up newly
+        created sessions without a page reload.
+        """
+        for sid, sdata in _get_sessions_sorted():
+            is_current = sid == _current_session[0]
+            with (
+                ui.item(
+                    on_click=lambda s=sid: _switch_session(s),
+                )
+                .props("dense")
+                .classes("w-full")
+                .on("dblclick", lambda s=sid: _rename_session(s))
+            ):
+                with ui.item_section().props("avatar"):
+                    ui.icon("push_pin" if sdata["pinned"] else "history")
+                with ui.item_section():
+                    label_cls = "text-xs font-bold" if is_current else "text-xs"
+                    ui.label(sdata["name"]).classes(label_cls)
+                    ui.tooltip(
+                        "Created: "
+                        + datetime.fromtimestamp(sdata["created"]).strftime(
+                            "%a %d %b %Y at %X"
+                        )
+                    )
+                # Three-dot context menu (right-aligned).
+                with ui.item_section().props("side"):
+                    with (
+                        ui.button(icon="more_vert")
+                        .props("flat dense round")
+                        .on("click.stop", lambda: None)
+                    ):
+                        with ui.menu():
+                            with ui.menu_item(
+                                on_click=lambda s=sid: _rename_session(s)
+                            ):
+                                with ui.item_section().props("avatar"):
+                                    ui.icon("edit")
+                                with ui.item_section():
+                                    ui.label("Rename")
+                            with ui.menu_item(on_click=lambda s=sid: _toggle_pin(s)):
+                                with ui.item_section().props("avatar"):
+                                    ui.icon("push_pin")
+                                with ui.item_section():
+                                    ui.label("Unpin" if sdata["pinned"] else "Pin")
+                            with ui.menu_item(
+                                on_click=lambda s=sid: _delete_session(s)
+                            ):
+                                with ui.item_section().props("avatar"):
+                                    ui.icon("delete")
+                                with ui.item_section():
+                                    ui.label("Delete")
 
     # ---- Header ----
     with ui.header().classes("items-center"):
@@ -157,38 +273,42 @@ def setup_layout(
     with (
         ui.left_drawer(value=True)
         .props("mini")
-        .classes("w-80 overflow-x-hidden") as left_drawer
+        .classes("w-80 overflow-x-hidden p-2") as left_drawer
     ):
         # Items use QItem + QItemSection(avatar) so that Quasar
         # automatically hides the label when the drawer is in mini mode.
-        with ui.item(on_click=lambda: print("New session clicked")):
+        with ui.item(on_click=_new_session).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("add")
             with ui.item_section():
                 ui.label("New Session")
-        with ui.item(on_click=lambda: right_drawer.toggle()):
+        with (
+            ui.item(on_click=lambda: right_drawer.toggle())
+            .props("dense")
+            .classes("w-full")
+        ):
             with ui.item_section().props("avatar"):
                 ui.icon("info")
             with ui.item_section():
                 ui.label("Inspector")
         ui.separator()
-        with ui.item().props("dense"):
+
+        # Session list header
+        with ui.item().props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("chat")
             with ui.item_section():
-                ui.label("Sessions").classes("text-lg font-bold")
-        with ui.item().props("dense"):
-            with ui.item_section().props("avatar"):
-                ui.icon("history")
-            with ui.item_section():
-                ui.label(f"Session ID: {session_id[:8]}...").classes(
-                    "text-sm text-gray-500"
-                )
+                ui.label("Sessions").classes("text-sm font-bold")
+
+        _render_session_list()
+
         ui.space()
         # Toggle button at the bottom of the drawer.
-        with ui.item(on_click=_toggle_left_drawer):
+        with ui.item(on_click=_toggle_left_drawer).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 toggle_icon_ref[0] = ui.icon("keyboard_double_arrow_right")
+            with ui.item_section():
+                ui.label("").classes("text-xs")
 
     # ---- Right drawer (inspector, hidden by default) ----
     with ui.right_drawer(value=False).classes("w-80") as right_drawer:
@@ -198,16 +318,18 @@ def setup_layout(
             "text-sm text-gray-500"
         )
 
-    # ---- Center: chat messages + input ----
-    with ui.column().classes("w-full h-full px-48"):
-        # Scrollable message history (grows to fill the column).
+    # ---- Center: chat messages + input (pinned to bottom) ----
+    with (
+        ui.column()
+        .classes("w-full px-48")
+        .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
+    ):
         with ui.scroll_area().classes("w-full grow"):
-            _chat_messages(session_id, own_id, avatar_url)
+            _chat_messages()
 
-        # Message input row (pinned to the bottom of the center column).
         with ui.row().classes("w-full no-wrap items-center py-4"):
             text = (
-                ui.textarea(placeholder="Type your message...")
+                ui.textarea(placeholder="Start a conversation")
                 .props("rounded outlined input-class=mx-3 autogrow")
                 .classes("flex-grow")
             )
@@ -217,28 +339,21 @@ def setup_layout(
                 if not text.value.strip():
                     return
                 stamp = datetime.now().strftime("%X")
-                _ensure_messages(session_id).append(
-                    (own_id, avatar_url, text.value, stamp)
+                _ensure_session(_current_session[0])["messages"].append(
+                    (text.value, stamp)
                 )
                 text.value = ""
                 _chat_messages.refresh()
+                _render_session_list.refresh()
 
             with ui.button("Send", on_click=send).props("unelevated color=primary"):
                 ui.tooltip("Enter to send, Shift+Enter for newline")
 
         # Plain Enter sends the message and prevents the default newline
-        # insertion.  The .exact modifier ensures this fires only when NO
-        # modifier keys (Shift, Ctrl, Alt, Meta) are pressed, so
-        # Shift+Enter / Ctrl+Enter fall through to the default textarea
-        # behaviour (newline insertion).
         def handle_enter(e: GenericEventArguments):
-            # e.args contains the client-side JavaScript event properties
             if e.args.get("shiftKey"):
-                # The user pressed Shift + Enter.
-                # We manually append a newline character because .prevent stopped it.
                 text.value += "\n"
             else:
-                # The user pressed Enter alone.
                 send()
 
         text.on("keydown.enter.exact.prevent", handle_enter)
@@ -293,14 +408,9 @@ def run_nicegui_app(
             app.storage.user["session_id"] = str(uuid.uuid4())
 
         session_id = app.storage.user["session_id"]
-        own_id = str(uuid.uuid4())
-        # Robohash generates a unique avatar from the UUID.
-        avatar_url = f"https://robohash.org/{own_id}?bgset=bg2"
 
         setup_layout(
             session_id=session_id,
-            own_id=own_id,
-            avatar_url=avatar_url,
             title=title,
             subtitle=subtitle,
             disclaimer=disclaimer,
