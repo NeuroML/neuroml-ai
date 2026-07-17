@@ -22,6 +22,8 @@ from nicegui.events import GenericEventArguments
 from klea_utils.api.sse import stream_events
 from klea_utils.api.utils import check_api_is_ready
 
+from .widgets import ChatBubble
+
 # Per-session data store.
 # Keyed by session_id.
 _sessions: dict[str, dict] = {}
@@ -93,16 +95,6 @@ def setup_layout(
     # Make q-page a flex container so the nicegui-content can flex-fill
     # the available page height, which in turn lets the center column
     # grow and pin the input row to the bottom.
-    # Message bubble colours: received (bot) = light blue, sent (user) = light green.
-    # The corner triangle is a ``::before`` pseudo-element using border colours.
-    ui.add_css(".q-message-text--sent { background: #e8f5e9 !important; }")
-    ui.add_css(
-        ".q-message-text--sent::before { border-bottom-color: #e8f5e9 !important; }"
-    )
-    ui.add_css(".q-message-text--received { background: #e3f2fd !important; }")
-    ui.add_css(
-        ".q-message-text--received::before { border-bottom-color: #e3f2fd !important; }"
-    )
     ui.add_css(".q-page { display: flex; flex-direction: column; }")
     ui.add_css(
         ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
@@ -141,34 +133,20 @@ def setup_layout(
         if msgs:
             for idx, (text, stamp, is_user) in enumerate(msgs):
                 collapsed = idx not in _expanded
-                with ui.element("div").classes(
-                    "w-full relative msg-collapsed"
-                    if collapsed
-                    else "w-full relative msg-expanded"
-                ):
-                    ui.chat_message(text=text, stamp=stamp, sent=is_user).classes(
-                        "w-full" if not is_user else "w-11/12"
-                    )
-                    with ui.row().classes("w-full justify-end gap-0 -mt-2"):
-                        ui.button(icon="content_copy").props(
-                            "flat dense round size=sm"
-                        ).on(
-                            "click",
-                            lambda t=text: ui.run_javascript(
-                                f"navigator.clipboard.writeText({json.dumps(t)})"
-                            ),
-                        )
-                        ui.button(
-                            icon="expand_less" if not collapsed else "expand_more"
-                        ).props("flat dense round size=sm").on(
-                            "click",
-                            lambda i=idx: (
-                                _expanded.discard(i)
-                                if i in _expanded
-                                else _expanded.add(i),
-                                _chat_messages.refresh(),
-                            ),
-                        )
+                ChatBubble(
+                    text=text,
+                    stamp=stamp,
+                    is_user=is_user,
+                    collapsed=collapsed,
+                    idx=idx,
+                    on_copy=lambda t=text: ui.run_javascript(
+                        f"navigator.clipboard.writeText({json.dumps(t)})"
+                    ),
+                    on_expand=lambda i=idx: (
+                        _expanded.discard(i) if i in _expanded else _expanded.add(i),
+                        _chat_messages.refresh(),
+                    )[1],
+                )
         ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
 
     def _switch_session(sid: str) -> None:
@@ -376,27 +354,12 @@ def setup_layout(
             _chat_messages()
             _stream_container = ui.column().classes("w-full")
 
-        with ui.row().classes("w-full no-wrap items-center py-4"):
+        with ui.row().classes("w-full no-wrap items-end py-4"):
             text = (
                 ui.textarea(placeholder="Start a conversation")
                 .props("rounded outlined input-class=mx-3 autogrow")
                 .classes("flex-grow")
             )
-
-            def send() -> None:
-                """Append the current input text as a user message."""
-                if not text.value.strip():
-                    return
-                stamp = datetime.now().strftime("%X")
-                query = text.value
-                text.value = ""
-                _ensure_session(_current_session[0])["messages"].append(
-                    (query, stamp, True)
-                )
-                _chat_messages.refresh()
-                _render_session_list.refresh()
-
-                background_tasks.create(_do_stream(query))
 
             async def _do_stream(query: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
@@ -443,8 +406,26 @@ def setup_layout(
                     )
                     _chat_messages.refresh()
 
-            with ui.button("Send", on_click=send).props("unelevated color=primary"):
-                ui.tooltip("Enter to send, Shift+Enter for newline")
+            def send() -> None:
+                """Append the current input text as a user message."""
+                if not text.value.strip():
+                    return
+                stamp = datetime.now().strftime("%X")
+                query = text.value
+                text.value = ""
+                _ensure_session(_current_session[0])["messages"].append(
+                    (query, stamp, True)
+                )
+                _chat_messages.refresh()
+                _render_session_list.refresh()
+
+                background_tasks.create(_do_stream(query))
+
+            with text.add_slot("append"):
+                with ui.button(icon="send", on_click=send).props(
+                    "flat dense round color=primary"
+                ):
+                    ui.tooltip("Enter to send, Shift+Enter for newline")
 
         # Plain Enter sends the message and prevents the default newline
         def handle_enter(e: GenericEventArguments):
@@ -454,6 +435,8 @@ def setup_layout(
                 send()
 
         text.on("keydown.enter.exact.prevent", handle_enter)
+        # Clicking the send icon inside the textarea also sends.
+        text.on("click:append", send)
 
         if disclaimer:
             ui.label(disclaimer).classes("text-xs text-grey-5 pb-2 w-full text-center")
