@@ -19,6 +19,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from klea_utils.cli.parser import make_parser
 from klea_utils.ui.web.nicegui.runner import run_nicegui_app
 
+# Use the multiprocessing-safe guard so that NiceGUI's file-watch reload
+# (which spawns a subprocess where ``__name__`` is ``"__mp_main__"``)
+# does not raise a RuntimeError.
 if __name__ in {"__main__", "__mp_main__"}:
     args = make_parser("Klea NiceGUI web interface").parse_args()
     run_nicegui_app(
