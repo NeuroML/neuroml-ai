@@ -290,8 +290,9 @@
 │ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Commands ─────────────────────────────────────────────────────────╮
-│ cli   Klea RAG cli client                                          │
-│ web   Klea RAG Streamlit client                                    │
+│ cli           Klea RAG cli client                                  │
+│ web           Klea RAG Streamlit client                            │
+│ web-nicegui   Klea RAG NiceGUI client                              │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
@@ -320,14 +321,42 @@
  Klea RAG Streamlit client                                            
                                                                       
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ --title     -t      TEXT  Title for application                    │
-│                           [default: KLEA RAG]                      │
-│ --subtitle  -b      TEXT  Sub title for application                │
-│                           [default: Answers use LLM technology and │
-│                           may be incorrect. Please re-confirm.]    │
-│ --server    -s      TEXT  KLEA RAG server URL:port                 │
-│                           [default: http://127.0.0.1:8005]         │
-│ --help                    Show this message and exit.              │
+│ --title       -t      TEXT  Application title (shown in header)    │
+│                             [default: KLEA RAG]                    │
+│ --subtitle    -b      TEXT  Subtitle shown next to title in header │
+│ --disclaimer  -c      TEXT  Disclaimer text shown below interface  │
+│                             [default: Answers use LLM technology   │
+│                             and may be incorrect. Please           │
+│                             re-confirm.]                           │
+│ --server      -s      TEXT  KLEA RAG server URL:port               │
+│                             [default: http://127.0.0.1:8005]       │
+│ --help                      Show this message and exit.            │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-rag web-nicegui [OPTIONS]                                
+                                                                      
+ Klea RAG NiceGUI client                                              
+                                                                      
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --title       -t      TEXT  Application title (shown in header)    │
+│                             [default: KLEA RAG]                    │
+│ --subtitle    -b      TEXT  Subtitle shown next to title in header │
+│ --disclaimer  -c      TEXT  Disclaimer text shown below the chat   │
+│                             area                                   │
+│                             [default: Answers use LLM technology   │
+│                             and may be incorrect. Please           │
+│                             re-confirm.]                           │
+│ --footer              TEXT  Footer HTML content                    │
+│                             [default: Powered by &lt;a                │
+│                             href=&quot;https://github.com/neuroml/klea… │
+│ --server      -s      TEXT  KLEA RAG server URL:port               │
+│                             [default: http://127.0.0.1:8005]       │
+│ --debug       -d            Enable auto-reload on file changes     │
+│ --help                      Show this message and exit.            │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
