@@ -11,11 +11,16 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import json
 import uuid
 from datetime import datetime
 
-from nicegui import app, ui
+import httpx
+from nicegui import app, background_tasks, ui
 from nicegui.events import GenericEventArguments
+
+from klea_utils.api.sse import stream_events
+from klea_utils.api.utils import check_api_is_ready
 
 # Per-session data store.
 # Keyed by session_id.
@@ -31,7 +36,9 @@ def _ensure_session(session_id: str) -> dict:
                     the creation timestamp).
         created     ``datetime.timestamp()`` of creation (float).
         pinned      Whether the session is pinned to the top of the list.
-        messages    List of ``(text, stamp)`` tuples.
+        messages    List of ``(text, stamp, is_user)`` tuples where
+                    *is_user* is ``True`` for user messages and
+                    ``False`` for bot / system messages.
     """
     if session_id not in _sessions:
         now = datetime.now()
@@ -53,6 +60,7 @@ def _get_sessions_sorted() -> list[tuple[str, dict]]:
 
 def setup_layout(
     session_id: str,
+    server_url: str,
     title: str = "Klea",
     subtitle: str = "",
     disclaimer: str = "",
@@ -74,26 +82,36 @@ def setup_layout(
 
     :param session_id: Opaque session identifier persisted in
         ``app.storage.user``.
+    :param server_url: Base URL of the backend API server.
     :param title: Bold application title in the header bar.
     :param subtitle: Optional smaller text shown next to *title*
         in the header.
     :param disclaimer: Optional text shown below the chat input.
     :param footer_text: HTML content for the footer bar.
     """
-    # --- Global CSS overrides ---
-    # Remove bubble background from system/bot messages so they appear
-    # inline with the page background.  User messages keep their default
-    # Quasar styling for visual distinction.
+    # --- CSS overrides ---
     # Make q-page a flex container so the nicegui-content can flex-fill
     # the available page height, which in turn lets the center column
     # grow and pin the input row to the bottom.
+    # Message bubble colours: received (bot) = light blue, sent (user) = light green.
+    # The corner triangle is a ``::before`` pseudo-element using border colours.
+    ui.add_css(".q-message-text--sent { background: #e8f5e9 !important; }")
     ui.add_css(
-        ".q-message-text--received { background: none !important; box-shadow: none !important; }"
+        ".q-message-text--sent::before { border-bottom-color: #e8f5e9 !important; }"
+    )
+    ui.add_css(".q-message-text--received { background: #e3f2fd !important; }")
+    ui.add_css(
+        ".q-message-text--received::before { border-bottom-color: #e3f2fd !important; }"
     )
     ui.add_css(".q-page { display: flex; flex-direction: column; }")
     ui.add_css(
         ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
     )
+    # Collapse long bot messages to 4 lines with an expand / collapse toggle.
+    ui.add_css(
+        ".msg-collapsed .q-message-text-content { max-height: 6em; overflow: hidden; }"
+    )
+    ui.add_css(".msg-expanded .q-message-text-content { max-height: none; }")
 
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
@@ -105,6 +123,8 @@ def setup_layout(
     # Mutable containers so refreshable functions can pick up changes.
     _current_session = [session_id]
     toggle_icon_ref = [None]
+
+    _expanded: set[int] = set()
 
     @ui.refreshable
     def _chat_messages() -> None:
@@ -119,8 +139,36 @@ def setup_layout(
         session = _sessions.get(_current_session[0])
         msgs = session["messages"] if session else []
         if msgs:
-            for text, stamp in msgs:
-                ui.chat_message(text=text, stamp=stamp, sent=True).classes("w-11/12")
+            for idx, (text, stamp, is_user) in enumerate(msgs):
+                collapsed = idx not in _expanded
+                with ui.element("div").classes(
+                    "w-full relative msg-collapsed"
+                    if collapsed
+                    else "w-full relative msg-expanded"
+                ):
+                    ui.chat_message(text=text, stamp=stamp, sent=is_user).classes(
+                        "w-full" if not is_user else "w-11/12"
+                    )
+                    with ui.row().classes("w-full justify-end gap-0 -mt-2"):
+                        ui.button(icon="content_copy").props(
+                            "flat dense round size=sm"
+                        ).on(
+                            "click",
+                            lambda t=text: ui.run_javascript(
+                                f"navigator.clipboard.writeText({json.dumps(t)})"
+                            ),
+                        )
+                        ui.button(
+                            icon="expand_less" if not collapsed else "expand_more"
+                        ).props("flat dense round size=sm").on(
+                            "click",
+                            lambda i=idx: (
+                                _expanded.discard(i)
+                                if i in _expanded
+                                else _expanded.add(i),
+                                _chat_messages.refresh(),
+                            ),
+                        )
         ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
 
     def _switch_session(sid: str) -> None:
@@ -326,6 +374,7 @@ def setup_layout(
     ):
         with ui.scroll_area().classes("w-full grow"):
             _chat_messages()
+            _stream_container = ui.column().classes("w-full")
 
         with ui.row().classes("w-full no-wrap items-center py-4"):
             text = (
@@ -339,12 +388,60 @@ def setup_layout(
                 if not text.value.strip():
                     return
                 stamp = datetime.now().strftime("%X")
-                _ensure_session(_current_session[0])["messages"].append(
-                    (text.value, stamp)
-                )
+                query = text.value
                 text.value = ""
+                _ensure_session(_current_session[0])["messages"].append(
+                    (query, stamp, True)
+                )
                 _chat_messages.refresh()
                 _render_session_list.refresh()
+
+                background_tasks.create(_do_stream(query))
+
+            async def _do_stream(query: str) -> None:
+                """Stream the RAG pipeline progress and final answer."""
+                with _stream_container:
+                    pg_row = ui.row().classes("w-full items-center gap-2 p-2")
+                    with pg_row:
+                        ui.spinner(type="dots").classes("w-4 h-4")
+                        pg_label = ui.label("").classes("text-xs text-grey-5 italic")
+
+                full_response = ""
+                try:
+                    async for event in stream_events(
+                        query, _current_session[0], server_url
+                    ):
+                        if event["type"] == "progress":
+                            pg_label.set_text(f"Processing: {event.get('node', '')}")
+                        elif event["type"] == "info":
+                            pg_label.set_text(
+                                f"{event.get('node', '')}: {event.get('data', {}).get('summary', '')}"
+                            )
+                        elif event["type"] == "complete":
+                            pg_row.delete()
+                            full_response = event.get("message_for_user", full_response)
+                            _ensure_session(_current_session[0])["messages"].append(
+                                (full_response, datetime.now().strftime("%X"), False)
+                            )
+                            _chat_messages.refresh()
+                            break
+                        elif event["type"] == "error":
+                            pg_row.delete()
+                            _ensure_session(_current_session[0])["messages"].append(
+                                (
+                                    f"Error: {event.get('message', 'Unknown error')}",
+                                    datetime.now().strftime("%X"),
+                                    False,
+                                )
+                            )
+                            _chat_messages.refresh()
+                            break
+                except httpx.RequestError as e:
+                    pg_row.delete()
+                    _ensure_session(_current_session[0])["messages"].append(
+                        (f"Connection error: {e}", datetime.now().strftime("%X"), False)
+                    )
+                    _chat_messages.refresh()
 
             with ui.button("Send", on_click=send).props("unelevated color=primary"):
                 ui.tooltip("Enter to send, Shift+Enter for newline")
@@ -383,8 +480,7 @@ def run_nicegui_app(
     :param title: Application title (displayed in the header and
         browser tab).
     :param server_url: Base URL of the backend API server
-        (e.g. ``http://127.0.0.1:8005``).  Currently unused in the
-        UI itself, but reserved for future SSE streaming.
+        (e.g. ``http://127.0.0.1:8005``).
     :param subtitle: Optional smaller text shown next to *title*
         in the header.
     :param disclaimer: Optional text shown below the chat input.
@@ -392,9 +488,8 @@ def run_nicegui_app(
     :param debug: When ``True``, enable NiceGUI's file-watch hot
         reload (``reload=True``).  Set to ``False`` in production.
     """
-    # (server_url is reserved for future SSE streaming)
 
-    @ui.page("/")
+    @ui.page("/", response_timeout=30)
     async def main_page():
         """Build the main page after ensuring the WebSocket is connected.
 
@@ -404,6 +499,22 @@ def run_nicegui_app(
         """
         await ui.context.client.connected()
 
+        # The page builder runs exactly once -- build the appropriate page
+        # directly rather than showing a loading spinner and then swapping.
+        # The ``response_timeout=30`` on the page decorator gives the health
+        # check time to complete before the client sees a timeout.
+        try:
+            await check_api_is_ready(f"{server_url}/health/ready")
+        except Exception:
+            ui.add_css(".nicegui-content { display: flex; flex: 1; }")
+            with ui.column().classes("w-full h-full items-center justify-center gap-4"):
+                ui.icon("cloud_off", size="4rem").classes("text-grey-5")
+                ui.label("Backend unavailable").classes("text-xl text-grey-7")
+                ui.label("Please check that the Klea server is running.").classes(
+                    "text-grey-5"
+                )
+            return
+
         if "session_id" not in app.storage.user:
             app.storage.user["session_id"] = str(uuid.uuid4())
 
@@ -411,6 +522,7 @@ def run_nicegui_app(
 
         setup_layout(
             session_id=session_id,
+            server_url=server_url,
             title=title,
             subtitle=subtitle,
             disclaimer=disclaimer,
