@@ -63,13 +63,18 @@ def cli(
 @code_app.command()
 def web(
     title: str = typer.Option(
-        "KLEA Code", "--title", "-t", help="Title for application"
+        "KLEA Code", "--title", "-t", help="Application title (shown in header)"
     ),
     subtitle: str = typer.Option(
-        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "",
         "--subtitle",
         "-b",
-        help="Sub title for application",
+        help="Subtitle shown next to title in header",
+    ),
+    disclaimer: str = typer.Option(
+        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "--disclaimer",
+        help="Disclaimer text shown below interface",
     ),
     server_url: str = typer.Option(
         "http://127.0.0.1:8005",
@@ -85,20 +90,33 @@ def web(
     cwd = Path(spec.origin).parent
     with chdir(cwd):
         subprocess.run(
-            shlex.split(f"streamlit run app.py '{title}' '{subtitle}' '{server_url}'")
+            shlex.split(
+                f"streamlit run app.py '{title}' '{subtitle}' '{server_url}'"
+                + f" --disclaimer '{disclaimer}'"
+            )
         )
 
 
 @code_app.command()
 def web_nicegui(
     title: str = typer.Option(
-        "KLEA Code", "--title", "-t", help="Title for application"
+        "KLEA Code", "--title", "-t", help="Application title (shown in header)"
     ),
     subtitle: str = typer.Option(
-        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "",
         "--subtitle",
         "-b",
-        help="Sub title for application",
+        help="Subtitle shown next to title in header",
+    ),
+    disclaimer: str = typer.Option(
+        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "--disclaimer",
+        help="Disclaimer text shown below the chat area",
+    ),
+    footer_text: str = typer.Option(
+        'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
+        "--footer",
+        help="Footer HTML content",
     ),
     server_url: str = typer.Option(
         "http://127.0.0.1:8005",
@@ -107,6 +125,9 @@ def web_nicegui(
         help="KLEA Code server URL:port",
         callback=_validate_url,
     ),
+    debug: bool = typer.Option(
+        False, "--debug", "-d", help="Enable auto-reload on file changes"
+    ),
 ):
     """Klea Code NiceGUI client"""
     spec = importlib.util.find_spec("klea_utils.ui.web.nicegui.app")
@@ -114,5 +135,10 @@ def web_nicegui(
     cwd = Path(spec.origin).parent
     with chdir(cwd):
         subprocess.run(
-            shlex.split(f"python app.py '{title}' '{subtitle}' '{server_url}'")
+            shlex.split(
+                f"python app.py '{title}' '{subtitle}' '{server_url}'"
+                + f" --disclaimer '{disclaimer}'"
+                + f" --footer '{footer_text}'"
+                + (" --debug" if debug else "")
+            )
         )
