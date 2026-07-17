@@ -8,11 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import json
-import logging
 import uuid
-
-logger = logging.getLogger(__name__)
 
 
 async def run_repl(
@@ -34,10 +30,10 @@ async def run_repl(
     :param single_query: If set, run one query and exit instead of REPL loop
     :param app_prefix: Prefix for user/assistant labels (e.g. ``"klea"``)
     """
-    # Lazy: avoids importing httpx + yaspin (and their deps) at module level
-    import httpx
+    # Lazy: avoids importing yaspin (and its deps) at module level
     from yaspin import yaspin
 
+    from klea_utils.api.sse import stream_events
     from klea_utils.api.utils import check_api_is_ready
 
     session_id = str(uuid.uuid4())
@@ -51,28 +47,16 @@ async def run_repl(
         print()
 
         with yaspin(text="Working ...", timer=True) as spinner:
-            async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream(
-                    "POST",
-                    f"{url}/query/stream",
-                    json={"query": query, "session_id": session_id},
-                ) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if not line.startswith("data: "):
-                            if line.strip():
-                                logger.warning("Skipping non-data line: %s", line[:80])
-                            continue
-                        event = json.loads(line[6:])  # strip out "data: "
-                        if event["type"] == "progress":
-                            spinner.text = event["node"]
-                        elif event["type"] == "complete":
-                            full_response = event.get("message_for_user", "")
-                            spinner.ok("[OK]")
-                        elif event["type"] == "error":
-                            error_msg = event.get("message", "Unknown server error")
-                            spinner.fail("[ERROR]")
-                            break
+            async for event in stream_events(query, session_id, url):
+                if event["type"] == "progress":
+                    spinner.text = event["node"]
+                elif event["type"] == "complete":
+                    full_response = event.get("message_for_user", "")
+                    spinner.ok("[OK]")
+                elif event["type"] == "error":
+                    error_msg = event.get("message", "Unknown server error")
+                    spinner.fail("[ERROR]")
+                    break
 
         output = error_msg or full_response
         print(f"{app_prefix} (AI) >>> {output}")

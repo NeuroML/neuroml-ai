@@ -9,16 +9,13 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import asyncio
-import json
-import logging
 import uuid
 
 import httpx
 import streamlit as st
 
+from klea_utils.api.sse import stream_events_sync
 from klea_utils.api.utils import check_api_is_ready
-
-logger = logging.getLogger(__name__)
 
 
 def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
@@ -60,46 +57,24 @@ def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
             def event_iter():
                 nonlocal full_response, last_node, progress
 
-                with httpx.Client(timeout=None) as client:
-                    with client.stream(
-                        "POST",
-                        f"{url}/query/stream",
-                        json={
-                            "query": query,
-                            "session_id": st.session_state.session_id,
-                        },
-                    ) as response:
-                        response.raise_for_status()
-                        for line in response.iter_lines():
-                            if not line.startswith("data: "):
-                                if line.strip():
-                                    logger.warning(
-                                        "Skipping non-data line: %s", line[:80]
-                                    )
-                                continue
-                            event = json.loads(line[6:])  # strip out "data: "
-
-                            if event["type"] == "progress":
-                                if event["node"] != last_node:
-                                    last_node = event["node"]
-                                    progress.caption(f"**{event['node']}**")
-                            elif event["type"] == "complete":
-                                progress.empty()
-                                full_response = event.get("message_for_user", "")
-                                yield full_response
-                                return
-                            elif event["type"] == "error":
-                                msg = event.get("message", "Unknown server error")
-                                progress.caption(f":red[Error: {msg}]")
-                                full_response = f"Error: {msg}"
-                                yield full_response
-                                return
-                            elif event["type"] == "error":
-                                msg = event.get("message", "Unknown server error")
-                                progress.update(state="error", label=msg)
-                                full_response = f"Error: {msg}"
-                                yield full_response
-                                return
+                for event in stream_events_sync(
+                    query, st.session_state.session_id, url
+                ):
+                    if event["type"] == "progress":
+                        if event["node"] != last_node:
+                            last_node = event["node"]
+                            progress.caption(f"**{event['node']}**")
+                    elif event["type"] == "complete":
+                        progress.empty()
+                        full_response = event.get("message_for_user", "")
+                        yield full_response
+                        return
+                    elif event["type"] == "error":
+                        msg = event.get("message", "Unknown server error")
+                        progress.caption(f":red[Error: {msg}]")
+                        full_response = f"Error: {msg}"
+                        yield full_response
+                        return
 
             try:
                 st.write_stream(event_iter())
