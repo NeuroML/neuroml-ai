@@ -12,6 +12,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 
@@ -24,6 +25,10 @@ from klea_utils.api.utils import check_api_is_ready
 
 from .widgets import ChatBubble
 
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 # Per-session data store.
 # Keyed by session_id.
 _sessions: dict[str, dict] = {}
@@ -34,13 +39,17 @@ def _ensure_session(session_id: str) -> dict:
 
     Each session dict has the following keys::
 
-        name        Human-readable display name (auto-generated from
-                    the creation timestamp).
-        created     ``datetime.timestamp()`` of creation (float).
-        pinned      Whether the session is pinned to the top of the list.
-        messages    List of ``(text, stamp, is_user)`` tuples where
-                    *is_user* is ``True`` for user messages and
-                    ``False`` for bot / system messages.
+        name                Human-readable display name (auto-generated from
+                            the creation timestamp).
+        created             ``datetime.timestamp()`` of creation (float).
+        pinned              Whether the session is pinned to the top of the list.
+        messages            List of ``(text, stamp, is_user)`` tuples where
+                            *is_user* is ``True`` for user messages and
+                            ``False`` for bot / system messages.
+        inspector_entries   List of dicts with info/debug events for the most
+                            recent query in this session.
+        inspector_expanded  Set of indices into *inspector_entries* that are
+                            currently expanded in the UI.
     """
     if session_id not in _sessions:
         now = datetime.now()
@@ -49,6 +58,8 @@ def _ensure_session(session_id: str) -> dict:
             "created": now.timestamp(),
             "pinned": False,
             "messages": [],
+            "inspector_entries": [],
+            "inspector_expanded": set(),
         }
     return _sessions[session_id]
 
@@ -100,10 +111,28 @@ def setup_layout(
         ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
     )
     # Collapse long bot messages to 4 lines with an expand / collapse toggle.
+    ui.add_css(".msg-collapsed { max-height: 6em; overflow: hidden; }")
+    ui.add_css(".msg-expanded { max-height: none; }")
     ui.add_css(
-        ".msg-collapsed .q-message-text-content { max-height: 6em; overflow: hidden; }"
+        ".inspector-entry > summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
     )
-    ui.add_css(".msg-expanded .q-message-text-content { max-height: none; }")
+    ui.add_css(
+        ".inspector-entry > summary::after { content: '\\25B6'; font-size: 0.65rem; margin-left: auto; transition: transform 0.15s; }"
+    )
+    ui.add_css(".inspector-entry[open] > summary::after { content: '\\25BC'; }")
+    ui.add_css(
+        ".inspector-details summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
+    )
+    ui.add_css(
+        ".inspector-details summary::after { content: '\\25B6'; font-size: 0.6rem; margin-left: auto; }"
+    )
+    ui.add_css(".inspector-details[open] summary::after { content: '\\25BC'; }")
+    ui.add_css(
+        ".inspector-details .md-div { overflow: hidden !important; height: auto !important; }"
+    )
+    ui.add_css(
+        ".inspector-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
+    )
 
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
@@ -117,7 +146,6 @@ def setup_layout(
     toggle_icon_ref = [None]
 
     _expanded: set[int] = set()
-    _inspector_entries: list[dict] = []
 
     @ui.refreshable
     def _chat_messages() -> None:
@@ -154,8 +182,10 @@ def setup_layout(
         """Switch the active session without a page reload."""
         app.storage.user["session_id"] = sid
         _current_session[0] = sid
+        logger.debug("Switched to session %s", sid)
         _chat_messages.refresh()
         _render_session_list.refresh()
+        _inspector_panel.refresh()
 
     def _delete_session(sid: str) -> None:
         """Remove a session from the store.
@@ -316,6 +346,7 @@ def setup_layout(
         ):
             with ui.item_section().props("avatar"):
                 ui.icon("info")
+                ui.tooltip("View pipeline details in the inspection pane")
             with ui.item_section():
                 ui.label("Inspector")
         ui.separator()
@@ -337,33 +368,72 @@ def setup_layout(
             with ui.item_section():
                 ui.label("").classes("text-xs")
 
+    def _toggle_inspector_entry(idx: int) -> None:
+        """Toggle the expanded/collapsed state of an inspector entry."""
+        session = _sessions.get(_current_session[0])
+        if not session:
+            return
+        expanded = session.setdefault("inspector_expanded", set())
+        if idx in expanded:
+            expanded.discard(idx)
+        else:
+            expanded.add(idx)
+
     # ---- Right drawer (inspector, hidden by default) ----
-    with ui.right_drawer(value=False).classes("w-80") as right_drawer:
-        ui.label("Inspector").classes("text-lg font-bold mb-4")
-        ui.separator()
+    with (
+        ui.right_drawer(value=False)
+        .props("width=420")
+        .classes("overflow-y-auto") as right_drawer
+    ):
+        ui.label("Inspector").classes("text-sm font-bold mb-0")
+        ui.separator().classes("mb-2")
 
         @ui.refreshable
         def _inspector_panel() -> None:
-            if not _inspector_entries:
-                ui.label("Info and debug events will appear here").classes(
+            session = _sessions.get(_current_session[0])
+            if not session:
+                logger.debug(
+                    "No session found for %s, inspector empty", _current_session[0]
+                )
+                return
+            entries = session.get("inspector_entries", [])
+            logger.debug(
+                "Rendering inspector panel: %d entries for session %s",
+                len(entries),
+                _current_session[0],
+            )
+            if not entries:
+                ui.label("Debug events will appear here").classes(
                     "text-sm text-gray-500"
                 )
                 return
-            for entry in _inspector_entries:
-                heading = entry.get("heading", entry.get("node", ""))
-                if heading:
-                    ui.label(heading).classes("text-sm font-bold mt-2 mb-1")
-                ui.label(entry.get("summary", "")).classes("text-xs text-grey-6 mb-1")
-                details = entry.get("details", {})
-                if details:
-                    with ui.element("details").classes(
-                        "text-xs text-grey-5 cursor-pointer"
+            for idx, entry in enumerate(entries):
+                heading = entry.get("heading", "")
+                expanded = idx in session["inspector_expanded"]
+                with (
+                    ui.element("details")
+                    .props("open" if expanded else "")
+                    .classes("inspector-entry mb-2 w-full")
+                ):
+                    with (
+                        ui.element("summary")
+                        .classes("text-xs font-bold cursor-pointer w-full")
+                        .on("click", lambda i=idx: _toggle_inspector_entry(i))
                     ):
-                        with ui.element("summary").classes("text-xs"):
-                            ui.label("Details")
-                        ui.code(json.dumps(details, indent=2)).classes(
-                            "text-xs overflow-x-auto"
-                        )
+                        ui.label(heading).classes("w-full")
+                    ui.label(entry.get("summary", "")).classes(
+                        "text-xs text-grey-6 mb-1 w-full"
+                    )
+                    details = entry.get("details", {})
+                    if details:
+                        with ui.element("details").classes(
+                            "inspector-details text-xs text-grey-5 cursor-pointer w-full"
+                        ):
+                            with ui.element("summary").classes("text-xs w-full"):
+                                ui.label("View details")
+                            ui.code(
+                                json.dumps(details, indent=2), language="json"
+                            ).classes("text-xs")
 
         _inspector_panel()
 
@@ -386,7 +456,12 @@ def setup_layout(
 
             async def _do_stream(query: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
-                _inspector_entries.clear()
+                session = _ensure_session(_current_session[0])
+                logger.debug(
+                    "Clearing inspector entries for session %s", _current_session[0]
+                )
+                session["inspector_entries"] = []
+                session["inspector_expanded"] = set()
                 _inspector_panel.refresh()
                 with _stream_container:
                     pg_row = ui.row().classes("w-full items-center gap-2 p-2")
@@ -399,11 +474,18 @@ def setup_layout(
                     async for event in stream_events(
                         query, _current_session[0], server_url
                     ):
+                        logger.debug("Stream event: type=%s", event.get("type"))
                         if event["type"] == "progress":
                             pg_label.set_text(f"{event.get('node', '')}")
-                        elif event["type"] in ("info", "debug"):
+                        elif event["type"] == "debug":
                             data = event.get("data", {})
-                            _inspector_entries.append(
+                            logger.debug(
+                                "Received debug event: node=%s heading=%s data=%s",
+                                event.get("node", ""),
+                                data.get("heading", ""),
+                                str(event)[:300],
+                            )
+                            session["inspector_entries"].append(
                                 {
                                     "type": event["type"],
                                     "node": event.get("node", ""),
@@ -412,10 +494,17 @@ def setup_layout(
                                     "details": data.get("details", {}),
                                 }
                             )
+                            logger.debug(
+                                "Inspector entries now: %d",
+                                len(session["inspector_entries"]),
+                            )
                             _inspector_panel.refresh()
                         elif event["type"] == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)
+                            logger.debug(
+                                "Stream complete, answer length=%d", len(full_response)
+                            )
                             _ensure_session(_current_session[0])["messages"].append(
                                 (full_response, datetime.now().strftime("%X"), False)
                             )
