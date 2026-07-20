@@ -125,6 +125,7 @@ class RouteEvaluator(AbstractRouterNode):
 
         # Emit info event with routing decision
         info_data = NodeStreamData(
+            heading="Route Evaluation",
             summary=f"Routing decision: {route}",
             details={
                 "route": route,
@@ -143,7 +144,9 @@ class RouteEvaluator(AbstractRouterNode):
             "max_rewrite_attempts": self.max_rewrite_attempts,
             "fallback_to_training_data": self.fallback_to_training_data,
         }
-        debug_data = NodeStreamData(summary=info_data.summary, details=debug_details)
+        debug_data = NodeStreamData(
+            heading=info_data.heading, summary=info_data.summary, details=debug_details
+        )
         debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
         self.write_custom_stream(debug_event.model_dump())
 

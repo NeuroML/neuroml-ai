@@ -117,6 +117,7 @@ def setup_layout(
     toggle_icon_ref = [None]
 
     _expanded: set[int] = set()
+    _inspector_entries: list[dict] = []
 
     @ui.refreshable
     def _chat_messages() -> None:
@@ -340,9 +341,31 @@ def setup_layout(
     with ui.right_drawer(value=False).classes("w-80") as right_drawer:
         ui.label("Inspector").classes("text-lg font-bold mb-4")
         ui.separator()
-        ui.label("Info and debug events will appear here").classes(
-            "text-sm text-gray-500"
-        )
+
+        @ui.refreshable
+        def _inspector_panel() -> None:
+            if not _inspector_entries:
+                ui.label("Info and debug events will appear here").classes(
+                    "text-sm text-gray-500"
+                )
+                return
+            for entry in _inspector_entries:
+                heading = entry.get("heading", entry.get("node", ""))
+                if heading:
+                    ui.label(heading).classes("text-sm font-bold mt-2 mb-1")
+                ui.label(entry.get("summary", "")).classes("text-xs text-grey-6 mb-1")
+                details = entry.get("details", {})
+                if details:
+                    with ui.element("details").classes(
+                        "text-xs text-grey-5 cursor-pointer"
+                    ):
+                        with ui.element("summary").classes("text-xs"):
+                            ui.label("Details")
+                        ui.code(json.dumps(details, indent=2)).classes(
+                            "text-xs overflow-x-auto"
+                        )
+
+        _inspector_panel()
 
     # ---- Center: chat messages + input (pinned to bottom) ----
     with (
@@ -363,6 +386,8 @@ def setup_layout(
 
             async def _do_stream(query: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
+                _inspector_entries.clear()
+                _inspector_panel.refresh()
                 with _stream_container:
                     pg_row = ui.row().classes("w-full items-center gap-2 p-2")
                     with pg_row:
@@ -376,10 +401,18 @@ def setup_layout(
                     ):
                         if event["type"] == "progress":
                             pg_label.set_text(f"{event.get('node', '')}")
-                        elif event["type"] == "info":
-                            pg_label.set_text(
-                                f"{event.get('node', '')}: {event.get('data', {}).get('summary', '')}"
+                        elif event["type"] in ("info", "debug"):
+                            data = event.get("data", {})
+                            _inspector_entries.append(
+                                {
+                                    "type": event["type"],
+                                    "node": event.get("node", ""),
+                                    "heading": data.get("heading", ""),
+                                    "summary": data.get("summary", ""),
+                                    "details": data.get("details", {}),
+                                }
                             )
+                            _inspector_panel.refresh()
                         elif event["type"] == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)

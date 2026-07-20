@@ -25,6 +25,10 @@ class NodeStreamData(BaseModel):
     This is the contract between nodes and the frontend.
     """
 
+    heading: str = Field(
+        default="",
+        description="Section heading for the inspector panel (right pane)",
+    )
     summary: str = Field(
         description="Human-readable summary, always rendered by frontend"
     )

@@ -88,6 +88,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         }
         total_docs = sum(per_domain_counts.values())
         info_data = NodeStreamData(
+            heading="Document Retrieval",
             summary=f"Retrieved {total_docs} documents from {len(per_domain_counts)} domains",
             details={"per_domain_counts": per_domain_counts},
         )
@@ -103,7 +104,9 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
             ]
             for domain, docs in reference_material.items()
         }
-        debug_data = NodeStreamData(summary=info_data.summary, details=debug_details)
+        debug_data = NodeStreamData(
+            heading=info_data.heading, summary=info_data.summary, details=debug_details
+        )
         debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
         self.write_custom_stream(debug_event.model_dump())
 

@@ -77,7 +77,11 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
         assert self._last_state_updates is not None
         eval_result = self._last_state_updates.get("text_response_eval")
         if eval_result is None:
-            return NodeStreamData(summary="Evaluation failed", details={})
+            return NodeStreamData(
+                heading="Answer Evaluation",
+                summary="Evaluation failed",
+                details={},
+            )
 
         # Extract scores from the evaluation result
         scores = {
@@ -90,6 +94,7 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
         }
 
         return NodeStreamData(
+            heading="Answer Evaluation",
             summary=f"Evaluation complete: {eval_result.summary}",
             details={
                 "scores": scores,
@@ -114,4 +119,6 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
                 "human_prompt": self._last_human_prompt,
             }
         )
-        return NodeStreamData(summary=info.summary, details=details)
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )

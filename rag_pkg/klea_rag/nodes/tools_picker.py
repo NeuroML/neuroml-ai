@@ -98,6 +98,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         else:
             summary = "No tools selected"
         return NodeStreamData(
+            heading="Tool Selection",
             summary=summary,
             details={
                 "tool_names": tool_names,
@@ -129,4 +130,6 @@ class ToolsPicker(BaseLLMNode[RAGState]):
                 {"name": tc.name, "arguments": tc.arguments, "reason": tc.reason}
                 for tc in tool_calls
             ]
-        return NodeStreamData(summary=info.summary, details=details)
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )

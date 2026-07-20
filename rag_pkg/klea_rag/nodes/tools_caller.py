@@ -66,6 +66,7 @@ class ToolsCaller(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         tool_names = [tc.tool for tc in state.tool_calls]
         success_count = sum(1 for r in results if not r.is_error)
         info_data = NodeStreamData(
+            heading="Tool Execution",
             summary=f"Called {len(tool_names)} tool(s), {success_count} succeeded",
             details={
                 "tool_names": tool_names,
@@ -92,7 +93,9 @@ class ToolsCaller(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
             }
             for i, r in enumerate(results)
         ]
-        debug_data = NodeStreamData(summary=info_data.summary, details=debug_details)
+        debug_data = NodeStreamData(
+            heading=info_data.heading, summary=info_data.summary, details=debug_details
+        )
         debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
         self.write_custom_stream(debug_event.model_dump())
 

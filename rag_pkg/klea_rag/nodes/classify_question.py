@@ -144,6 +144,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         classified = self._last_state_updates.get("query_domains", [])
         available = list(self.domains.keys())
         return NodeStreamData(
+            heading="Question Classification",
             summary=f"Classified into: {', '.join(classified)} (from {len(available)} available domains)",
             details={
                 "classified_domains": classified,
@@ -167,7 +168,9 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
                 "human_prompt": self._last_human_prompt,
             }
         )
-        return NodeStreamData(summary=info.summary, details=details)
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
 
     # TODO: may need updating
     @override

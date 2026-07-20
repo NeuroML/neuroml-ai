@@ -110,6 +110,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         attempt = self._last_state_updates.get("retrieval_attempts", 1)
         action = "Regenerated" if attempt > 1 else "Generated"
         return NodeStreamData(
+            heading="Retrieval Query Generation",
             summary=f"{action} retrieval query (attempt {attempt})",
             details={
                 "retrieval_query": query,
@@ -137,4 +138,6 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         if state.retrieval_attempts > 0 and state.text_response_eval:
             details["evaluator_feedback"] = state.text_response_eval.summary
             details["previous_query"] = state.retrieval_query
-        return NodeStreamData(summary=info.summary, details=details)
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
