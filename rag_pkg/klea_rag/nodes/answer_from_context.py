@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, override
 
 from klea_utils.llm import split_output_by_section
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from klea_utils.stores.utils import serialize_vs_retrieval
 from klea_utils.tools import textualize_tool_results
@@ -114,6 +115,47 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
             self.logger.debug("No references included.")
 
         return full_answer
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return answer generation summary."""
+        assert self._last_state_updates is not None
+        answer = ""
+        refs = []
+        result = self._last_result
+        if isinstance(result, AnswerSchema):
+            answer = result.answer
+            refs = result.references
+        preview = answer[:120] + "..." if len(answer) > 120 else answer
+        return NodeStreamData(
+            heading="Answer Generation",
+            summary=f"Generated answer ({len(answer)} chars, {len(refs)} references)",
+            details={
+                "answer_preview": preview,
+                "char_count": len(answer),
+                "reference_count": len(refs),
+                "references": refs,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + input prompt, raw output, and processed output."""
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
+        info = self._get_info()
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": str(self._last_prompt),
+                "unprocessed_output": str(self._last_output),
+                "processed_output": str(self._last_result),
+            }
+        )
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
 
     @override
     def _get_default_error_result(self) -> Any:

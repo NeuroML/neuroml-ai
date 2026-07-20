@@ -120,21 +120,22 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
 
     @override
     def _get_debug(self) -> NodeStreamData:
-        """Return info + query, prompts, and evaluator feedback."""
+        """Return info + input prompt, raw output, processed output, and evaluator feedback."""
         assert self._last_state is not None
-        assert self._last_system_prompt is not None
-        assert self._last_human_prompt is not None
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
         info = self._get_info()
         details = info.details.copy()
-        state: RAGState = self._last_state  # type: ignore[assignment]
         details.update(
             {
-                "query": state.query,
-                "system_prompt": self._last_system_prompt,
-                "human_prompt": self._last_human_prompt,
+                "input_prompt": str(self._last_prompt),
+                "unprocessed_output": str(self._last_output),
+                "processed_output": str(self._last_result),
             }
         )
         # Add evaluator feedback if this is a retry
+        state: RAGState = self._last_state  # type: ignore[assignment]
         if state.retrieval_attempts > 0 and state.text_response_eval:
             details["evaluator_feedback"] = state.text_response_eval.summary
             details["previous_query"] = state.retrieval_query

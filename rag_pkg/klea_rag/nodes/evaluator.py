@@ -105,18 +105,18 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
 
     @override
     def _get_debug(self) -> NodeStreamData:
-        """Return info + query, prompts, and evaluation context."""
+        """Return info + input prompt, raw output, and processed output."""
         assert self._last_state is not None
-        assert self._last_system_prompt is not None
-        assert self._last_human_prompt is not None
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
         info = self._get_info()
         details = info.details.copy()
-        state: RAGState = self._last_state  # type: ignore[assignment]
         details.update(
             {
-                "query": state.query,
-                "system_prompt": self._last_system_prompt,
-                "human_prompt": self._last_human_prompt,
+                "input_prompt": str(self._last_prompt),
+                "unprocessed_output": str(self._last_output),
+                "processed_output": str(self._last_result),
             }
         )
         return NodeStreamData(
