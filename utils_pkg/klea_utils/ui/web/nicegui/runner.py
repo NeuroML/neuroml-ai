@@ -117,16 +117,16 @@ def setup_layout(
         ".inspector-entry > summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
     )
     ui.add_css(
-        ".inspector-entry > summary::after { content: '\\25B6'; font-size: 0.65rem; margin-left: auto; transition: transform 0.15s; }"
+        ".inspector-entry > summary::before { content: '\\25B6'; font-size: 0.65rem; margin-right: 0.35rem; transition: transform 0.15s; }"
     )
-    ui.add_css(".inspector-entry[open] > summary::after { content: '\\25BC'; }")
+    ui.add_css(".inspector-entry[open] > summary::before { content: '\\25BC'; }")
     ui.add_css(
         ".inspector-details summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
     )
     ui.add_css(
-        ".inspector-details summary::after { content: '\\25B6'; font-size: 0.6rem; margin-left: auto; }"
+        ".inspector-details summary::before { content: '\\25B6'; font-size: 0.6rem; margin-right: 0.35rem; }"
     )
-    ui.add_css(".inspector-details[open] summary::after { content: '\\25BC'; }")
+    ui.add_css(".inspector-details[open] summary::before { content: '\\25BC'; }")
     ui.add_css(
         ".inspector-details .md-div { overflow: hidden !important; height: auto !important; }"
     )
