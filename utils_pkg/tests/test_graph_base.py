@@ -56,7 +56,7 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
-        self.c_model = setup_llm("ollama:qwen3:0.6b", self.logger)
+        self.c_model = setup_llm("ollama:qwen3:0.6b", logger=self.logger)
 
     @override
     async def _create_graph(self) -> None:

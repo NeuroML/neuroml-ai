@@ -70,15 +70,15 @@ class KleaCode(BaseLangGraph):
 
     def _setup_models(self) -> None:
         """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, self.logger)
+        self.c_model = setup_llm(self.app_env.chat_model, logger=self.logger)
         if self.app_env.chat_model == self.app_env.reasoning_model:
             self.r_model = self.c_model
             self.logger.info(
                 f"Same model used for both chat and reasoning: {self.app_env.chat_model}"
             )
         else:
-            self.r_model = setup_llm(self.app_env.reasoning_model, self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, self.logger)
+            self.r_model = setup_llm(self.app_env.reasoning_model, logger=self.logger)
+        self.g_model = setup_llm(self.app_env.guard_model, logger=self.logger)
 
     @override
     def _configure_resources(self) -> None:

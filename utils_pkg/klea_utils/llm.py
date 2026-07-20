@@ -305,7 +305,7 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
-def setup_llm(model_name_full: str, logger: logging.Logger):
+def setup_llm(model_name_full: str, logger: logging.Logger, check_model: bool = True):
     """Set up a chat model"""
     # Lazy: init_chat_model and huggingface classes pull in provider
     # packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)
@@ -367,17 +367,20 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
         """
         assert model_var
 
-        state, msg = check_model_works(model_var, timeout=10, retries=3)
-        if state:
-            logger.debug(f"Model works: {state}, {msg}")
-        else:
-            # handle special case where some models do not support "cheapest" on HF
-            if "Provider 'cheapest' not supported" in msg:
-                logger.error(f"Model does not work: {state}, {msg}")
-                logger.debug("Replacing 'cheapest' with 'auto' and retrying")
-                return setup_llm(model_name_full.replace(":cheapest", ":auto"), logger)
+        if check_model:
+            state, msg = check_model_works(model_var, timeout=10, retries=3)
+            if state:
+                logger.debug(f"Model works: {state}, {msg}")
+            else:
+                # handle special case where some models do not support "cheapest" on HF
+                if "Provider 'cheapest' not supported" in msg:
+                    logger.error(f"Model does not work: {state}, {msg}")
+                    logger.debug("Replacing 'cheapest' with 'auto' and retrying")
+                    return setup_llm(
+                        model_name_full.replace(":cheapest", ":auto"), logger
+                    )
 
-            logger.error(f"Model does not work: {state}, {msg}")
+                logger.error(f"Model does not work: {state}, {msg}")
         assert state
     else:
         if parsed.provider == "ollama":

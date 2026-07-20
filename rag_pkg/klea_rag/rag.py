@@ -80,8 +80,8 @@ class RAG(BaseLangGraph):
     @override
     def _setup_models(self) -> None:
         """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, self.logger)
+        self.c_model = setup_llm(self.app_env.chat_model, logger=self.logger)
+        self.g_model = setup_llm(self.app_env.guard_model, logger=self.logger)
 
     async def get_graph(self):
         """Setup and get compiled graph"""
