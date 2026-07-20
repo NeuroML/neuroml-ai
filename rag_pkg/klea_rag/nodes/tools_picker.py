@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
+from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 
@@ -118,8 +119,8 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         details = info.details.copy()
         details.update(
             {
-                "input_prompt": str(self._last_prompt),
-                "unprocessed_output": str(self._last_output),
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
                 "processed_output": str(self._last_result),
             }
         )
