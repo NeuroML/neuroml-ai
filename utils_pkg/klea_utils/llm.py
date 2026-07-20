@@ -19,6 +19,7 @@ from textwrap import dedent
 from typing import NamedTuple, Type
 
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompt_values import PromptValue
 from pydantic import BaseModel
 
 logging.basicConfig(
@@ -232,6 +233,48 @@ def content_to_str(
             b.get("text", "") if isinstance(b, dict) else str(b) for b in content
         )
     return str(content)
+
+
+def prompt_value_to_messages(prompt: PromptValue) -> list[dict]:
+    """Convert a ``PromptValue`` to a clean list of message dicts.
+
+    Each dict has ``role`` and ``content`` keys, suitable for JSON
+    serialisation in the inspector debug panel.
+
+    :param prompt: The LangChain ``PromptValue`` (filled, variables
+        already substituted).
+    :returns: A list of ``{"role": "...", "content": "..."}`` dicts.
+    """
+    return [
+        {"role": msg.type, "content": content_to_str(msg.content)}
+        for msg in prompt.to_messages()
+    ]
+
+
+def extract_llm_output_content(output: AIMessage | dict) -> str:
+    """Extract plain-text content from an LLM output.
+
+    Handles both ``AIMessage`` (non-structured output) and
+    ``dict`` (structured output with ``raw`` / ``parsed`` keys):
+
+    * ``AIMessage`` -- returns ``content_to_str(message.content)``.
+    * ``dict`` -- extracts the ``raw`` ``AIMessage`` from a structured
+      output response and returns its content; falls back to
+      ``output["parsed"]`` and finally ``str(output)``.
+
+    :param output: The raw output from ``llm.invoke()``.
+    :returns: A plain-text string.
+    """
+    if isinstance(output, AIMessage):
+        return content_to_str(output.content)
+    if isinstance(output, dict):
+        raw = output.get("raw")
+        if isinstance(raw, AIMessage):
+            return content_to_str(raw.content)
+        parsed = output.get("parsed")
+        if parsed is not None:
+            return str(parsed)
+    return str(output)
 
 
 def check_model_works(model, timeout=30, retries=5):
