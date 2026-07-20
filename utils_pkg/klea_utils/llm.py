@@ -377,11 +377,13 @@ def setup_llm(model_name_full: str, logger: logging.Logger, check_model: bool = 
                     logger.error(f"Model does not work: {state}, {msg}")
                     logger.debug("Replacing 'cheapest' with 'auto' and retrying")
                     return setup_llm(
-                        model_name_full.replace(":cheapest", ":auto"), logger
+                        model_name_full.replace(":cheapest", ":auto"),
+                        logger=logger,
+                        check_model=True,
                     )
 
                 logger.error(f"Model does not work: {state}, {msg}")
-        assert state
+            assert state
     else:
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
@@ -391,8 +393,9 @@ def setup_llm(model_name_full: str, logger: logging.Logger, check_model: bool = 
         )
         assert model_var
 
-        state, msg = check_model_works(model_var, timeout=60)
-        assert state
+        if check_model:
+            state, msg = check_model_works(model_var, timeout=60)
+            assert state
 
     logger.info(f"Using chat model: {model_name_full}")
 
