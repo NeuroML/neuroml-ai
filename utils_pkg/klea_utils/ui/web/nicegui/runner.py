@@ -176,7 +176,9 @@ def setup_layout(
                         _chat_messages.refresh(),
                     )[1],
                 )
-        ui.run_javascript("window.scrollTo(0, document.body.scrollHeight)")
+        ui.run_javascript(
+            "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
+        )
 
     def _switch_session(sid: str) -> None:
         """Switch the active session without a page reload."""
@@ -443,7 +445,7 @@ def setup_layout(
         .classes("w-full px-48")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
-        with ui.scroll_area().classes("w-full grow"):
+        with ui.scroll_area().classes("w-full grow chat-scroll-area"):
             _chat_messages()
             _stream_container = ui.column().classes("w-full")
 
