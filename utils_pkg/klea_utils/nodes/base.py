@@ -132,19 +132,20 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
     def _configure_llm(self) -> Runnable:
         """Configure LLM with structured output"""
-        schema = self.output_schema
-        if schema:
-            return self.model_inst.with_structured_output(
-                schema, method="json_schema", include_raw=True
+        inst = self._llm_entry.instance
+        if self.output_schema:
+            return inst.with_structured_output(
+                self.output_schema, method="json_schema", include_raw=True
             )
         else:
-            return self.model_inst
+            return inst
 
     def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
         """Invoke LLM with default temperature - can be overridden"""
-        output = llm.invoke(prompt, config=self.model_config)
+        config = self._llm_entry.build_config({"temperature": self.temperature})
+        output = llm.invoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
 

@@ -135,14 +135,12 @@ class AbstractLLMNode[TSchema: BaseModel](
         super().__init__(logger, label)
         self.llm_models = llm_models
         try:
-            entry = self.llm_models[self.model_type]
+            self._llm_entry = self.llm_models[self.model_type]
         except KeyError:
             raise KeyError(
                 f"Node '{type(self).__name__}' has model_type='{self.model_type}', "
                 f"but llm_models only has keys: {list(self.llm_models)}"
             ) from None
-        self.model_inst = entry.instance
-        self.model_config = entry.build_config({"temperature": temperature})
         self.temperature = temperature
         self._output_schema = output_schema
 
