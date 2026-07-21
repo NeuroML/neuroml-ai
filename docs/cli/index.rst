@@ -33,3 +33,4 @@ Coding / Workflow
    :maxdepth: 1
 
    klea-code
+   klea-code-serve
