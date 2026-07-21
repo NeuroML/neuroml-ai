@@ -26,7 +26,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         temperature: float,
         output_schema: type[GoalSchema],
         memory: bool = False,
@@ -35,7 +35,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
@@ -43,7 +43,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=output_schema,
             memory=memory,
