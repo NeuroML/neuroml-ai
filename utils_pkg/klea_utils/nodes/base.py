@@ -22,6 +22,8 @@ from langchain_core.runnables import Runnable
 from langchain_core.utils.function_calling import convert_to_json_schema
 from pydantic import BaseModel
 
+from klea_utils.graph.base import model_overrides_ctx
+
 from ..errors import PromptTemplateError
 from ..llm import add_memory_to_prompt, load_prompt, parse_output_with_thought
 from .abstract import AbstractLLMNode
@@ -144,7 +146,9 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
         """Invoke LLM with default temperature - can be overridden"""
-        config = self._llm_entry.build_config({"temperature": self.temperature})
+        overrides = {"temperature": self.temperature}
+        overrides.update(model_overrides_ctx.get())
+        config = self._llm_entry.build_config(overrides)
         output = llm.invoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output

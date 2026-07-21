@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import contextvars
 import json
 import logging
 import os
@@ -30,6 +31,14 @@ from pydantic import BaseModel, Field, create_model
 
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+
+# Per-request context variable carrying per-session model overrides (api_key,
+# model, provider, etc.).  Set by the API layer before graph.ainvoke() and
+# read by _invoke_llm() so that nodes don't need to thread overrides through
+# their signatures.  Falls back to an empty dict if not set.
+model_overrides_ctx: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
+    "model_overrides", default={}
+)
 
 
 class LLMModel(BaseModel):
@@ -55,21 +64,6 @@ class LLMModel(BaseModel):
         if overrides:
             config.setdefault("configurable", {}).update(overrides)
         return config
-
-    def rebuild(
-        self, model_string: str, logger: logging.Logger, **overrides: Any
-    ) -> None:
-        """Replace the model instance and config template at runtime.
-
-        Called when a user switches models via the API/frontend.
-        Creates a fresh ``_ConfigurableModel`` via ``setup_llm`` so that
-        provider-specific defaults are reset  ---  avoids leaking init kwargs
-        when switching between different providers (e.g. HF -> OpenAI).
-        """
-        from klea_utils.llm import setup_llm
-
-        self.instance = setup_llm(model_string, logger)
-        self.config_template = {"configurable": overrides}
 
 
 class _CustomChannelEnabler(StreamTransformer):
@@ -327,20 +321,6 @@ class BaseLangGraph(ABC):
         entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
         """
         ...
-
-    def update_model(self, role: str, model_string: str, **overrides: Any) -> None:
-        """Swap a model entry at runtime.
-
-        Called when a user changes models via the API/frontend.
-        Delegates to :meth:`LLMModel.rebuild` which calls
-        :func:`klea_utils.llm.setup_llm` to create a fresh
-        ``_ConfigurableModel`` with provider-specific defaults.
-
-        :param role: Key in ``self.llm_models`` (e.g. ``"chat"``)
-        :param model_string: Full model string (e.g. ``"openai:gpt-5.5"``)
-        :param overrides: Configurable field overrides (e.g. ``api_key``)
-        """
-        self.llm_models[role].rebuild(model_string, self.logger, **overrides)
 
     @abstractmethod
     async def _create_graph(self) -> None:
