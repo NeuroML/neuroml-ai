@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Model management endpoints for runtime model switching.
+Per-session model configuration endpoints for runtime model switching.
 
 File: klea_utils/api/models.py
 
@@ -9,9 +9,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-import traceback
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 logging.basicConfig(
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class ModelConfigPayload(BaseModel):
+class SessionModelConfigPayload(BaseModel):
     model: str
     temperature: float | None = None
     api_key: str | None = None
@@ -32,40 +31,33 @@ class ModelConfigPayload(BaseModel):
 
 
 def create_models_router() -> APIRouter:
-    """Create an APIRouter with ``GET /models`` and ``POST /models/{role}``.
+    """Create an APIRouter for per-session model configuration.
 
-    Reads/writes model entries from ``request.app.state.graph.llm_models``.
+    ``GET /session/{session_id}/models``
+        Returns overrides for the session (or global defaults as fallback).
+
+    ``POST /session/{session_id}/models/{role}``
+        Stores per-session model overrides in ``app.state.sessions``.
     """
     router = APIRouter(prefix="/models", tags=["models"])
 
-    @router.get("/")
-    async def list_models(request: Request):
-        from klea_utils.graph.base import BaseLangGraph
+    @router.get("/session/{session_id}")
+    async def get_session_models(session_id: str, request: Request):
+        sessions = request.app.state.sessions
+        return sessions.get(session_id, {})
 
-        graph: BaseLangGraph = request.app.state.graph
+    @router.post("/session/{session_id}/{role}")
+    async def set_session_model(
+        session_id: str, role: str, payload: SessionModelConfigPayload, request: Request
+    ):
+        sessions = request.app.state.sessions
+        data = sessions.setdefault(session_id, {})
+        data[role] = payload.model_dump(exclude_none=True)
         return {
-            role: {
-                "model": entry.instance.model_id
-                if hasattr(entry.instance, "model_id")
-                else str(entry.instance)
-            }
-            for role, entry in graph.llm_models.items()
+            "status": "ok",
+            "session_id": session_id,
+            "role": role,
+            "model": payload.model,
         }
-
-    @router.post("/{role}")
-    async def set_model(role: str, payload: ModelConfigPayload, request: Request):
-        from klea_utils.graph.base import BaseLangGraph
-
-        graph: BaseLangGraph = request.app.state.graph
-        if role not in graph.llm_models:
-            raise HTTPException(404, f"Unknown model role: {role}")
-        overrides = payload.model_dump(exclude={"model"}, exclude_none=True)
-        try:
-            graph.update_model(role, payload.model, **overrides)
-        except Exception as e:
-            detail = f"{e}\n{traceback.format_exc()}"
-            logger.error(detail)
-            raise HTTPException(400, detail=str(e))
-        return {"status": "ok", "role": role, "model": payload.model}
 
     return router
