@@ -15,7 +15,7 @@ import pytest
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 
-from klea_utils.graph.base import BaseLangGraph
+from klea_utils.graph.base import BaseLangGraph, LLMModel
 from klea_utils.llm import setup_llm
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
@@ -56,7 +56,9 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
-        self.c_model = setup_llm("ollama:qwen3:0.6b", self.logger)
+        self.llm_models = {
+            "chat": LLMModel(instance=setup_llm("ollama:qwen3:0.6b", self.logger)),
+        }
 
     @override
     async def _create_graph(self) -> None:
@@ -67,7 +69,7 @@ class ToyGraph(BaseLangGraph):
         self._answer_node = AnswerGeneral(
             logger=self.logger,
             label="Saying hello",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.3,
             memory=False,
         )

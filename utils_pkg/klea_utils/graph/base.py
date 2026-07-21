@@ -32,7 +32,7 @@ from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
 
 
-class LLModel(BaseModel):
+class LLMModel(BaseModel):
     """Container for a single LLM model instance and its runtime config template.
 
     ``instance`` holds the model object (typically a ``_ConfigurableModel``
@@ -125,7 +125,7 @@ class BaseLangGraph(ABC):
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
 
-        self.llm_models: dict[str, LLModel] = {}
+        self.llm_models: dict[str, LLMModel] = {}
 
         self.memory = memory
 
@@ -308,7 +308,7 @@ class BaseLangGraph(ABC):
     def _setup_models(self) -> None:
         """Set up LLM model instances.
 
-        Subclasses should populate ``self.llm_models`` with ``LLModel``
+        Subclasses should populate ``self.llm_models`` with ``LLMModel``
         entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
         """
         ...

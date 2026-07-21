@@ -46,7 +46,7 @@ class SummariseMemoryNode(BaseLLMNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param llm_models: ``{role: LLModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature for LLM calls
         :param summarisation_threshold: Minimum number of messages before summarising
         :param memory: Whether to include conversation history in the prompt

@@ -128,19 +128,21 @@ class AbstractLLMNode[TSchema: BaseModel](
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param llm_models: ``{role: LLModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         :param output_schema: Pydantic schema for structured output
         """
         super().__init__(logger, label)
         self.llm_models = llm_models
         try:
-            self.model_inst = self.llm_models[self.model_type].instance
+            entry = self.llm_models[self.model_type]
         except KeyError:
             raise KeyError(
                 f"Node '{type(self).__name__}' has model_type='{self.model_type}', "
                 f"but llm_models only has keys: {list(self.llm_models)}"
             ) from None
+        self.model_inst = entry.instance
+        self.model_config = entry.build_config({"temperature": temperature})
         self.temperature = temperature
         self._output_schema = output_schema
 

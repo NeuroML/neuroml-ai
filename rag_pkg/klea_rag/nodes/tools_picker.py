@@ -34,7 +34,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param llm_models: ``{role: LLModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         :param domain_tools_description: Per-domain tool descriptions
         """

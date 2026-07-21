@@ -45,7 +45,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param llm_models: ``{role: LLModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param domains: Domain name to description mapping
         :param output_schema: Pydantic schema for classification output
         :param temperature: Sampling temperature for LLM calls
