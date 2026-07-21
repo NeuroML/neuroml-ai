@@ -187,7 +187,7 @@ class AbstractLLMNode[TSchema: BaseModel](
             self._last_template, self._last_variables
         )
         self._last_llm = self._configure_llm()
-        self._last_output = self._invoke_llm(self._last_llm, self._last_prompt)
+        self._last_output = await self._invoke_llm(self._last_llm, self._last_prompt)
         self._last_result = self._process_output(self._last_output)
         self._last_state_updates = self._update_state(self._last_result, state)
 
@@ -269,10 +269,12 @@ class AbstractLLMNode[TSchema: BaseModel](
         ...
 
     @abstractmethod
-    def _invoke_llm(
+    async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
-        """Invoke LLM with default temperature - can be overridden"""
+        """Async invoke LLM — must use ``await llm.ainvoke()`` so the
+        event loop can process streaming callbacks (waiter pattern)
+        during the LLM call rather than blocking until it completes."""
         ...
 
     @abstractmethod

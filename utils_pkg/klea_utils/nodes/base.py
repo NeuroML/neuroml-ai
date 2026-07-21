@@ -144,14 +144,15 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         else:
             return inst
 
-    def _invoke_llm(
+    async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
-        """Invoke LLM with default temperature - can be overridden"""
+        """Async invoke LLM — uses ``ainvoke`` so the event loop can
+        process streaming callbacks during the LLM call."""
         overrides = {"temperature": self.temperature}
         overrides.update(model_overrides_ctx.get())
         config = self._llm_entry.build_config(overrides)
-        output = llm.invoke(prompt, config=config)
+        output = await llm.ainvoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
 
