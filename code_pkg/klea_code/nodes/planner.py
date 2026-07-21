@@ -20,6 +20,8 @@ from klea_code.schemas import KleaCodeState, PlanSchema
 class Planner(BaseLLMNode[PlanSchema]):
     """Node that creates or updates an execution plan."""
 
+    model_type = "plan"
+
     def __init__(
         self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.01
     ):

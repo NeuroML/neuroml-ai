@@ -24,6 +24,8 @@ from klea_rag.schemas import RAGState
 class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     """Node that generates a concise retrieval query from the user's question."""
 
+    model_type = "chat"
+
     def __init__(
         self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.3
     ):

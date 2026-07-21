@@ -19,6 +19,8 @@ from klea_code.schemas import KleaCodeState, ToolCallSchema
 class ToolsPicker(BaseLLMNode[KleaCodeState]):
     """Node that selects the best tools for the current step."""
 
+    model_type = "plan"
+
     def __init__(
         self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.01
     ):

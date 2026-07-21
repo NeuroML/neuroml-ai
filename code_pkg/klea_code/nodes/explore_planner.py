@@ -17,6 +17,7 @@ from klea_code.schemas import KleaCodeState, PlanSchema
 
 
 class ExplorePlanner(Planner):
+    model_type = "plan"
     """Node that plans exploration steps for a codebase.
 
     Subclasses Planner with:

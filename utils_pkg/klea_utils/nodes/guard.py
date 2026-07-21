@@ -19,6 +19,7 @@ from .base import BaseLLMNode
 
 
 class GuardNode(BaseLLMNode):
+    model_type = "guard"
     """Safety guard node that checks if user queries are safe to process.
 
     Evaluates whether a query contains potentially harmful content

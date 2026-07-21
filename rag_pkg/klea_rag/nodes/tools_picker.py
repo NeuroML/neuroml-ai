@@ -20,6 +20,8 @@ from klea_rag.schemas import RAGState, ToolCallsSchema
 class ToolsPicker(BaseLLMNode[RAGState]):
     """Node that selects tools to augment vector store retrieval."""
 
+    model_type = "chat"
+
     def __init__(
         self,
         logger: logging.Logger,

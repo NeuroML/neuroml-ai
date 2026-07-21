@@ -21,6 +21,8 @@ from klea_rag.schemas import EvaluateAnswerSchema, RAGState
 class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     """Node that evaluates a RAG-generated answer against retrieved context."""
 
+    model_type = "chat"
+
     def __init__(
         self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.0
     ):

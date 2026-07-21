@@ -27,6 +27,8 @@ class AnswerSchema(BaseModel):
 class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     """Generate an answer from the provided context"""
 
+    model_type = "chat"
+
     def __init__(
         self,
         logger: logging.Logger,

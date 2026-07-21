@@ -19,6 +19,7 @@ from .base import BaseLLMNode
 
 
 class SummariseMemoryNode(BaseLLMNode):
+    model_type = "chat"
     """Node that summarises conversation history into a context summary.
 
     Uses _pre_exec() to skip execution if there aren't enough recent messages.

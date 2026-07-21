@@ -20,6 +20,8 @@ from klea_code.schemas import GoalSchema, KleaCodeState
 class GoalSetter(BaseLLMNode[GoalSchema]):
     """Goal setter node"""
 
+    model_type = "plan"
+
     def __init__(
         self,
         logger: logging.Logger,

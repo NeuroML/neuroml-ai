@@ -24,6 +24,7 @@ class FallbackConfig(BaseModel):
 
 
 class AnswerGeneral(BaseLLMNode):
+    model_type = "chat"
     """Answer general (non-domain) questions using the LLM's training data.
 
     Provides a conversational, user-friendly response. Optionally appends
