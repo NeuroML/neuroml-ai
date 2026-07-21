@@ -328,6 +328,20 @@ class BaseLangGraph(ABC):
         """
         ...
 
+    def update_model(self, role: str, model_string: str, **overrides: Any) -> None:
+        """Swap a model entry at runtime.
+
+        Called when a user changes models via the API/frontend.
+        Delegates to :meth:`LLMModel.rebuild` which calls
+        :func:`klea_utils.llm.setup_llm` to create a fresh
+        ``_ConfigurableModel`` with provider-specific defaults.
+
+        :param role: Key in ``self.llm_models`` (e.g. ``"chat"``)
+        :param model_string: Full model string (e.g. ``"openai:gpt-5.5"``)
+        :param overrides: Configurable field overrides (e.g. ``api_key``)
+        """
+        self.llm_models[role].rebuild(model_string, self.logger, **overrides)
+
     @abstractmethod
     async def _create_graph(self) -> None:
         """Build and compile the LangGraph, storing it in ``self.graph``.
