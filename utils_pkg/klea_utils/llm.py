@@ -238,11 +238,28 @@ def check_model_works(model, timeout=30, retries=5):
     """Check if a model works since it is not tested when loaded"""
     assert timeout >= 0
 
+    # Pick the right token-limit param for the provider so we keep the health
+    # check cheap without triggering warnings about unknown kwargs.
+    llm_type = getattr(model, "_llm_type", "")
+    if "huggingface" in llm_type:
+        token_param = "max_new_tokens"
+    elif "ollama" in llm_type:
+        token_param = "num_predict"
+    else:
+        token_param = "max_tokens"
+
+    configurable = {token_param: 5}
+
     for attempt in range(retries):
         print(f"Checking model. Attempt #{attempt + 1}/{retries}")
         try:
-            # Use a very simple prompt with short max_tokens
-            result = model.invoke("Hello world", config={"timeout": timeout})
+            result = model.invoke(
+                "ping",
+                config={
+                    "timeout": timeout,
+                    "configurable": configurable,
+                },
+            )
             print(f"Model available (attempt {attempt + 1}/{retries}): {result}")
             return True, f"Model available (attempt {attempt + 1}/{retries})"
         except StopIteration as e:
@@ -261,16 +278,7 @@ def check_model_works(model, timeout=30, retries=5):
                     False,
                     f"Model unavailable after {retries} attempts: {error_msg}",
                 )
-            error_msg = f"{e.__class__.__name__}: {e.__str__()}"
-            print(f"Attempt #{attempt}: model unavailable: {error_msg}")
-            if attempt < retries - 1:
-                time.sleep(2**attempt)  # Exponential backoff
-            else:
-                print(f"Model unavailable after {retries} attempts: {error_msg}")
-                return (
-                    False,
-                    f"Model unavailable after {retries} attempts: {error_msg}",
-                )
+
     return False, "Unknown error"
 
 
@@ -341,7 +349,7 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
             parsed.model_name,
             model_provider="huggingface",
             configurable_fields=_COMMON_CONFIG_FIELDS
-            + ("provider", "backend", "huggingfacehub_api_token"),
+            + ("provider", "backend", "huggingfacehub_api_token", "max_new_tokens"),
             backend="endpoint",
             provider=parsed.suffix or "auto",
             huggingfacehub_api_token=hf_token,
@@ -350,12 +358,14 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
             repetition_penalty=1.03,
         )
     else:
+        extra_fields: tuple[str, ...] = ()
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
+            extra_fields = ("num_predict",)
 
         model_var = init_chat_model(
             model_name_full,
-            configurable_fields=_COMMON_CONFIG_FIELDS,
+            configurable_fields=_COMMON_CONFIG_FIELDS + extra_fields,
         )
 
     state, msg = check_model_works(model_var, timeout=60)
