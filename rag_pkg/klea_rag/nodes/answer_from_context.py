@@ -32,11 +32,13 @@ class AnswerSchema(BaseModel):
 class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     """Generate an answer from the provided context"""
 
+    model_type = "chat"
+
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         temperature: float = 0.3,
         memory: bool = False,
     ):
@@ -44,14 +46,14 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         :param memory: Whether to include conversation memory in the prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=AnswerSchema,
             memory=memory,

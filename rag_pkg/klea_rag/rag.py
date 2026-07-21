@@ -72,16 +72,22 @@ class RAG(BaseLangGraph):
         """Initialise"""
         super().__init__(logging_level=logging_level, memory=memory)
 
-        self.g_model = None
-
         # total number of reference documents
         self.num_refs_max = 10
 
     @override
     def _setup_models(self) -> None:
         """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, logger=self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, logger=self.logger)
+        from klea_utils.graph.base import LLMModel
+
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=setup_llm(self.app_env.chat_model, logger=self.logger)
+            ),
+            "guard": LLMModel(
+                instance=setup_llm(self.app_env.guard_model, logger=self.logger)
+            ),
+        }
 
     async def get_graph(self):
         """Setup and get compiled graph"""
@@ -145,7 +151,7 @@ class RAG(BaseLangGraph):
         self._guard_node = GuardNode(
             logger=self.logger,
             label="Checking safety",
-            model=self.g_model,
+            llm_models=self.llm_models,
             temperature=0.3,
             memory=self.memory,
         )
@@ -174,7 +180,7 @@ class RAG(BaseLangGraph):
         self._classify_question_node = ClassifyQuestion(
             logger=self.logger,
             label="Classifying question",
-            model=self.c_model,
+            llm_models=self.llm_models,
             output_schema=self.QueryDomainSchema,
             temperature=0.3,
             memory=self.memory,
@@ -196,7 +202,7 @@ class RAG(BaseLangGraph):
         self._generate_retrieval_query_node = GenerateRetrievalQuery(
             logger=self.logger,
             label="Generating search",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.3,
         )
         self.workflow.add_node(
@@ -206,7 +212,7 @@ class RAG(BaseLangGraph):
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.01,
             domain_tools_description=self.tools_description,
         )
@@ -226,7 +232,7 @@ class RAG(BaseLangGraph):
         self._answer_general_node = AnswerGeneral(
             logger=self.logger,
             label="Answering generally",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.3,
             memory=self.memory,
             fallback_config=FallbackConfig(
@@ -260,7 +266,7 @@ class RAG(BaseLangGraph):
         self._generate_answer_from_context_node = AnswerFromContext(
             logger=self.logger,
             label="Generating answer",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.3,
             memory=False,
         )
@@ -271,7 +277,7 @@ class RAG(BaseLangGraph):
         self._evaluate_answer_node = Evaluator(
             logger=self.logger,
             label="Evaluating answer",
-            model=self.c_model,
+            llm_models=self.llm_models,
             temperature=0.0,
         )
         self.workflow.add_node(
@@ -309,7 +315,7 @@ class RAG(BaseLangGraph):
             self._summarise_history_node = SummariseMemoryNode(
                 logger=self.logger,
                 label="Summarizing history",
-                model=self.c_model,
+                llm_models=self.llm_models,
                 temperature=0.3,
                 summarisation_threshold=10,
             )

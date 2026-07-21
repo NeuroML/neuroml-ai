@@ -26,6 +26,7 @@ from klea_rag.schemas import RAGState
 
 # Type is calculated at runtime in orchestrator
 class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
+    model_type = "chat"
     """Classify a user query into domain categories.
 
     Uses an LLM to determine which domains the query belongs to, based on
@@ -37,7 +38,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         domains: Dict[str, str],
         output_schema: Type[TSchema],
         temperature: float = 0.3,
@@ -48,7 +49,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param domains: Domain name to description mapping
         :param output_schema: Pydantic schema for classification output
         :param temperature: Sampling temperature for LLM calls
@@ -58,7 +59,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=output_schema,
             memory=memory,

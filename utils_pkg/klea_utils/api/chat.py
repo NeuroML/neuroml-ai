@@ -11,7 +11,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import json
 import logging
 import traceback
-from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -41,14 +40,14 @@ def create_chat_router() -> APIRouter:
     @router.post("/query")
     async def query(request: Request, payload: ChatPayload):
         # Lazy: BaseLangGraph is the base class for all graphs
-        from klea_utils.graph.base import BaseLangGraph
+        from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
         thread_id = payload.session_id
         sessions = request.app.state.sessions
 
-        if thread_id not in sessions:
-            sessions[thread_id] = True
+        sessions.setdefault(thread_id, {})
+        model_overrides_ctx.set(sessions[thread_id])
 
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
@@ -61,10 +60,14 @@ def create_chat_router() -> APIRouter:
 
     @router.post("/query/stream")
     async def query_stream(request: Request, payload: ChatPayload):
-        from klea_utils.graph.base import BaseLangGraph
+        from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
-        thread_id = f"session_{payload.session_id or str(uuid4())}"
+        thread_id = f"session_{payload.session_id}"
+        sessions = request.app.state.sessions
+
+        sessions.setdefault(payload.session_id, {})
+        model_overrides_ctx.set(sessions[payload.session_id])
 
         async def event_stream():
             try:

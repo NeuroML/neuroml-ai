@@ -19,20 +19,26 @@ from klea_code.schemas import KleaCodeState, ToolCallSchema
 class ToolsPicker(BaseLLMNode[KleaCodeState]):
     """Node that selects the best tools for the current step."""
 
+    model_type = "plan"
+
     def __init__(
-        self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.01
+        self,
+        logger: logging.Logger,
+        label: str,
+        llm_models: dict[str, Any],
+        temperature: float = 0.01,
     ):
         """Initialise the tools picker node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance (reasoning model)
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=ToolCallSchema,
             memory=False,

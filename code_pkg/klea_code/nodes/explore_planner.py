@@ -17,6 +17,7 @@ from klea_code.schemas import KleaCodeState, PlanSchema
 
 
 class ExplorePlanner(Planner):
+    model_type = "plan"
     """Node that plans exploration steps for a codebase.
 
     Subclasses Planner with:
@@ -24,16 +25,18 @@ class ExplorePlanner(Planner):
     """
 
     @override
-    def __init__(self, logger, label: str, model, temperature: float = 0.01):
+    def __init__(
+        self, logger, label: str, llm_models: dict[str, Any], temperature: float = 0.01
+    ):
         """Initialise the explore planner node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         """
         super().__init__(
-            logger=logger, label=label, model=model, temperature=temperature
+            logger=logger, label=label, llm_models=llm_models, temperature=temperature
         )
         self.prompt_prefix = "ExplorePlanner"
 

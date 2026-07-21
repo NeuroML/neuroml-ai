@@ -8,6 +8,8 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Literal, Type, final
@@ -107,6 +109,9 @@ class AbstractLLMNode[TSchema: BaseModel](
 ):
     """Abstract base class for LangGraph nodes that use LLMs.
 
+    Subclasses **must** set :attr:`model_type` to a key present in the
+    ``llm_models`` dict (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
+
     Implements a template execution flow:
     1. Pre-execution check (optional skip)
     2. Build prompt (system + human)
@@ -115,11 +120,13 @@ class AbstractLLMNode[TSchema: BaseModel](
     5. Update state
     """
 
+    model_type: str = ""
+
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        model_inst: Any,
+        llm_models: dict[str, Any],
         temperature: float,
         output_schema: Type[TSchema] | None = None,
     ):
@@ -127,12 +134,19 @@ class AbstractLLMNode[TSchema: BaseModel](
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model_inst: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature
         :param output_schema: Pydantic schema for structured output
         """
         super().__init__(logger, label)
-        self.model_inst = model_inst
+        self.llm_models = llm_models
+        try:
+            self._llm_entry = self.llm_models[self.model_type]
+        except KeyError:
+            raise KeyError(
+                f"Node '{type(self).__name__}' has model_type='{self.model_type}', "
+                f"but llm_models only has keys: {list(self.llm_models)}"
+            ) from None
         self.temperature = temperature
         self._output_schema = output_schema
 

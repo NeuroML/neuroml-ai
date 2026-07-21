@@ -65,20 +65,24 @@ class KleaCode(BaseLangGraph):
         """Initialise"""
         super().__init__(logging_level=logging_level, memory=memory)
 
-        self.r_model = None
-        self.g_model = None
-
     def _setup_models(self) -> None:
         """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, logger=self.logger)
+        from klea_utils.graph.base import LLMModel
+
+        chat = setup_llm(self.app_env.chat_model, logger=self.logger)
         if self.app_env.chat_model == self.app_env.reasoning_model:
-            self.r_model = self.c_model
+            plan = chat
             self.logger.info(
                 f"Same model used for both chat and reasoning: {self.app_env.chat_model}"
             )
         else:
-            self.r_model = setup_llm(self.app_env.reasoning_model, logger=self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, logger=self.logger)
+            plan = setup_llm(self.app_env.reasoning_model, self.logger)
+        guard = setup_llm(self.app_env.guard_model, logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(instance=chat),
+            "plan": LLMModel(instance=plan),
+            "guard": LLMModel(instance=guard),
+        }
 
     @override
     def _configure_resources(self) -> None:
@@ -120,7 +124,7 @@ class KleaCode(BaseLangGraph):
         self._guard_node = GuardNode(
             logger=self.logger,
             label="Checking safety",
-            model=self.g_model,
+            llm_models=self.llm_models,
             temperature=0.3,
             memory=self.memory,
         )
@@ -143,7 +147,7 @@ class KleaCode(BaseLangGraph):
         self._goal_setter_node = GoalSetter(
             logger=self.logger,
             label="Setting goal",
-            model=self.r_model,
+            llm_models=self.llm_models,
             temperature=0.01,
             output_schema=GoalSchema,
             memory=False,
@@ -153,20 +157,26 @@ class KleaCode(BaseLangGraph):
         )
 
         self._explore_planner_node = ExplorePlanner(
-            logger=self.logger, label="Exploring", model=self.r_model, temperature=0.01
+            logger=self.logger,
+            label="Exploring",
+            llm_models=self.llm_models,
+            temperature=0.01,
         )
         self.workflow.add_node(
             self._explore_planner_node.label, self._explore_planner_node.execute
         )
 
         self._planner_node = Planner(
-            logger=self.logger, label="Planning", model=self.r_model, temperature=0.01
+            logger=self.logger,
+            label="Planning",
+            llm_models=self.llm_models,
+            temperature=0.01,
         )
         self._planner_node.set_tools_description(self.tools_description)
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
-            model=self.r_model,
+            llm_models=self.llm_models,
             temperature=0.01,
         )
         self._tools_picker_node.set_tools_description(self.tools_description)

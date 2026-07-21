@@ -8,12 +8,14 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import contextvars
 import json
 import logging
 import os
 import sys
 import time
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, List, Literal, Type, final
@@ -25,10 +27,43 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+
+# Per-request context variable carrying per-session model overrides (api_key,
+# model, provider, etc.).  Set by the API layer before graph.ainvoke() and
+# read by _invoke_llm() so that nodes don't need to thread overrides through
+# their signatures.  Falls back to an empty dict if not set.
+model_overrides_ctx: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
+    "model_overrides", default={}
+)
+
+
+class LLMModel(BaseModel):
+    """Container for a single LLM model instance and its runtime config template.
+
+    ``instance`` holds the model object (typically a ``_ConfigurableModel``
+    returned by ``init_chat_model``).  ``config_template`` stores the default
+    ``configurable`` fields that will be merged into every ``invoke()`` call
+    (e.g. temperature).  Nodes may override specific fields per-call.
+
+    Use ``build_config()`` to produce a per-invocation config dict:
+    ``build_config({"temperature": 0.5})`` returns a copy of the template
+    with temperature overridden.
+    """
+
+    instance: Any
+    config_template: dict[str, Any] = Field(
+        default_factory=lambda: {"configurable": {}}
+    )
+
+    def build_config(self, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+        config = deepcopy(self.config_template)
+        if overrides:
+            config.setdefault("configurable", {}).update(overrides)
+        return config
 
 
 class _CustomChannelEnabler(StreamTransformer):
@@ -99,7 +134,7 @@ class BaseLangGraph(ABC):
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
 
-        self.c_model = None
+        self.llm_models: dict[str, LLMModel] = {}
 
         self.memory = memory
 
@@ -282,8 +317,8 @@ class BaseLangGraph(ABC):
     def _setup_models(self) -> None:
         """Set up LLM model instances.
 
-        Subclasses should assign model instances to ``self.c_model`` (and
-        optionally ``self.r_model`` for reasoning models).
+        Subclasses should populate ``self.llm_models`` with ``LLMModel``
+        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
         """
         ...
 

@@ -19,6 +19,7 @@ from .base import BaseLLMNode
 
 
 class SummariseMemoryNode(BaseLLMNode):
+    model_type = "chat"
     """Node that summarises conversation history into a context summary.
 
     Uses _pre_exec() to skip execution if there aren't enough recent messages.
@@ -36,7 +37,7 @@ class SummariseMemoryNode(BaseLLMNode):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         temperature: float = 0.3,
         summarisation_threshold: int = 10,
         memory: bool = False,
@@ -45,7 +46,7 @@ class SummariseMemoryNode(BaseLLMNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature for LLM calls
         :param summarisation_threshold: Minimum number of messages before summarising
         :param memory: Whether to include conversation history in the prompt
@@ -53,7 +54,7 @@ class SummariseMemoryNode(BaseLLMNode):
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=None,
             memory=memory,

@@ -8,6 +8,8 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from __future__ import annotations
+
 import inspect
 import logging
 from functools import cached_property
@@ -21,6 +23,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_core.utils.function_calling import convert_to_json_schema
 from pydantic import BaseModel
+
+from klea_utils.graph.base import model_overrides_ctx
 
 from ..errors import PromptTemplateError
 from ..llm import add_memory_to_prompt, load_prompt, parse_output_with_thought
@@ -47,7 +51,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         temperature: float,
         output_schema: Type[TSchema] | None,
         memory: bool = False,
@@ -57,13 +61,15 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param temperature: Sampling temperature for LLM calls
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
         :param num_history_messages: Number of recent messages to include
         """
-        super().__init__(logger, label, model, temperature, output_schema=output_schema)
+        super().__init__(
+            logger, label, llm_models, temperature, output_schema=output_schema
+        )
 
         self._prompt_prefix: str | None = None
         self._prompt_registry_location: Path | None = None
@@ -130,21 +136,22 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
     def _configure_llm(self) -> Runnable:
         """Configure LLM with structured output"""
-        schema = self.output_schema
-        if schema:
-            return self.model_inst.with_structured_output(
-                schema, method="json_schema", include_raw=True
+        inst = self._llm_entry.instance
+        if self.output_schema:
+            return inst.with_structured_output(
+                self.output_schema, method="json_schema", include_raw=True
             )
         else:
-            return self.model_inst
+            return inst
 
     def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
         """Invoke LLM with default temperature - can be overridden"""
-        output = llm.invoke(
-            prompt, config={"configurable": {"temperature": self.temperature}}
-        )
+        overrides = {"temperature": self.temperature}
+        overrides.update(model_overrides_ctx.get())
+        config = self._llm_entry.build_config(overrides)
+        output = llm.invoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
 

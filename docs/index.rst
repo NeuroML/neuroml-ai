@@ -29,7 +29,7 @@ The project is organised as a monorepo with four installable packages:
      - Generic RAG pipeline with multi-domain support
    * - ``code_pkg``
      - ``klea_code``
-     - ``klea-code``
+     - ``klea-code``, ``klea-code-serve``
      - AI-assisted coding and workflow system
    * - ``mcp_pkg``
      - ``neuroml_mcp``

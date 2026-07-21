@@ -19,6 +19,7 @@ from .base import BaseLLMNode
 
 
 class GuardNode(BaseLLMNode):
+    model_type = "guard"
     """Safety guard node that checks if user queries are safe to process.
 
     Evaluates whether a query contains potentially harmful content
@@ -31,7 +32,7 @@ class GuardNode(BaseLLMNode):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
+        llm_models: dict[str, Any],
         temperature: float = 0.3,
         memory: bool = False,
     ):
@@ -39,14 +40,14 @@ class GuardNode(BaseLLMNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature for LLM calls
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param temperature: Sampling temperature
         :param memory: Whether to include conversation history in the prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
+            llm_models=llm_models,
             temperature=temperature,
             output_schema=None,
             memory=memory,
