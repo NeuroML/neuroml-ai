@@ -56,6 +56,21 @@ class LLMModel(BaseModel):
             config.setdefault("configurable", {}).update(overrides)
         return config
 
+    def rebuild(
+        self, model_string: str, logger: logging.Logger, **overrides: Any
+    ) -> None:
+        """Replace the model instance and config template at runtime.
+
+        Called when a user switches models via the API/frontend.
+        Creates a fresh ``_ConfigurableModel`` via ``setup_llm`` so that
+        provider-specific defaults are reset  ---  avoids leaking init kwargs
+        when switching between different providers (e.g. HF -> OpenAI).
+        """
+        from klea_utils.llm import setup_llm
+
+        self.instance = setup_llm(model_string, logger)
+        self.config_template = {"configurable": overrides}
+
 
 class _CustomChannelEnabler(StreamTransformer):
     """Enables the ``custom`` channel in LangGraph v3 event streams.
