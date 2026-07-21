@@ -305,6 +305,18 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
+# Shared configurable fields for init_chat_model. Common to all providers;
+# provider-specific fields are appended per-branch.
+_COMMON_CONFIG_FIELDS: tuple[str, ...] = (
+    "model",
+    "model_provider",
+    "temperature",
+    "max_tokens",
+    "api_key",
+    "base_url",
+)
+
+
 def setup_llm(model_name_full: str, logger: logging.Logger):
     """Set up a chat model"""
     # Lazy: init_chat_model and huggingface classes pull in provider
@@ -314,81 +326,50 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
     parsed = parse_model_name(model_name_full)
 
     if parsed.provider == "huggingface":
-        from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-
-        model_name = parsed.model_name
-        provider = parsed.suffix or "auto"
-
-        logger.debug(f"Using huggingface model: {model_name}")
-
-        hf_token = os.environ.get("HF_TOKEN", None)
+        hf_token = os.environ.get("HF_TOKEN")
         assert hf_token
 
+        logger.debug(f"Using huggingface model: {parsed.model_name}")
         logger.debug(f"Got HuggingFace Token: {hf_token[:2]}...{hf_token[-2:]}")
 
-        llm = HuggingFaceEndpoint(
-            repo_id=model_name,
-            provider=provider,
-            max_new_tokens=32768,
-            do_sample=False,
-            repetition_penalty=1.03,
-            task="conversational",
-            huggingfacehub_api_token=hf_token,
-        )
-
-        logger.debug(f"Using huggingface model: {model_name}")
-
-        hf_token = os.environ.get("HF_TOKEN", None)
-        assert hf_token
-
-        logger.debug(f"Got HuggingFace Token: {hf_token[:2]}...{hf_token[-2:]}")
-
-        llm = HuggingFaceEndpoint(
-            repo_id=f"{model_name}",
-            provider=provider,
-            max_new_tokens=32768,
-            do_sample=False,
-            repetition_penalty=1.03,
-            task="conversational",  # seems to be ignored, defaults to text-generation
-            huggingfacehub_api_token=hf_token,
-        )
-
-        model_var = ChatHuggingFace(llm=llm)
-
-        """
-
+        # init_chat_model for huggingface calls ChatHuggingFace.from_model_id(),
+        # which for backend="endpoint" creates a HuggingFaceEndpoint internally.
+        # All remaining kwargs flow through to HuggingFaceEndpoint.__init__().
+        # "model", "model_provider", and "temperature" are configurable at
+        # runtime so the user can switch model/repo_id without restarting.
         model_var = init_chat_model(
-            model_name,
+            parsed.model_name,
             model_provider="huggingface",
-            llm=llm,
-            configurable_fields=("temperature"),
+            configurable_fields=_COMMON_CONFIG_FIELDS
+            + ("provider", "backend", "huggingfacehub_api_token"),
             backend="endpoint",
+            provider=parsed.suffix or "auto",
+            huggingfacehub_api_token=hf_token,
+            max_new_tokens=32768,
+            do_sample=False,
+            repetition_penalty=1.03,
         )
-        """
-        assert model_var
-
-        state, msg = check_model_works(model_var, timeout=10, retries=3)
-        if state:
-            logger.debug(f"Model works: {state}, {msg}")
-        else:
-            # handle special case where some models do not support "cheapest" on HF
-            if "Provider 'cheapest' not supported" in msg:
-                logger.error(f"Model does not work: {state}, {msg}")
-                logger.debug("Replacing 'cheapest' with 'auto' and retrying")
-                return setup_llm(model_name_full.replace(":cheapest", ":auto"), logger)
-
-            logger.error(f"Model does not work: {state}, {msg}")
-        assert state
     else:
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
 
         model_var = init_chat_model(
-            model_name_full, configurable_fields=("temperature")
+            model_name_full,
+            configurable_fields=_COMMON_CONFIG_FIELDS,
         )
-        assert model_var
 
-        state, msg = check_model_works(model_var, timeout=60)
+    state, msg = check_model_works(model_var, timeout=60)
+    if not state:
+        # handle special case where some models do not support "cheapest" on HF
+        if (
+            parsed.provider == "huggingface"
+            and "Provider 'cheapest' not supported" in msg
+        ):
+            logger.error(f"Model does not work: {state}, {msg}")
+            logger.debug("Replacing 'cheapest' with 'auto' and retrying")
+            return setup_llm(model_name_full.replace(":cheapest", ":auto"), logger)
+
+        logger.error(f"Model does not work: {state}, {msg}")
         assert state
 
     logger.info(f"Using chat model: {model_name_full}")
