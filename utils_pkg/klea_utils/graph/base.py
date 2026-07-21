@@ -533,10 +533,12 @@ class BaseLangGraph(ABC):
                         yield {"type": "progress", "node": current_node}
 
                 elif event_type in ("info", "debug"):
+                    data_out = data.get("data", {}).copy()
+                    data_out["timing_seconds"] = round(time.monotonic() - node_start, 2)
                     yield {
                         "type": event_type,
                         "node": data["node"],
-                        "data": data.get("data", {}),
+                        "data": data_out,
                     }
 
             elif method == "messages":

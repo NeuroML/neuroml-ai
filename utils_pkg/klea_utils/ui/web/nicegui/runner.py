@@ -411,6 +411,7 @@ def setup_layout(
                 return
             for idx, entry in enumerate(entries):
                 heading = entry.get("heading", "")
+                timing = entry.get("timing_seconds", None)
                 expanded = idx in session["inspector_expanded"]
                 with (
                     ui.element("details")
@@ -422,7 +423,12 @@ def setup_layout(
                         .classes("text-xs font-bold cursor-pointer w-full")
                         .on("click", lambda i=idx: _toggle_inspector_entry(i))
                     ):
-                        ui.label(heading).classes("w-full")
+                        with ui.row().classes("w-full flex-nowrap items-center"):
+                            ui.label(heading)
+                            if timing:
+                                ui.label(f"({timing:.1f}s)").classes(
+                                    "text-xs text-grey-5"
+                                )
                     ui.label(entry.get("summary", "")).classes(
                         "text-xs text-grey-6 mb-1 w-full"
                     )
@@ -476,43 +482,31 @@ def setup_layout(
                     async for event in stream_events(
                         query, _current_session[0], server_url
                     ):
-                        logger.debug("Stream event: type=%s", event.get("type"))
-                        if event["type"] == "progress":
+                        t = event.get("type", "?")
+                        if t == "progress":
                             pg_label.set_text(f"{event.get('node', '')}")
-                        elif event["type"] == "debug":
+                        elif t == "debug":
                             data = event.get("data", {})
-                            logger.debug(
-                                "Received debug event: node=%s heading=%s data=%s",
-                                event.get("node", ""),
-                                data.get("heading", ""),
-                                str(event)[:300],
-                            )
                             session["inspector_entries"].append(
                                 {
-                                    "type": event["type"],
+                                    "type": t,
                                     "node": event.get("node", ""),
                                     "heading": data.get("heading", ""),
                                     "summary": data.get("summary", ""),
                                     "details": data.get("details", {}),
+                                    "timing_seconds": data.get("timing_seconds", None),
                                 }
                             )
-                            logger.debug(
-                                "Inspector entries now: %d",
-                                len(session["inspector_entries"]),
-                            )
                             _inspector_panel.refresh()
-                        elif event["type"] == "complete":
+                        elif t == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)
-                            logger.debug(
-                                "Stream complete, answer length=%d", len(full_response)
-                            )
                             _ensure_session(_current_session[0])["messages"].append(
                                 (full_response, datetime.now().strftime("%X"), False)
                             )
                             _chat_messages.refresh()
                             break
-                        elif event["type"] == "error":
+                        elif t == "error":
                             pg_row.delete()
                             _ensure_session(_current_session[0])["messages"].append(
                                 (
