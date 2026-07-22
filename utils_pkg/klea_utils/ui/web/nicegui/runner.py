@@ -12,7 +12,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
-import logging
 import uuid
 from datetime import datetime
 
@@ -27,11 +26,10 @@ from klea_utils.api.sse import (
 )
 from klea_utils.api.utils import check_api_is_ready
 
+from ....plogging import setup_logger
 from .widgets import ChatBubble
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = setup_logger(__name__)
 
 # Per-session data store.
 # Keyed by session_id.

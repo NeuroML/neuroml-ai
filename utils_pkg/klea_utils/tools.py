@@ -8,18 +8,14 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import logging
 from typing import Any, List
 
 from fastmcp.client.client import CallToolResult
 from mcp.types import EmbeddedResource, TextContent
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
+from .plogging import setup_logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = setup_logger(__name__)
 
 
 def _textualize_content_block(block: Any) -> str:

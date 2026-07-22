@@ -8,17 +8,12 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import logging
-
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
+from ..plogging import setup_logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = setup_logger(__name__)
 
 
 class SessionModelConfigPayload(BaseModel):

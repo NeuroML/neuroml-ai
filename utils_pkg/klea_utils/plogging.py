@@ -37,6 +37,9 @@ logger_formatter_other = logging.Formatter(
 def setup_logger(name: str, stderr_level: int = logging.DEBUG) -> logging.Logger:
     """Configure a dual-stream logger.
 
+    Idempotent — subsequent calls with the same *name* return the
+    already-configured logger unchanged.
+
     INFO-level messages go to stdout with a simple format.  All other
     levels (DEBUG, WARNING, ERROR, CRITICAL) go to stderr with a
     format that includes the function name.
@@ -46,6 +49,9 @@ def setup_logger(name: str, stderr_level: int = logging.DEBUG) -> logging.Logger
     :returns: Configured logger with handlers attached
     """
     logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 

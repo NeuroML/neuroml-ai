@@ -33,9 +33,6 @@ from klea_code.nodes.tools_router import ToolsRouter
 from .config import AppConfig, AppEnv
 from .schemas import GoalSchema, KleaCodeState
 
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
-
 
 @final
 class KleaCode(BaseLangGraph):

@@ -36,9 +36,6 @@ from .nodes.tools_caller import ToolsCaller
 from .nodes.tools_picker import ToolsPicker
 from .schemas import RAGState
 
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
-
 
 @final
 class RAG(BaseLangGraph):

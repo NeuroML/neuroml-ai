@@ -21,12 +21,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompt_values import PromptValue
 from pydantic import BaseModel
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
+from .plogging import setup_logger
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger = setup_logger(__name__)
 
 
 class ParsedModelName(NamedTuple):

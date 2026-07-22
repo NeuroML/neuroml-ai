@@ -8,14 +8,9 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import logging
-
 import typer
 
-from klea_utils.plogging import setup_logger
-
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
+from ..plogging import setup_logger
 
 app = typer.Typer(help="Create vector stores from documents")
 
