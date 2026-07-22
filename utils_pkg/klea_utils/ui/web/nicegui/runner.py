@@ -139,6 +139,9 @@ def setup_layout(
     ui.add_css(
         ".inspector-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
     )
+    ui.add_css(
+        ".q-tooltip { max-width: 350px !important; overflow: visible !important; white-space: nowrap !important; }"
+    )
 
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
@@ -345,6 +348,7 @@ def setup_layout(
         with ui.item(on_click=_new_session).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("add")
+                ui.tooltip("Start a new conversation")
             with ui.item_section():
                 ui.label("New Session")
         with (
@@ -373,6 +377,7 @@ def setup_layout(
         with ui.item(on_click=_toggle_left_drawer).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 toggle_icon_ref[0] = ui.icon("keyboard_double_arrow_right")
+                ui.tooltip("Expand or collapse the sidebar")
             with ui.item_section():
                 ui.label("").classes("text-xs")
 
