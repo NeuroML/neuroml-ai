@@ -20,7 +20,11 @@ import httpx
 from nicegui import app, background_tasks, ui
 from nicegui.events import GenericEventArguments
 
-from klea_utils.api.sse import stream_events
+from klea_utils.api.sse import (
+    fetch_active_models,
+    format_model_info,
+    stream_events,
+)
 from klea_utils.api.utils import check_api_is_ready
 
 from .widgets import ChatBubble
@@ -78,6 +82,7 @@ def setup_layout(
     subtitle: str = "",
     disclaimer: str = "",
     footer_text: str = 'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
+    model_info: str = "",
 ) -> None:
     """Build the full page UI: header, drawers, chat area, and footer.
 
@@ -101,6 +106,7 @@ def setup_layout(
         in the header.
     :param disclaimer: Optional text shown below the chat input.
     :param footer_text: HTML content for the footer bar.
+    :param model_info: Compact model summary string (from ``format_model_info``).
     """
     # --- CSS overrides ---
     # Make q-page a flex container so the nicegui-content can flex-fill
@@ -315,9 +321,9 @@ def setup_layout(
 
     # ---- Header ----
     with ui.header().classes("items-center"):
-        if subtitle:
-            ui.label(subtitle).classes("text-sm text-grey-4 mr-2")
         ui.label(title).classes("text-xl font-bold")
+        if subtitle:
+            ui.label(subtitle).classes("text-sm text-grey-4 ml-2 mr-2")
         ui.space()
 
         def _toggle_dark():
@@ -388,7 +394,14 @@ def setup_layout(
         .classes("overflow-y-auto") as right_drawer
     ):
         ui.label("Inspector").classes("text-sm font-bold mb-0")
-        ui.separator().classes("mb-2")
+        ui.separator().classes("my-0.5")
+
+        if model_info:
+            with ui.row().classes("items-center no-wrap my-0.5"):
+                ui.icon("settings").classes("text-sm")
+                with ui.label(model_info).classes("text-xs truncate"):
+                    ui.tooltip("Current models per role")
+            ui.separator().classes("my-0.5")
 
         @ui.refreshable
         def _inspector_panel() -> None:
@@ -621,6 +634,10 @@ def run_nicegui_app(
 
         session_id = app.storage.user["session_id"]
 
+        # Fetch model info (non-fatal — just won't show in header on failure)
+        active_models = await fetch_active_models(server_url, session_id)
+        model_info = format_model_info(active_models)
+
         setup_layout(
             session_id=session_id,
             server_url=server_url,
@@ -628,6 +645,7 @@ def run_nicegui_app(
             subtitle=subtitle,
             disclaimer=disclaimer,
             footer_text=footer_text,
+            model_info=model_info,
         )
 
     ui.run(

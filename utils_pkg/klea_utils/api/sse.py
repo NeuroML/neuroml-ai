@@ -140,7 +140,7 @@ def format_model_info(info: dict[str, dict[str, str]]) -> str:
 
     Strips provider prefixes and joins roles, e.g.::
 
-        chat:deepseek-v4-flash | guard:llama-guard3 | embedding:bge-m3
+        Chat:deepseek-v4-flash | Guard:llama-guard3 | Embedding:bge-m3
 
     :param info: The dict returned by ``fetch_active_models`` /
         ``fetch_active_models_sync``.
@@ -154,7 +154,7 @@ def format_model_info(info: dict[str, dict[str, str]]) -> str:
             name_short = parsed.model_name if parsed.model_name else raw
         else:
             name_short = "?"
-        parts.append(f"{role}:{name_short}")
+        parts.append(f"{role.capitalize()}: {name_short}")
     result = " | ".join(parts)
     logger.debug("Formatted model info: %s", result)
     return result
