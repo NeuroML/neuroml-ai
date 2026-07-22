@@ -12,6 +12,7 @@ import contextvars
 import json
 import logging
 import os
+import sqlite3
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -23,6 +24,7 @@ from typing import Any, List, Literal, Type, final
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
@@ -127,12 +129,15 @@ class BaseLangGraph(ABC):
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        checkpoint: str = "inmemory",
     ):
         """Initialise the base orchestrator.
 
         :param logging_level: Logging level for the orchestrator
-        :param memory: Whether to enable checkpoint-based session memory
+        :param checkpoint: Checkpointer mode — ``"inmemory"`` (volatile, default),
+            ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
+            or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
+            that need conversation history receive ``memory=False``.
         """
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
@@ -142,11 +147,18 @@ class BaseLangGraph(ABC):
         # and do NOT change this dict.
         self.llm_models: dict[str, LLMModel] = {}
 
-        self.memory = memory
-
         self.tools_description: dict[str, str] = {}
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
-        self.checkpointer: InMemorySaver | None = InMemorySaver() if memory else None
+        self.checkpointer_mode = checkpoint
+        self.memory = checkpoint != "none"
+        if checkpoint == "sqlite":
+            db_path = str(Path(self.paths.user_data_dir) / "checkpoints.db")
+            conn = sqlite3.connect(db_path, check_same_thread=False)
+            self.checkpointer = SqliteSaver(conn)
+        elif checkpoint == "inmemory":
+            self.checkpointer = InMemorySaver()
+        else:
+            self.checkpointer = None
 
         self.config_dict: dict[str, Any]
 

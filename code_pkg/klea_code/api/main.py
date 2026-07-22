@@ -17,7 +17,7 @@ from klea_code.klea_code import KleaCode
 
 
 def _create_kleacode() -> KleaCode:
-    return KleaCode(memory=True)
+    return KleaCode(checkpoint="inmemory")
 
 
 app = make_app(

@@ -41,7 +41,7 @@ class ToyGraph(BaseLangGraph):
     graph_name: str = "ToyGraph"
 
     def __init__(self):
-        super().__init__(logging_level=logging.WARNING, memory=False)
+        super().__init__(logging_level=logging.WARNING, checkpoint="none")
         from platformdirs import PlatformDirs
 
         self.paths = PlatformDirs(self.graph_name.lower())

@@ -17,7 +17,7 @@ from klea_rag.rag import RAG
 
 
 def _create_rag() -> RAG:
-    return RAG(memory=True)
+    return RAG(checkpoint="inmemory")
 
 
 app = make_app(

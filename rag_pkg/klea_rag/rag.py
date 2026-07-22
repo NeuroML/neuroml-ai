@@ -64,10 +64,10 @@ class RAG(BaseLangGraph):
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        checkpoint: str = "inmemory",
     ):
         """Initialise"""
-        super().__init__(logging_level=logging_level, memory=memory)
+        super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
         # total number of reference documents
         self.num_refs_max = 10
