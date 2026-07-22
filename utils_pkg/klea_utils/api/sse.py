@@ -13,12 +13,14 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
-import logging
 from collections.abc import AsyncGenerator, Generator
 
 import httpx
 
-logger = logging.getLogger(__name__)
+from ..llm import parse_model_name
+from ..plogging import setup_logger
+
+logger = setup_logger(__name__)
 
 
 async def stream_events(
@@ -58,6 +60,104 @@ async def stream_events(
                     continue
                 # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
                 yield json.loads(line[6:])
+
+
+# TODO: if more fetch-json-from-endpoint functions are added, consider
+# extracting the async/sync boilerplate into _fetch_json / _fetch_json_sync
+# helpers in utils.py to avoid repetition.
+async def fetch_active_models(
+    server_url: str,
+    session_id: str,
+) -> dict[str, dict[str, str]]:
+    """Fetch the resolved model config per role for a session.
+
+    Calls ``GET /models/session/{session_id}/active`` and returns the
+    merged default + override config dict.
+
+    :param server_url: Base URL of the backend API server.
+    :param session_id: Opaque session identifier.
+    :returns: ``{"chat": {"model": "...", "provider": "..."}, "guard": ..., "embedding": ...}``
+    """
+    url = f"{server_url}/models/session/{session_id}/active"
+    async with httpx.AsyncClient(timeout=5) as client:
+        try:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                logger.warning(
+                    "Failed to fetch active models: HTTP %s from %s",
+                    resp.status_code,
+                    url,
+                )
+                return {}
+            data: dict[str, dict[str, str]] = resp.json()
+            logger.debug("Active models for session %s: %s", session_id, data)
+            return data
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch active models from %s: %s",
+                url,
+                e,
+            )
+            return {}
+
+
+def fetch_active_models_sync(
+    server_url: str,
+    session_id: str,
+) -> dict[str, dict[str, str]]:
+    """Synchronous counterpart of :func:`fetch_active_models`.
+
+    Intended for Streamlit and TUI frontends.
+
+    :param server_url: Base URL of the backend API server.
+    :param session_id: Opaque session identifier.
+    """
+    url = f"{server_url}/models/session/{session_id}/active"
+    with httpx.Client(timeout=5) as client:
+        try:
+            resp = client.get(url)
+            if resp.status_code != 200:
+                logger.warning(
+                    "Failed to fetch active models: HTTP %s from %s",
+                    resp.status_code,
+                    url,
+                )
+                return {}
+            data: dict[str, dict[str, str]] = resp.json()
+            logger.debug("Active models for session %s: %s", session_id, data)
+            return data
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch active models from %s: %s",
+                url,
+                e,
+            )
+            return {}
+
+
+def format_model_info(info: dict[str, dict[str, str]]) -> str:
+    """Build a compact one-line model summary from active models config.
+
+    Strips provider prefixes and joins roles, e.g.::
+
+        chat:deepseek-v4-flash | guard:llama-guard3 | embedding:bge-m3
+
+    :param info: The dict returned by ``fetch_active_models`` /
+        ``fetch_active_models_sync``.
+    :returns: Empty string if no models are configured.
+    """
+    parts: list[str] = []
+    for role, cfg in info.items():
+        raw = cfg.get("model", "")
+        if raw:
+            parsed = parse_model_name(raw)
+            name_short = parsed.model_name if parsed.model_name else raw
+        else:
+            name_short = "?"
+        parts.append(f"{role}:{name_short}")
+    result = " | ".join(parts)
+    logger.debug("Formatted model info: %s", result)
+    return result
 
 
 def stream_events_sync(
