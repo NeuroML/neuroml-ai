@@ -294,8 +294,30 @@ def check_model_works(model, timeout=30, retries=5):
 
     configurable = {token_param: 5}
 
+    # One-shot probe for response_format/json_schema support.  A transient
+    # failure here is harmless  ---  we just fall back to prompt-based structured
+    # output (already in _get_system_prompt).  Every model will pass the plain
+    # ping retry loop below even if this probe fails.
+    try:
+        from pydantic import BaseModel
+
+        class _ProbeSchema(BaseModel):
+            answer: str
+
+        probe = model.with_structured_output(
+            _ProbeSchema, method="json_schema", include_raw=False
+        )
+        probe.invoke(
+            "ping",
+            config={"timeout": timeout, "configurable": configurable},
+        )
+        model._supports_structured_output = True
+        logger.info("Model supports structured output")
+    except Exception:
+        model._supports_structured_output = False
+
     for attempt in range(retries):
-        print(f"Checking model. Attempt #{attempt + 1}/{retries}")
+        logger.info(f"Checking model. Attempt #{attempt + 1}/{retries}")
         try:
             result = model.invoke(
                 "ping",
@@ -304,7 +326,7 @@ def check_model_works(model, timeout=30, retries=5):
                     "configurable": configurable,
                 },
             )
-            print(f"Model available (attempt {attempt + 1}/{retries}): {result}")
+            logger.info(f"Model available (attempt {attempt + 1}/{retries}): {result}")
             return True, f"Model available (attempt {attempt + 1}/{retries})"
         except StopIteration as e:
             return (
@@ -313,11 +335,13 @@ def check_model_works(model, timeout=30, retries=5):
             )
         except Exception as e:
             error_msg = f"{e.__class__.__name__}: {e.__str__()}"
-            print(f"Attempt #{attempt + 1}/{retries}: model unavailable: {error_msg}")
+            logger.warning(
+                f"Attempt #{attempt + 1}/{retries}: model unavailable: {error_msg}"
+            )
             if attempt < retries - 1:
-                time.sleep(2**attempt)  # Exponential backoff
+                time.sleep(2**attempt)
             else:
-                print(f"Model unavailable after {retries} attempts: {error_msg}")
+                logger.error(f"Model unavailable after {retries} attempts: {error_msg}")
                 return (
                     False,
                     f"Model unavailable after {retries} attempts: {error_msg}",
