@@ -14,7 +14,13 @@ from typing import Any, Dict, override
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
-from ..llm import content_to_str, split_output_by_section
+from ..llm import (
+    content_to_str,
+    extract_llm_output_content,
+    prompt_value_to_messages,
+    split_output_by_section,
+)
+from ..nodes.abstract import NodeStreamData
 from .base import BaseLLMNode
 
 
@@ -89,8 +95,40 @@ class AnswerGeneral(BaseLLMNode):
 
         return {"messages": messages, "message_for_user": answer}
 
-    # TODO: may need updating
     @override
     def _get_default_error_result(self) -> AIMessage:
         """Return default result when processing fails."""
         return AIMessage(content="")
+
+    @override
+    def _get_info(self) -> NodeStreamData | None:
+        """Return answer summary."""
+        assert self._last_state_updates is not None
+        result = content_to_str(self._last_state_updates.get("message_for_user", ""))
+        char_count = len(result)
+        return NodeStreamData(
+            heading="General Answer",
+            summary=f"Generated answer ({char_count} characters)"
+            if char_count
+            else "No answer generated",
+            details={"character_count": char_count},
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData | None:
+        """Return info + input/output triples."""
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        info = self._get_info()
+        if not info:
+            return None
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
+            }
+        )
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
