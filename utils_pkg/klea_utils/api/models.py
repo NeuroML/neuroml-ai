@@ -16,39 +16,40 @@ from ..plogging import setup_logger
 logger = setup_logger(__name__)
 
 
-class SessionModelConfigPayload(BaseModel):
+class ChatModelConfigPayload(BaseModel):
     model: str
     api_key: str | None = None
     base_url: str | None = None
     provider: str | None = None
+    user_id: str = ""
 
 
 def create_models_router() -> APIRouter:
-    """Create an APIRouter for per-session model configuration.
+    """Create an APIRouter for per-chat model configuration.
 
-    ``GET /models/session/{session_id}/overrides``
-        Returns stored overrides for a session.
+    ``GET /chat/{user_id}/{chat_id}/models/overrides``
+        Returns stored model overrides for a chat.
 
-    ``GET /models/session/{session_id}/active``
+    ``GET /chat/{user_id}/{chat_id}/models/active``
         Returns resolved model config (defaults merged with overrides).
 
-    ``POST /models/session/{session_id}/overrides/{role}``
-        Stores per-session model overrides in ``app.state.sessions``.
+    ``POST /chat/{user_id}/{chat_id}/models/overrides/{role}``
+        Stores per-chat model overrides in ``app.state.chat_sessions``.
     """
-    router = APIRouter(prefix="/models", tags=["models"])
+    router = APIRouter(prefix="/chat", tags=["models"])
 
-    @router.get("/session/{session_id}/overrides")
-    async def get_session_model_overrides(session_id: str, request: Request):
-        sessions = request.app.state.sessions
-        return sessions.get(session_id, {}).get("models", {})
+    @router.get("/{user_id}/{chat_id}/models/overrides")
+    async def get_chat_model_overrides(user_id: str, chat_id: str, request: Request):
+        chat_sessions = request.app.state.chat_sessions
+        key = f"{user_id}:{chat_id}"
+        return chat_sessions.get(key, {}).get("models", {})
 
-    @router.get("/session/{session_id}/active")
-    async def get_session_active_models(session_id: str, request: Request):
-        """Return the resolved model config per role (defaults + session overrides).
+    @router.get("/{user_id}/{chat_id}/models/active")
+    async def get_chat_active_models(user_id: str, chat_id: str, request: Request):
+        """Return the resolved model config per role (defaults + chat overrides).
 
         Reads the graph's ``llm_models`` dict for defaults and merges any
-        per-session overrides on top.  The frontend can use this to display
-        the effective model configuration for a session.
+        per-chat overrides on top.
         """
         # Lazy: BaseLangGraph is the base class for all graphs
         from klea_utils.graph.base import BaseLangGraph
@@ -61,11 +62,12 @@ def create_models_router() -> APIRouter:
                 cfg["provider"] = entry.parsed_model.provider or ""
             defaults[role] = cfg
 
-        # Add the embedding model (fixed, not session-configurable)
+        # Add the embedding model (fixed, not chat-configurable)
         if graph.embedding_model:
             defaults["embedding"] = {"model": graph.embedding_model}
 
-        overrides = request.app.state.sessions.get(session_id, {}).get("models", {})
+        key = f"{user_id}:{chat_id}"
+        overrides = request.app.state.chat_sessions.get(key, {}).get("models", {})
         for role, override in overrides.items():
             if role in defaults:
                 defaults[role]["model"] = override.get("model", defaults[role]["model"])
@@ -80,16 +82,21 @@ def create_models_router() -> APIRouter:
 
         return defaults
 
-    @router.post("/session/{session_id}/overrides/{role}")
-    async def set_session_model_override(
-        session_id: str, role: str, payload: SessionModelConfigPayload, request: Request
+    @router.post("/{user_id}/{chat_id}/models/overrides/{role}")
+    async def set_chat_model_override(
+        user_id: str,
+        chat_id: str,
+        role: str,
+        payload: ChatModelConfigPayload,
+        request: Request,
     ):
-        sessions = request.app.state.sessions
-        data = sessions.setdefault(session_id, {}).setdefault("models", {})
+        chat_sessions = request.app.state.chat_sessions
+        key = f"{user_id}:{chat_id}"
+        data = chat_sessions.setdefault(key, {}).setdefault("models", {})
         data[role] = payload.model_dump(exclude_none=True)
         return {
             "status": "ok",
-            "session_id": session_id,
+            "chat_id": chat_id,
             "role": role,
             "model": payload.model,
         }

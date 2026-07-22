@@ -8,8 +8,6 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import uuid
-
 
 async def run_repl(
     url: str,
@@ -31,12 +29,13 @@ async def run_repl(
     :param app_prefix: Prefix for user/assistant labels (e.g. ``"klea"``)
     """
     # Lazy: avoids importing yaspin (and its deps) at module level
+    import coolname
     from yaspin import yaspin
 
     from klea_utils.api.sse import stream_events
     from klea_utils.api.utils import check_api_is_ready
 
-    session_id = str(uuid.uuid4())
+    chat_id = coolname.generate_slug(2)
 
     with yaspin(text="Waiting for API..."):
         await check_api_is_ready(f"{url}/health/ready")
@@ -47,7 +46,7 @@ async def run_repl(
         print()
 
         with yaspin(text="Working ...", timer=True) as spinner:
-            async for event in stream_events(query, session_id, url):
+            async for event in stream_events(query, chat_id, url):
                 if event["type"] == "progress":
                     spinner.text = event["node"]
                 elif event["type"] == "complete":

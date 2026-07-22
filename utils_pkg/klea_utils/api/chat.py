@@ -22,7 +22,8 @@ logger = setup_logger(__name__)
 
 class ChatPayload(BaseModel):
     query: str
-    session_id: str
+    chat_id: str
+    user_id: str = ""
 
 
 def create_chat_router() -> APIRouter:
@@ -30,8 +31,13 @@ def create_chat_router() -> APIRouter:
 
     The router reads the graph instance from ``request.app.state.graph``
     (set by :func:`klea_utils.api.app.make_app`).
+    Chat-session configs are kept in ``app.state.chat_sessions`` keyed by
+    ``{user_id}:{chat_id}``.
     """
     router = APIRouter()
+
+    def _storage_key(payload: ChatPayload) -> str:
+        return f"{payload.user_id}:{payload.chat_id}"
 
     @router.post("/query")
     async def query(request: Request, payload: ChatPayload):
@@ -39,11 +45,12 @@ def create_chat_router() -> APIRouter:
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
-        thread_id = payload.session_id
-        sessions = request.app.state.sessions
+        key = _storage_key(payload)
+        thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
+        chat_sessions = request.app.state.chat_sessions
 
-        sessions.setdefault(thread_id, {}).setdefault("models", {})
-        model_overrides_ctx.set(sessions[thread_id]["models"])
+        chat_sessions.setdefault(key, {}).setdefault("models", {})
+        model_overrides_ctx.set(chat_sessions[key]["models"])
 
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
@@ -59,11 +66,12 @@ def create_chat_router() -> APIRouter:
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
-        thread_id = f"session_{payload.session_id}"
-        sessions = request.app.state.sessions
+        key = _storage_key(payload)
+        thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
+        chat_sessions = request.app.state.chat_sessions
 
-        sessions.setdefault(payload.session_id, {}).setdefault("models", {})
-        model_overrides_ctx.set(sessions[payload.session_id]["models"])
+        chat_sessions.setdefault(key, {}).setdefault("models", {})
+        model_overrides_ctx.set(chat_sessions[key]["models"])
 
         async def event_stream():
             try:

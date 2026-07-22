@@ -9,8 +9,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import asyncio
-import uuid
 
+import coolname
 import httpx
 import streamlit as st
 
@@ -37,8 +37,8 @@ def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
 
     if "history" not in st.session_state:
         st.session_state.history = []
-    if "session_id" not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
+    if "chat_id" not in st.session_state:
+        st.session_state.chat_id = coolname.generate_slug(2)
 
     for msg in st.session_state.history:
         with st.chat_message(msg["role"]):
@@ -57,9 +57,7 @@ def run_streamlit_app(title: str, url: str, subtitle: str = "") -> None:
             def event_iter():
                 nonlocal full_response, last_node, progress
 
-                for event in stream_events_sync(
-                    query, st.session_state.session_id, url
-                ):
+                for event in stream_events_sync(query, st.session_state.chat_id, url):
                     if event["type"] == "progress":
                         if event["node"] != last_node:
                             last_node = event["node"]

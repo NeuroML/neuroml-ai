@@ -42,7 +42,9 @@ def make_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.is_ready = False
-        app.state.sessions = TTLCache(maxsize=1000, ttl=7200)
+        # Chat-session storage keyed by ``f"{user_id}:{chat_id}"``.
+        # Each entry stores model-override configs per role.
+        app.state.chat_sessions = TTLCache(maxsize=1000, ttl=7200)
 
         graph = graph_factory()
         await graph.setup()

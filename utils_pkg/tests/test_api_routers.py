@@ -31,7 +31,7 @@ def app():
     """Create a minimal FastAPI app with mock graph."""
     _app = FastAPI()
     _app.state.is_ready = True
-    _app.state.sessions = {}
+    _app.state.chat_sessions = {}
 
     mock_graph = AsyncMock()
     mock_graph.run_graph_invoke.return_value = "mock answer"

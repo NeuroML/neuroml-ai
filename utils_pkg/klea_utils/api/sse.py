@@ -25,8 +25,9 @@ logger = setup_logger(__name__)
 
 async def stream_events(
     query: str,
-    session_id: str,
+    chat_id: str,
     server_url: str,
+    user_id: str = "",
 ) -> AsyncGenerator[dict, None]:
     """POST to ``/query/stream`` and yield parsed SSE event dicts.
 
@@ -42,15 +43,16 @@ async def stream_events(
     This async generator is intended for NiceGUI and TUI frontends.
 
     :param query: User's query string.
-    :param session_id: Opaque session identifier.
+    :param chat_id: Chat conversation identifier.
     :param server_url: Base URL of the backend API server.
+    :param user_id: Opaque persistent user identifier.
     """
     url = f"{server_url}/query/stream"
     async with httpx.AsyncClient(timeout=None) as client:
         async with client.stream(
             "POST",
             url,
-            json={"query": query, "session_id": session_id},
+            json={"query": query, "chat_id": chat_id, "user_id": user_id},
         ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
@@ -67,18 +69,20 @@ async def stream_events(
 # helpers in utils.py to avoid repetition.
 async def fetch_active_models(
     server_url: str,
-    session_id: str,
+    user_id: str,
+    chat_id: str,
 ) -> dict[str, dict[str, str]]:
-    """Fetch the resolved model config per role for a session.
+    """Fetch the resolved model config per role for a chat.
 
-    Calls ``GET /models/session/{session_id}/active`` and returns the
+    Calls ``GET /chat/{user_id}/{chat_id}/models/active`` and returns the
     merged default + override config dict.
 
     :param server_url: Base URL of the backend API server.
-    :param session_id: Opaque session identifier.
+    :param user_id: Opaque persistent user identifier.
+    :param chat_id: Chat conversation identifier.
     :returns: ``{"chat": {"model": "...", "provider": "..."}, "guard": ..., "embedding": ...}``
     """
-    url = f"{server_url}/models/session/{session_id}/active"
+    url = f"{server_url}/chat/{user_id}/{chat_id}/models/active"
     async with httpx.AsyncClient(timeout=5) as client:
         try:
             resp = await client.get(url)
@@ -90,7 +94,7 @@ async def fetch_active_models(
                 )
                 return {}
             data: dict[str, dict[str, str]] = resp.json()
-            logger.debug("Active models for session %s: %s", session_id, data)
+            logger.debug("Active models for %s:%s: %s", user_id, chat_id, data)
             return data
         except Exception as e:
             logger.warning(
@@ -103,16 +107,18 @@ async def fetch_active_models(
 
 def fetch_active_models_sync(
     server_url: str,
-    session_id: str,
+    user_id: str,
+    chat_id: str,
 ) -> dict[str, dict[str, str]]:
     """Synchronous counterpart of :func:`fetch_active_models`.
 
     Intended for Streamlit and TUI frontends.
 
     :param server_url: Base URL of the backend API server.
-    :param session_id: Opaque session identifier.
+    :param user_id: Opaque persistent user identifier.
+    :param chat_id: Chat conversation identifier.
     """
-    url = f"{server_url}/models/session/{session_id}/active"
+    url = f"{server_url}/chat/{user_id}/{chat_id}/models/active"
     with httpx.Client(timeout=5) as client:
         try:
             resp = client.get(url)
@@ -124,7 +130,7 @@ def fetch_active_models_sync(
                 )
                 return {}
             data: dict[str, dict[str, str]] = resp.json()
-            logger.debug("Active models for session %s: %s", session_id, data)
+            logger.debug("Active models for %s:%s: %s", user_id, chat_id, data)
             return data
         except Exception as e:
             logger.warning(
@@ -162,8 +168,9 @@ def format_model_info(info: dict[str, dict[str, str]]) -> str:
 
 def stream_events_sync(
     query: str,
-    session_id: str,
+    chat_id: str,
     server_url: str,
+    user_id: str = "",
 ) -> Generator[dict, None, None]:
     """Synchronous counterpart of :func:`stream_events`.
 
@@ -178,15 +185,16 @@ def stream_events_sync(
     instead.
 
     :param query: User's query string.
-    :param session_id: Opaque session identifier.
+    :param chat_id: Chat conversation identifier.
     :param server_url: Base URL of the backend API server.
+    :param user_id: Opaque persistent user identifier.
     """
     url = f"{server_url}/query/stream"
     with httpx.Client(timeout=None) as client:
         with client.stream(
             "POST",
             url,
-            json={"query": query, "session_id": session_id},
+            json={"query": query, "chat_id": chat_id, "user_id": user_id},
         ) as response:
             response.raise_for_status()
             for line in response.iter_lines():
