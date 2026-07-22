@@ -137,12 +137,11 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     def _configure_llm(self) -> Runnable:
         """Configure LLM with structured output"""
         inst = self._llm_entry.instance
-        if self.output_schema:
+        if self.output_schema and getattr(inst, "_supports_structured_output", True):
             return inst.with_structured_output(
                 self.output_schema, method="json_schema", include_raw=True
             )
-        else:
-            return inst
+        return inst
 
     async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
@@ -162,21 +161,28 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         schema = self.output_schema
 
         if schema:
-            assert isinstance(output, dict)
-
-            if output["parsing_error"]:
-                self.logger.warning(
-                    f"LLM parsing error, using fallback: {output['parsing_error']}"
-                )
-                result, _ = parse_output_with_thought(output["raw"], schema)
-            else:
-                result = output["parsed"]
+            # but answer is returned as message instead of json/dict
+            if isinstance(output, AIMessage):
+                result, _ = parse_output_with_thought(output, schema)
                 if isinstance(result, dict):
                     result = schema(**result)
+            else:
+                assert isinstance(output, dict)
+                if output["parsing_error"]:
+                    self.logger.warning(
+                        f"LLM parsing error, using fallback: {output['parsing_error']}"
+                    )
+                    result, _ = parse_output_with_thought(output["raw"], schema)
                 else:
-                    if not isinstance(result, schema):
-                        self.logger.critical(f"Unexpected output type: {type(result)}")
-                        result = self._get_default_error_result()
+                    result = output["parsed"]
+                    if isinstance(result, dict):
+                        result = schema(**result)
+                    else:
+                        if not isinstance(result, schema):
+                            self.logger.critical(
+                                f"Unexpected output type: {type(result)}"
+                            )
+                            result = self._get_default_error_result()
 
             self.logger.debug(f"Processed output: {result}")
         else:
