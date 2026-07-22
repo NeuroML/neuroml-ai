@@ -66,6 +66,10 @@ def create_models_router() -> APIRouter:
                 cfg["provider"] = entry.parsed_model.provider or ""
             defaults[role] = cfg
 
+        # Add the embedding model (fixed, not session-configurable)
+        if graph.embedding_model:
+            defaults["embedding"] = {"model": graph.embedding_model}
+
         overrides = request.app.state.sessions.get(session_id, {}).get("models", {})
         for role, override in overrides.items():
             if role in defaults:
