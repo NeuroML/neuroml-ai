@@ -44,17 +44,18 @@ def parse_model_name(raw: str) -> ParsedModelName:
     Follows the ``provider:model_id`` convention.  The provider is
     expected to be explicitly included; no provider inference is done.
 
-    ``huggingface`` is the only special case: a third ``:`` segment
-    denotes a provider hint (``auto``, ``cheapest``, ``fastest``)
-    rather than a model tag.  For all other providers the second and
-    third segments together form the model name.
+    With three segments the third is treated as a ``suffix``
+    (provider hint, model tag, base URL, etc.) *unless* the provider
+    is ``ollama``, for which the second and third segments form the
+    model name (``model_name:tag``).
 
     Examples:
 
-    * ``ollama:bge-m3:latest`` -> provider=ollama, model=bge-m3:latest
+    * ``ollama:bge-m3:latest`` -> provider=ollama, model=bge-m3:latest, suffix=None
     * ``huggingface:org/model:auto`` -> provider=huggingface, model=org/model, suffix=auto
-    * ``openai:gpt-4o`` -> provider=openai, model=gpt-4o
-    * ``bge-m3`` -> provider=None, model=bge-m3
+    * ``custom:model:https://example.com/v1`` -> provider=custom, model=model, suffix=https://example.com/v1
+    * ``openai:gpt-4o`` -> provider=openai, model=gpt-4o, suffix=None
+    * ``bge-m3`` -> provider=None, model=bge-m3, suffix=None
 
     :param raw: Model name with optional provider prefix
     :returns: Parsed model name components
@@ -66,15 +67,15 @@ def parse_model_name(raw: str) -> ParsedModelName:
 
     provider = parts[0].lower()
 
-    if provider == "huggingface" and len(parts) == 3:
-        return ParsedModelName(provider=provider, model_name=parts[1], suffix=parts[2])
+    if len(parts) == 2:
+        return ParsedModelName(provider=provider, model_name=parts[1], suffix=None)
 
-    if len(parts) == 3:
+    if provider == "ollama":
         return ParsedModelName(
             provider=provider, model_name=f"{parts[1]}:{parts[2]}", suffix=None
         )
 
-    return ParsedModelName(provider=provider, model_name=parts[1], suffix=None)
+    return ParsedModelName(provider=provider, model_name=parts[1], suffix=parts[2])
 
 
 def check_ollama_model(logger, model, exit=False):
@@ -376,7 +377,15 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
 
     parsed = parse_model_name(model_name_full)
 
-    if parsed.provider == "huggingface":
+    # fall back to openai for custom end points, assuming they are openai compatible
+    if parsed.provider == "custom":
+        model_var = init_chat_model(
+            parsed.model_name,
+            model_provider="openai",
+            configurable_fields=_COMMON_CONFIG_FIELDS + ("model_provider",),
+            base_url=parsed.suffix,
+        )
+    elif parsed.provider == "huggingface":
         hf_token = os.environ.get("HF_TOKEN")
         assert hf_token
 
