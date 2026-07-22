@@ -134,6 +134,9 @@ class BaseLangGraph(ABC):
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
 
+        # Graph-level default models per role.  Per-request model
+        # overrides are merged at invoke time via ``model_overrides_ctx``
+        # and do NOT change this dict.
         self.llm_models: dict[str, LLMModel] = {}
 
         self.memory = memory
@@ -319,6 +322,8 @@ class BaseLangGraph(ABC):
 
         Subclasses should populate ``self.llm_models`` with ``LLMModel``
         entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
+        These are graph-wide defaults; per-request overrides are applied
+        at runtime via ``model_overrides_ctx``.
         """
         ...
 
