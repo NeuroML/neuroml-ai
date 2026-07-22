@@ -448,7 +448,7 @@ def setup_layout(
     # ---- Center: chat messages + input (pinned to bottom) ----
     with (
         ui.column()
-        .classes("w-full px-48")
+        .classes("w-full px-8")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
         with ui.scroll_area().classes("w-full grow chat-scroll-area"):
