@@ -12,6 +12,7 @@ import asyncio
 from pathlib import Path
 
 import aiohttp
+from klea_utils.paths import get_cache_dir
 from klea_utils.plogging import setup_logger
 from tenacity import (
     retry,
@@ -20,7 +21,7 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from ..utils import MCP_DIRS
+from ..utils import NML_MCP_DIRS
 
 logger = setup_logger(__name__)
 
@@ -54,5 +55,5 @@ async def _download_file_to_cache_by_content(
     session, url: str, params: dict, timeout, disk_file_name: str
 ) -> Path | None:
     """Wrapper to download file to the cache, by content"""
-    file_path = MCP_DIRS.user_cache_dir / Path(disk_file_name)
+    file_path = get_cache_dir(NML_MCP_DIRS) / Path(disk_file_name)
     return await _download_file_by_content(session, url, params, timeout, file_path)
