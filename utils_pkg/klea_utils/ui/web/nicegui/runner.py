@@ -15,6 +15,7 @@ import json
 import uuid
 from datetime import datetime
 
+import coolname
 import httpx
 from nicegui import app, background_tasks, ui
 from nicegui.events import GenericEventArguments
@@ -31,18 +32,17 @@ from .widgets import ChatBubble
 
 logger = setup_logger(__name__)
 
-# Per-session data store.
+# Per-chat data store.
 # Keyed by session_id.
-_sessions: dict[str, dict] = {}
+_chats: dict[str, dict] = {}
 
 
-def _ensure_session(session_id: str) -> dict:
+def _ensure_chat(chat_id: str) -> dict:
     """Return the session dict for *session_id*, creating it if missing.
 
     Each session dict has the following keys::
 
-        name                Human-readable display name (auto-generated from
-                            the creation timestamp).
+        name                Human-readable display name (auto-generated)
         created             ``datetime.timestamp()`` of creation (float).
         pinned              Whether the session is pinned to the top of the list.
         messages            List of ``(text, stamp, is_user)`` tuples where
@@ -53,29 +53,30 @@ def _ensure_session(session_id: str) -> dict:
         inspector_expanded  Set of indices into *inspector_entries* that are
                             currently expanded in the UI.
     """
-    if session_id not in _sessions:
+    if chat_id not in _chats:
         now = datetime.now()
-        _sessions[session_id] = {
-            "name": now.strftime("%a %d %b %Y at %X"),
+        _chats[chat_id] = {
+            "name": chat_id.replace("-", " ").title(),
             "created": now.timestamp(),
             "pinned": False,
             "messages": [],
             "inspector_entries": [],
             "inspector_expanded": set(),
         }
-    return _sessions[session_id]
+    return _chats[chat_id]
 
 
-def _get_sessions_sorted() -> list[tuple[str, dict]]:
+def _get_chats_sorted() -> list[tuple[str, dict]]:
     """Return (session_id, data) pairs, pinned first, then by creation desc."""
-    items = list(_sessions.items())
+    items = list(_chats.items())
     items.sort(key=lambda x: (not x[1]["pinned"], -x[1]["created"]))
     return items
 
 
 def setup_layout(
-    session_id: str,
+    chat_id: str,
     server_url: str,
+    user_id: str = "",
     title: str = "Klea",
     subtitle: str = "",
     disclaimer: str = "",
@@ -96,9 +97,9 @@ def setup_layout(
     ChatGPT-style rail that shows only icons when collapsed and
     full text when expanded.
 
-    :param session_id: Opaque session identifier persisted in
-        ``app.storage.user``.
+    :param chat_id: Chat conversation identifier.
     :param server_url: Base URL of the backend API server.
+    :param user_id: Opaque persistent user identifier.
     :param title: Bold application title in the header bar.
     :param subtitle: Optional smaller text shown next to *title*
         in the header.
@@ -149,7 +150,7 @@ def setup_layout(
 
     mini_state = True
     # Mutable containers so refreshable functions can pick up changes.
-    _current_session = [session_id]
+    _current_chat_id = [chat_id]
     toggle_icon_ref = [None]
 
     _expanded: set[int] = set()
@@ -164,7 +165,7 @@ def setup_layout(
         matching the Gemini/ChatGPT model where only user input has a
         visible bubble.
         """
-        session = _sessions.get(_current_session[0])
+        session = _chats.get(_current_chat_id[0])
         msgs = session["messages"] if session else []
         if msgs:
             for idx, (text, stamp, is_user) in enumerate(msgs):
@@ -187,38 +188,38 @@ def setup_layout(
             "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
         )
 
-    def _switch_session(sid: str) -> None:
-        """Switch the active session without a page reload."""
-        app.storage.user["session_id"] = sid
-        _current_session[0] = sid
-        logger.debug("Switched to session %s", sid)
+    def _switch_chat(sid: str) -> None:
+        """Switch the active chat without a page reload."""
+        app.storage.user["chat_id"] = sid
+        _current_chat_id[0] = sid
+        logger.debug("Switched to chat %s", sid)
         _chat_messages.refresh()
-        _render_session_list.refresh()
+        _render_chat_list.refresh()
         _inspector_panel.refresh()
 
-    def _delete_session(sid: str) -> None:
+    def _delete_chat(sid: str) -> None:
         """Remove a session from the store.
 
         If the currently active session is deleted, the next available
         session becomes active (or a fresh one is created).
         """
-        _sessions.pop(sid, None)
-        if _current_session[0] == sid:
-            remaining = _get_sessions_sorted()
+        _chats.pop(sid, None)
+        if _current_chat_id[0] == sid:
+            remaining = _get_chats_sorted()
             if remaining:
-                _switch_session(remaining[0][0])
+                _switch_chat(remaining[0][0])
             else:
-                new_sid = str(uuid.uuid4())
-                _ensure_session(new_sid)
-                _switch_session(new_sid)
+                new_sid = coolname.generate_slug(2)
+                _ensure_chat(new_sid)
+                _switch_chat(new_sid)
         else:
-            _render_session_list.refresh()
+            _render_chat_list.refresh()
 
     def _toggle_pin(sid: str) -> None:
         """Flip the pinned flag for a session and refresh the list."""
-        session = _ensure_session(sid)
+        session = _ensure_chat(sid)
         session["pinned"] = not session["pinned"]
-        _render_session_list.refresh()
+        _render_chat_list.refresh()
 
     def _toggle_left_drawer():
         """Switch the left drawer between mini (rail) and full width.
@@ -237,33 +238,33 @@ def setup_layout(
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
-    def _new_session():
+    def _new_chat():
         """Create a fresh session and switch to it."""
-        sid = str(uuid.uuid4())
-        _ensure_session(sid)
-        _switch_session(sid)
+        sid = coolname.generate_slug(2)
+        _ensure_chat(sid)
+        _switch_chat(sid)
 
-    def _rename_session(sid: str) -> None:
-        """Open a dialog to rename a session."""
-        session = _ensure_session(sid)
+    def _rename_chat(sid: str) -> None:
+        """Open a dialog to rename a chat."""
+        chat = _ensure_chat(sid)
         dialog = ui.dialog()
 
         def _save():
-            session["name"] = inp.value
+            chat["name"] = inp.value
             dialog.close()
-            _render_session_list.refresh()
+            _render_chat_list.refresh()
 
         with dialog:
             with ui.card():
-                ui.label("Rename session").classes("text-lg font-bold")
-                inp = ui.input(value=session["name"]).on("keydown.enter", _save)
+                ui.label("Rename chat").classes("text-lg font-bold")
+                inp = ui.input(value=chat["name"]).on("keydown.enter", _save)
                 with ui.row().classes("w-full justify-end"):
                     ui.button("Cancel", on_click=dialog.close)
                     ui.button("Save", on_click=_save).props("unelevated color=primary")
         dialog.open()
 
     @ui.refreshable
-    def _render_session_list():
+    def _render_chat_list():
         """Render the sorted list of session entries in the left drawer.
 
         Each entry shows the session name (bold for the active session),
@@ -271,15 +272,15 @@ def setup_layout(
         menu for rename / pin / delete.  Refresh this to pick up newly
         created sessions without a page reload.
         """
-        for sid, sdata in _get_sessions_sorted():
-            is_current = sid == _current_session[0]
+        for sid, sdata in _get_chats_sorted():
+            is_current = sid == _current_chat_id[0]
             with (
                 ui.item(
-                    on_click=lambda s=sid: _switch_session(s),
+                    on_click=lambda s=sid: _switch_chat(s),
                 )
                 .props("dense")
                 .classes("w-full")
-                .on("dblclick", lambda s=sid: _rename_session(s))
+                .on("dblclick", lambda s=sid: _rename_chat(s))
             ):
                 with ui.item_section().props("avatar"):
                     ui.icon("push_pin" if sdata["pinned"] else "history")
@@ -300,9 +301,7 @@ def setup_layout(
                         .on("click.stop", lambda: None)
                     ):
                         with ui.menu():
-                            with ui.menu_item(
-                                on_click=lambda s=sid: _rename_session(s)
-                            ):
+                            with ui.menu_item(on_click=lambda s=sid: _rename_chat(s)):
                                 with ui.item_section().props("avatar"):
                                     ui.icon("edit")
                                 with ui.item_section():
@@ -312,9 +311,7 @@ def setup_layout(
                                     ui.icon("push_pin")
                                 with ui.item_section():
                                     ui.label("Unpin" if sdata["pinned"] else "Pin")
-                            with ui.menu_item(
-                                on_click=lambda s=sid: _delete_session(s)
-                            ):
+                            with ui.menu_item(on_click=lambda s=sid: _delete_chat(s)):
                                 with ui.item_section().props("avatar"):
                                     ui.icon("delete")
                                 with ui.item_section():
@@ -343,12 +340,12 @@ def setup_layout(
     ):
         # Items use QItem + QItemSection(avatar) so that Quasar
         # automatically hides the label when the drawer is in mini mode.
-        with ui.item(on_click=_new_session).props("dense").classes("w-full"):
+        with ui.item(on_click=_new_chat).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("add")
                 ui.tooltip("Start a new conversation")
             with ui.item_section():
-                ui.label("New Session")
+                ui.label("New Chat")
         with (
             ui.item(on_click=lambda: right_drawer.toggle())
             .props("dense")
@@ -366,9 +363,9 @@ def setup_layout(
             with ui.item_section().props("avatar"):
                 ui.icon("chat")
             with ui.item_section():
-                ui.label("Sessions").classes("text-sm font-bold")
+                ui.label("Chats").classes("text-sm font-bold")
 
-        _render_session_list()
+        _render_chat_list()
 
         ui.space()
         # Toggle button at the bottom of the drawer.
@@ -381,7 +378,7 @@ def setup_layout(
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry."""
-        session = _sessions.get(_current_session[0])
+        session = _chats.get(_current_chat_id[0])
         if not session:
             return
         expanded = session.setdefault("inspector_expanded", set())
@@ -408,17 +405,17 @@ def setup_layout(
 
         @ui.refreshable
         def _inspector_panel() -> None:
-            session = _sessions.get(_current_session[0])
+            session = _chats.get(_current_chat_id[0])
             if not session:
                 logger.debug(
-                    "No session found for %s, inspector empty", _current_session[0]
+                    "No session found for %s, inspector empty", _current_chat_id[0]
                 )
                 return
             entries = session.get("inspector_entries", [])
             logger.debug(
                 "Rendering inspector panel: %d entries for session %s",
                 len(entries),
-                _current_session[0],
+                _current_chat_id[0],
             )
             if not entries:
                 ui.label("Debug events will appear here").classes(
@@ -480,9 +477,9 @@ def setup_layout(
 
             async def _do_stream(query: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
-                session = _ensure_session(_current_session[0])
+                session = _ensure_chat(_current_chat_id[0])
                 logger.debug(
-                    "Clearing inspector entries for session %s", _current_session[0]
+                    "Clearing inspector entries for session %s", _current_chat_id[0]
                 )
                 session["inspector_entries"] = []
                 session["inspector_expanded"] = set()
@@ -496,7 +493,7 @@ def setup_layout(
                 full_response = ""
                 try:
                     async for event in stream_events(
-                        query, _current_session[0], server_url
+                        query, _current_chat_id[0], server_url, user_id=user_id
                     ):
                         t = event.get("type", "?")
                         if t == "progress":
@@ -517,14 +514,14 @@ def setup_layout(
                         elif t == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)
-                            _ensure_session(_current_session[0])["messages"].append(
+                            _ensure_chat(_current_chat_id[0])["messages"].append(
                                 (full_response, datetime.now().strftime("%X"), False)
                             )
                             _chat_messages.refresh()
                             break
                         elif t == "error":
                             pg_row.delete()
-                            _ensure_session(_current_session[0])["messages"].append(
+                            _ensure_chat(_current_chat_id[0])["messages"].append(
                                 (
                                     f"Error: {event.get('message', 'Unknown error')}",
                                     datetime.now().strftime("%X"),
@@ -535,7 +532,7 @@ def setup_layout(
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
-                    _ensure_session(_current_session[0])["messages"].append(
+                    _ensure_chat(_current_chat_id[0])["messages"].append(
                         (f"Connection error: {e}", datetime.now().strftime("%X"), False)
                     )
                     _chat_messages.refresh()
@@ -547,11 +544,11 @@ def setup_layout(
                 stamp = datetime.now().strftime("%X")
                 query = text.value
                 text.value = ""
-                _ensure_session(_current_session[0])["messages"].append(
+                _ensure_chat(_current_chat_id[0])["messages"].append(
                     (query, stamp, True)
                 )
                 _chat_messages.refresh()
-                _render_session_list.refresh()
+                _render_chat_list.refresh()
 
                 background_tasks.create(_do_stream(query))
 
@@ -632,17 +629,23 @@ def run_nicegui_app(
                 )
             return
 
-        if "session_id" not in app.storage.user:
-            app.storage.user["session_id"] = str(uuid.uuid4())
+        if "user_id" not in app.storage.user:
+            app.storage.user["user_id"] = str(uuid.uuid4())
 
-        session_id = app.storage.user["session_id"]
+        user_id = app.storage.user["user_id"]
+
+        if "chat_id" not in app.storage.user:
+            app.storage.user["chat_id"] = coolname.generate_slug(2)
+
+        chat_id = app.storage.user["chat_id"]
 
         # Fetch model info (non-fatal — just won't show in header on failure)
-        active_models = await fetch_active_models(server_url, session_id)
+        active_models = await fetch_active_models(server_url, user_id, chat_id)
         model_info = format_model_info(active_models)
 
         setup_layout(
-            session_id=session_id,
+            chat_id=chat_id,
+            user_id=user_id,
             server_url=server_url,
             title=title,
             subtitle=subtitle,
