@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from __future__ import annotations
 
 import inspect
+import json
 import logging
 from functools import cached_property
 from pathlib import Path
@@ -233,10 +234,6 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """Load system prompt from file, optionally adding memory summary and output schema."""
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
-        if self.memory:
-            memory_addition = self._get_memory_addition(state)
-            system_prompt += memory_addition
-
         if self.output_schema:
             # we pass this as part of the prompt because not all models/end
             # points support passing schemas separately, or respect `with
@@ -248,9 +245,13 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
                 Respond in JSON following this schema:
 
-                {str(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
+                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
                 """
             )
+
+        if self.memory:
+            memory_addition = self._get_memory_addition(state)
+            system_prompt += memory_addition
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt

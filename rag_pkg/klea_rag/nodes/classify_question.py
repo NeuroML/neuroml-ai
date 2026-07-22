@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import json
 import logging
 from textwrap import dedent
 from typing import Any, Dict, Type, override
@@ -91,10 +92,6 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         # additional logic
         system_prompt += f"\n\n## Domains\n{self._build_domain_str()}\n\n"
 
-        if self.memory:
-            memory_addition = self._get_memory_addition(state)
-            system_prompt += memory_addition
-
         if self.output_schema:
             system_prompt += dedent(
                 f"""
@@ -102,9 +99,13 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
                 Respond in JSON following this schema:
 
-                {str(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
+                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
                 """
             )
+
+        if self.memory:
+            memory_addition = self._get_memory_addition(state)
+            system_prompt += memory_addition
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt
