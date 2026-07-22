@@ -9,7 +9,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-import os
 import re
 import sys
 import time
@@ -357,21 +356,43 @@ def setup_embedding(model_name_full, logger):
 
     parsed = parse_model_name(model_name_full)
 
-    if parsed.provider == "huggingface":
-        logger.debug(f"Using huggingface model: {parsed.model_name}")
-
-        from langchain_huggingface import HuggingFaceEndpointEmbeddings
-
-        hf_token = os.environ.get("HF_TOKEN", None)
-        assert hf_token
-
-        model_var = HuggingFaceEndpointEmbeddings(
-            model=parsed.model_name,
-            provider=parsed.suffix or "auto",
-            task="feature-extraction",
-            huggingfacehub_api_token=hf_token,
+    if parsed.provider == "custom":
+        logger.debug(
+            "Using openai-compatible embedding model %s at endpoint %s",
+            parsed.model_name,
+            parsed.suffix,
         )
+        model_var = init_embeddings(
+            parsed.model_name,
+            provider="openai",
+            base_url=parsed.suffix,
+        )
+    elif parsed.provider == "huggingface":
+        # "local" suffix -> HuggingFaceEmbeddings (local sentence-transformers).
+        # Any other suffix -> HuggingFaceEndpointEmbeddings (HF Inference API).
+        if parsed.suffix == "local":
+            logger.debug(
+                "Using huggingface local embedding model: %s",
+                parsed.model_name,
+            )
+            from langchain_huggingface import HuggingFaceEmbeddings
+
+            model_var = HuggingFaceEmbeddings(model_name=parsed.model_name)
+        else:
+            logger.debug(
+                "Using huggingface endpoint embedding model: %s (provider: %s)",
+                parsed.model_name,
+                parsed.suffix or "auto",
+            )
+            from langchain_huggingface import HuggingFaceEndpointEmbeddings
+
+            model_var = HuggingFaceEndpointEmbeddings(
+                model=parsed.model_name,
+                provider=parsed.suffix or "auto",
+                task="feature-extraction",
+            )
     else:
+        logger.debug("Using embedding model: %s", model_name_full)
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
         model_var = init_embeddings(model_name_full)
@@ -413,6 +434,11 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
 
     # fall back to openai for custom end points, assuming they are openai compatible
     if parsed.provider == "custom":
+        logger.debug(
+            "Using openai-compatible model %s at custom endpoint %s",
+            parsed.model_name,
+            parsed.suffix,
+        )
         model_var = init_chat_model(
             parsed.model_name,
             model_provider="openai",
@@ -420,23 +446,39 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
             base_url=parsed.suffix,
         )
     elif parsed.provider == "huggingface":
-        logger.debug(f"Using huggingface model: {parsed.model_name}")
-
-        # init_chat_model for huggingface calls ChatHuggingFace.from_model_id(),
-        # which for backend="endpoint" creates a HuggingFaceEndpoint internally.
-        # All remaining kwargs flow through to HuggingFaceEndpoint.__init__().
-        # The HF_TOKEN env var is read automatically by HuggingFaceEndpoint.
-        model_var = init_chat_model(
-            parsed.model_name,
-            model_provider="huggingface",
-            configurable_fields=_COMMON_CONFIG_FIELDS,
-            backend="endpoint",
-            provider=parsed.suffix or "auto",
-            max_new_tokens=32768,
-            do_sample=False,
-            repetition_penalty=1.03,
-        )
+        # "local" suffix -> pipeline backend (model loaded locally).
+        # Any other suffix is treated as an inference provider hint.
+        # The HF_TOKEN env var is read automatically in all cases.
+        if parsed.suffix == "local":
+            logger.debug(
+                "Using huggingface local pipeline model: %s",
+                parsed.model_name,
+            )
+            model_var = init_chat_model(
+                parsed.model_name,
+                model_provider="huggingface",
+                configurable_fields=_COMMON_CONFIG_FIELDS,
+                backend="pipeline",
+                task="text-generation",
+            )
+        else:
+            logger.debug(
+                "Using huggingface endpoint model: %s (provider: %s)",
+                parsed.model_name,
+                parsed.suffix or "auto",
+            )
+            model_var = init_chat_model(
+                parsed.model_name,
+                model_provider="huggingface",
+                configurable_fields=_COMMON_CONFIG_FIELDS,
+                backend="endpoint",
+                provider=parsed.suffix or "auto",
+                max_new_tokens=32768,
+                do_sample=False,
+                repetition_penalty=1.03,
+            )
     else:
+        logger.debug("Using model: %s", model_name_full)
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
 
