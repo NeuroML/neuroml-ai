@@ -52,7 +52,7 @@ class KleaCode(BaseLangGraph):
     env_var = "KLEA_CODE_ENV_FILE"
     env_file_default = "klea_code.env"
     config_class = AppConfig
-    logger_name = "KleaCode"
+    graph_name = "KleaCode"
 
     def __init__(
         self,

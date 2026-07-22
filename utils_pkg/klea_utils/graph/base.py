@@ -120,8 +120,9 @@ class BaseLangGraph(ABC):
     #: Default config file name if the environment variable is not set.
     env_file_default: str = "config.env"
 
-    #: Logger name for this orchestrator.
-    logger_name: str = "BaseLangGraph"
+    #: Logger name for this orchestrator, also used as the app name
+    #: for ``platformdirs`` data/cache directories.
+    graph_name: str = "BaseLangGraph"
 
     def __init__(
         self,
@@ -163,9 +164,13 @@ class BaseLangGraph(ABC):
 
         self.QueryDomainSchema: Type[BaseModel] | None = None
 
+        from platformdirs import PlatformDirs
+
+        self.paths = PlatformDirs(self.graph_name.lower())
+
         from klea_utils.plogging import setup_logger
 
-        self.logger = setup_logger(self.logger_name, stderr_level=logging_level)
+        self.logger = setup_logger(self.graph_name, stderr_level=logging_level)
 
     def _load_env(self) -> None:
         """Load env file, and configuration

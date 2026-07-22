@@ -55,7 +55,7 @@ class RAG(BaseLangGraph):
     env_var = "KLEA_RAG_ENV_FILE"
     env_file_default = "rag.env"
     config_class = AppConfig
-    logger_name = "RAG"
+    graph_name = "RAG"
 
     # type hints
     app_env: AppEnv

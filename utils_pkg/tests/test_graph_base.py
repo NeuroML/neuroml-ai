@@ -38,11 +38,14 @@ class ToyGraph(BaseLangGraph):
     config_class: Type[BaseModel] = BaseModel
     env_var: str = "TOY_ENV_FILE"
     env_file_default: str = "toy.env"
-    logger_name: str = "ToyGraph"
+    graph_name: str = "ToyGraph"
 
     def __init__(self):
         super().__init__(logging_level=logging.WARNING, memory=False)
-        self.logger = setup_logger(self.logger_name, stderr_level=logging.INFO)
+        from platformdirs import PlatformDirs
+
+        self.paths = PlatformDirs(self.graph_name.lower())
+        self.logger = setup_logger(self.graph_name, stderr_level=logging.INFO)
         self.logger.propagate = False
 
     @override
