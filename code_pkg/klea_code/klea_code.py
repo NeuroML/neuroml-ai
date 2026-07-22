@@ -79,9 +79,9 @@ class KleaCode(BaseLangGraph):
             plan = setup_llm(self.app_env.reasoning_model, self.logger)
         guard = setup_llm(self.app_env.guard_model, logger=self.logger)
         self.llm_models = {
-            "chat": LLMModel(instance=chat),
-            "plan": LLMModel(instance=plan),
-            "guard": LLMModel(instance=guard),
+            "chat": LLMModel(instance=chat, model_name=self.app_env.chat_model),
+            "plan": LLMModel(instance=plan, model_name=self.app_env.reasoning_model),
+            "guard": LLMModel(instance=guard, model_name=self.app_env.guard_model),
         }
 
     @override

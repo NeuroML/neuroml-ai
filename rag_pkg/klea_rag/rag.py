@@ -82,10 +82,12 @@ class RAG(BaseLangGraph):
 
         self.llm_models = {
             "chat": LLMModel(
-                instance=setup_llm(self.app_env.chat_model, logger=self.logger)
+                instance=setup_llm(self.app_env.chat_model, logger=self.logger),
+                model_name=self.app_env.chat_model,
             ),
             "guard": LLMModel(
-                instance=setup_llm(self.app_env.guard_model, logger=self.logger)
+                instance=setup_llm(self.app_env.guard_model, logger=self.logger),
+                model_name=self.app_env.guard_model,
             ),
         }
 

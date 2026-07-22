@@ -54,6 +54,7 @@ class LLMModel(BaseModel):
     with temperature overridden.
     """
 
+    model_name: str = ""
     instance: Any
     config_template: dict[str, Any] = Field(
         default_factory=lambda: {"configurable": {}}
