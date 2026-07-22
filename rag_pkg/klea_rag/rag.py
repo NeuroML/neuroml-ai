@@ -79,15 +79,18 @@ class RAG(BaseLangGraph):
     def _setup_models(self) -> None:
         """Set up the LLM chat model"""
         from klea_utils.graph.base import LLMModel
+        from klea_utils.llm import parse_model_name
 
         self.llm_models = {
             "chat": LLMModel(
                 instance=setup_llm(self.app_env.chat_model, logger=self.logger),
                 model_name=self.app_env.chat_model,
+                parsed_model=parse_model_name(self.app_env.chat_model),
             ),
             "guard": LLMModel(
                 instance=setup_llm(self.app_env.guard_model, logger=self.logger),
                 model_name=self.app_env.guard_model,
+                parsed_model=parse_model_name(self.app_env.guard_model),
             ),
         }
 

@@ -381,15 +381,25 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
-# Shared configurable fields for init_chat_model. Common to all providers;
-# provider-specific fields are appended per-branch.
-_COMMON_CONFIG_FIELDS: tuple[str, ...] = (
-    "model",
-    "model_provider",
-    "temperature",
-    "max_tokens",
-    "api_key",
-    "base_url",
+# Per-provider configurable field sets.  "all" covers every field any provider
+# might need.  _COMMON_CONFIG_FIELDS is the union  ---  the superset used by every
+# _ConfigurableModel so that runtime provider switching works.
+PROVIDER_CONFIG_FIELDS: dict[str, set[str]] = {
+    "all": {
+        "model",
+        "model_provider",
+        "temperature",
+        "max_tokens",
+        "api_key",
+        "base_url",
+    },
+    "huggingface": {"huggingfacehub_api_token", "provider", "backend"},
+    "ollama": {"num_predict"},
+}
+_COMMON_CONFIG_FIELDS: tuple[str, ...] = tuple(
+    PROVIDER_CONFIG_FIELDS["all"]
+    | PROVIDER_CONFIG_FIELDS.get("huggingface", set())
+    | PROVIDER_CONFIG_FIELDS.get("ollama", set())
 )
 
 
@@ -406,42 +416,33 @@ def setup_llm(model_name_full: str, logger: logging.Logger):
         model_var = init_chat_model(
             parsed.model_name,
             model_provider="openai",
-            configurable_fields=_COMMON_CONFIG_FIELDS + ("model_provider",),
+            configurable_fields=_COMMON_CONFIG_FIELDS,
             base_url=parsed.suffix,
         )
     elif parsed.provider == "huggingface":
-        hf_token = os.environ.get("HF_TOKEN")
-        assert hf_token
-
         logger.debug(f"Using huggingface model: {parsed.model_name}")
-        logger.debug(f"Got HuggingFace Token: {hf_token[:2]}...{hf_token[-2:]}")
 
         # init_chat_model for huggingface calls ChatHuggingFace.from_model_id(),
         # which for backend="endpoint" creates a HuggingFaceEndpoint internally.
         # All remaining kwargs flow through to HuggingFaceEndpoint.__init__().
-        # "model", "model_provider", and "temperature" are configurable at
-        # runtime so the user can switch model/repo_id without restarting.
+        # The HF_TOKEN env var is read automatically by HuggingFaceEndpoint.
         model_var = init_chat_model(
             parsed.model_name,
             model_provider="huggingface",
-            configurable_fields=_COMMON_CONFIG_FIELDS
-            + ("provider", "backend", "huggingfacehub_api_token", "max_new_tokens"),
+            configurable_fields=_COMMON_CONFIG_FIELDS,
             backend="endpoint",
             provider=parsed.suffix or "auto",
-            huggingfacehub_api_token=hf_token,
             max_new_tokens=32768,
             do_sample=False,
             repetition_penalty=1.03,
         )
     else:
-        extra_fields: tuple[str, ...] = ()
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
-            extra_fields = ("num_predict",)
 
         model_var = init_chat_model(
             model_name_full,
-            configurable_fields=_COMMON_CONFIG_FIELDS + extra_fields,
+            configurable_fields=_COMMON_CONFIG_FIELDS,
         )
 
     state, msg = check_model_works(model_var, timeout=60)

@@ -55,6 +55,7 @@ class LLMModel(BaseModel):
     """
 
     model_name: str = ""
+    parsed_model: Any = None
     instance: Any
     config_template: dict[str, Any] = Field(
         default_factory=lambda: {"configurable": {}}

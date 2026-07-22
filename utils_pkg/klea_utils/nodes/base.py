@@ -27,7 +27,12 @@ from pydantic import BaseModel
 from klea_utils.graph.base import model_overrides_ctx
 
 from ..errors import PromptTemplateError
-from ..llm import add_memory_to_prompt, load_prompt, parse_output_with_thought
+from ..llm import (
+    PROVIDER_CONFIG_FIELDS,
+    add_memory_to_prompt,
+    load_prompt,
+    parse_output_with_thought,
+)
 from .abstract import AbstractLLMNode
 
 
@@ -146,10 +151,32 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue
     ) -> AIMessage | dict[str, Any]:
-        """Async invoke LLM — uses ``ainvoke`` so the event loop can
+        """Async invoke LLM  ---  uses ``ainvoke`` so the event loop can
         process streaming callbacks during the LLM call."""
         overrides = {"temperature": self.temperature}
         overrides.update(model_overrides_ctx.get())
+        # Map generic api_key to provider-specific token field names so
+        # that a single user-facing field works for all providers.
+        if "api_key" in overrides:
+            overrides.setdefault("huggingfacehub_api_token", overrides["api_key"])
+
+        # Resolve the active provider (default from model_name + any override)
+        default_provider = (
+            self._llm_entry.parsed_model.provider
+            if self._llm_entry.parsed_model
+            else None
+        )
+        active_provider = (
+            overrides.get("model_provider") or default_provider or "openai"
+        )
+
+        # Strip fields not relevant to the active provider so they don't
+        # leak into the concrete model constructor.
+        allowed = PROVIDER_CONFIG_FIELDS["all"] | PROVIDER_CONFIG_FIELDS.get(
+            active_provider, set()
+        )
+        overrides = {k: v for k, v in overrides.items() if k in allowed}
+
         config = self._llm_entry.build_config(overrides)
         output = await llm.ainvoke(prompt, config=config)
         self.logger.debug(f"{output = }")

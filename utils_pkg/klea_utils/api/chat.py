@@ -46,8 +46,8 @@ def create_chat_router() -> APIRouter:
         thread_id = payload.session_id
         sessions = request.app.state.sessions
 
-        sessions.setdefault(thread_id, {})
-        model_overrides_ctx.set(sessions[thread_id])
+        sessions.setdefault(thread_id, {}).setdefault("models", {})
+        model_overrides_ctx.set(sessions[thread_id]["models"])
 
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
@@ -66,8 +66,8 @@ def create_chat_router() -> APIRouter:
         thread_id = f"session_{payload.session_id}"
         sessions = request.app.state.sessions
 
-        sessions.setdefault(payload.session_id, {})
-        model_overrides_ctx.set(sessions[payload.session_id])
+        sessions.setdefault(payload.session_id, {}).setdefault("models", {})
+        model_overrides_ctx.set(sessions[payload.session_id]["models"])
 
         async def event_stream():
             try:

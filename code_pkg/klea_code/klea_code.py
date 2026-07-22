@@ -78,10 +78,24 @@ class KleaCode(BaseLangGraph):
         else:
             plan = setup_llm(self.app_env.reasoning_model, self.logger)
         guard = setup_llm(self.app_env.guard_model, logger=self.logger)
+        from klea_utils.llm import parse_model_name
+
         self.llm_models = {
-            "chat": LLMModel(instance=chat, model_name=self.app_env.chat_model),
-            "plan": LLMModel(instance=plan, model_name=self.app_env.reasoning_model),
-            "guard": LLMModel(instance=guard, model_name=self.app_env.guard_model),
+            "chat": LLMModel(
+                instance=chat,
+                model_name=self.app_env.chat_model,
+                parsed_model=parse_model_name(self.app_env.chat_model),
+            ),
+            "plan": LLMModel(
+                instance=plan,
+                model_name=self.app_env.reasoning_model,
+                parsed_model=parse_model_name(self.app_env.reasoning_model),
+            ),
+            "guard": LLMModel(
+                instance=guard,
+                model_name=self.app_env.guard_model,
+                parsed_model=parse_model_name(self.app_env.guard_model),
+            ),
         }
 
     @override
