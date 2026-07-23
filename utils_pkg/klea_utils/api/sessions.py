@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""
+Chat session CRUD endpoints.
+
+File: klea_utils/api/sessions.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import coolname
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
+
+from klea_utils.api.sessions_db import SessionStore
+
+from ..plogging import setup_logger
+
+logger = setup_logger(__name__)
+
+
+class CreateChatPayload(BaseModel):
+    chat_id: str
+    title: str = ""
+
+
+class UpdateChatPayload(BaseModel):
+    title: str
+
+
+def create_sessions_router() -> APIRouter:
+    """Create an APIRouter for chat session CRUD.
+
+    Endpoints:
+
+    ``GET /chat/{user_id}``
+        List all chats for the user.
+
+    ``POST /chat/{user_id}``
+        Create a new chat.  Title is auto-generated from *coolname* if
+        not provided.
+
+    ``PATCH /chat/{user_id}/{chat_id}``
+        Update a chat's metadata (title).
+
+    ``DELETE /chat/{user_id}/{chat_id}``
+        Remove a chat and all associated data.
+    """
+    router = APIRouter(prefix="/chat", tags=["sessions"])
+
+    @router.get("/{user_id}")
+    async def list_chats(user_id: str, request: Request):
+        store: SessionStore = request.app.state.chat_sessions
+        chats = store.list_chats(user_id)
+        logger.debug("list_chats(%s): %d chat(s)", user_id, len(chats))
+        return chats
+
+    @router.post("/{user_id}")
+    async def create_chat(user_id: str, payload: CreateChatPayload, request: Request):
+        store: SessionStore = request.app.state.chat_sessions
+        title = payload.title or coolname.generate_slug(2)
+        store.create_chat(user_id, payload.chat_id, title)
+        chat = store.get_chat(user_id, payload.chat_id)
+        if chat is None:
+            logger.error(
+                "create_chat(%s, %s): store returned None after insert",
+                user_id,
+                payload.chat_id,
+            )
+            raise HTTPException(status_code=500, detail="Failed to create chat")
+        logger.debug(
+            "create_chat(%s, %s, title=%r): OK", user_id, payload.chat_id, title
+        )
+        return chat
+
+    @router.patch("/{user_id}/{chat_id}")
+    async def update_chat(
+        user_id: str, chat_id: str, payload: UpdateChatPayload, request: Request
+    ):
+        store: SessionStore = request.app.state.chat_sessions
+        if not store.get_chat(user_id, chat_id):
+            logger.warning("update_chat(%s, %s): chat not found", user_id, chat_id)
+            raise HTTPException(status_code=404, detail="Chat not found")
+        store.rename_chat(user_id, chat_id, payload.title)
+        logger.debug(
+            "update_chat(%s, %s, title=%r): OK", user_id, chat_id, payload.title
+        )
+        return store.get_chat(user_id, chat_id)
+
+    @router.delete("/{user_id}/{chat_id}")
+    async def delete_chat(user_id: str, chat_id: str, request: Request):
+        store: SessionStore = request.app.state.chat_sessions
+        if not store.get_chat(user_id, chat_id):
+            logger.warning("delete_chat(%s, %s): chat not found", user_id, chat_id)
+            raise HTTPException(status_code=404, detail="Chat not found")
+        store.delete_chat(user_id, chat_id)
+        logger.debug("delete_chat(%s, %s): OK", user_id, chat_id)
+        return {"status": "ok", "chat_id": chat_id}
+
+    return router
