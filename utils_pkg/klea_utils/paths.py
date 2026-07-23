@@ -19,10 +19,8 @@ from pathlib import Path
 
 from platformdirs import PlatformDirs
 
-KLEA_DIRS = PlatformDirs("klea")
 
-
-def get_cache_dir(dirs: PlatformDirs = KLEA_DIRS) -> Path:
+def get_cache_dir(dirs: PlatformDirs) -> Path:
     """Return the OS-appropriate per-user cache directory for *dirs*.
 
     On Linux: ``~/.cache/{app_name}/``
@@ -32,7 +30,7 @@ def get_cache_dir(dirs: PlatformDirs = KLEA_DIRS) -> Path:
     return Path(dirs.user_cache_dir)
 
 
-def get_data_dir(dirs: PlatformDirs = KLEA_DIRS) -> Path:
+def get_data_dir(dirs: PlatformDirs) -> Path:
     """Return the OS-appropriate per-user data directory for *dirs*.
 
     On Linux: ``~/.local/share/{app_name}/``
@@ -42,7 +40,7 @@ def get_data_dir(dirs: PlatformDirs = KLEA_DIRS) -> Path:
     return Path(dirs.user_data_dir)
 
 
-def get_config_dir(dirs: PlatformDirs = KLEA_DIRS) -> Path:
+def get_config_dir(dirs: PlatformDirs) -> Path:
     """Return the OS-appropriate per-user config directory for *dirs*.
 
     On Linux: ``~/.config/{app_name}/``
