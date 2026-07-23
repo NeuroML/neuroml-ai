@@ -39,17 +39,7 @@ from .schemas import RAGState
 
 @final
 class RAG(BaseLangGraph):
-    """General RAG implementation
-
-    TODO: Multi-user support - Currently a single RAG instance serves all users with
-    the same model configuration. For multi-user deployments with per-user model
-    selection, this class needs to be refactored to:
-    - Support per-user RAG instances with different model configurations
-    - Implement instance pooling and resource management
-    - Add session-based instance lifecycle management
-    - Handle model loading/unloading for memory efficiency
-    - Consider using a session manager or instance registry
-    """
+    """General RAG implementation"""
 
     env_class = AppEnv
     env_var = "KLEA_RAG_ENV_FILE"
