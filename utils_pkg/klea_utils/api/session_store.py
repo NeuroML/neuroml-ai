@@ -26,6 +26,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..plogging import setup_logger
+
+logger = setup_logger(__name__)
+
 
 class SessionStore:
     """SQLite-backed persistent store for chat session data.
@@ -73,6 +77,7 @@ class SessionStore:
         self._lock = threading.Lock()
         self._conn.executescript(self._SCHEMA_SQL)
         self._conn.commit()
+        logger.debug("SessionStore opened at %s", self._path)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -100,7 +105,9 @@ class SessionStore:
                 "SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC",
                 (user_id,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        result = [dict(r) for r in rows]
+        logger.debug("list_chats(%s): %d chat(s)", user_id, len(result))
+        return result
 
     def get_chat(self, user_id: str, chat_id: str) -> dict[str, Any] | None:
         """Return a single chat or ``None``."""
@@ -109,7 +116,11 @@ class SessionStore:
                 "SELECT * FROM chat_sessions WHERE user_id = ? AND chat_id = ?",
                 (user_id, chat_id),
             ).fetchone()
-        return dict(row) if row else None
+        result = dict(row) if row else None
+        logger.debug(
+            "get_chat(%s, %s): %s", user_id, chat_id, "found" if result else "not found"
+        )
+        return result
 
     def create_chat(self, user_id: str, chat_id: str, title: str = "") -> None:
         """Insert a chat row if it does not already exist."""
@@ -122,6 +133,7 @@ class SessionStore:
                 (user_id, chat_id, title, now, now),
             )
             self._conn.commit()
+        logger.debug("create_chat(%s, %s, title=%r)", user_id, chat_id, title)
 
     def delete_chat(self, user_id: str, chat_id: str) -> None:
         """Remove a chat and all its associated data."""
@@ -135,6 +147,7 @@ class SessionStore:
                 (user_id, chat_id),
             )
             self._conn.commit()
+        logger.debug("delete_chat(%s, %s)", user_id, chat_id)
 
     def rename_chat(self, user_id: str, chat_id: str, title: str) -> None:
         """Update the display title of a chat."""
@@ -145,6 +158,7 @@ class SessionStore:
                 (title, self._now(), user_id, chat_id),
             )
             self._conn.commit()
+        logger.debug("rename_chat(%s, %s, title=%r)", user_id, chat_id, title)
 
     def touch_chat(self, user_id: str, chat_id: str) -> None:
         """Bump ``updated_at`` without changing any other field."""
@@ -155,6 +169,7 @@ class SessionStore:
                 (self._now(), user_id, chat_id),
             )
             self._conn.commit()
+        logger.debug("touch_chat(%s, %s)", user_id, chat_id)
 
     # ------------------------------------------------------------------
     # Model overrides (stored in chat_sessions.overrides JSON blob)
@@ -172,7 +187,11 @@ class SessionStore:
                 "SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?",
                 (user_id, chat_id),
             ).fetchone()
-        return self._json_loads(row["overrides"] if row else None)
+        result = self._json_loads(row["overrides"] if row else None)
+        logger.debug(
+            "get_model_overrides(%s, %s): %d role(s)", user_id, chat_id, len(result)
+        )
+        return result
 
     def set_model_override(
         self,
@@ -195,6 +214,13 @@ class SessionStore:
                 (self._json_dumps(current), self._now(), user_id, chat_id),
             )
             self._conn.commit()
+        logger.debug(
+            "set_model_override(%s, %s, role=%s, model=%s)",
+            user_id,
+            chat_id,
+            role,
+            config.get("model", "?"),
+        )
 
     def clear_model_overrides(self, user_id: str, chat_id: str) -> None:
         """Remove all model overrides for a chat."""
@@ -205,6 +231,7 @@ class SessionStore:
                 (self._now(), user_id, chat_id),
             )
             self._conn.commit()
+        logger.debug("clear_model_overrides(%s, %s)", user_id, chat_id)
 
     # ------------------------------------------------------------------
     # Messages (curated Q&A for frontend display)
@@ -225,6 +252,9 @@ class SessionStore:
             m = dict(r)
             m["metadata"] = self._json_loads(m["metadata"])
             result.append(m)
+        logger.debug(
+            "get_messages(%s, %s): %d message(s)", user_id, chat_id, len(result)
+        )
         return result
 
     def add_message(
@@ -245,6 +275,13 @@ class SessionStore:
                 (user_id, chat_id, role, content, meta_raw, now),
             )
             self._conn.commit()
+        logger.debug(
+            "add_message(%s, %s, role=%s, content_len=%d)",
+            user_id,
+            chat_id,
+            role,
+            len(content),
+        )
 
     def add_messages(
         self, user_id: str, chat_id: str, messages: Sequence[dict[str, Any]]
@@ -273,6 +310,9 @@ class SessionStore:
                 batch,
             )
             self._conn.commit()
+        logger.debug(
+            "add_messages(%s, %s): %d message(s)", user_id, chat_id, len(batch)
+        )
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -281,3 +321,4 @@ class SessionStore:
     def close(self) -> None:
         """Close the underlying SQLite connection."""
         self._conn.close()
+        logger.debug("SessionStore closed (%s)", self._path)
