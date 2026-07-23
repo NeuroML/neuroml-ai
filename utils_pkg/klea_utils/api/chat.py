@@ -48,9 +48,7 @@ def create_chat_router() -> APIRouter:
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
 
         store.create_chat(payload.user_id, payload.chat_id)
-        model_overrides_ctx.set(
-            store.get_model_overrides(payload.user_id, payload.chat_id)
-        )
+        model_overrides_ctx.set(store.get_overrides(payload.user_id, payload.chat_id))
 
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
@@ -79,9 +77,7 @@ def create_chat_router() -> APIRouter:
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
 
         store.create_chat(payload.user_id, payload.chat_id)
-        model_overrides_ctx.set(
-            store.get_model_overrides(payload.user_id, payload.chat_id)
-        )
+        model_overrides_ctx.set(store.get_overrides(payload.user_id, payload.chat_id))
 
         async def event_stream():
             query = payload.query

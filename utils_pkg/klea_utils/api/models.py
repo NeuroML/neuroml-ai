@@ -11,6 +11,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from klea_utils.api.sessions_db import SessionStore
+
 from ..plogging import setup_logger
 
 logger = setup_logger(__name__)
@@ -34,15 +36,21 @@ def create_models_router() -> APIRouter:
         Returns resolved model config (defaults merged with overrides).
 
     ``POST /chat/{user_id}/{chat_id}/models/overrides/{role}``
-        Stores per-chat model overrides in ``app.state.chat_sessions``.
+        Stores per-chat model overrides.
     """
     router = APIRouter(prefix="/chat", tags=["models"])
 
     @router.get("/{user_id}/{chat_id}/models/overrides")
     async def get_chat_model_overrides(user_id: str, chat_id: str, request: Request):
-        chat_sessions = request.app.state.chat_sessions
-        key = f"{user_id}:{chat_id}"
-        return chat_sessions.get(key, {}).get("models", {})
+        store: SessionStore = request.app.state.chat_sessions
+        overrides = store.get_overrides(user_id, chat_id)
+        logger.debug(
+            "get_chat_model_overrides(%s, %s): %d role(s)",
+            user_id,
+            chat_id,
+            len(overrides),
+        )
+        return overrides
 
     @router.get("/{user_id}/{chat_id}/models/active")
     async def get_chat_active_models(user_id: str, chat_id: str, request: Request):
@@ -55,6 +63,7 @@ def create_models_router() -> APIRouter:
         from klea_utils.graph.base import BaseLangGraph
 
         graph: BaseLangGraph = request.app.state.graph
+        store: SessionStore = request.app.state.chat_sessions
         defaults: dict[str, dict[str, str]] = {}
         for role, entry in graph.llm_models.items():
             cfg: dict[str, str] = {"model": entry.model_name or ""}
@@ -62,12 +71,10 @@ def create_models_router() -> APIRouter:
                 cfg["provider"] = entry.parsed_model.provider or ""
             defaults[role] = cfg
 
-        # Add the embedding model (fixed, not chat-configurable)
         if graph.embedding_model:
             defaults["embedding"] = {"model": graph.embedding_model}
 
-        key = f"{user_id}:{chat_id}"
-        overrides = request.app.state.chat_sessions.get(key, {}).get("models", {})
+        overrides = store.get_overrides(user_id, chat_id)
         for role, override in overrides.items():
             if role in defaults:
                 defaults[role]["model"] = override.get("model", defaults[role]["model"])
@@ -80,6 +87,12 @@ def create_models_router() -> APIRouter:
             else:
                 defaults[role] = override
 
+        logger.debug(
+            "get_chat_active_models(%s, %s): %d role(s)",
+            user_id,
+            chat_id,
+            len(defaults),
+        )
         return defaults
 
     @router.post("/{user_id}/{chat_id}/models/overrides/{role}")
@@ -90,10 +103,18 @@ def create_models_router() -> APIRouter:
         payload: ChatModelConfigPayload,
         request: Request,
     ):
-        chat_sessions = request.app.state.chat_sessions
-        key = f"{user_id}:{chat_id}"
-        data = chat_sessions.setdefault(key, {}).setdefault("models", {})
-        data[role] = payload.model_dump(exclude_none=True)
+        store: SessionStore = request.app.state.chat_sessions
+        store.create_chat(user_id, chat_id)
+        store.set_override(
+            user_id, chat_id, role, payload.model_dump(exclude_none=True)
+        )
+        logger.debug(
+            "set_chat_model_override(%s, %s, role=%s, model=%s)",
+            user_id,
+            chat_id,
+            role,
+            payload.model,
+        )
         return {
             "status": "ok",
             "chat_id": chat_id,

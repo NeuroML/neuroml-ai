@@ -175,9 +175,7 @@ class SessionStore:
     # Model overrides (stored in chat_sessions.overrides JSON blob)
     # ------------------------------------------------------------------
 
-    def get_model_overrides(
-        self, user_id: str, chat_id: str
-    ) -> dict[str, dict[str, Any]]:
+    def get_overrides(self, user_id: str, chat_id: str) -> dict[str, dict[str, Any]]:
         """Return per-role model overrides keyed by role.
 
         Returns ``{"rag": {"model": "...", "provider": "..."}, ...}``
@@ -188,12 +186,10 @@ class SessionStore:
                 (user_id, chat_id),
             ).fetchone()
         result = self._json_loads(row["overrides"] if row else None)
-        logger.debug(
-            "get_model_overrides(%s, %s): %d role(s)", user_id, chat_id, len(result)
-        )
+        logger.debug("get_overrides(%s, %s): %d role(s)", user_id, chat_id, len(result))
         return result
 
-    def set_model_override(
+    def set_override(
         self,
         user_id: str,
         chat_id: str,
@@ -215,14 +211,14 @@ class SessionStore:
             )
             self._conn.commit()
         logger.debug(
-            "set_model_override(%s, %s, role=%s, model=%s)",
+            "set_override(%s, %s, role=%s, model=%s)",
             user_id,
             chat_id,
             role,
             config.get("model", "?"),
         )
 
-    def clear_model_overrides(self, user_id: str, chat_id: str) -> None:
+    def clear_overrides(self, user_id: str, chat_id: str) -> None:
         """Remove all model overrides for a chat."""
         with self._lock:
             self._conn.execute(
@@ -231,7 +227,7 @@ class SessionStore:
                 (self._now(), user_id, chat_id),
             )
             self._conn.commit()
-        logger.debug("clear_model_overrides(%s, %s)", user_id, chat_id)
+        logger.debug("clear_overrides(%s, %s)", user_id, chat_id)
 
     # ------------------------------------------------------------------
     # Messages (curated Q&A for frontend display)
