@@ -15,6 +15,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from klea_utils.api.sessions_db import SessionStore
+
 from ..plogging import setup_logger
 
 logger = setup_logger(__name__)
@@ -31,13 +33,10 @@ def create_chat_router() -> APIRouter:
 
     The router reads the graph instance from ``request.app.state.graph``
     (set by :func:`klea_utils.api.app.make_app`).
-    Chat-session configs are kept in ``app.state.chat_sessions`` keyed by
-    ``{user_id}:{chat_id}``.
+    Chat-session data is stored via the ``SessionStore`` on
+    ``app.state.chat_sessions``.
     """
     router = APIRouter()
-
-    def _storage_key(payload: ChatPayload) -> str:
-        return f"{payload.user_id}:{payload.chat_id}"
 
     @router.post("/query")
     async def query(request: Request, payload: ChatPayload):
@@ -45,43 +44,81 @@ def create_chat_router() -> APIRouter:
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
-        key = _storage_key(payload)
+        store: SessionStore = request.app.state.chat_sessions
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
-        chat_sessions = request.app.state.chat_sessions
 
-        chat_sessions.setdefault(key, {}).setdefault("models", {})
-        model_overrides_ctx.set(chat_sessions[key]["models"])
+        store.create_chat(payload.user_id, payload.chat_id)
+        model_overrides_ctx.set(
+            store.get_model_overrides(payload.user_id, payload.chat_id)
+        )
 
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
+            message = result if isinstance(result, str) else str(result)
+            store.add_message(payload.user_id, payload.chat_id, "user", payload.query)
+            store.add_message(payload.user_id, payload.chat_id, "assistant", message)
         except Exception as e:
             detail = f"{e}\n{traceback.format_exc()}"
             logger.error(detail)
+            store.add_message(
+                payload.user_id,
+                payload.chat_id,
+                "assistant",
+                f"Error: {e}",
+            )
             raise HTTPException(status_code=500, detail=detail)
 
-        return {"result": result}
+        return {"result": message}
 
     @router.post("/query/stream")
     async def query_stream(request: Request, payload: ChatPayload):
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
         graph: BaseLangGraph = request.app.state.graph
-        key = _storage_key(payload)
+        store: SessionStore = request.app.state.chat_sessions
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
-        chat_sessions = request.app.state.chat_sessions
 
-        chat_sessions.setdefault(key, {}).setdefault("models", {})
-        model_overrides_ctx.set(chat_sessions[key]["models"])
+        store.create_chat(payload.user_id, payload.chat_id)
+        model_overrides_ctx.set(
+            store.get_model_overrides(payload.user_id, payload.chat_id)
+        )
 
         async def event_stream():
+            query = payload.query
+            user_id = payload.user_id
+            chat_id = payload.chat_id
+            message_stored = False
             try:
-                async for event in graph.run_graph_astream_events(
-                    payload.query, thread_id
-                ):
+                async for event in graph.run_graph_astream_events(query, thread_id):
+                    t = event.get("type")
+                    if t == "complete":
+                        store.add_message(user_id, chat_id, "user", query)
+                        store.add_message(
+                            user_id,
+                            chat_id,
+                            "assistant",
+                            event.get("message_for_user", ""),
+                        )
+                        message_stored = True
+                    elif t == "error":
+                        store.add_message(
+                            user_id,
+                            chat_id,
+                            "assistant",
+                            f"Error: {event.get('message', 'Unknown error')}",
+                        )
+                        message_stored = True
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
                 detail = f"{e}\n{traceback.format_exc()}"
                 logger.error(detail)
+                if not message_stored:
+                    store.add_message(
+                        user_id,
+                        chat_id,
+                        "assistant",
+                        f"Unexpected error during streaming: {e}",
+                    )
                 error_event = json.dumps({"type": "error", "message": str(e)})
                 yield f"data: {error_event}\n\n"
 
