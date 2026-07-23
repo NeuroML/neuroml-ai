@@ -96,23 +96,26 @@ async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) ->
                 )
                 if resp.status_code == 200:
                     session = _ensure_chat(user_id, current_chat_id)
-                    for msg in resp.json():
-                        session["messages"].append(
-                            (
-                                msg["content"],
-                                datetime.fromtimestamp(msg["created_at"]).strftime(
-                                    "%X"
-                                ),
-                                msg["role"] == "user",
-                            )
+                    session["messages"] = [
+                        (
+                            msg["content"],
+                            datetime.fromtimestamp(msg["created_at"]).strftime("%X"),
+                            msg["role"] == "user",
                         )
+                        for msg in resp.json()
+                    ]
     except Exception as e:
         logger.warning("Failed to hydrate chats from server: %s", e)
 
 
-def _get_chats_sorted() -> list[tuple[str, dict]]:
-    """Return (chat_id, data) pairs, pinned first, then by creation desc."""
-    items = [(k.split(":", 1)[1], v) for k, v in _chats.items()]
+def _get_chats_sorted(user_id: str) -> list[tuple[str, dict]]:
+    """Return (chat_id, data) pairs for *user_id*, pinned first, then by creation desc.
+
+    Filters by the user_id prefix so that in a multi-browser scenario
+    (same NiceGUI process) each user only sees their own chats.
+    """
+    prefix = f"{user_id}:"
+    items = [(k.split(":", 1)[1], v) for k, v in _chats.items() if k.startswith(prefix)]
     items.sort(key=lambda x: (not x[1]["pinned"], -x[1]["created"]))
     return items
 
@@ -258,7 +261,7 @@ def setup_layout(
         background_tasks.create(_delete_chat_on_server(chat_id))
         _chats.pop(f"{user_id}:{chat_id}", None)
         if _current_chat_id[0] == chat_id:
-            remaining = _get_chats_sorted()
+            remaining = _get_chats_sorted(user_id)
             if remaining:
                 _switch_chat(remaining[0][0])
             else:
@@ -295,9 +298,10 @@ def setup_layout(
         """POST a new chat to the server so it persists."""
         try:
             async with httpx.AsyncClient(timeout=10) as client:
+                title = _chats.get(f"{user_id}:{chat_id}", {}).get("name", chat_id)
                 resp = await client.post(
                     f"{server_url}/chat/{user_id}",
-                    json={"chat_id": chat_id},
+                    json={"chat_id": chat_id, "title": title},
                 )
                 if resp.status_code == 200:
                     chat_data = resp.json()
@@ -351,7 +355,7 @@ def setup_layout(
         menu for rename / pin / delete.  Refresh this to pick up newly
         created sessions without a page reload.
         """
-        for chat_id, sdata in _get_chats_sorted():
+        for chat_id, sdata in _get_chats_sorted(user_id):
             is_current = chat_id == _current_chat_id[0]
             with (
                 ui.item(
@@ -493,12 +497,12 @@ def setup_layout(
             session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not session:
                 logger.debug(
-                    "No session found for %s, inspector empty", _current_chat_id[0]
+                    "No chat found for %s, inspector empty", _current_chat_id[0]
                 )
                 return
             entries = session.get("inspector_entries", [])
             logger.debug(
-                "Rendering inspector panel: %d entries for session %s",
+                "Rendering inspector panel: %d entries for chat %s",
                 len(entries),
                 _current_chat_id[0],
             )
@@ -564,7 +568,7 @@ def setup_layout(
                 """Stream the RAG pipeline progress and final answer."""
                 session = _ensure_chat(user_id, _current_chat_id[0])
                 logger.debug(
-                    "Clearing inspector entries for session %s", _current_chat_id[0]
+                    "Clearing inspector entries for chat %s", _current_chat_id[0]
                 )
                 session["inspector_entries"] = []
                 session["inspector_expanded"] = set()
