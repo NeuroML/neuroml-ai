@@ -71,7 +71,11 @@ def _ensure_chat(user_id: str, chat_id: str) -> dict:
 
 
 async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) -> None:
-    """Fetch chats and messages from the server and populate ``_chats``."""
+    """Fetch chats and messages from the server and populate ``_chats``.
+
+    Chats are only created server-side by ``/query/stream``, so if the
+    server has no data for this user yet the local store stays empty.
+    """
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             # Fetch chat list
@@ -84,34 +88,24 @@ async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) ->
                     _chats[key]["name"] = chat_data.get("title", chat_id)
                     _chats[key]["created"] = chat_data.get("created_at", 0)
 
-            # Ensure current chat exists on server
+            # Fetch messages for current chat (only if chat exists)
             current_key = f"{user_id}:{current_chat_id}"
-            if current_key not in _chats:
-                resp = await client.post(
-                    f"{server_url}/chat/{user_id}",
-                    json={"chat_id": current_chat_id},
+            if current_key in _chats:
+                resp = await client.get(
+                    f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
                 )
                 if resp.status_code == 200:
-                    chat_data = resp.json()
-                    _ensure_chat(user_id, current_chat_id)
-                    _chats[current_key]["name"] = chat_data.get(
-                        "title", current_chat_id
-                    )
-
-            # Fetch messages for current chat
-            resp = await client.get(
-                f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
-            )
-            if resp.status_code == 200:
-                session = _ensure_chat(user_id, current_chat_id)
-                for msg in resp.json():
-                    session["messages"].append(
-                        (
-                            msg["content"],
-                            datetime.fromtimestamp(msg["created_at"]).strftime("%X"),
-                            msg["role"] == "user",
+                    session = _ensure_chat(user_id, current_chat_id)
+                    for msg in resp.json():
+                        session["messages"].append(
+                            (
+                                msg["content"],
+                                datetime.fromtimestamp(msg["created_at"]).strftime(
+                                    "%X"
+                                ),
+                                msg["role"] == "user",
+                            )
                         )
-                    )
     except Exception as e:
         logger.warning("Failed to hydrate chats from server: %s", e)
 
