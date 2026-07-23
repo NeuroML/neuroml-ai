@@ -12,11 +12,10 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
-from platformdirs import PlatformDirs
 
 from klea_utils.api.sessions_db import SessionStore
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.paths import get_data_dir, init_dir
+from klea_utils.paths import init_dir
 
 
 def make_app(
@@ -29,10 +28,10 @@ def make_app(
 
     The lifespan:
 
-    1. Opens a persistent :class:`SessionStore` at
-       ``{data_dir}/sessions.db`` for chat metadata, model overrides,
-       and message history.
-    2. Instantiates and sets up the graph via *graph_factory*
+    1. Instantiates and sets up the graph via *graph_factory*
+    2. Opens a persistent :class:`SessionStore` at
+       ``{graph.paths.user_data_dir}/sessions.db`` alongside the
+       graph's checkpoints.
     3. Stores the graph and session store on ``app.state``
 
     :param graph_factory: Callable that returns a configured
@@ -43,18 +42,17 @@ def make_app(
     :returns: Configured FastAPI app
     """
 
-    # TODO: skipping sqlite bits for testing with an arg/flag
-
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.is_ready = False
 
-        db_path = init_dir(get_data_dir(PlatformDirs("klea"))) / "sessions.db"
-        app.state.chat_sessions = SessionStore(str(db_path))
-
         graph = graph_factory()
         await graph.setup()
         app.state.graph = graph
+
+        db_path = init_dir(graph.paths.user_data_dir) / "sessions.db"
+        app.state.chat_sessions = SessionStore(str(db_path))
+
         app.state.is_ready = True
 
         yield

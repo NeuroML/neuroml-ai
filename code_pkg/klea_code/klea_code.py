@@ -42,7 +42,7 @@ class KleaCode(BaseLangGraph):
     env_var = "KLEA_CODE_ENV_FILE"
     env_file_default = "klea_code.env"
     config_class = AppConfig
-    graph_name = "KleaCode"
+    graph_name = "klea-code"
 
     def __init__(
         self,

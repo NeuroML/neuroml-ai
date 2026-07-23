@@ -12,7 +12,6 @@ import contextvars
 import json
 import logging
 import os
-import sqlite3
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -24,13 +23,15 @@ from typing import Any, List, Literal, Type, final
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
+from platformdirs import PlatformDirs
 from pydantic import BaseModel, Field, create_model
 
+from klea_utils.paths import init_dir
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
 
@@ -134,7 +135,7 @@ class BaseLangGraph(ABC):
         """Initialise the base orchestrator.
 
         :param logging_level: Logging level for the orchestrator
-        :param checkpoint: Checkpointer mode — ``"inmemory"`` (volatile, default),
+        :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),
             ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
             or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
             that need conversation history receive ``memory=False``.
@@ -151,14 +152,9 @@ class BaseLangGraph(ABC):
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
         self.checkpointer_mode = checkpoint
         self.memory = checkpoint != "none"
-        if checkpoint == "sqlite":
-            db_path = str(Path(self.paths.user_data_dir) / "checkpoints.db")
-            conn = sqlite3.connect(db_path, check_same_thread=False)
-            self.checkpointer = SqliteSaver(conn)
-        elif checkpoint == "inmemory":
-            self.checkpointer = InMemorySaver()
-        else:
-            self.checkpointer = None
+        self.checkpointer = None
+
+        self.paths = PlatformDirs(self.graph_name.lower())
 
         self.config_dict: dict[str, Any]
 
@@ -175,10 +171,6 @@ class BaseLangGraph(ABC):
         self.k_max: int = 10
 
         self.QueryDomainSchema: Type[BaseModel] | None = None
-
-        from platformdirs import PlatformDirs
-
-        self.paths = PlatformDirs(self.graph_name.lower())
 
         from klea_utils.plogging import setup_logger
 
@@ -367,6 +359,24 @@ class BaseLangGraph(ABC):
         """
         pass
 
+    async def _setup_checkpointer(self) -> None:
+        """Set up the checkpointer.
+
+        ``setup()`` calls this hook before ``_load_env()``.
+        The checkpointer is ``None`` when ``checkpoint="none"``.
+        """
+        if self.checkpointer_mode == "sqlite":
+            import aiosqlite
+
+            db_path = init_dir(self.paths.user_data_dir) / "checkpoints.db"
+            self.logger.debug("Opening sqlite checkpointer at %s", db_path)
+            conn = await aiosqlite.connect(str(db_path))
+            self.checkpointer = AsyncSqliteSaver(conn)
+            self.logger.debug("Sqlite checkpointer ready")
+        elif self.checkpointer_mode == "inmemory":
+            self.checkpointer = InMemorySaver()
+            self.logger.debug("In-memory checkpointer ready")
+
     def _post_setup(self) -> None:
         """Hook called after the standard setup sequence.
 
@@ -393,14 +403,16 @@ class BaseLangGraph(ABC):
 
         Calls hooks and template methods in this order:
         1. ``_pre_setup()``
-        2. ``_load_env()``
-        3. ``_setup_models()``
-        4. ``_create_mcp_client()``
-        5. ``_pre_graph()``
-        6. ``_create_graph()``
-        7. ``_post_setup()``
+        2. ``_setup_checkpointer()``
+        3. ``_load_env()``
+        4. ``_setup_models()``
+        5. ``_create_mcp_client()``
+        6. ``_pre_graph()``
+        7. ``_create_graph()``
+        8. ``_post_setup()``
         """
         self._pre_setup()
+        await self._setup_checkpointer()
         self._load_env()
         self._configure_resources()
         self._setup_models()
