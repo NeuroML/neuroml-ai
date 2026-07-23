@@ -12,7 +12,7 @@ via ``graph.aget_state(thread_id)`` -- the checkpoint DB is the
 canonical source and already stores the full deserialised state with no
 serialization round-trip.
 
-File: klea_utils/api/session_store.py
+File: klea_utils/api/sessions_db.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
