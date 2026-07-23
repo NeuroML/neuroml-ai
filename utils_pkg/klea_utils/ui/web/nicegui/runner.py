@@ -33,12 +33,15 @@ from .widgets import ChatBubble
 logger = setup_logger(__name__)
 
 # Per-chat data store.
-# Keyed by session_id.
+# Keyed by ``{user_id}:{chat_id}`` so that colliding chat_ids across
+# different users do not interfere.  Without the user_id prefix,
+# two users whose sessions happen to share a chat_id (possible with
+# a finite slug pool) would overwrite each other's data.
 _chats: dict[str, dict] = {}
 
 
-def _ensure_chat(chat_id: str) -> dict:
-    """Return the session dict for *session_id*, creating it if missing.
+def _ensure_chat(user_id: str, chat_id: str) -> dict:
+    """Return the session dict for *user_id* / *chat_id*, creating it if missing.
 
     Each session dict has the following keys::
 
@@ -53,9 +56,10 @@ def _ensure_chat(chat_id: str) -> dict:
         inspector_expanded  Set of indices into *inspector_entries* that are
                             currently expanded in the UI.
     """
-    if chat_id not in _chats:
+    key = f"{user_id}:{chat_id}"
+    if key not in _chats:
         now = datetime.now()
-        _chats[chat_id] = {
+        _chats[key] = {
             "name": chat_id.replace("-", " ").title(),
             "created": now.timestamp(),
             "pinned": False,
@@ -63,12 +67,58 @@ def _ensure_chat(chat_id: str) -> dict:
             "inspector_entries": [],
             "inspector_expanded": set(),
         }
-    return _chats[chat_id]
+    return _chats[key]
+
+
+async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) -> None:
+    """Fetch chats and messages from the server and populate ``_chats``."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            # Fetch chat list
+            resp = await client.get(f"{server_url}/chat/{user_id}")
+            if resp.status_code == 200:
+                for chat_data in resp.json():
+                    chat_id = chat_data["chat_id"]
+                    key = f"{user_id}:{chat_id}"
+                    _ensure_chat(user_id, chat_id)
+                    _chats[key]["name"] = chat_data.get("title", chat_id)
+                    _chats[key]["created"] = chat_data.get("created_at", 0)
+
+            # Ensure current chat exists on server
+            current_key = f"{user_id}:{current_chat_id}"
+            if current_key not in _chats:
+                resp = await client.post(
+                    f"{server_url}/chat/{user_id}",
+                    json={"chat_id": current_chat_id},
+                )
+                if resp.status_code == 200:
+                    chat_data = resp.json()
+                    _ensure_chat(user_id, current_chat_id)
+                    _chats[current_key]["name"] = chat_data.get(
+                        "title", current_chat_id
+                    )
+
+            # Fetch messages for current chat
+            resp = await client.get(
+                f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
+            )
+            if resp.status_code == 200:
+                session = _ensure_chat(user_id, current_chat_id)
+                for msg in resp.json():
+                    session["messages"].append(
+                        (
+                            msg["content"],
+                            datetime.fromtimestamp(msg["created_at"]).strftime("%X"),
+                            msg["role"] == "user",
+                        )
+                    )
+    except Exception as e:
+        logger.warning("Failed to hydrate chats from server: %s", e)
 
 
 def _get_chats_sorted() -> list[tuple[str, dict]]:
-    """Return (session_id, data) pairs, pinned first, then by creation desc."""
-    items = list(_chats.items())
+    """Return (chat_id, data) pairs, pinned first, then by creation desc."""
+    items = [(k.split(":", 1)[1], v) for k, v in _chats.items()]
     items.sort(key=lambda x: (not x[1]["pinned"], -x[1]["created"]))
     return items
 
@@ -165,7 +215,7 @@ def setup_layout(
         matching the Gemini/ChatGPT model where only user input has a
         visible bubble.
         """
-        session = _chats.get(_current_chat_id[0])
+        session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
         msgs = session["messages"] if session else []
         if msgs:
             for idx, (text, stamp, is_user) in enumerate(msgs):
@@ -188,36 +238,45 @@ def setup_layout(
             "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
         )
 
-    def _switch_chat(sid: str) -> None:
+    def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
-        app.storage.user["chat_id"] = sid
-        _current_chat_id[0] = sid
-        logger.debug("Switched to chat %s", sid)
+        app.storage.user["chat_id"] = chat_id
+        _current_chat_id[0] = chat_id
+        logger.debug("Switched to chat %s", chat_id)
         _chat_messages.refresh()
         _render_chat_list.refresh()
         _inspector_panel.refresh()
 
-    def _delete_chat(sid: str) -> None:
-        """Remove a session from the store.
+    async def _delete_chat_on_server(chat_id: str) -> None:
+        """DELETE the chat on the server."""
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.delete(f"{server_url}/chat/{user_id}/{chat_id}")
+        except Exception as e:
+            logger.warning("Failed to delete chat on server: %s", e)
+
+    def _delete_chat(chat_id: str) -> None:
+        """Remove a session from the store and server.
 
         If the currently active session is deleted, the next available
         session becomes active (or a fresh one is created).
         """
-        _chats.pop(sid, None)
-        if _current_chat_id[0] == sid:
+        background_tasks.create(_delete_chat_on_server(chat_id))
+        _chats.pop(f"{user_id}:{chat_id}", None)
+        if _current_chat_id[0] == chat_id:
             remaining = _get_chats_sorted()
             if remaining:
                 _switch_chat(remaining[0][0])
             else:
-                new_sid = coolname.generate_slug(2)
-                _ensure_chat(new_sid)
-                _switch_chat(new_sid)
+                new_chat_id = coolname.generate_slug(2)
+                _ensure_chat(user_id, new_chat_id)
+                _switch_chat(new_chat_id)
         else:
             _render_chat_list.refresh()
 
-    def _toggle_pin(sid: str) -> None:
+    def _toggle_pin(chat_id: str) -> None:
         """Flip the pinned flag for a session and refresh the list."""
-        session = _ensure_chat(sid)
+        session = _ensure_chat(user_id, chat_id)
         session["pinned"] = not session["pinned"]
         _render_chat_list.refresh()
 
@@ -238,20 +297,46 @@ def setup_layout(
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
+    async def _create_chat_on_server(chat_id: str) -> None:
+        """POST a new chat to the server so it persists."""
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    f"{server_url}/chat/{user_id}",
+                    json={"chat_id": chat_id},
+                )
+                if resp.status_code == 200:
+                    chat_data = resp.json()
+                    _ensure_chat(user_id, chat_id)
+                    _chats[f"{user_id}:{chat_id}"]["name"] = chat_data.get(
+                        "title", chat_id
+                    )
+        except Exception as e:
+            logger.warning("Failed to create chat on server: %s", e)
+
     def _new_chat():
         """Create a fresh session and switch to it."""
-        sid = coolname.generate_slug(2)
-        _ensure_chat(sid)
-        _switch_chat(sid)
+        chat_id = coolname.generate_slug(2)
+        _ensure_chat(user_id, chat_id)
+        _switch_chat(chat_id)
+        background_tasks.create(_create_chat_on_server(chat_id))
 
-    def _rename_chat(sid: str) -> None:
-        """Open a dialog to rename a chat."""
-        chat = _ensure_chat(sid)
+    def _rename_chat(chat_id: str) -> None:
+        """Open a dialog to rename a chat and persist on server."""
+        chat = _ensure_chat(user_id, chat_id)
         dialog = ui.dialog()
 
-        def _save():
+        async def _save():
             chat["name"] = inp.value
             dialog.close()
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    await client.patch(
+                        f"{server_url}/chat/{user_id}/{chat_id}",
+                        json={"title": inp.value},
+                    )
+            except Exception as e:
+                logger.warning("Failed to rename chat on server: %s", e)
             _render_chat_list.refresh()
 
         with dialog:
@@ -272,15 +357,15 @@ def setup_layout(
         menu for rename / pin / delete.  Refresh this to pick up newly
         created sessions without a page reload.
         """
-        for sid, sdata in _get_chats_sorted():
-            is_current = sid == _current_chat_id[0]
+        for chat_id, sdata in _get_chats_sorted():
+            is_current = chat_id == _current_chat_id[0]
             with (
                 ui.item(
-                    on_click=lambda s=sid: _switch_chat(s),
+                    on_click=lambda s=chat_id: _switch_chat(s),
                 )
                 .props("dense")
                 .classes("w-full")
-                .on("dblclick", lambda s=sid: _rename_chat(s))
+                .on("dblclick", lambda s=chat_id: _rename_chat(s))
             ):
                 with ui.item_section().props("avatar"):
                     ui.icon("push_pin" if sdata["pinned"] else "history")
@@ -301,17 +386,23 @@ def setup_layout(
                         .on("click.stop", lambda: None)
                     ):
                         with ui.menu():
-                            with ui.menu_item(on_click=lambda s=sid: _rename_chat(s)):
+                            with ui.menu_item(
+                                on_click=lambda s=chat_id: _rename_chat(s)
+                            ):
                                 with ui.item_section().props("avatar"):
                                     ui.icon("edit")
                                 with ui.item_section():
                                     ui.label("Rename")
-                            with ui.menu_item(on_click=lambda s=sid: _toggle_pin(s)):
+                            with ui.menu_item(
+                                on_click=lambda s=chat_id: _toggle_pin(s)
+                            ):
                                 with ui.item_section().props("avatar"):
                                     ui.icon("push_pin")
                                 with ui.item_section():
                                     ui.label("Unpin" if sdata["pinned"] else "Pin")
-                            with ui.menu_item(on_click=lambda s=sid: _delete_chat(s)):
+                            with ui.menu_item(
+                                on_click=lambda s=chat_id: _delete_chat(s)
+                            ):
                                 with ui.item_section().props("avatar"):
                                     ui.icon("delete")
                                 with ui.item_section():
@@ -378,7 +469,7 @@ def setup_layout(
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry."""
-        session = _chats.get(_current_chat_id[0])
+        session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
         if not session:
             return
         expanded = session.setdefault("inspector_expanded", set())
@@ -405,7 +496,7 @@ def setup_layout(
 
         @ui.refreshable
         def _inspector_panel() -> None:
-            session = _chats.get(_current_chat_id[0])
+            session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not session:
                 logger.debug(
                     "No session found for %s, inspector empty", _current_chat_id[0]
@@ -477,7 +568,7 @@ def setup_layout(
 
             async def _do_stream(query: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
-                session = _ensure_chat(_current_chat_id[0])
+                session = _ensure_chat(user_id, _current_chat_id[0])
                 logger.debug(
                     "Clearing inspector entries for session %s", _current_chat_id[0]
                 )
@@ -514,14 +605,18 @@ def setup_layout(
                         elif t == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)
-                            _ensure_chat(_current_chat_id[0])["messages"].append(
+                            _ensure_chat(user_id, _current_chat_id[0])[
+                                "messages"
+                            ].append(
                                 (full_response, datetime.now().strftime("%X"), False)
                             )
                             _chat_messages.refresh()
                             break
                         elif t == "error":
                             pg_row.delete()
-                            _ensure_chat(_current_chat_id[0])["messages"].append(
+                            _ensure_chat(user_id, _current_chat_id[0])[
+                                "messages"
+                            ].append(
                                 (
                                     f"Error: {event.get('message', 'Unknown error')}",
                                     datetime.now().strftime("%X"),
@@ -532,7 +627,7 @@ def setup_layout(
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
-                    _ensure_chat(_current_chat_id[0])["messages"].append(
+                    _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
                         (f"Connection error: {e}", datetime.now().strftime("%X"), False)
                     )
                     _chat_messages.refresh()
@@ -544,7 +639,7 @@ def setup_layout(
                 stamp = datetime.now().strftime("%X")
                 query = text.value
                 text.value = ""
-                _ensure_chat(_current_chat_id[0])["messages"].append(
+                _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
                     (query, stamp, True)
                 )
                 _chat_messages.refresh()
@@ -638,6 +733,8 @@ def run_nicegui_app(
             app.storage.user["chat_id"] = coolname.generate_slug(2)
 
         chat_id = app.storage.user["chat_id"]
+
+        await _hydrate_chats(server_url, user_id, chat_id)
 
         # Fetch model info (non-fatal — just won't show in header on failure)
         active_models = await fetch_active_models(server_url, user_id, chat_id)
