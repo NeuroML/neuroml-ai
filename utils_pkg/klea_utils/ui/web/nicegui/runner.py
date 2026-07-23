@@ -88,9 +88,9 @@ async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) ->
                     _chats[key]["name"] = chat_data.get("title", chat_id)
                     _chats[key]["created"] = chat_data.get("created_at", 0)
 
-            # Fetch messages for current chat (only if chat exists)
-            current_key = f"{user_id}:{current_chat_id}"
-            if current_key in _chats:
+            # Fetch messages for current chat (only if chat_id is set)
+            current_key = f"{user_id}:{current_chat_id}" if current_chat_id else None
+            if current_key and current_key in _chats:
                 resp = await client.get(
                     f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
                 )
@@ -547,123 +547,150 @@ def setup_layout(
 
         _inspector_panel()
 
-    # ---- Center: chat messages + input (pinned to bottom) ----
-    with (
-        ui.column()
-        .classes("w-full px-8")
-        .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
-    ):
-        with ui.scroll_area().classes("w-full grow chat-scroll-area"):
-            _chat_messages()
-            _stream_container = ui.column().classes("w-full")
+    # ---- Center ----
+    if not chat_id:
+        with (
+            ui.column()
+            .classes("w-full h-full items-center justify-center gap-4")
+            .style("flex: 1; display: flex;")
+        ):
+            ui.label("Start a conversation").classes("text-xl text-grey-5")
+            ui.label(
+                'Click "New Chat" in the sidebar or press Ctrl+K to begin'
+            ).classes("text-sm text-grey-5")
+    else:
+        with (
+            ui.column()
+            .classes("w-full px-8")
+            .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
+        ):
+            with ui.scroll_area().classes("w-full grow chat-scroll-area"):
+                _chat_messages()
+                _stream_container = ui.column().classes("w-full")
 
-        with ui.row().classes("w-full no-wrap items-end py-4"):
-            text = (
-                ui.textarea(placeholder="Start a conversation")
-                .props("rounded outlined input-class=mx-3 autogrow")
-                .classes("flex-grow")
-            )
-
-            async def _do_stream(query: str) -> None:
-                """Stream the RAG pipeline progress and final answer."""
-                session = _ensure_chat(user_id, _current_chat_id[0])
-                logger.debug(
-                    "Clearing inspector entries for chat %s", _current_chat_id[0]
+            with ui.row().classes("w-full no-wrap items-end py-4"):
+                text = (
+                    ui.textarea(placeholder="Start a conversation")
+                    .props("rounded outlined input-class=mx-3 autogrow")
+                    .classes("flex-grow")
                 )
-                session["inspector_entries"] = []
-                session["inspector_expanded"] = set()
-                _inspector_panel.refresh()
-                with _stream_container:
-                    pg_row = ui.row().classes("w-full items-center gap-2 p-2")
-                    with pg_row:
-                        ui.spinner(type="dots").classes("w-4 h-4")
-                        pg_label = ui.label("").classes("text-xs text-grey-5 italic")
 
-                full_response = ""
-                try:
-                    async for event in stream_events(
-                        query, _current_chat_id[0], server_url, user_id=user_id
-                    ):
-                        t = event.get("type", "?")
-                        if t == "progress":
-                            pg_label.set_text(f"{event.get('node', '')}")
-                        elif t == "debug":
-                            data = event.get("data", {})
-                            session["inspector_entries"].append(
-                                {
-                                    "type": t,
-                                    "node": event.get("node", ""),
-                                    "heading": data.get("heading", ""),
-                                    "summary": data.get("summary", ""),
-                                    "details": data.get("details", {}),
-                                    "timing_seconds": data.get("timing_seconds", None),
-                                }
+                async def _do_stream(query: str) -> None:
+                    """Stream the RAG pipeline progress and final answer."""
+                    session = _ensure_chat(user_id, _current_chat_id[0])
+                    logger.debug(
+                        "Clearing inspector entries for chat %s", _current_chat_id[0]
+                    )
+                    session["inspector_entries"] = []
+                    session["inspector_expanded"] = set()
+                    _inspector_panel.refresh()
+                    with _stream_container:
+                        pg_row = ui.row().classes("w-full items-center gap-2 p-2")
+                        with pg_row:
+                            ui.spinner(type="dots").classes("w-4 h-4")
+                            pg_label = ui.label("").classes(
+                                "text-xs text-grey-5 italic"
                             )
-                            _inspector_panel.refresh()
-                        elif t == "complete":
-                            pg_row.delete()
-                            full_response = event.get("message_for_user", full_response)
-                            _ensure_chat(user_id, _current_chat_id[0])[
-                                "messages"
-                            ].append(
-                                (full_response, datetime.now().strftime("%X"), False)
-                            )
-                            _chat_messages.refresh()
-                            break
-                        elif t == "error":
-                            pg_row.delete()
-                            _ensure_chat(user_id, _current_chat_id[0])[
-                                "messages"
-                            ].append(
-                                (
-                                    f"Error: {event.get('message', 'Unknown error')}",
-                                    datetime.now().strftime("%X"),
-                                    False,
+
+                    full_response = ""
+                    try:
+                        async for event in stream_events(
+                            query, _current_chat_id[0], server_url, user_id=user_id
+                        ):
+                            t = event.get("type", "?")
+                            if t == "progress":
+                                pg_label.set_text(f"{event.get('node', '')}")
+                            elif t == "debug":
+                                data = event.get("data", {})
+                                session["inspector_entries"].append(
+                                    {
+                                        "type": t,
+                                        "node": event.get("node", ""),
+                                        "heading": data.get("heading", ""),
+                                        "summary": data.get("summary", ""),
+                                        "details": data.get("details", {}),
+                                        "timing_seconds": data.get(
+                                            "timing_seconds", None
+                                        ),
+                                    }
                                 )
+                                _inspector_panel.refresh()
+                            elif t == "complete":
+                                pg_row.delete()
+                                full_response = event.get(
+                                    "message_for_user", full_response
+                                )
+                                _ensure_chat(user_id, _current_chat_id[0])[
+                                    "messages"
+                                ].append(
+                                    (
+                                        full_response,
+                                        datetime.now().strftime("%X"),
+                                        False,
+                                    )
+                                )
+                                _chat_messages.refresh()
+                                break
+                            elif t == "error":
+                                pg_row.delete()
+                                _ensure_chat(user_id, _current_chat_id[0])[
+                                    "messages"
+                                ].append(
+                                    (
+                                        f"Error: {event.get('message', 'Unknown error')}",
+                                        datetime.now().strftime("%X"),
+                                        False,
+                                    )
+                                )
+                                _chat_messages.refresh()
+                                break
+                    except httpx.RequestError as e:
+                        pg_row.delete()
+                        _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
+                            (
+                                f"Connection error: {e}",
+                                datetime.now().strftime("%X"),
+                                False,
                             )
-                            _chat_messages.refresh()
-                            break
-                except httpx.RequestError as e:
-                    pg_row.delete()
+                        )
+                        _chat_messages.refresh()
+
+                def send() -> None:
+                    """Append the current input text as a user message."""
+                    if not text.value.strip():
+                        return
+                    stamp = datetime.now().strftime("%X")
+                    query = text.value
+                    text.value = ""
                     _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
-                        (f"Connection error: {e}", datetime.now().strftime("%X"), False)
+                        (query, stamp, True)
                     )
                     _chat_messages.refresh()
+                    _render_chat_list.refresh()
 
-            def send() -> None:
-                """Append the current input text as a user message."""
-                if not text.value.strip():
-                    return
-                stamp = datetime.now().strftime("%X")
-                query = text.value
-                text.value = ""
-                _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
-                    (query, stamp, True)
+                    background_tasks.create(_do_stream(query))
+
+                with text.add_slot("append"):
+                    with ui.button(icon="send", on_click=send).props(
+                        "flat dense round color=primary"
+                    ):
+                        ui.tooltip("Enter to send, Shift+Enter for newline")
+
+            # Plain Enter sends the message and prevents the default newline
+            def handle_enter(e: GenericEventArguments):
+                if e.args.get("shiftKey"):
+                    text.value += "\n"
+                else:
+                    send()
+
+            text.on("keydown.enter.exact.prevent", handle_enter)
+            # Clicking the send icon inside the textarea also sends.
+            text.on("click:append", send)
+
+            if disclaimer:
+                ui.label(disclaimer).classes(
+                    "text-xs text-grey-5 pb-2 w-full text-center"
                 )
-                _chat_messages.refresh()
-                _render_chat_list.refresh()
-
-                background_tasks.create(_do_stream(query))
-
-            with text.add_slot("append"):
-                with ui.button(icon="send", on_click=send).props(
-                    "flat dense round color=primary"
-                ):
-                    ui.tooltip("Enter to send, Shift+Enter for newline")
-
-        # Plain Enter sends the message and prevents the default newline
-        def handle_enter(e: GenericEventArguments):
-            if e.args.get("shiftKey"):
-                text.value += "\n"
-            else:
-                send()
-
-        text.on("keydown.enter.exact.prevent", handle_enter)
-        # Clicking the send icon inside the textarea also sends.
-        text.on("click:append", send)
-
-        if disclaimer:
-            ui.label(disclaimer).classes("text-xs text-grey-5 pb-2 w-full text-center")
 
     # ---- Footer ----
     with ui.footer().classes("bg-grey-3 dark:bg-grey-9 text-xs py-1"):
@@ -727,16 +754,14 @@ def run_nicegui_app(
 
         user_id = app.storage.user["user_id"]
 
-        if "chat_id" not in app.storage.user:
-            app.storage.user["chat_id"] = coolname.generate_slug(2)
-
-        chat_id = app.storage.user["chat_id"]
+        chat_id = app.storage.user.get("chat_id", "")
 
         await _hydrate_chats(server_url, user_id, chat_id)
 
-        # Fetch model info (non-fatal — just won't show in header on failure)
-        active_models = await fetch_active_models(server_url, user_id, chat_id)
-        model_info = format_model_info(active_models)
+        model_info = ""
+        if chat_id:
+            active_models = await fetch_active_models(server_url, user_id, chat_id)
+            model_info = format_model_info(active_models)
 
         setup_layout(
             chat_id=chat_id,
