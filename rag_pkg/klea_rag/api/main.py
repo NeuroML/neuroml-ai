@@ -19,7 +19,7 @@ from klea_rag.rag import RAG
 
 
 def _create_rag() -> RAG:
-    return RAG(checkpoint="inmemory")
+    return RAG(checkpoint="sqlite")
 
 
 app = make_app(

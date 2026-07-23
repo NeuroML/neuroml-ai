@@ -19,7 +19,7 @@ from klea_code.klea_code import KleaCode
 
 
 def _create_kleacode() -> KleaCode:
-    return KleaCode(checkpoint="inmemory")
+    return KleaCode(checkpoint="sqlite")
 
 
 app = make_app(
