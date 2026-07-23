@@ -201,7 +201,7 @@ def setup_layout(
     mini_state = True
     # Mutable containers so refreshable functions can pick up changes.
     _current_chat_id = [chat_id]
-    toggle_icon_ref = [None]
+    toggle_icon_ref: list = [None]
 
     _expanded: set[int] = set()
 
@@ -230,9 +230,9 @@ def setup_layout(
                         f"navigator.clipboard.writeText({json.dumps(t)})"
                     ),
                     on_expand=lambda i=idx: (
-                        _expanded.discard(i) if i in _expanded else _expanded.add(i),
-                        _chat_messages.refresh(),
-                    )[1],
+                        (_expanded.discard(i) if i in _expanded else _expanded.add(i))
+                        or _chat_messages.refresh()
+                    ),
                 )
         ui.run_javascript(
             "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
