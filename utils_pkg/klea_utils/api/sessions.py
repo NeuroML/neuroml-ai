@@ -2,6 +2,12 @@
 """
 Chat session CRUD endpoints.
 
+NOTE: *user_id* is currently a browser-generated UUID taken from
+the URL path.  For multi-user deployments this must be replaced with
+an authenticated identity (JWT / OAuth) extracted from the request
+context — otherwise any user can delete or rename another user's chats
+by modifying the ``user_id`` in the URL.
+
 File: klea_utils/api/sessions.py
 
 Copyright 2026 Ankur Sinha
