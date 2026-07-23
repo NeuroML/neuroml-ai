@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from platformdirs import PlatformDirs
 
-from klea_utils.api.session_store import SessionStore
+from klea_utils.api.sessions_db import SessionStore
 from klea_utils.graph.base import BaseLangGraph
 from klea_utils.paths import get_data_dir, init_dir
 
