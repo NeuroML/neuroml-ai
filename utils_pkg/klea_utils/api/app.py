@@ -11,10 +11,12 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
-from cachetools import TTLCache
 from fastapi import APIRouter, FastAPI
+from platformdirs import PlatformDirs
 
+from klea_utils.api.session_store import SessionStore
 from klea_utils.graph.base import BaseLangGraph
+from klea_utils.paths import get_data_dir, init_dir
 
 
 def make_app(
@@ -27,9 +29,11 @@ def make_app(
 
     The lifespan:
 
-    1. Creates an in-memory session cache (TTLCache, 2 hour TTL)
+    1. Opens a persistent :class:`SessionStore` at
+       ``{data_dir}/sessions.db`` for chat metadata, model overrides,
+       and message history.
     2. Instantiates and sets up the graph via *graph_factory*
-    3. Stores the graph and session cache on ``app.state``
+    3. Stores the graph and session store on ``app.state``
 
     :param graph_factory: Callable that returns a configured
         :class:`~klea_utils.graph.base.BaseLangGraph` instance
@@ -39,12 +43,14 @@ def make_app(
     :returns: Configured FastAPI app
     """
 
+    # TODO: skipping sqlite bits for testing with an arg/flag
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.is_ready = False
-        # Chat-session storage keyed by ``f"{user_id}:{chat_id}"``.
-        # Each entry stores model-override configs per role.
-        app.state.chat_sessions = TTLCache(maxsize=1000, ttl=7200)
+
+        db_path = init_dir(get_data_dir(PlatformDirs("klea"))) / "sessions.db"
+        app.state.chat_sessions = SessionStore(str(db_path))
 
         graph = graph_factory()
         await graph.setup()
@@ -54,6 +60,7 @@ def make_app(
         yield
 
         app.state.is_ready = False
+        app.state.chat_sessions.close()
 
     app = FastAPI(lifespan=lifespan, title=title, version=version)
 
