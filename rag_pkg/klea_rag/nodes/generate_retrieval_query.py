@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from textwrap import dedent
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.llm import (
     content_to_str,
@@ -89,7 +89,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         }
 
     @override
-    def _update_state(self, result: Output, state: RAGState) -> Dict[str, Any]:
+    def _update_state(self, result: Output, state: RAGState) -> dict[str, Any]:
         """Update state with the generated retrieval query."""
         content = content_to_str(result.content)
         thought, answer = (

@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.llm import content_to_str
 from klea_utils.nodes.abstract import AbstractLangGraphNode
@@ -17,7 +17,7 @@ from klea_utils.nodes.abstract import AbstractLangGraphNode
 from klea_rag.schemas import RAGState
 
 
-class AnswerUser(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
+class AnswerUser(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     """Node that returns the final message to the user."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -29,7 +29,7 @@ class AnswerUser(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: RAGState) -> Dict[str, Any]:
+    async def execute(self, state: RAGState) -> dict[str, Any]:
         """Return the message for the user.
 
         :param state: Current graph state

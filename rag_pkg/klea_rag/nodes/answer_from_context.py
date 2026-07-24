@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.llm import (
     extract_llm_output_content,
@@ -77,7 +77,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         }
 
     @override
-    def _update_state(self, result: AnswerSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: AnswerSchema, state: BaseModel) -> dict[str, Any]:
         """Update state with the generated answer and formatted references."""
         thought, answer = split_output_by_section(result.answer, "<think>", "</think>")
         refs = result.references

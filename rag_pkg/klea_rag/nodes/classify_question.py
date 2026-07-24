@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import json
 import logging
 from textwrap import dedent
-from typing import Any, Dict, Type, override
+from typing import Any, override
 
 from klea_utils.llm import (
     extract_llm_output_content,
@@ -40,8 +40,8 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        domains: Dict[str, str],
-        output_schema: Type[TSchema],
+        domains: dict[str, str],
+        output_schema: type[TSchema],
         temperature: float = 0.3,
         memory: bool = False,
         pre_prompt: str = "",
@@ -116,7 +116,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         return {"query": state.query}
 
     @override
-    def _update_state(self, result: Any, state: RAGState) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: RAGState) -> dict[str, Any]:
         """Extract classification result, append query to messages."""
         messages = list(state.messages)
         messages.append(HumanMessage(content=state.query))

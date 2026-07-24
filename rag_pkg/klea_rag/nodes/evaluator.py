@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
 from klea_utils.nodes.abstract import NodeStreamData
@@ -67,7 +67,7 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     @override
     def _update_state(
         self, result: EvaluateAnswerSchema, state: RAGState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update state with evaluation result and computed routing decision."""
         return {
             "text_response_eval": result,

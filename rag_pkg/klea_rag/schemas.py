@@ -8,7 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any, Dict, List, Literal, Tuple
+from typing import Any, Literal
 
 from fastmcp.client.client import CallToolResult
 from langchain_core.messages import AnyMessage
@@ -34,7 +34,7 @@ class ToolCallSchema(BaseModel):
     """Schema for tool call response."""
 
     tool: str = ""
-    args: Dict[str, Any] = Field(default_factory=dict)
+    args: dict[str, Any] = Field(default_factory=dict)
     reason: str = ""
 
 
@@ -51,7 +51,7 @@ class RAGState(BaseModel):
     query_domains: list[str] = ["undefined"]
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
     guard_decision: str = "unsafe"
-    messages: List[AnyMessage] = Field(default_factory=list)
+    messages: list[AnyMessage] = Field(default_factory=list)
 
     # summarised version of context so far
     context_summary: str = ""
@@ -65,7 +65,7 @@ class RAGState(BaseModel):
     tool_results: list[CallToolResult] = Field(default_factory=list)
 
     # reference material from retrievals
-    reference_material: Dict[str, List[Tuple]] = Field(default_factory=dict)
+    reference_material: dict[str, list[tuple]] = Field(default_factory=dict)
 
     # number of retrieval query modification attempts in evaluator loop
     retrieval_attempts: int = 0

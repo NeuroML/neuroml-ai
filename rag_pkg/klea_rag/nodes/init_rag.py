@@ -9,21 +9,21 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 from klea_rag.schemas import EvaluateAnswerSchema, RAGState
 
 
-class InitRAGState(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
+class InitRAGState(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     """Initialise/reset RAG state before each iteration."""
 
     def __init__(self, logger: logging.Logger, label: str):
         """Initialise with a logger and human-readable label."""
         super().__init__(logger, label)
 
-    async def execute(self, state: RAGState) -> Dict[str, Any]:
+    async def execute(self, state: RAGState) -> dict[str, Any]:
         """Reset state fields to their initial values."""
         self.write_custom_stream({"type": "progress", "node": self.label})
         return {

@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import asyncio
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from fastmcp import Client
 from fastmcp.client.client import CallToolResult
@@ -23,7 +23,7 @@ from klea_utils.nodes.abstract import (
 from klea_rag.schemas import RAGState
 
 
-class ToolsCaller(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
+class ToolsCaller(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     """Node that calls MCP tools based on tool_calls in state."""
 
     def __init__(self, logger: logging.Logger, label: str, mcp_client: Client | None):
@@ -37,7 +37,7 @@ class ToolsCaller(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         self._mcp_client = mcp_client
 
     @override
-    async def execute(self, state: RAGState) -> Dict[str, Any]:
+    async def execute(self, state: RAGState) -> dict[str, Any]:
         self.logger.debug(f"{state =}")
 
         # no _pre_exec here

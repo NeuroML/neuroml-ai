@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
 from klea_utils.nodes.abstract import NodeStreamData
@@ -81,7 +81,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         }
 
     @override
-    def _update_state(self, result: ToolCallsSchema, state: RAGState) -> Dict[str, Any]:
+    def _update_state(self, result: ToolCallsSchema, state: RAGState) -> dict[str, Any]:
         """Update state with selected tool calls."""
         return {"tool_calls": result.tool_calls}
 
