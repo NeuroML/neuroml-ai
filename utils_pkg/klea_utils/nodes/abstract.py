@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Literal, Type, final
+from typing import Any, Literal, final
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
@@ -34,9 +34,13 @@ class NodeStreamData(BaseModel):
     summary: str = Field(
         description="Human-readable summary, always rendered by frontend"
     )
-    details: Dict[str, Any] = Field(
+    details: dict[str, Any] = Field(
         default_factory=dict,
         description="Structured data, rendered as collapsible JSON",
+    )
+    display: str = Field(
+        default="",
+        description="Pre-formatted markdown content for the status pane",
     )
 
 
@@ -46,7 +50,7 @@ class NodeStreamEvent(BaseModel):
     This is the contract between the graph infrastructure and the frontend.
     """
 
-    type: Literal["info", "debug"] = Field(description="Event type")
+    type: Literal["info", "debug", "state"] = Field(description="Event type")
     node: str = Field(description="Node label")
     data: NodeStreamData = Field(description="Event payload")
 
@@ -105,7 +109,7 @@ class AbstractLangGraphNode[TSchema: BaseModel, TReturn](ABC):
 
 
 class AbstractLLMNode[TSchema: BaseModel](
-    AbstractLangGraphNode[TSchema, Dict[str, Any]]
+    AbstractLangGraphNode[TSchema, dict[str, Any]]
 ):
     """Abstract base class for LangGraph nodes that use LLMs.
 
@@ -128,7 +132,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         label: str,
         llm_models: dict[str, Any],
         temperature: float,
-        output_schema: Type[TSchema] | None = None,
+        output_schema: type[TSchema] | None = None,
     ):
         """Initialize with logger and model.
 
@@ -151,7 +155,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._output_schema = output_schema
 
     @final
-    async def execute(self, state: BaseModel) -> Dict[str, Any]:
+    async def execute(self, state: BaseModel) -> dict[str, Any]:
         """Template method defining standard execution flow"""
         # Clear previous execution context to prevent stale data.
         # These are instance variables (not locals) so that streaming hooks
@@ -216,8 +220,9 @@ class AbstractLLMNode[TSchema: BaseModel](
     def _post_exec_stream(self) -> None:
         """Emit streaming events after LLM invocation.
 
-        Default: emits ``info`` and ``debug`` events from ``_get_info`` and
-        ``_get_debug`` if they return non-None values.
+        Default: emits ``info``, ``debug``, and ``state`` events from
+        ``_get_info``, ``_get_debug``, and ``_get_status`` if they
+        return non-None values.
         Override to customise post-execution streaming.
         """
         info = self._get_info()
@@ -227,6 +232,10 @@ class AbstractLLMNode[TSchema: BaseModel](
         debug = self._get_debug()
         if debug:
             event = NodeStreamEvent(type="debug", node=self.label, data=debug)
+            self.write_custom_stream(event.model_dump())
+        status = self._get_status()
+        if status:
+            event = NodeStreamEvent(type="state", node=self.label, data=status)
             self.write_custom_stream(event.model_dump())
 
     def _get_info(self) -> NodeStreamData | None:
@@ -263,6 +272,19 @@ class AbstractLLMNode[TSchema: BaseModel](
         """
         return None
 
+    def _get_status(self) -> NodeStreamData | None:
+        """Return status pane content for this node.
+
+        Override to populate the status pane with display-ready
+        markdown content.  The ``display`` field of the returned
+        ``NodeStreamData`` is rendered in the status pane; the frontend
+        replaces the previous entry for this node label so loops do not
+        accumulate.
+
+        :returns: NodeStreamData with display content, or None to skip
+        """
+        return None
+
     @abstractmethod
     def _configure_llm(self) -> Runnable:
         """Configure LLM with structured output"""
@@ -284,7 +306,7 @@ class AbstractLLMNode[TSchema: BaseModel](
 
     @abstractmethod
     def _invoke_prompt(
-        self, prompt_template: ChatPromptTemplate, variables: Any | Dict[str, Any]
+        self, prompt_template: ChatPromptTemplate, variables: Any | dict[str, Any]
     ) -> PromptValue:
         """Format prompt with state-specific parameters"""
         ...
@@ -312,7 +334,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         ...
 
     @abstractmethod
-    def _update_state(self, result: Any, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: BaseModel) -> dict[str, Any]:
         """Update and return state dictionary"""
         ...
 

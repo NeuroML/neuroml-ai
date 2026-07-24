@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, List, Literal, Type, final
+from typing import Any, Literal, final
 
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
@@ -111,11 +111,11 @@ class BaseLangGraph(ABC):
 
     #: Pydantic BaseSettings class for env loading.
     #: Subclasses must set this to their AppEnv class.
-    env_class: Type[BaseModel]
+    env_class: type[BaseModel]
 
     #: Pydantic BaseModel class for configuration loading.
     #: Subclasses must set this to their AppConfig class.
-    config_class: Type[BaseModel]
+    config_class: type[BaseModel]
 
     #: Name of the environment variable that controls the env file path.
     env_var: str = "ENV_FILE"
@@ -170,7 +170,7 @@ class BaseLangGraph(ABC):
         self.default_k: int = 5
         self.k_max: int = 10
 
-        self.QueryDomainSchema: Type[BaseModel] | None = None
+        self.QueryDomainSchema: type[BaseModel] | None = None
 
         from klea_utils.plogging import setup_logger
 
@@ -292,7 +292,7 @@ class BaseLangGraph(ABC):
 
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(List[Literal[tuple(all_domains)]], "undefined"),
+                query_domains=(list[Literal[tuple(all_domains)]], "undefined"),
             )
         else:
             self.logger.warning("No vector stores configured.")
@@ -393,7 +393,7 @@ class BaseLangGraph(ABC):
         """Hook called after MCP client setup but before graph compilation.
 
         Override to perform subclass-specific initialisation that depends
-        on config and MCP client but must happen before the LangGraph is built.
+        on config and MCP client but must happen         before the LangGraph is built.
         """
         pass
 
@@ -478,7 +478,7 @@ class BaseLangGraph(ABC):
 
         async for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
-                self.logger.debug(f"{node}: {repr(state)}")
+                self.logger.debug(f"{node}: {state!r}")
                 if message := state.get("message_for_user", None):
                     self.logger.info(f"User message: {message}")
                     yield message
@@ -568,7 +568,7 @@ class BaseLangGraph(ABC):
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
 
-                elif event_type in ("info", "debug"):
+                elif event_type in ("info", "debug", "state"):
                     data_out = data.get("data", {}).copy()
                     data_out["timing_seconds"] = round(time.monotonic() - node_start, 2)
                     yield {
