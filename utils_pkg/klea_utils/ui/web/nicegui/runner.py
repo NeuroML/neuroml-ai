@@ -28,96 +28,16 @@ from klea_utils.api.sse import (
 from klea_utils.api.utils import check_api_is_ready
 
 from ....plogging import setup_logger
+from .client import (
+    create_chat_on_server,
+    delete_chat_on_server,
+    hydrate_chats,
+    rename_chat_on_server,
+)
+from .state import chats, ensure_chat, get_chats_sorted
 from .widgets import ChatBubble
 
 logger = setup_logger(__name__)
-
-# Per-chat data store.
-# Keyed by ``{user_id}:{chat_id}`` so that colliding chat_ids across
-# different users do not interfere.  Without the user_id prefix,
-# two users whose sessions happen to share a chat_id (possible with
-# a finite slug pool) would overwrite each other's data.
-_chats: dict[str, dict] = {}
-
-
-def _ensure_chat(user_id: str, chat_id: str) -> dict:
-    """Return the session dict for *user_id* / *chat_id*, creating it if missing.
-
-    Each session dict has the following keys::
-
-        name                Human-readable display name (auto-generated)
-        created             ``datetime.timestamp()`` of creation (float).
-        pinned              Whether the session is pinned to the top of the list.
-        messages            List of ``(text, stamp, is_user)`` tuples where
-                            *is_user* is ``True`` for user messages and
-                            ``False`` for bot / system messages.
-        inspector_entries   List of dicts with info/debug events for the most
-                            recent query in this session.
-        inspector_expanded  Set of indices into *inspector_entries* that are
-                            currently expanded in the UI.
-    """
-    key = f"{user_id}:{chat_id}"
-    if key not in _chats:
-        now = datetime.now()
-        _chats[key] = {
-            "name": chat_id.replace("-", " ").title(),
-            "created": now.timestamp(),
-            "pinned": False,
-            "messages": [],
-            "inspector_entries": [],
-            "inspector_expanded": set(),
-        }
-    return _chats[key]
-
-
-async def _hydrate_chats(server_url: str, user_id: str, current_chat_id: str) -> None:
-    """Fetch chats and messages from the server and populate ``_chats``.
-
-    Chats are only created server-side by ``/query/stream``, so if the
-    server has no data for this user yet the local store stays empty.
-    """
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            # Fetch chat list
-            resp = await client.get(f"{server_url}/chat/{user_id}")
-            if resp.status_code == 200:
-                for chat_data in resp.json():
-                    chat_id = chat_data["chat_id"]
-                    key = f"{user_id}:{chat_id}"
-                    _ensure_chat(user_id, chat_id)
-                    _chats[key]["name"] = chat_data.get("title", chat_id)
-                    _chats[key]["created"] = chat_data.get("created_at", 0)
-
-            # Fetch messages for current chat (only if chat_id is set)
-            current_key = f"{user_id}:{current_chat_id}" if current_chat_id else None
-            if current_key and current_key in _chats:
-                resp = await client.get(
-                    f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
-                )
-                if resp.status_code == 200:
-                    session = _ensure_chat(user_id, current_chat_id)
-                    session["messages"] = [
-                        (
-                            msg["content"],
-                            datetime.fromtimestamp(msg["created_at"]).strftime("%X"),
-                            msg["role"] == "user",
-                        )
-                        for msg in resp.json()
-                    ]
-    except Exception as e:
-        logger.warning("Failed to hydrate chats from server: %s", e)
-
-
-def _get_chats_sorted(user_id: str) -> list[tuple[str, dict]]:
-    """Return (chat_id, data) pairs for *user_id*, pinned first, then by creation desc.
-
-    Filters by the user_id prefix so that in a multi-browser scenario
-    (same NiceGUI process) each user only sees their own chats.
-    """
-    prefix = f"{user_id}:"
-    items = [(k.split(":", 1)[1], v) for k, v in _chats.items() if k.startswith(prefix)]
-    items.sort(key=lambda x: (not x[1]["pinned"], -x[1]["created"]))
-    return items
 
 
 def setup_layout(
@@ -202,55 +122,63 @@ def setup_layout(
 
     _expanded: set[int] = set()
 
-    @ui.refreshable
-    def _chat_messages() -> None:
-        """Render the message list for the currently active session.
+    def _render_chat_area() -> None:
+        """Rebuild the scroll-area content (welcome or messages).
 
-        User messages appear as right-aligned bubbles with a grey
-        background (``sent=True``).  System / bot messages appear as
-        left-aligned, full-width, transparent text (``sent=False``),
-        matching the Gemini/ChatGPT model where only user input has a
-        visible bubble.
+        Uses explicit clear+rebuild instead of ``@ui.refreshable``
+        to avoid issues with the welcome-to-empty-chat transition.
         """
-        session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
-        msgs = session["messages"] if session else []
-        if msgs:
-            for idx, (text, stamp, is_user) in enumerate(msgs):
-                collapsed = idx not in _expanded
-                ChatBubble(
-                    text=text,
-                    stamp=stamp,
-                    is_user=is_user,
-                    collapsed=collapsed,
-                    idx=idx,
-                    on_copy=lambda t=text: ui.run_javascript(
-                        f"navigator.clipboard.writeText({json.dumps(t)})"
-                    ),
-                    on_expand=lambda i=idx: (
-                        (_expanded.discard(i) if i in _expanded else _expanded.add(i))
-                        or _chat_messages.refresh()
-                    ),
-                )
-        ui.run_javascript(
-            "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
-        )
+        current = _current_chat_id[0]
+        _chat_area.clear()
+        with _chat_area:
+            if not current:
+                with (
+                    ui.column()
+                    .classes("w-full h-full items-center justify-center gap-4")
+                    .style("flex: 1; display: flex;")
+                ):
+                    ui.label("Start a conversation").classes("text-xl text-grey-5")
+                    ui.label("Type your message below to begin").classes(
+                        "text-sm text-grey-5"
+                    )
+            else:
+                session = chats.get(f"{user_id}:{current}")
+                msgs = session["messages"] if session else []
+                for idx, (text, stamp, is_user) in enumerate(msgs):
+                    collapsed = idx not in _expanded
+                    ChatBubble(
+                        text=text,
+                        stamp=stamp,
+                        is_user=is_user,
+                        collapsed=collapsed,
+                        idx=idx,
+                        on_copy=lambda t=text: ui.run_javascript(
+                            f"navigator.clipboard.writeText({json.dumps(t)})"
+                        ),
+                        on_expand=lambda i=idx: (
+                            (
+                                _expanded.discard(i)
+                                if i in _expanded
+                                else _expanded.add(i)
+                            )
+                            or _render_chat_area()
+                        ),
+                    )
+        try:
+            ui.run_javascript(
+                "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
+            )
+        except RuntimeError:
+            pass
 
     def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
         app.storage.user["chat_id"] = chat_id
         _current_chat_id[0] = chat_id
-        logger.debug("Switched to chat %s", chat_id)
-        _chat_messages.refresh()
+        logger.debug("chat_id=%s user_id=%s", chat_id, user_id)
+        _render_chat_area()
         _render_chat_list.refresh()
         _inspector_panel.refresh()
-
-    async def _delete_chat_on_server(chat_id: str) -> None:
-        """DELETE the chat on the server."""
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                await client.delete(f"{server_url}/chat/{user_id}/{chat_id}")
-        except Exception as e:
-            logger.warning("Failed to delete chat on server: %s", e)
 
     def _delete_chat(chat_id: str) -> None:
         """Remove a session from the store and server.
@@ -258,22 +186,24 @@ def setup_layout(
         If the currently active session is deleted, the next available
         session becomes active (or a fresh one is created).
         """
-        background_tasks.create(_delete_chat_on_server(chat_id))
-        _chats.pop(f"{user_id}:{chat_id}", None)
+        background_tasks.create(delete_chat_on_server(server_url, user_id, chat_id))
+        chats.pop(f"{user_id}:{chat_id}", None)
         if _current_chat_id[0] == chat_id:
-            remaining = _get_chats_sorted(user_id)
+            remaining = get_chats_sorted(user_id)
             if remaining:
                 _switch_chat(remaining[0][0])
             else:
-                new_chat_id = coolname.generate_slug(2)
-                _ensure_chat(user_id, new_chat_id)
-                _switch_chat(new_chat_id)
+                _current_chat_id[0] = ""
+                app.storage.user["chat_id"] = ""
+                _render_chat_area()
+                _render_chat_list.refresh()
+                _inspector_panel.refresh()
         else:
             _render_chat_list.refresh()
 
     def _toggle_pin(chat_id: str) -> None:
         """Flip the pinned flag for a session and refresh the list."""
-        session = _ensure_chat(user_id, chat_id)
+        session = ensure_chat(user_id, chat_id)
         session["pinned"] = not session["pinned"]
         _render_chat_list.refresh()
 
@@ -294,56 +224,31 @@ def setup_layout(
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
-    async def _create_chat_on_server(chat_id: str) -> None:
-        """POST a new chat to the server so it persists."""
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                title = _chats.get(f"{user_id}:{chat_id}", {}).get("name", chat_id)
-                resp = await client.post(
-                    f"{server_url}/chat/{user_id}",
-                    json={"chat_id": chat_id, "title": title},
-                )
-                if resp.status_code == 200:
-                    chat_data = resp.json()
-                    _ensure_chat(user_id, chat_id)
-                    _chats[f"{user_id}:{chat_id}"]["name"] = chat_data.get(
-                        "title", chat_id
-                    )
-        except Exception as e:
-            logger.warning("Failed to create chat on server: %s", e)
-
     def _new_chat():
         """Create a fresh session and switch to it."""
         chat_id = coolname.generate_slug(2)
-        _ensure_chat(user_id, chat_id)
+        logger.debug("creating chat_id=%s", chat_id)
+        ensure_chat(user_id, chat_id)
         _switch_chat(chat_id)
-        background_tasks.create(_create_chat_on_server(chat_id))
+        background_tasks.create(create_chat_on_server(server_url, user_id, chat_id))
 
     def _rename_chat(chat_id: str) -> None:
         """Open a dialog to rename a chat and persist on server."""
-        chat = _ensure_chat(user_id, chat_id)
+        chat = ensure_chat(user_id, chat_id)
         dialog = ui.dialog()
 
         async def _save():
             chat["name"] = inp.value
             dialog.close()
-            try:
-                async with httpx.AsyncClient(timeout=10) as client:
-                    await client.patch(
-                        f"{server_url}/chat/{user_id}/{chat_id}",
-                        json={"title": inp.value},
-                    )
-            except Exception as e:
-                logger.warning("Failed to rename chat on server: %s", e)
+            await rename_chat_on_server(server_url, user_id, chat_id, inp.value)
             _render_chat_list.refresh()
 
-        with dialog:
-            with ui.card():
-                ui.label("Rename chat").classes("text-lg font-bold")
-                inp = ui.input(value=chat["name"]).on("keydown.enter", _save)
-                with ui.row().classes("w-full justify-end"):
-                    ui.button("Cancel", on_click=dialog.close)
-                    ui.button("Save", on_click=_save).props("unelevated color=primary")
+        with dialog, ui.card():
+            ui.label("Rename chat").classes("text-lg font-bold")
+            inp = ui.input(value=chat["name"]).on("keydown.enter", _save)
+            with ui.row().classes("w-full justify-end"):
+                ui.button("Cancel", on_click=dialog.close)
+                ui.button("Save", on_click=_save).props("unelevated color=primary")
         dialog.open()
 
     @ui.refreshable
@@ -355,15 +260,16 @@ def setup_layout(
         menu for rename / pin / delete.  Refresh this to pick up newly
         created sessions without a page reload.
         """
-        for chat_id, sdata in _get_chats_sorted(user_id):
-            is_current = chat_id == _current_chat_id[0]
+        # Underscore suffix avoids shadowing setup_layout's chat_id parameter
+        for chat_id_, sdata in get_chats_sorted(user_id):
+            is_current = chat_id_ == _current_chat_id[0]
             with (
                 ui.item(
-                    on_click=lambda s=chat_id: _switch_chat(s),
+                    on_click=lambda s=chat_id_: _switch_chat(s),
                 )
                 .props("dense")
                 .classes("w-full")
-                .on("dblclick", lambda s=chat_id: _rename_chat(s))
+                .on("dblclick", lambda s=chat_id_: _rename_chat(s))
             ):
                 with ui.item_section().props("avatar"):
                     ui.icon("push_pin" if sdata["pinned"] else "history")
@@ -377,34 +283,28 @@ def setup_layout(
                         )
                     )
                 # Three-dot context menu (right-aligned).
-                with ui.item_section().props("side"):
-                    with (
-                        ui.button(icon="more_vert")
-                        .props("flat dense round")
-                        .on("click.stop", lambda: None)
-                    ):
-                        with ui.menu():
-                            with ui.menu_item(
-                                on_click=lambda s=chat_id: _rename_chat(s)
-                            ):
-                                with ui.item_section().props("avatar"):
-                                    ui.icon("edit")
-                                with ui.item_section():
-                                    ui.label("Rename")
-                            with ui.menu_item(
-                                on_click=lambda s=chat_id: _toggle_pin(s)
-                            ):
-                                with ui.item_section().props("avatar"):
-                                    ui.icon("push_pin")
-                                with ui.item_section():
-                                    ui.label("Unpin" if sdata["pinned"] else "Pin")
-                            with ui.menu_item(
-                                on_click=lambda s=chat_id: _delete_chat(s)
-                            ):
-                                with ui.item_section().props("avatar"):
-                                    ui.icon("delete")
-                                with ui.item_section():
-                                    ui.label("Delete")
+                with (
+                    ui.item_section().props("side"),
+                    ui.button(icon="more_vert")
+                    .props("flat dense round")
+                    .on("click.stop", lambda: None),
+                    ui.menu(),
+                ):
+                    with ui.menu_item(on_click=lambda s=chat_id_: _rename_chat(s)):
+                        with ui.item_section().props("avatar"):
+                            ui.icon("edit")
+                        with ui.item_section():
+                            ui.label("Rename")
+                    with ui.menu_item(on_click=lambda s=chat_id_: _toggle_pin(s)):
+                        with ui.item_section().props("avatar"):
+                            ui.icon("push_pin")
+                        with ui.item_section():
+                            ui.label("Unpin" if sdata["pinned"] else "Pin")
+                    with ui.menu_item(on_click=lambda s=chat_id_: _delete_chat(s)):
+                        with ui.item_section().props("avatar"):
+                            ui.icon("delete")
+                        with ui.item_section():
+                            ui.label("Delete")
 
     # ---- Header ----
     with ui.header().classes("items-center"):
@@ -425,7 +325,8 @@ def setup_layout(
     with (
         ui.left_drawer(value=True)
         .props("mini")
-        .classes("w-80 overflow-x-hidden p-2") as left_drawer
+        .props("width=320")
+        .classes("overflow-x-hidden p-2") as left_drawer
     ):
         # Items use QItem + QItemSection(avatar) so that Quasar
         # automatically hides the label when the drawer is in mini mode.
@@ -467,7 +368,7 @@ def setup_layout(
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry."""
-        session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
+        session = chats.get(f"{user_id}:{_current_chat_id[0]}")
         if not session:
             return
         expanded = session.setdefault("inspector_expanded", set())
@@ -494,7 +395,7 @@ def setup_layout(
 
         @ui.refreshable
         def _inspector_panel() -> None:
-            session = _chats.get(f"{user_id}:{_current_chat_id[0]}")
+            session = chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not session:
                 logger.debug(
                     "No chat found for %s, inspector empty", _current_chat_id[0]
@@ -518,19 +419,15 @@ def setup_layout(
                 with (
                     ui.element("details")
                     .props("open" if expanded else "")
-                    .classes("inspector-entry mb-2 w-full")
+                    .classes("inspector-entry mb-2 w-full"),
+                    ui.element("summary")
+                    .classes("text-xs font-bold cursor-pointer w-full")
+                    .on("click", lambda i=idx: _toggle_inspector_entry(i)),
+                    ui.row().classes("w-full flex-nowrap items-center"),
                 ):
-                    with (
-                        ui.element("summary")
-                        .classes("text-xs font-bold cursor-pointer w-full")
-                        .on("click", lambda i=idx: _toggle_inspector_entry(i))
-                    ):
-                        with ui.row().classes("w-full flex-nowrap items-center"):
-                            ui.label(heading)
-                            if timing:
-                                ui.label(f"({timing:.1f}s)").classes(
-                                    "text-xs text-grey-5"
-                                )
+                    ui.label(heading)
+                    if timing:
+                        ui.label(f"({timing:.1f}s)").classes("text-xs text-grey-5")
                     ui.label(entry.get("summary", "")).classes(
                         "text-xs text-grey-6 mb-1 w-full"
                     )
@@ -547,150 +444,138 @@ def setup_layout(
 
         _inspector_panel()
 
-    # ---- Center ----
-    if not chat_id:
-        with (
-            ui.column()
-            .classes("w-full h-full items-center justify-center gap-4")
-            .style("flex: 1; display: flex;")
-        ):
-            ui.label("Start a conversation").classes("text-xl text-grey-5")
-            ui.label(
-                'Click "New Chat" in the sidebar or press Ctrl+K to begin'
-            ).classes("text-sm text-grey-5")
-    else:
-        with (
-            ui.column()
-            .classes("w-full px-8")
-            .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
-        ):
-            with ui.scroll_area().classes("w-full grow chat-scroll-area"):
-                _chat_messages()
-                _stream_container = ui.column().classes("w-full")
+    # ---- Center: chat messages + input (pinned to bottom) ----
+    with (
+        ui.column()
+        .classes("w-full px-8")
+        .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
+    ):
+        with ui.scroll_area().classes("w-full grow chat-scroll-area"):
+            _chat_area = ui.column().classes("w-full")
+            _render_chat_area()
+            _stream_container = ui.column().classes("w-full")
 
-            with ui.row().classes("w-full no-wrap items-end py-4"):
-                text = (
-                    ui.textarea(placeholder="Start a conversation")
-                    .props("rounded outlined input-class=mx-3 autogrow")
-                    .classes("flex-grow")
-                )
+        with ui.row().classes("w-full no-wrap items-end py-4"):
+            text = (
+                ui.textarea(placeholder="Start a conversation")
+                .props("rounded outlined input-class=mx-3 autogrow")
+                .classes("flex-grow")
+            )
 
-                async def _do_stream(query: str) -> None:
-                    """Stream the RAG pipeline progress and final answer."""
-                    session = _ensure_chat(user_id, _current_chat_id[0])
-                    logger.debug(
-                        "Clearing inspector entries for chat %s", _current_chat_id[0]
-                    )
-                    session["inspector_entries"] = []
-                    session["inspector_expanded"] = set()
-                    _inspector_panel.refresh()
-                    with _stream_container:
-                        pg_row = ui.row().classes("w-full items-center gap-2 p-2")
-                        with pg_row:
-                            ui.spinner(type="dots").classes("w-4 h-4")
-                            pg_label = ui.label("").classes(
-                                "text-xs text-grey-5 italic"
+            async def _do_stream(query: str, chat_id: str) -> None:
+                """Stream the RAG pipeline progress and final answer."""
+                session = ensure_chat(user_id, chat_id)
+                logger.debug("Clearing inspector entries for chat %s", chat_id)
+                session["inspector_entries"] = []
+                session["inspector_expanded"] = set()
+                _inspector_panel.refresh()
+                with _stream_container:
+                    pg_row = ui.row().classes("w-full items-center gap-2 p-2")
+                    with pg_row:
+                        ui.spinner(type="dots").classes("w-4 h-4")
+                        pg_label = ui.label("").classes("text-xs text-grey-5 italic")
+
+                full_response = ""
+                try:
+                    async for event in stream_events(
+                        query, chat_id, server_url, user_id=user_id
+                    ):
+                        t = event.get("type", "?")
+                        if t == "progress":
+                            pg_label.set_text(f"{event.get('node', '')}")
+                        elif t == "debug":
+                            data = event.get("data", {})
+                            session["inspector_entries"].append(
+                                {
+                                    "type": t,
+                                    "node": event.get("node", ""),
+                                    "heading": data.get("heading", ""),
+                                    "summary": data.get("summary", ""),
+                                    "details": data.get("details", {}),
+                                    "timing_seconds": data.get("timing_seconds", None),
+                                }
                             )
-
-                    full_response = ""
-                    try:
-                        async for event in stream_events(
-                            query, _current_chat_id[0], server_url, user_id=user_id
-                        ):
-                            t = event.get("type", "?")
-                            if t == "progress":
-                                pg_label.set_text(f"{event.get('node', '')}")
-                            elif t == "debug":
-                                data = event.get("data", {})
-                                session["inspector_entries"].append(
-                                    {
-                                        "type": t,
-                                        "node": event.get("node", ""),
-                                        "heading": data.get("heading", ""),
-                                        "summary": data.get("summary", ""),
-                                        "details": data.get("details", {}),
-                                        "timing_seconds": data.get(
-                                            "timing_seconds", None
-                                        ),
-                                    }
+                            _inspector_panel.refresh()
+                        elif t == "complete":
+                            pg_row.delete()
+                            full_response = event.get("message_for_user", full_response)
+                            ensure_chat(user_id, chat_id)["messages"].append(
+                                (
+                                    full_response,
+                                    datetime.now().astimezone().strftime("%X"),
+                                    False,
                                 )
-                                _inspector_panel.refresh()
-                            elif t == "complete":
-                                pg_row.delete()
-                                full_response = event.get(
-                                    "message_for_user", full_response
-                                )
-                                _ensure_chat(user_id, _current_chat_id[0])[
-                                    "messages"
-                                ].append(
-                                    (
-                                        full_response,
-                                        datetime.now().strftime("%X"),
-                                        False,
-                                    )
-                                )
-                                _chat_messages.refresh()
-                                break
-                            elif t == "error":
-                                pg_row.delete()
-                                _ensure_chat(user_id, _current_chat_id[0])[
-                                    "messages"
-                                ].append(
-                                    (
-                                        f"Error: {event.get('message', 'Unknown error')}",
-                                        datetime.now().strftime("%X"),
-                                        False,
-                                    )
-                                )
-                                _chat_messages.refresh()
-                                break
-                    except httpx.RequestError as e:
-                        pg_row.delete()
-                        _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
-                            (
-                                f"Connection error: {e}",
-                                datetime.now().strftime("%X"),
-                                False,
                             )
+                            _render_chat_area()
+                            break
+                        elif t == "error":
+                            pg_row.delete()
+                            ensure_chat(user_id, chat_id)["messages"].append(
+                                (
+                                    f"Error: {event.get('message', 'Unknown error')}",
+                                    datetime.now().astimezone().strftime("%X"),
+                                    False,
+                                )
+                            )
+                            _render_chat_area()
+                            break
+                except httpx.RequestError as e:
+                    pg_row.delete()
+                    ensure_chat(user_id, chat_id)["messages"].append(
+                        (
+                            f"Connection error: {e}",
+                            datetime.now().astimezone().strftime("%X"),
+                            False,
                         )
-                        _chat_messages.refresh()
-
-                def send() -> None:
-                    """Append the current input text as a user message."""
-                    if not text.value.strip():
-                        return
-                    stamp = datetime.now().strftime("%X")
-                    query = text.value
-                    text.value = ""
-                    _ensure_chat(user_id, _current_chat_id[0])["messages"].append(
-                        (query, stamp, True)
                     )
-                    _chat_messages.refresh()
+                    _render_chat_area()
+
+            def send() -> None:
+                """Append the current input text as a user message."""
+                if not text.value.strip():
+                    return
+                stamp = datetime.now().astimezone().strftime("%X")
+                query = text.value
+                text.value = ""
+
+                current = _current_chat_id[0]
+                if not current:
+                    current = coolname.generate_slug(2)
+                    _current_chat_id[0] = current
+                    app.storage.user["chat_id"] = current
+                    ensure_chat(user_id, current)
+                    background_tasks.create(
+                        create_chat_on_server(server_url, user_id, current)
+                    )
                     _render_chat_list.refresh()
 
-                    background_tasks.create(_do_stream(query))
+                ensure_chat(user_id, current)["messages"].append((query, stamp, True))
+                _render_chat_area()
+                _render_chat_list.refresh()
 
-                with text.add_slot("append"):
-                    with ui.button(icon="send", on_click=send).props(
-                        "flat dense round color=primary"
-                    ):
-                        ui.tooltip("Enter to send, Shift+Enter for newline")
+                background_tasks.create(_do_stream(query, current))
 
-            # Plain Enter sends the message and prevents the default newline
-            def handle_enter(e: GenericEventArguments):
-                if e.args.get("shiftKey"):
-                    text.value += "\n"
-                else:
-                    send()
+            with (
+                text.add_slot("append"),
+                ui.button(icon="send", on_click=send).props(
+                    "flat dense round color=primary"
+                ),
+            ):
+                ui.tooltip("Enter to send, Shift+Enter for newline")
 
-            text.on("keydown.enter.exact.prevent", handle_enter)
-            # Clicking the send icon inside the textarea also sends.
-            text.on("click:append", send)
+        # Plain Enter sends the message and prevents the default newline
+        def handle_enter(e: GenericEventArguments):
+            if e.args.get("shiftKey"):
+                text.value += "\n"
+            else:
+                send()
 
-            if disclaimer:
-                ui.label(disclaimer).classes(
-                    "text-xs text-grey-5 pb-2 w-full text-center"
-                )
+        text.on("keydown.enter.exact.prevent", handle_enter)
+        # Clicking the send icon inside the textarea also sends.
+        text.on("click:append", send)
+
+        if disclaimer:
+            ui.label(disclaimer).classes("text-xs text-grey-5 pb-2 w-full text-center")
 
     # ---- Footer ----
     with ui.footer().classes("bg-grey-3 dark:bg-grey-9 text-xs py-1"):
@@ -751,12 +636,18 @@ def run_nicegui_app(
 
         if "user_id" not in app.storage.user:
             app.storage.user["user_id"] = str(uuid.uuid4())
+            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
+        else:
+            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
 
         user_id = app.storage.user["user_id"]
 
-        chat_id = app.storage.user.get("chat_id", "")
+        chat_id = ""
 
-        await _hydrate_chats(server_url, user_id, chat_id)
+        logger.debug("user_id=%s chat_id=%s", user_id, chat_id)
+        logger.debug("before hydrate: chats keys=%s", list(chats.keys()))
+        await hydrate_chats(server_url, user_id, chat_id)
+        logger.debug("after hydrate: chats keys=%s", list(chats.keys()))
 
         model_info = ""
         if chat_id:
