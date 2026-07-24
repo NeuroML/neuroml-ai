@@ -149,6 +149,16 @@ class SessionStore:
             self._conn.commit()
         logger.debug("delete_chat(%s, %s)", user_id, chat_id)
 
+    def delete_user_chats(self, user_id: str) -> None:
+        """Remove all chats and messages for a user."""
+        with self._lock:
+            self._conn.execute("DELETE FROM messages WHERE user_id = ?", (user_id,))
+            self._conn.execute(
+                "DELETE FROM chat_sessions WHERE user_id = ?", (user_id,)
+            )
+            self._conn.commit()
+        logger.debug("delete_user_chats(%s)", user_id)
+
     def rename_chat(self, user_id: str, chat_id: str, title: str) -> None:
         """Update the display title of a chat."""
         with self._lock:
