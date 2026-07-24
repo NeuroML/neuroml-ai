@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_utils.nodes.abstract import (
     AbstractLangGraphNode,
@@ -21,7 +21,7 @@ from klea_utils.stores.retrieval import VSRetriever
 from klea_rag.schemas import RAGState
 
 
-class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
+class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     """Retrieve reference material from vector stores.
 
     Queries the vector stores for all domains in the query_domains list using
@@ -49,7 +49,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         self.num_refs_max = num_refs_max
 
     @override
-    async def execute(self, state: RAGState) -> Dict[str, Any]:
+    async def execute(self, state: RAGState) -> dict[str, Any]:
         """Retrieve and rank reference material."""
         if self.stores is None:
             self.logger.debug("No vector stores configured, skipping retrieval")
@@ -109,5 +109,21 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, Dict[str, Any]]):
         )
         debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
         self.write_custom_stream(debug_event.model_dump())
+
+        # Emit state event
+        md_lines = []
+        for domain, docs in reference_material.items():
+            md_lines.append(f"### {domain}")
+            for i, (doc, score) in enumerate(docs, 1):
+                preview = doc.page_content[:120].replace("\n", " ")
+                md_lines.append(f"{i}.  [{score:.2f}] {preview}...")
+        display_md = "\n".join(md_lines) if md_lines else "No documents retrieved"
+        status_data = NodeStreamData(
+            heading="Reference Material",
+            summary=f"{total_docs} docs from {len(per_domain_counts)} domains",
+            display=display_md,
+        )
+        status_event = NodeStreamEvent(type="state", node=self.label, data=status_data)
+        self.write_custom_stream(status_event.model_dump())
 
         return {"reference_material": reference_material}
