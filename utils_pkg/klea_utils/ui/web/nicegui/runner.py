@@ -312,6 +312,59 @@ def setup_layout(
                         with ui.item_section():
                             ui.label("Delete")
 
+    def _delete_all_data():
+        """Show a confirmation dialog before deleting the user session."""
+        logger.debug("opening delete-user-session dialog for user_id=%s", user_id)
+        dialog = ui.dialog()
+        with dialog, ui.card():
+            ui.label("Delete user session?").classes("text-lg font-bold")
+            ui.label(
+                "This will permanently delete all your chats, messages, and "
+                "checkpoints from the server. This cannot be undone."
+            ).classes("text-sm")
+            with ui.row().classes("w-full justify-end"):
+                ui.button("Cancel", on_click=dialog.close)
+                ui.button("Delete", on_click=lambda: _confirm_delete_all(dialog)).props(
+                    "unelevated color=negative"
+                )
+        dialog.open()
+
+    async def _confirm_delete_all(dialog: ui.dialog):
+        """DELETE all server data, reset in-memory state, and generate a new user ID."""
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.delete(f"{server_url}/chat/{user_id}")
+                if resp.status_code == 200:
+                    logger.debug(
+                        "delete_user_session succeeded for user_id=%s", user_id
+                    )
+        except Exception as e:
+            logger.warning("Failed to delete user session: %s", e)
+            dialog.close()
+            return
+
+        logger.debug("clearing in-memory chats for user_id=%s", user_id)
+        chat_key_prefix = f"{user_id}:"
+        for key in list(chats.keys()):
+            if key.startswith(chat_key_prefix):
+                chats.pop(key, None)
+
+        _current_chat_id[0] = ""
+        app.storage.user["chat_id"] = ""
+        old_id = user_id
+        app.storage.user["user_id"] = str(uuid.uuid4())
+        logger.debug(
+            "reset local state: new user_id=%s (was %s)",
+            app.storage.user["user_id"],
+            old_id,
+        )
+        _render_chat_area()
+        _render_chat_list.refresh()
+        _inspector_panel.refresh()
+        dialog.close()
+
     # ---- Header ----
     with ui.header().classes("items-center"):
         ui.label(title).classes("text-xl font-bold")
@@ -362,6 +415,15 @@ def setup_layout(
                 ui.label("Chats").classes("text-sm font-bold")
 
         _render_chat_list()
+
+        ui.separator()
+        with ui.item(on_click=_delete_all_data).props("dense").classes("w-full"):
+            with ui.item_section().props("avatar"):
+                ui.icon("delete")
+                ui.tooltip("Delete all data for this user session")
+            with ui.item_section():
+                ui.label("Delete user session").classes("text-xs")
+        ui.separator()
 
         ui.space()
         # Toggle button at the bottom of the drawer.
