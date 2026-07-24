@@ -129,6 +129,13 @@ def setup_layout(
         to avoid issues with the welcome-to-empty-chat transition.
         """
         current = _current_chat_id[0]
+        logger.debug(
+            "current=%s msgs=%d",
+            current,
+            len(chats.get(f"{user_id}:{current}", {}).get("messages", []))
+            if current
+            else 0,
+        )
         _chat_area.clear()
         with _chat_area:
             if not current:
@@ -164,12 +171,12 @@ def setup_layout(
                             or _render_chat_area()
                         ),
                     )
-        try:
-            ui.run_javascript(
-                "document.querySelector('.chat-scroll-area')?.scrollTo(0, 999999)"
-            )
-        except RuntimeError:
-            pass
+        _scroll_to_bottom()
+
+    def _scroll_to_bottom() -> None:
+        """Scroll chat area to the bottom using Quasar's native scroll API."""
+        logger.debug("attempting scroll for chat=%s", _current_chat_id[0])
+        _scroll_area.scroll_to(pixels=99999)
 
     def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
@@ -521,7 +528,7 @@ def setup_layout(
         .classes("w-full px-8")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
-        with ui.scroll_area().classes("w-full grow chat-scroll-area"):
+        with ui.scroll_area().classes("w-full grow chat-scroll-area") as _scroll_area:
             _chat_area = ui.column().classes("w-full")
             _render_chat_area()
             _stream_container = ui.column().classes("w-full")
@@ -570,6 +577,11 @@ def setup_layout(
                         elif t == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)
+                            logger.debug(
+                                "chat=%s response_len=%d",
+                                chat_id,
+                                len(full_response),
+                            )
                             ensure_chat(user_id, chat_id)["messages"].append(
                                 (
                                     full_response,
@@ -610,6 +622,7 @@ def setup_layout(
                 text.value = ""
 
                 current = _current_chat_id[0]
+                logger.debug("current=%s query_len=%d", current, len(query))
                 if not current:
                     current = coolname.generate_slug(2)
                     _current_chat_id[0] = current
