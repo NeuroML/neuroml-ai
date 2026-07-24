@@ -405,27 +405,22 @@ def setup_layout(
                 ui.tooltip("View pipeline details in the inspection pane")
             with ui.item_section():
                 ui.label("Inspector")
-        ui.separator()
 
-        # Session list header
-        with ui.item().props("dense").classes("w-full"):
-            with ui.item_section().props("avatar"):
-                ui.icon("chat")
-            with ui.item_section():
-                ui.label("Chats").classes("text-sm font-bold")
+        # Session list header (no icon — plain text signals a section heading)
+        with ui.item().props("dense").classes("w-full"), ui.item_section():
+            ui.label("Chats").classes("text-sm font-bold")
 
         _render_chat_list()
 
-        ui.separator()
+        ui.space()
+
         with ui.item(on_click=_delete_all_data).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("delete")
                 ui.tooltip("Delete all data for this user session")
             with ui.item_section():
                 ui.label("Delete user session").classes("text-xs")
-        ui.separator()
 
-        ui.space()
         # Toggle button at the bottom of the drawer.
         with ui.item(on_click=_toggle_left_drawer).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
