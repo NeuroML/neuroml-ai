@@ -142,8 +142,8 @@ def setup_layout(
                         "text-sm text-grey-5"
                     )
             else:
-                session = chats.get(f"{user_id}:{current}")
-                msgs = session["messages"] if session else []
+                current_chat = chats.get(f"{user_id}:{current}")
+                msgs = current_chat["messages"] if current_chat else []
                 for idx, (text, stamp, is_user) in enumerate(msgs):
                     collapsed = idx not in _expanded
                     ChatBubble(
@@ -186,6 +186,12 @@ def setup_layout(
         If the currently active session is deleted, the next available
         session becomes active (or a fresh one is created).
         """
+        logger.debug(
+            "deleting chat_id=%s user_id=%s (current=%s)",
+            chat_id,
+            user_id,
+            _current_chat_id[0],
+        )
         background_tasks.create(delete_chat_on_server(server_url, user_id, chat_id))
         chats.pop(f"{user_id}:{chat_id}", None)
         if _current_chat_id[0] == chat_id:
@@ -202,9 +208,9 @@ def setup_layout(
             _render_chat_list.refresh()
 
     def _toggle_pin(chat_id: str) -> None:
-        """Flip the pinned flag for a session and refresh the list."""
-        session = ensure_chat(user_id, chat_id)
-        session["pinned"] = not session["pinned"]
+        """Flip the pinned flag for a chat and refresh the list."""
+        current_chat = ensure_chat(user_id, chat_id)
+        current_chat["pinned"] = not current_chat["pinned"]
         _render_chat_list.refresh()
 
     def _toggle_left_drawer():
@@ -278,9 +284,9 @@ def setup_layout(
                     ui.label(sdata["name"]).classes(label_cls)
                     ui.tooltip(
                         "Created: "
-                        + datetime.fromtimestamp(sdata["created"]).strftime(
-                            "%a %d %b %Y at %X"
-                        )
+                        + datetime.fromtimestamp(sdata["created"])
+                        .astimezone()
+                        .strftime("%a %d %b %Y at %X")
                     )
                 # Three-dot context menu (right-aligned).
                 with (
@@ -368,10 +374,10 @@ def setup_layout(
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry."""
-        session = chats.get(f"{user_id}:{_current_chat_id[0]}")
-        if not session:
+        current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+        if not current_chat:
             return
-        expanded = session.setdefault("inspector_expanded", set())
+        expanded = current_chat.setdefault("inspector_expanded", set())
         if idx in expanded:
             expanded.discard(idx)
         else:
@@ -395,13 +401,14 @@ def setup_layout(
 
         @ui.refreshable
         def _inspector_panel() -> None:
-            session = chats.get(f"{user_id}:{_current_chat_id[0]}")
-            if not session:
-                logger.debug(
-                    "No chat found for %s, inspector empty", _current_chat_id[0]
-                )
+            current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+            if not current_chat:
+                if _current_chat_id[0]:
+                    logger.debug(
+                        "No chat found for %s, inspector empty", _current_chat_id[0]
+                    )
                 return
-            entries = session.get("inspector_entries", [])
+            entries = current_chat.get("inspector_entries", [])
             logger.debug(
                 "Rendering inspector panel: %d entries for chat %s",
                 len(entries),
@@ -415,19 +422,25 @@ def setup_layout(
             for idx, entry in enumerate(entries):
                 heading = entry.get("heading", "")
                 timing = entry.get("timing_seconds", None)
-                expanded = idx in session["inspector_expanded"]
+                expanded = idx in current_chat["inspector_expanded"]
+                # SIM117 intentionally not combined: must exit row/summary
+                # contexts before rendering summary-text and nested details.
                 with (
                     ui.element("details")
                     .props("open" if expanded else "")
-                    .classes("inspector-entry mb-2 w-full"),
-                    ui.element("summary")
-                    .classes("text-xs font-bold cursor-pointer w-full")
-                    .on("click", lambda i=idx: _toggle_inspector_entry(i)),
-                    ui.row().classes("w-full flex-nowrap items-center"),
+                    .classes("inspector-entry mb-2 w-full")
                 ):
-                    ui.label(heading)
-                    if timing:
-                        ui.label(f"({timing:.1f}s)").classes("text-xs text-grey-5")
+                    with (  # noqa: SIM117
+                        ui.element("summary")
+                        .classes("text-xs font-bold cursor-pointer w-full")
+                        .on("click", lambda i=idx: _toggle_inspector_entry(i))
+                    ):
+                        with ui.row().classes("w-full flex-nowrap items-center"):
+                            ui.label(heading)
+                            if timing:
+                                ui.label(f"({timing:.1f}s)").classes(
+                                    "text-xs text-grey-5"
+                                )
                     ui.label(entry.get("summary", "")).classes(
                         "text-xs text-grey-6 mb-1 w-full"
                     )
@@ -464,10 +477,10 @@ def setup_layout(
 
             async def _do_stream(query: str, chat_id: str) -> None:
                 """Stream the RAG pipeline progress and final answer."""
-                session = ensure_chat(user_id, chat_id)
+                current_chat = ensure_chat(user_id, chat_id)
                 logger.debug("Clearing inspector entries for chat %s", chat_id)
-                session["inspector_entries"] = []
-                session["inspector_expanded"] = set()
+                current_chat["inspector_entries"] = []
+                current_chat["inspector_expanded"] = set()
                 _inspector_panel.refresh()
                 with _stream_container:
                     pg_row = ui.row().classes("w-full items-center gap-2 p-2")
@@ -485,7 +498,7 @@ def setup_layout(
                             pg_label.set_text(f"{event.get('node', '')}")
                         elif t == "debug":
                             data = event.get("data", {})
-                            session["inspector_entries"].append(
+                            current_chat["inspector_entries"].append(
                                 {
                                     "type": t,
                                     "node": event.get("node", ""),
@@ -646,7 +659,7 @@ def run_nicegui_app(
 
         logger.debug("user_id=%s chat_id=%s", user_id, chat_id)
         logger.debug("before hydrate: chats keys=%s", list(chats.keys()))
-        await hydrate_chats(server_url, user_id, chat_id)
+        await hydrate_chats(server_url, user_id)
         logger.debug("after hydrate: chats keys=%s", list(chats.keys()))
 
         model_info = ""
