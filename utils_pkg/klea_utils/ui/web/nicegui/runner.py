@@ -108,6 +108,27 @@ def setup_layout(
     ui.add_css(
         ".q-tooltip { max-width: 350px !important; overflow: visible !important; white-space: nowrap !important; }"
     )
+    # Status pane styling — uses disclosure triangles (same pattern as inspector)
+    ui.add_css(
+        ".status-entry > summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
+    )
+    ui.add_css(
+        ".status-entry > summary::before { content: '\\25B6'; font-size: 0.65rem; margin-right: 0.35rem; transition: transform 0.15s; }"
+    )
+    ui.add_css(".status-entry[open] > summary::before { content: '\\25BC'; }")
+    ui.add_css(
+        ".status-details summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
+    )
+    ui.add_css(
+        ".status-details summary::before { content: '\\25B6'; font-size: 0.6rem; margin-right: 0.35rem; }"
+    )
+    ui.add_css(".status-details[open] summary::before { content: '\\25BC'; }")
+    ui.add_css(
+        ".status-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
+    )
+    ui.add_css(
+        ".status-entry .md-div { overflow: hidden !important; height: auto !important; }"
+    )
 
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
@@ -200,7 +221,7 @@ def setup_layout(
         logger.debug("chat_id=%s user_id=%s", chat_id, user_id)
         _render_chat_area()
         _render_chat_list.refresh()
-        _inspector_panel.refresh()
+        _status_pane.refresh()
 
     def _delete_chat(chat_id: str) -> None:
         """Remove a chat session from the store and server.
@@ -225,7 +246,7 @@ def setup_layout(
                 app.storage.user["chat_id"] = ""
                 _render_chat_area()
                 _render_chat_list.refresh()
-                _inspector_panel.refresh()
+                _status_pane.refresh()
         else:
             _render_chat_list.refresh()
 
@@ -384,7 +405,7 @@ def setup_layout(
         )
         _render_chat_area()
         _render_chat_list.refresh()
-        _inspector_panel.refresh()
+        _status_pane.refresh()
         dialog.close()
 
     # ---- Header ----
@@ -462,13 +483,13 @@ def setup_layout(
         else:
             expanded.add(idx)
 
-    # ---- Right drawer (inspector, hidden by default) ----
+    # ---- Right drawer (status pane, hidden by default) ----
     with (
         ui.right_drawer(value=False)
         .props("width=420")
         .classes("overflow-y-auto") as right_drawer
     ):
-        ui.label("Inspector").classes("text-sm font-bold mb-0")
+        ui.label("Status").classes("text-sm font-bold mb-0")
         ui.separator().classes("my-0.5")
 
         if model_info:
@@ -479,55 +500,44 @@ def setup_layout(
             ui.separator().classes("my-0.5")
 
         @ui.refreshable
-        def _inspector_panel() -> None:
-            """Render debug or info events for the active chat in the right drawer."""
+        def _status_pane() -> None:
+            """Render state sections for the active chat in the right drawer."""
             current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not current_chat:
                 if _current_chat_id[0]:
                     logger.debug(
-                        "No chat found for %s, inspector empty", _current_chat_id[0]
+                        "No chat found for %s, status pane empty", _current_chat_id[0]
                     )
                 return
-            entries = current_chat.get("inspector_entries", [])
-            logger.debug(
-                "Rendering inspector panel: %d entries for chat %s",
-                len(entries),
-                _current_chat_id[0],
-            )
-            if not entries:
-                ui.label("Debug events will appear here").classes(
+            sections = current_chat.get("state_sections", {})
+            if not sections:
+                ui.label("State updates will appear here").classes(
                     "text-sm text-gray-500"
                 )
                 return
-            for idx, entry in enumerate(entries):
-                heading = entry.get("heading", "")
-                timing = entry.get("timing_seconds", None)
-                expanded = idx in current_chat["inspector_expanded"]
-                # SIM117 intentionally not combined: must exit row/summary
-                # contexts before rendering summary-text and nested details.
+            for idx, (node_label, section) in enumerate(sections.items()):
                 with (
                     ui.element("details")
-                    .props("open" if expanded else "")
-                    .classes("inspector-entry mb-2 w-full")
+                    .props("open")
+                    .classes("status-entry mb-2 w-full")
                 ):
-                    with (  # noqa: SIM117
-                        ui.element("summary")
-                        .classes("text-xs font-bold cursor-pointer w-full")
-                        .on("click", lambda i=idx: _toggle_inspector_entry(i))
+                    with (
+                        ui.element("summary").classes(
+                            "text-xs font-bold cursor-pointer w-full"
+                        ),
+                        ui.row().classes("w-full flex-nowrap items-center"),
                     ):
-                        with ui.row().classes("w-full flex-nowrap items-center"):
-                            ui.label(heading)
-                            if timing:
-                                ui.label(f"({timing:.1f}s)").classes(
-                                    "text-xs text-grey-5"
-                                )
-                    ui.label(entry.get("summary", "")).classes(
-                        "text-xs text-grey-6 mb-1 w-full"
-                    )
-                    details = entry.get("details", {})
+                        ui.label(section.get("heading", node_label))
+                    display = section.get("display", "")
+                    if display:
+                        ui.markdown(display).classes("text-xs w-full")
+                    summary = section.get("summary", "")
+                    if summary and not display:
+                        ui.label(summary).classes("text-xs text-grey-6 mb-1 w-full")
+                    details = section.get("details", {})
                     if details:
                         with ui.element("details").classes(
-                            "inspector-details text-xs text-grey-5 cursor-pointer w-full"
+                            "status-details text-xs text-grey-5 cursor-pointer w-full"
                         ):
                             with ui.element("summary").classes("text-xs w-full"):
                                 ui.label("View details")
@@ -535,7 +545,55 @@ def setup_layout(
                                 json.dumps(details, indent=2), language="json"
                             ).classes("text-xs")
 
-        _inspector_panel()
+        _status_pane()
+
+        # --- Debug section (commented out — location TBD) ---
+        # @ui.refreshable
+        # def _debug_panel() -> None:
+        #     """Render debug/info entries (old inspector) — unused pending frontend design."""
+        #     current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+        #     if not current_chat:
+        #         return
+        #     entries = current_chat.get("inspector_entries", [])
+        #     if not entries:
+        #         return
+        #     ui.separator().classes("my-1")
+        #     ui.label("Debug").classes("text-xs font-bold mb-0")
+        #     for idx, entry in enumerate(entries):
+        #         heading = entry.get("heading", "")
+        #         timing = entry.get("timing_seconds", None)
+        #         expanded = idx in current_chat["inspector_expanded"]
+        #         with (
+        #             ui.element("details")
+        #             .props("open" if expanded else "")
+        #             .classes("inspector-entry mb-2 w-full")
+        #         ):
+        #             with (
+        #                 ui.element("summary")
+        #                 .classes("text-xs font-bold cursor-pointer w-full")
+        #                 .on("click", lambda i=idx: _toggle_inspector_entry(i))
+        #             ):
+        #                 with ui.row().classes("w-full flex-nowrap items-center"):
+        #                     ui.label(heading)
+        #                     if timing:
+        #                         ui.label(f"({timing:.1f}s)").classes(
+        #                             "text-xs text-grey-5"
+        #                         )
+        #             ui.label(entry.get("summary", "")).classes(
+        #                 "text-xs text-grey-6 mb-1 w-full"
+        #             )
+        #             details = entry.get("details", {})
+        #             if details:
+        #                 with ui.element("details").classes(
+        #                     "inspector-details text-xs text-grey-5 cursor-pointer w-full"
+        #                 ):
+        #                     with ui.element("summary").classes("text-xs w-full"):
+        #                         ui.label("View details")
+        #                     ui.code(
+        #                         json.dumps(details, indent=2), language="json"
+        #                     ).classes("text-xs")
+        #
+        # _debug_panel()
 
     # ---- Center: chat messages + input (pinned to bottom) ----
     with (
@@ -561,7 +619,8 @@ def setup_layout(
                 logger.debug("Clearing inspector entries for chat %s", chat_id)
                 current_chat["inspector_entries"] = []
                 current_chat["inspector_expanded"] = set()
-                _inspector_panel.refresh()
+                current_chat["state_sections"] = {}
+                _status_pane.refresh()
                 with _stream_container:
                     pg_row = ui.row().classes("w-full items-center gap-2 p-2")
                     with pg_row:
@@ -588,7 +647,16 @@ def setup_layout(
                                     "timing_seconds": data.get("timing_seconds", None),
                                 }
                             )
-                            _inspector_panel.refresh()
+                        elif t == "state":
+                            data = event.get("data", {})
+                            node = event.get("node", "")
+                            current_chat["state_sections"][node] = {
+                                "heading": data.get("heading", ""),
+                                "display": data.get("display", ""),
+                                "summary": data.get("summary", ""),
+                                "details": data.get("details", {}),
+                            }
+                            _status_pane.refresh()
                         elif t == "complete":
                             pg_row.delete()
                             full_response = event.get("message_for_user", full_response)

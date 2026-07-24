@@ -38,6 +38,8 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
                             recent query in this chat session.
         inspector_expanded  Set of indices into *inspector_entries* that are
                             currently expanded in the UI.
+        state_sections      Dict of ``{node_label: section_data}`` for the status
+                            pane, ordered by first insertion (per node label).
     """
     key = f"{user_id}:{chat_id}"
     if key not in chats:
@@ -50,6 +52,7 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
             "messages": [],
             "inspector_entries": [],
             "inspector_expanded": set(),
+            "state_sections": {},
         }
     else:
         logger.debug("found existing %s", key)
