@@ -51,6 +51,9 @@ def create_sessions_router() -> APIRouter:
 
     ``DELETE /chat/{user_id}/{chat_id}``
         Remove a chat and all associated data.
+
+    ``DELETE /chat/{user_id}``
+        Remove all chats, messages, and checkpoints for the user.
     """
     router = APIRouter(prefix="/chat", tags=["sessions"])
 
@@ -102,5 +105,23 @@ def create_sessions_router() -> APIRouter:
         store.delete_chat(user_id, chat_id)
         logger.debug("delete_chat(%s, %s): OK", user_id, chat_id)
         return {"status": "ok", "chat_id": chat_id}
+
+    @router.delete("/{user_id}")
+    async def delete_user(user_id: str, request: Request):
+        store: SessionStore = request.app.state.chat_sessions
+        graph: BaseLangGraph = request.app.state.graph
+
+        # Purge LangGraph checkpoints for every chat thread.
+        removed = 0
+        for chat in store.list_chats(user_id):
+            thread_id = f"user_{user_id}:chat_{chat['chat_id']}"
+            if graph.checkpointer:
+                await graph.checkpointer.adelete_thread(thread_id)
+            removed += 1
+
+        # Purge sessions + messages.
+        store.delete_user_chats(user_id)
+        logger.debug("delete_user(%s): removed %d chat(s)", user_id, removed)
+        return {"status": "ok", "user_id": user_id, "removed": removed}
 
     return router
