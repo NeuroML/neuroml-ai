@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from klea_utils.api.sessions_db import SessionStore
+from klea_utils.graph.base import BaseLangGraph
 
 from ..plogging import setup_logger
 
