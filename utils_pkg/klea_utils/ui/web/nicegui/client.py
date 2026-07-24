@@ -21,11 +21,15 @@ from .state import chats, ensure_chat
 logger = setup_logger(__name__)
 
 
-async def hydrate_chats(server_url: str, user_id: str, current_chat_id: str) -> None:
-    """Fetch chats and messages from the server and populate the local state.
+async def hydrate_chats(server_url: str, user_id: str) -> None:
+    """Fetch all chats and their messages from the server into the local state.
 
-    Chats are only created server-side by ``/query/stream``, so if the
-    server has no data for this user yet the local store stays empty.
+    Populates the in-memory ``chats`` dict with every conversation belonging
+    to *user_id*, including the full message history for each chat.
+
+    After this call the frontend can switch between any chat without
+    additional server round-trips.  If the server has no data for this
+    user yet the local store stays empty.
     """
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -46,23 +50,27 @@ async def hydrate_chats(server_url: str, user_id: str, current_chat_id: str) -> 
                     chats[key]["name"] = chat_data.get("title", chat_id)
                     chats[key]["created"] = chat_data.get("created_at", 0)
 
-            current_key = f"{user_id}:{current_chat_id}" if current_chat_id else None
-            if current_key and current_key in chats:
-                resp = await client.get(
-                    f"{server_url}/chat/{user_id}/{current_chat_id}/messages"
-                )
-                if resp.status_code == 200:
-                    session = ensure_chat(user_id, current_chat_id)
-                    session["messages"] = [
-                        (
-                            msg["content"],
-                            datetime.fromtimestamp(msg["created_at"])
-                            .astimezone()
-                            .strftime("%X"),
-                            msg["role"] == "user",
-                        )
-                        for msg in resp.json()
-                    ]
+                # Fetch messages for every chat returned by the server.
+                for chat_data in chats_from_server:
+                    chat_id = chat_data["chat_id"]
+                    logger.debug("GET /chat/%s/%s/messages", user_id, chat_id)
+                    msg_resp = await client.get(
+                        f"{server_url}/chat/{user_id}/{chat_id}/messages"
+                    )
+                    if msg_resp.status_code == 200:
+                        key = f"{user_id}:{chat_id}"
+                        session = chats.get(key)
+                        if session:
+                            session["messages"] = [
+                                (
+                                    msg["content"],
+                                    datetime.fromtimestamp(msg["created_at"])
+                                    .astimezone()
+                                    .strftime("%X"),
+                                    msg["role"] == "user",
+                                )
+                                for msg in msg_resp.json()
+                            ]
     except Exception as e:
         logger.warning("Failed to hydrate chats from server: %s", e)
 
@@ -86,9 +94,11 @@ async def create_chat_on_server(server_url: str, user_id: str, chat_id: str) -> 
 
 async def delete_chat_on_server(server_url: str, user_id: str, chat_id: str) -> None:
     """DELETE the chat on the server."""
+    logger.debug("DELETE /chat/%s/%s", user_id, chat_id)
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            await client.delete(f"{server_url}/chat/{user_id}/{chat_id}")
+            resp = await client.delete(f"{server_url}/chat/{user_id}/{chat_id}")
+            logger.debug("status=%d", resp.status_code)
     except Exception as e:
         logger.warning("Failed to delete chat on server: %s", e)
 
