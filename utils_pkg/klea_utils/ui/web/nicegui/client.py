@@ -59,9 +59,9 @@ async def hydrate_chats(server_url: str, user_id: str) -> None:
                     )
                     if msg_resp.status_code == 200:
                         key = f"{user_id}:{chat_id}"
-                        session = chats.get(key)
-                        if session:
-                            session["messages"] = [
+                        current_chat = chats.get(key)
+                        if current_chat:
+                            current_chat["messages"] = [
                                 (
                                     msg["content"],
                                     datetime.fromtimestamp(msg["created_at"])

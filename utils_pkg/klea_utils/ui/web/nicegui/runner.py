@@ -181,10 +181,10 @@ def setup_layout(
         _inspector_panel.refresh()
 
     def _delete_chat(chat_id: str) -> None:
-        """Remove a session from the store and server.
+        """Remove a chat session from the store and server.
 
-        If the currently active session is deleted, the next available
-        session becomes active (or a fresh one is created).
+        If the currently active chat session is deleted, the next available
+        chat session becomes active (or a new one is created).
         """
         logger.debug(
             "deleting chat_id=%s user_id=%s (current=%s)",
@@ -231,7 +231,7 @@ def setup_layout(
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
     def _new_chat():
-        """Create a fresh session and switch to it."""
+        """Create a new chat and switch to it."""
         chat_id = coolname.generate_slug(2)
         logger.debug("creating chat_id=%s", chat_id)
         ensure_chat(user_id, chat_id)
@@ -259,12 +259,12 @@ def setup_layout(
 
     @ui.refreshable
     def _render_chat_list():
-        """Render the sorted list of session entries in the left drawer.
+        """Render the sorted list of chat sessions in the left drawer.
 
-        Each entry shows the session name (bold for the active session),
+        Each entry shows the chat name (bold for the active chat),
         a tooltip with the creation timestamp, and a three-dot context
         menu for rename / pin / delete.  Refresh this to pick up newly
-        created sessions without a page reload.
+        created chat sessions without a page reload.
         """
         # Underscore suffix avoids shadowing setup_layout's chat_id parameter
         for chat_id_, sdata in get_chats_sorted(user_id):
@@ -373,7 +373,7 @@ def setup_layout(
                 ui.label("").classes("text-xs")
 
     def _toggle_inspector_entry(idx: int) -> None:
-        """Toggle the expanded/collapsed state of an inspector entry."""
+        """Toggle the expanded/collapsed state of an inspector entry for the active chat."""
         current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
         if not current_chat:
             return
@@ -401,6 +401,7 @@ def setup_layout(
 
         @ui.refreshable
         def _inspector_panel() -> None:
+            """Render debug or info events for the active chat in the right drawer."""
             current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not current_chat:
                 if _current_chat_id[0]:
@@ -476,7 +477,7 @@ def setup_layout(
             )
 
             async def _do_stream(query: str, chat_id: str) -> None:
-                """Stream the RAG pipeline progress and final answer."""
+                """Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI."""
                 current_chat = ensure_chat(user_id, chat_id)
                 logger.debug("Clearing inspector entries for chat %s", chat_id)
                 current_chat["inspector_entries"] = []
@@ -544,7 +545,7 @@ def setup_layout(
                     _render_chat_area()
 
             def send() -> None:
-                """Append the current input text as a user message."""
+                """Append the current input text as a user message. Creates a new chat if none is active."""
                 if not text.value.strip():
                     return
                 stamp = datetime.now().astimezone().strftime("%X")
@@ -578,6 +579,7 @@ def setup_layout(
 
         # Plain Enter sends the message and prevents the default newline
         def handle_enter(e: GenericEventArguments):
+            """Send on Enter, insert newline on Shift+Enter."""
             if e.args.get("shiftKey"):
                 text.value += "\n"
             else:
@@ -625,7 +627,7 @@ def run_nicegui_app(
     async def main_page():
         """Build the main page after ensuring the WebSocket is connected.
 
-        ``ui.run_javascript`` (used inside ``_chat_messages``) only
+        ``ui.run_javascript`` (used inside ``_render_chat_area``) only
         works after the client has connected, so we await
         ``ui.context.client.connected()`` first.
         """
