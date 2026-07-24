@@ -174,7 +174,22 @@ def setup_layout(
         _scroll_to_bottom()
 
     def _scroll_to_bottom() -> None:
-        """Scroll chat area to the bottom using Quasar's native scroll API."""
+        """Scroll chat area to the bottom.
+
+        Uses Quasar's ``setScrollPosition`` (via NiceGUI's
+        ``scroll_to(pixels=99999)``) instead of raw JavaScript because
+        NiceGUI batches UI updates and JS into the same WebSocket packet
+        — by the time a ``setTimeout`` or ``requestAnimationFrame``
+        callback fires the new DOM may not be laid out yet, so
+        ``scrollTop = scrollHeight`` or ``scrollIntoView`` land at the
+        wrong position.
+
+        ``setScrollPosition`` is Quasar's own scroll API on
+        ``QScrollArea``; it coordinates with its internal layout cycle
+        so the scroll lands correctly after the content updates are
+        painted.  The large pixel value is safe — Quasar clamps it to
+        the actual scrollable extent.
+        """
         logger.debug("attempting scroll for chat=%s", _current_chat_id[0])
         _scroll_area.scroll_to(pixels=99999)
 
