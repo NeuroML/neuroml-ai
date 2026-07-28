@@ -147,6 +147,18 @@ Git log has the step-by-step edits. Omit routine work.
 - Every deferred import must have a comment explaining *why* it is lazy, so the
   pattern is self-documenting for future maintainers.
 
+## Logging conventions
+
+- Use `f"{variable = }"` (Python 3.8+ f-string debug syntax) when logging
+  variable values, one variable per line:
+  ```python
+  self.logger.debug(
+      f"{current_chat = }\n"
+      f"{model_info = }"
+  )
+  ```
+- This avoids manual label strings and keeps the variable name in the log output.
+
 ## DO NOT SPECULATE OR GUESS
 
 When the behavior of code is unclear, **do not propose speculative fixes or guess
