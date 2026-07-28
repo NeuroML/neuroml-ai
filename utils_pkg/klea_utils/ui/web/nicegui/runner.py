@@ -302,6 +302,7 @@ def setup_layout(
             dialog.close()
             await rename_chat_on_server(server_url, user_id, chat_id, inp.value)
             _render_chat_list.refresh()
+            _status_pane.refresh()
 
         with dialog, ui.card():
             ui.label("Rename chat").classes("text-lg font-bold")
