@@ -78,6 +78,7 @@ London <https://openneuroai.org/>`_.
    concepts/index
    glossary
    tutorials/index
+   cookbook/index
    cli/index
 
 .. toctree::
