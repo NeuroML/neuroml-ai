@@ -20,6 +20,11 @@ logger = setup_logger(__name__)
 # Per-chat data store.  External modules may read/write this dict
 # directly for performance; the helper functions below cover the
 # common create-or-get and sorted-lookup cases.
+#
+# Using plain dicts rather than Pydantic BaseModel because this is a
+# simple in-memory frontend cache (not an API contract) and NiceGUI
+# naturally works with dict access.  The saved schema is documented
+# inline in ensure_chat() below.
 chats: dict[str, dict] = {}
 
 
@@ -40,6 +45,8 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
                             currently expanded in the UI.
         state_sections      Dict of ``{node_label: section_data}`` for the status
                             pane, ordered by first insertion (per node label).
+        model_info          Dict of active model config per role
+                            (from ``fetch_active_models``).
     """
     key = f"{user_id}:{chat_id}"
     if key not in chats:
@@ -53,6 +60,7 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
             "inspector_entries": [],
             "inspector_expanded": set(),
             "state_sections": {},
+            "model_info": {},
         }
     else:
         logger.debug("found existing %s", key)

@@ -48,7 +48,6 @@ def setup_layout(
     subtitle: str = "",
     disclaimer: str = "",
     footer_text: str = 'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
-    model_info: str = "",
 ) -> None:
     """Build the full page UI: header, drawers, chat area, and footer.
 
@@ -72,7 +71,6 @@ def setup_layout(
         in the header.
     :param disclaimer: Optional text shown below the chat input.
     :param footer_text: HTML content for the footer bar.
-    :param model_info: Compact model summary string (from ``format_model_info``).
     """
     # --- CSS overrides ---
     # Make q-page a flex container so the nicegui-content can flex-fill
@@ -214,6 +212,18 @@ def setup_layout(
         logger.debug("attempting scroll for chat=%s", _current_chat_id[0])
         _scroll_area.scroll_to(pixels=99999)
 
+    async def _fetch_model_info() -> None:
+        """Fetch active model config for the current chat and update the status pane."""
+        chat_id = _current_chat_id[0]
+        if not chat_id:
+            return
+        active = await fetch_active_models(server_url, user_id, chat_id)
+        if not active:
+            return
+        current = ensure_chat(user_id, chat_id)
+        current["model_info"] = active
+        _status_pane.refresh()
+
     def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
         app.storage.user["chat_id"] = chat_id
@@ -222,6 +232,7 @@ def setup_layout(
         _render_chat_area()
         _render_chat_list.refresh()
         _status_pane.refresh()
+        background_tasks.create(_fetch_model_info())
 
     def _delete_chat(chat_id: str) -> None:
         """Remove a chat session from the store and server.
@@ -492,16 +503,9 @@ def setup_layout(
         ui.label("Status").classes("text-sm font-bold mb-0")
         ui.separator().classes("my-0.5")
 
-        if model_info:
-            with ui.row().classes("items-center no-wrap my-0.5"):
-                ui.icon("settings").classes("text-sm")
-                with ui.label(model_info).classes("text-xs truncate"):
-                    ui.tooltip("Current models per role")
-            ui.separator().classes("my-0.5")
-
         @ui.refreshable
         def _status_pane() -> None:
-            """Render state sections for the active chat in the right drawer."""
+            """Render model info and state sections for the active chat in the right drawer."""
             current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not current_chat:
                 if _current_chat_id[0]:
@@ -509,12 +513,21 @@ def setup_layout(
                         "No chat found for %s, status pane empty", _current_chat_id[0]
                     )
                 return
+            model_info = current_chat.get("model_info", {})
             sections = current_chat.get("state_sections", {})
-            if not sections:
+            has_content = bool(model_info) or bool(sections)
+            if not has_content:
                 ui.label("State updates will appear here").classes(
                     "text-sm text-gray-500"
                 )
                 return
+            if model_info:
+                model_info_str = format_model_info(model_info)
+                with ui.row().classes("items-center no-wrap mb-1"):
+                    ui.icon("settings").classes("text-sm")
+                    with ui.label(model_info_str).classes("text-xs truncate"):
+                        ui.tooltip("Current models per role")
+                ui.separator().classes("my-0.5")
             for idx, (node_label, section) in enumerate(sections.items()):
                 with (
                     ui.element("details")
@@ -817,11 +830,6 @@ def run_nicegui_app(
         await hydrate_chats(server_url, user_id)
         logger.debug("after hydrate: chats keys=%s", list(chats.keys()))
 
-        model_info = ""
-        if chat_id:
-            active_models = await fetch_active_models(server_url, user_id, chat_id)
-            model_info = format_model_info(active_models)
-
         setup_layout(
             chat_id=chat_id,
             user_id=user_id,
@@ -830,7 +838,6 @@ def run_nicegui_app(
             subtitle=subtitle,
             disclaimer=disclaimer,
             footer_text=footer_text,
-            model_info=model_info,
         )
 
     ui.run(
