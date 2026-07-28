@@ -449,14 +449,10 @@ def setup_layout(
                 ui.tooltip("Start a new conversation")
             with ui.item_section():
                 ui.label("New Chat")
-        with (
-            ui.item(on_click=lambda: right_drawer.toggle())
-            .props("dense")
-            .classes("w-full")
-        ):
+        with ui.item(on_click=lambda: None).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("info")
-                ui.tooltip("View pipeline details in the inspection pane")
+                ui.tooltip("Inspection dialog (coming soon)")
             with ui.item_section():
                 ui.label("Inspector")
 
@@ -495,17 +491,11 @@ def setup_layout(
             expanded.add(idx)
 
     # ---- Right drawer (status pane, hidden by default) ----
-    with (
-        ui.right_drawer(value=False)
-        .props("width=420")
-        .classes("overflow-y-auto") as right_drawer
-    ):
-        ui.label("Status").classes("text-sm font-bold mb-0")
-        ui.separator().classes("my-0.5")
+    with ui.right_drawer(value=True).props("width=420").classes("overflow-y-auto"):
 
         @ui.refreshable
         def _status_pane() -> None:
-            """Render model info and state sections for the active chat in the right drawer."""
+            """Render chat name, model info and state sections for the active chat in the right drawer."""
             current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
             if not current_chat:
                 if _current_chat_id[0]:
@@ -513,6 +503,18 @@ def setup_layout(
                         "No chat found for %s, status pane empty", _current_chat_id[0]
                     )
                 return
+            with ui.label(current_chat.get("name", "")).classes(
+                "text-sm font-bold mb-0"
+            ):
+                created = current_chat.get("created", 0)
+                if created:
+                    ui.tooltip(
+                        "Created: "
+                        + datetime.fromtimestamp(created)
+                        .astimezone()
+                        .strftime("%a %d %b %Y at %X")
+                    )
+            ui.separator().classes("my-0.5")
             model_info = current_chat.get("model_info", {})
             sections = current_chat.get("state_sections", {})
             has_content = bool(model_info) or bool(sections)
