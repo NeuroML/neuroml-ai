@@ -64,7 +64,9 @@ def create_models_router() -> APIRouter:
 
         graph: BaseLangGraph = request.app.state.graph
         store: SessionStore = request.app.state.chat_sessions
-        defaults: dict[str, dict[str, str]] = {}
+        from typing import Any
+
+        defaults: dict[str, dict[str, Any]] = {}
         for role, entry in graph.llm_models.items():
             cfg: dict[str, str] = {"model": entry.model_name or ""}
             if entry.parsed_model:
@@ -86,6 +88,9 @@ def create_models_router() -> APIRouter:
                     defaults[role]["base_url"] = override["base_url"]
             else:
                 defaults[role] = override
+
+        for role in defaults:
+            defaults[role]["overridden"] = role in overrides
 
         logger.debug(
             "get_chat_active_models(%s, %s): %d role(s)",
@@ -121,5 +126,20 @@ def create_models_router() -> APIRouter:
             "role": role,
             "model": payload.model,
         }
+
+    @router.delete("/{user_id}/{chat_id}/models/overrides/{role}")
+    async def clear_chat_model_override(
+        user_id: str,
+        chat_id: str,
+        role: str,
+        request: Request,
+    ):
+        """Remove the model override for a single role in a chat."""
+        store: SessionStore = request.app.state.chat_sessions
+        store.clear_override(user_id, chat_id, role)
+        logger.debug(
+            "clear_chat_model_override(%s, %s, role=%s)", user_id, chat_id, role
+        )
+        return {"status": "ok", "chat_id": chat_id, "role": role}
 
     return router

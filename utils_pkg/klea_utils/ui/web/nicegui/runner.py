@@ -22,17 +22,19 @@ from nicegui.events import GenericEventArguments
 
 from klea_utils.api.sse import (
     fetch_active_models,
-    format_model_info,
     stream_events,
 )
 from klea_utils.api.utils import check_api_is_ready
+from klea_utils.llm import parse_model_name
 
 from ....plogging import setup_logger
 from .client import (
+    clear_model_override,
     create_chat_on_server,
     delete_chat_on_server,
     hydrate_chats,
     rename_chat_on_server,
+    set_model_override,
 )
 from .state import chats, ensure_chat, get_chats_sorted
 from .widgets import ChatBubble
@@ -104,7 +106,10 @@ def setup_layout(
         ".inspector-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
     )
     ui.add_css(
-        ".q-tooltip { max-width: 350px !important; overflow: visible !important; white-space: nowrap !important; }"
+        ".q-tooltip { max-width: 350px !important; overflow: visible !important; white-space: nowrap !important; padding: 4px 8px !important; }"
+    )
+    ui.add_css(
+        ".model-tooltip { white-space: pre-wrap !important; max-width: none !important; }"
     )
     # Status pane styling — uses disclosure triangles (same pattern as inspector)
     ui.add_css(
@@ -224,6 +229,88 @@ def setup_layout(
         current["model_info"] = active
         _status_pane.refresh()
 
+    def _model_config_dialog() -> None:
+        """Open a dialog to view and change per-role model overrides."""
+        chat_id = _current_chat_id[0]
+        if not chat_id:
+            return
+        current_chat = ensure_chat(user_id, chat_id)
+        current_info = current_chat.get("model_info", {})
+        roles = list(current_info.keys())
+        if not roles:
+            return
+
+        dialog = ui.dialog()
+        dialog.classes("w-96")
+
+        async def _save_role(role: str, model_inp, api_key_inp):
+            payload = {"model": model_inp.value}
+            if api_key_inp.value.strip():
+                payload["api_key"] = api_key_inp.value.strip()
+            ok = await set_model_override(server_url, user_id, chat_id, role, payload)
+            if ok:
+                dialog.close()
+                await _fetch_model_info()
+
+        async def _clear_role(role: str):
+            ok = await clear_model_override(server_url, user_id, chat_id, role)
+            if ok:
+                dialog.close()
+                await _fetch_model_info()
+
+        with dialog, ui.card().classes("w-full p-4"):
+            with ui.tabs().classes("w-full") as tabs:
+                tab_map = {}
+                for role in roles:
+                    cfg = current_info.get(role, {})
+                    label = (
+                        f"{role.capitalize()} [User]"
+                        if cfg.get("overridden")
+                        else role.capitalize()
+                    )
+                    tab_map[role] = ui.tab(name=role.capitalize(), label=label)
+            with ui.tab_panels(tabs, value=roles[0].capitalize()).classes("w-full"):
+                for role in roles:
+                    cfg = current_info.get(role, {})
+                    with ui.tab_panel(tab_map[role]):
+                        model_inp = ui.input(
+                            "Model", value=cfg.get("model", "")
+                        ).classes("w-full")
+                        api_key_inp = ui.input(
+                            "API key", password=True, password_toggle_button=True
+                        ).classes("w-full")
+                        with ui.row().classes("items-center gap-1"):
+                            ui.icon("info").classes(
+                                "text-sm text-grey-5 cursor-pointer"
+                            ).on(
+                                "click",
+                                lambda: ui.run_javascript(
+                                    "window.open('https://neuroklea.org/install.html#choosing-models', '_blank')"
+                                ),
+                            )
+                            ui.tooltip("See the docs for model selection options")
+                            ui.icon("privacy").classes("text-sm text-grey-5")
+                            ui.tooltip(
+                                "Stored per-chat on the server. "
+                                "Truncated in API responses. "
+                                "Clear the override or delete the chat to remove."
+                            )
+                        with ui.row().classes("w-full justify-end gap-2"):
+                            ui.button(
+                                "Clear",
+                                on_click=lambda r=role: background_tasks.create(
+                                    _clear_role(r)
+                                ),
+                            ).props("flat")
+                            ui.button(
+                                "Save",
+                                on_click=lambda r=role, m=model_inp, a=api_key_inp: (
+                                    background_tasks.create(_save_role(r, m, a))
+                                ),
+                            ).props("unelevated color=primary")
+
+        dialog.open()
+
     def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
         app.storage.user["chat_id"] = chat_id
@@ -337,12 +424,12 @@ def setup_layout(
                 with ui.item_section():
                     label_cls = "text-xs font-bold" if is_current else "text-xs"
                     ui.label(sdata["name"]).classes(label_cls)
-                    ui.tooltip(
-                        "Created: "
-                        + datetime.fromtimestamp(sdata["created"])
-                        .astimezone()
-                        .strftime("%a %d %b %Y at %X")
-                    )
+                ui.tooltip(
+                    "Created: "
+                    + datetime.fromtimestamp(sdata["created"])
+                    .astimezone()
+                    .strftime("%a %d %b %Y at %X")
+                )
                 # Three-dot context menu (right-aligned).
                 with (
                     ui.item_section().props("side"),
@@ -492,7 +579,11 @@ def setup_layout(
             expanded.add(idx)
 
     # ---- Right drawer (status pane, hidden by default) ----
-    with ui.right_drawer(value=True).props("width=420").classes("overflow-y-auto"):
+    with (
+        ui.right_drawer(value=True)
+        .props("width=420")
+        .classes("overflow-y-auto overflow-x-hidden")
+    ):
 
         @ui.refreshable
         def _status_pane() -> None:
@@ -504,19 +595,55 @@ def setup_layout(
                         "No chat found for %s, status pane empty", _current_chat_id[0]
                     )
                 return
-            with ui.label(current_chat.get("name", "")).classes(
-                "text-sm font-bold mb-0"
-            ):
-                created = current_chat.get("created", 0)
-                if created:
-                    ui.tooltip(
-                        "Created: "
-                        + datetime.fromtimestamp(created)
-                        .astimezone()
-                        .strftime("%a %d %b %Y at %X")
-                    )
-            ui.separator().classes("my-0.5")
-            model_info = current_chat.get("model_info", {})
+            with ui.column().classes("w-full gap-0"):
+                with ui.row().classes("items-center w-full gap-0"):
+                    with ui.label(current_chat.get("name", "")).classes(
+                        "text-sm font-bold mb-0"
+                    ):
+                        created = current_chat.get("created", 0)
+                        if created:
+                            ui.tooltip(
+                                "Created: "
+                                + datetime.fromtimestamp(created)
+                                .astimezone()
+                                .strftime("%a %d %b %Y at %X")
+                            )
+                    ui.space()
+                    with ui.element():
+                        ui.button(
+                            icon="settings", on_click=lambda: _model_config_dialog()
+                        ).props("flat dense round color=grey-9").classes("text-sm")
+                        ui.tooltip("Choose models")
+                model_info = current_chat.get("model_info", {})
+                if model_info:
+                    tooltip_parts: list[str] = []
+                    display_parts: list[str] = []
+                    for role, cfg in model_info.items():
+                        raw = cfg.get("model", "")
+                        short = (
+                            parse_model_name(raw).model_name
+                            if parse_model_name(raw)
+                            else raw
+                        )
+                        provider = cfg.get("provider", "")
+                        if provider:
+                            tooltip_short = f"{short} ({provider})"
+                        else:
+                            tooltip_short = short
+                        if cfg.get("overridden"):
+                            tooltip_short += " [User]"
+                            display_short = f"{short} (custom)"
+                        else:
+                            display_short = short
+                        tooltip_parts.append(f"{role.capitalize()}: {tooltip_short}")
+                        display_parts.append(display_short)
+                    with ui.label(" | ".join(display_parts)).classes(
+                        "text-xs text-grey-5"
+                    ):
+                        if tooltip_parts:
+                            ui.tooltip("\n".join(tooltip_parts)).classes(
+                                "model-tooltip"
+                            )
             sections = current_chat.get("state_sections", {})
             has_content = bool(model_info) or bool(sections)
             if not has_content:
@@ -524,12 +651,7 @@ def setup_layout(
                     "text-sm text-gray-500"
                 )
                 return
-            if model_info:
-                model_info_str = format_model_info(model_info)
-                with ui.row().classes("items-center no-wrap mb-1"):
-                    ui.icon("settings").classes("text-sm")
-                    with ui.label(model_info_str).classes("text-xs truncate"):
-                        ui.tooltip("Current models per role")
+            if sections:
                 ui.separator().classes("my-0.5")
             for idx, (node_label, section) in enumerate(sections.items()):
                 with (

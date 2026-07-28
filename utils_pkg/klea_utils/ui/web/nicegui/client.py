@@ -115,3 +115,34 @@ async def rename_chat_on_server(
             )
     except Exception as e:
         logger.warning("Failed to rename chat on server: %s", e)
+
+
+async def set_model_override(
+    server_url: str, user_id: str, chat_id: str, role: str, payload: dict
+) -> bool:
+    """POST a model override for a chat role."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{server_url}/chat/{user_id}/{chat_id}/models/overrides/{role}",
+                json=payload,
+            )
+            return resp.status_code == 200
+    except Exception as e:
+        logger.warning("Failed to set model override: %s", e)
+        return False
+
+
+async def clear_model_override(
+    server_url: str, user_id: str, chat_id: str, role: str
+) -> bool:
+    """DELETE the model override for a chat role."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.delete(
+                f"{server_url}/chat/{user_id}/{chat_id}/models/overrides/{role}",
+            )
+            return resp.status_code == 200
+    except Exception as e:
+        logger.warning("Failed to clear model override: %s", e)
+        return False

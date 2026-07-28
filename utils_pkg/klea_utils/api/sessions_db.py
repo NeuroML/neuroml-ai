@@ -239,6 +239,23 @@ class SessionStore:
             self._conn.commit()
         logger.debug("clear_overrides(%s, %s)", user_id, chat_id)
 
+    def clear_override(self, user_id: str, chat_id: str, role: str) -> None:
+        """Remove the model override for a single role in a chat."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?",
+                (user_id, chat_id),
+            ).fetchone()
+            current = self._json_loads(row["overrides"]) if row else {}
+            current.pop(role, None)
+            self._conn.execute(
+                "UPDATE chat_sessions SET overrides = ?, updated_at = ? "
+                "WHERE user_id = ? AND chat_id = ?",
+                (self._json_dumps(current), self._now(), user_id, chat_id),
+            )
+            self._conn.commit()
+        logger.debug("clear_override(%s, %s, role=%s)", user_id, chat_id, role)
+
     # ------------------------------------------------------------------
     # Messages (curated Q&A for frontend display)
     # ------------------------------------------------------------------
