@@ -55,6 +55,11 @@ class LLMModel(BaseModel):
     Use ``build_config()`` to produce a per-invocation config dict:
     ``build_config({"temperature": 0.5})`` returns a copy of the template
     with temperature overridden.
+
+    ``modifiable`` controls whether the model can be changed at runtime
+    (both the API and web UI reject modifications to locked roles).
+    Set to ``False`` to lock a role (e.g. guard) against user overrides
+    in managed deployments.
     """
 
     model_name: str = ""
@@ -63,6 +68,7 @@ class LLMModel(BaseModel):
     config_template: dict[str, Any] = Field(
         default_factory=lambda: {"configurable": {}}
     )
+    modifiable: bool = True
 
     def build_config(self, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
         config = deepcopy(self.config_template)
@@ -166,7 +172,6 @@ class BaseLangGraph(ABC):
 
         self.stores_config: VectorStoresConfig | None = None
         self.stores: VSRetriever | None = None
-        self.embedding_model: str | None = None
         self.default_k: int = 5
         self.k_max: int = 10
 
@@ -275,11 +280,12 @@ class BaseLangGraph(ABC):
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
-        if self.stores_config and self.embedding_model:
+        emb = self.llm_models.get("embedding")
+        if self.stores_config and emb and emb.model_name:
             self.stores = VSRetriever(
                 vs_config=self.stores_config,
                 logger=self.logger,
-                embedding_model=self.embedding_model,
+                embedding_model=emb.model_name,
                 default_k=self.default_k,
                 k_max=self.k_max,
             )

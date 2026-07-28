@@ -78,6 +78,12 @@ class RAG(BaseLangGraph):
                 instance=setup_llm(self.app_env.guard_model, logger=self.logger),
                 model_name=self.app_env.guard_model,
                 parsed_model=parse_model_name(self.app_env.guard_model),
+                modifiable=False,
+            ),
+            "embedding": LLMModel(
+                instance=None,
+                model_name=self.app_env.embedding_model,
+                parsed_model=parse_model_name(self.app_env.embedding_model),
             ),
         }
 
@@ -118,7 +124,6 @@ class RAG(BaseLangGraph):
 
         # set up configs
         self.stores_config = VectorStoresConfig(domains=domain_vs)
-        self.embedding_model = self.app_env.embedding_model
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
         self.mcp_config = MCPConfig(mcpServers=domain_ms)

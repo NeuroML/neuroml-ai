@@ -263,25 +263,30 @@ def setup_layout(
                 tab_map = {}
                 for role in roles:
                     cfg = current_info.get(role, {})
-                    label = (
-                        f"{role.capitalize()} [User]"
-                        if cfg.get("overridden")
-                        else role.capitalize()
+                    modifiable = cfg.get("modifiable", True)
+                    tab_icon = None
+                    if cfg.get("overridden"):
+                        tab_icon = "person"
+                    elif not modifiable:
+                        tab_icon = "lock"
+                    tab_map[role] = ui.tab(
+                        name=role.capitalize(),
+                        label=role.capitalize(),
+                        icon=tab_icon,
                     )
-                    tab_map[role] = ui.tab(name=role.capitalize(), label=label)
             with ui.tab_panels(tabs, value=roles[0].capitalize()).classes("w-full"):
                 for role in roles:
                     cfg = current_info.get(role, {})
+                    modifiable = cfg.get("modifiable", True)
                     with ui.tab_panel(tab_map[role]):
                         model_inp = ui.input(
                             "Model", value=cfg.get("model", "")
                         ).classes("w-full")
-                        api_key_inp = ui.input(
-                            "API key", password=True, password_toggle_button=True
-                        ).classes("w-full")
-                        with ui.row().classes("items-center gap-1"):
+                        if not modifiable:
+                            model_inp.disable()
+                        with model_inp.add_slot("append"):
                             ui.icon("info").classes(
-                                "text-sm text-grey-5 cursor-pointer"
+                                "text-sm cursor-pointer text-grey-5"
                             ).on(
                                 "click",
                                 lambda: ui.run_javascript(
@@ -289,25 +294,35 @@ def setup_layout(
                                 ),
                             )
                             ui.tooltip("See the docs for model selection options")
-                            ui.icon("privacy").classes("text-sm text-grey-5")
+                        api_key_inp = ui.input(
+                            "API key", password=True, password_toggle_button=True
+                        ).classes("w-full")
+                        if not modifiable:
+                            api_key_inp.disable()
+                        with api_key_inp:
                             ui.tooltip(
-                                "Stored per-chat on the server. "
-                                "Truncated in API responses. "
-                                "Clear the override or delete the chat to remove."
+                                "Stored per-chat on the server.\n"
+                                "Truncated in API responses.\n"
+                                "Reset the override or delete the chat to remove."
+                            ).classes("model-tooltip")
+                        if not modifiable:
+                            ui.label("Locked by administrator").classes(
+                                "text-xs text-grey-5 italic"
                             )
-                        with ui.row().classes("w-full justify-end gap-2"):
-                            ui.button(
-                                "Clear",
-                                on_click=lambda r=role: background_tasks.create(
-                                    _clear_role(r)
-                                ),
-                            ).props("flat")
-                            ui.button(
-                                "Save",
-                                on_click=lambda r=role, m=model_inp, a=api_key_inp: (
-                                    background_tasks.create(_save_role(r, m, a))
-                                ),
-                            ).props("unelevated color=primary")
+                        else:
+                            with ui.row().classes("w-full justify-end gap-2"):
+                                ui.button(
+                                    "Reset",
+                                    on_click=lambda r=role: background_tasks.create(
+                                        _clear_role(r)
+                                    ),
+                                ).props("flat")
+                                ui.button(
+                                    "Save",
+                                    on_click=lambda r=role, m=model_inp, a=api_key_inp: (
+                                        background_tasks.create(_save_role(r, m, a))
+                                    ),
+                                ).props("unelevated color=primary")
 
         dialog.open()
 
@@ -632,9 +647,7 @@ def setup_layout(
                             tooltip_short = short
                         if cfg.get("overridden"):
                             tooltip_short += " [User]"
-                            display_short = f"{short} (custom)"
-                        else:
-                            display_short = short
+                        display_short = short
                         tooltip_parts.append(f"{role.capitalize()}: {tooltip_short}")
                         display_parts.append(display_short)
                     with ui.label(" | ".join(display_parts)).classes(
