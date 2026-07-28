@@ -416,6 +416,12 @@ PROVIDER_CONFIG_FIELDS: dict[str, set[str]] = {
     "huggingface": {"huggingfacehub_api_token", "provider", "backend"},
     "ollama": {"num_predict"},
 }
+PROVIDER_CONFIG_FIELDS_EXCLUDES: dict[str, set[str]] = {
+    "ollama": {"api_key"},
+}
+PROVIDER_CONFIG_FIELDS_DEFAULTS: dict[str, dict[str, str]] = {
+    "ollama": {"base_url": "http://localhost:11434/api/"}
+}
 _COMMON_CONFIG_FIELDS: tuple[str, ...] = tuple(
     PROVIDER_CONFIG_FIELDS["all"]
     | PROVIDER_CONFIG_FIELDS.get("huggingface", set())

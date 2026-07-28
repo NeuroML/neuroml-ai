@@ -30,8 +30,11 @@ from klea_utils.graph.base import model_overrides_ctx
 from ..errors import PromptTemplateError
 from ..llm import (
     PROVIDER_CONFIG_FIELDS,
+    PROVIDER_CONFIG_FIELDS_DEFAULTS,
+    PROVIDER_CONFIG_FIELDS_EXCLUDES,
     add_memory_to_prompt,
     load_prompt,
+    parse_model_name,
     parse_output_with_thought,
 )
 from .abstract import AbstractLLMNode
@@ -154,8 +157,21 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     ) -> AIMessage | dict[str, Any]:
         """Async invoke LLM  ---  uses ``ainvoke`` so the event loop can
         process streaming callbacks during the LLM call."""
-        overrides = {"temperature": self.temperature}
-        overrides.update(model_overrides_ctx.get())
+        overrides: dict[str, Any] = {"temperature": self.temperature}
+        role_overrides = model_overrides_ctx.get().get(self.model_type, {})
+        self.logger.debug(
+            f"{model_overrides_ctx.get() = }\n{self.model_type = }\n{role_overrides = }"
+        )
+        if "model" in role_overrides:
+            parsed = parse_model_name(role_overrides["model"])
+            if parsed:
+                role_overrides["model"] = parsed.model_name
+                if parsed.provider:
+                    role_overrides["model_provider"] = parsed.provider
+                if parsed.suffix:
+                    role_overrides["base_url"] = parsed.suffix
+        overrides.update(role_overrides)
+
         # Map generic api_key to provider-specific token field names so
         # that a single user-facing field works for all providers.
         if "api_key" in overrides:
@@ -176,9 +192,23 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         allowed = PROVIDER_CONFIG_FIELDS["all"] | PROVIDER_CONFIG_FIELDS.get(
             active_provider, set()
         )
+        self.logger.debug(f"{allowed = }")
         overrides = {k: v for k, v in overrides.items() if k in allowed}
+        self.logger.debug(f"{overrides = }")
+
+        excluded = PROVIDER_CONFIG_FIELDS_EXCLUDES.get(active_provider, set())
+        self.logger.debug(f"{excluded = }")
+
+        for k in excluded:
+            if k in overrides:
+                overrides[k] = None
+
+        self.logger.debug(f"{overrides = }")
+        # defaults = PROVIDER_CONFIG_FIELDS_DEFAULTS.get(active_provider, {})
+        # overrides.update(defaults)
 
         config = self._llm_entry.build_config(overrides)
+        self.logger.debug(f"{self.model_type = }\n{overrides = }\n{config = }")
         output = await llm.ainvoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
