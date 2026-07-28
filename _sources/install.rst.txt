@@ -50,9 +50,12 @@ klea-utils extras
    * - ``ingest``
      - ``docling``, ``typer``, ``xxhash``
      - Document ingestion pipeline
+   * - ``nicegui``
+     - ``nicegui``
+     - NiceGUI web UI frontend
    * - ``full``
      - All of the above
-     - All optional extras (vector stores + inference providers)
+     - All optional extras (vector stores + inference providers + frontends)
 
 Usage::
 
@@ -82,6 +85,9 @@ klea-rag extras
    * - ``ollama``
      - ``klea_utils[ollama]``
      - Ollama inference provider for RAG
+   * - ``nicegui``
+     - ``klea_utils[nicegui]``
+     - NiceGUI web UI frontend
    * - ``full``
      - All vector store and inference provider extras
      - All RAG optional extras
