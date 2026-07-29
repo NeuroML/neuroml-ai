@@ -63,30 +63,30 @@ class ChatBubble(ui.element):
 
         self.classes(f"w-full flex flex-col {align}")
 
-        with self:
-            with ui.element("div").classes(
+        with (
+            self,
+            ui.element("div").classes(
                 f"flex flex-col rounded-2xl {bg} {corner} p-3 gap-1 {bubble_w}"
-            ):
-                text_cls = (
-                    f"whitespace-pre-wrap {text_align} msg-collapsed"
-                    if collapsed
-                    else f"whitespace-pre-wrap {text_align} msg-expanded"
-                )
-                with ui.element("div").classes(text_cls):
-                    ui.markdown(text)
+            ),
+        ):
+            text_cls = (
+                f"{text_align} msg-collapsed"
+                if collapsed
+                else f"{text_align} msg-expanded"
+            )
+            with ui.element("div").classes(text_cls):
+                ui.markdown(text)
 
-                with ui.row().classes(
-                    f"flex flex-row {bottom_align} items-center gap-1"
-                ):
-                    ui.label(stamp).classes("text-xs text-grey-5")
+            with ui.row().classes(f"flex flex-row {bottom_align} items-center gap-1"):
+                ui.label(stamp).classes("text-xs text-grey-5")
 
-                    if on_copy:
-                        ui.button(icon="content_copy").props(
-                            "flat dense round size=sm"
-                        ).on("click", on_copy)
+                if on_copy:
+                    ui.button(icon="content_copy").props("flat dense round size=sm").on(
+                        "click", on_copy
+                    )
 
-                    if on_expand:
-                        icon = "expand_less" if not collapsed else "expand_more"
-                        ui.button(icon=icon).props("flat dense round size=sm").on(
-                            "click", on_expand
-                        )
+                if on_expand:
+                    icon = "expand_less" if not collapsed else "expand_more"
+                    ui.button(icon=icon).props("flat dense round size=sm").on(
+                        "click", on_expand
+                    )
