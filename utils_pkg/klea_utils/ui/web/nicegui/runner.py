@@ -243,7 +243,6 @@ def setup_layout(
             return
 
         dialog = ui.dialog()
-        dialog.classes("w-96")
 
         async def _save_role(role: str, model_inp, api_key_inp):
             payload = {"model": model_inp.value}
