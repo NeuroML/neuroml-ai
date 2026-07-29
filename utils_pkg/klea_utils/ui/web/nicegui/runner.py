@@ -650,7 +650,7 @@ def setup_layout(
     with (
         ui.right_drawer(value=True)
         .props("width=420")
-        .classes("overflow-y-auto overflow-x-hidden")
+        .classes("overflow-y-auto overflow-x-hidden bg-grey-1")
     ):
 
         @ui.refreshable
@@ -754,7 +754,7 @@ def setup_layout(
     # ---- Center: chat messages + input (pinned to bottom) ----
     with (
         ui.column()
-        .classes("w-full px-8")
+        .classes("w-full px-2")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
         with ui.scroll_area().classes("w-full grow chat-scroll-area") as _scroll_area:
