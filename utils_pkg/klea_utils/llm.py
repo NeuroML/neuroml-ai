@@ -401,32 +401,41 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
-# Per-provider configurable field sets.  "all" covers every field any provider
-# might need.  _COMMON_CONFIG_FIELDS is the union  ---  the superset used by every
-# _ConfigurableModel so that runtime provider switching works.
-PROVIDER_CONFIG_FIELDS: dict[str, set[str]] = {
-    "all": {
-        "model",
-        "model_provider",
-        "temperature",
-        "max_tokens",
-        "api_key",
-        "base_url",
-    },
-    "huggingface": {"huggingfacehub_api_token", "provider", "backend"},
-    "ollama": {"num_predict"},
-}
-PROVIDER_CONFIG_FIELDS_EXCLUDES: dict[str, set[str]] = {
-    "ollama": {"api_key"},
-}
-PROVIDER_CONFIG_FIELDS_DEFAULTS: dict[str, dict[str, str]] = {
-    "ollama": {"base_url": "http://localhost:11434/api/"}
-}
-_COMMON_CONFIG_FIELDS: tuple[str, ...] = tuple(
-    PROVIDER_CONFIG_FIELDS["all"]
-    | PROVIDER_CONFIG_FIELDS.get("huggingface", set())
-    | PROVIDER_CONFIG_FIELDS.get("ollama", set())
-)
+def get_provider_allowed_fields(provider: str) -> set[str]:
+    """Return the set of init-param names accepted by a given provider's model class.
+
+    Uses LangChain's internal provider registry to look up the Pydantic
+    model class and introspect its fields (including aliases so that
+    both ``api_key`` and ``openai_api_key`` pass through).
+
+    Falls back to an empty set if the provider is not registered in
+    LangChain's built-in providers.  Raises ``ImportError`` if the
+    provider's integration package is not installed  ---  callers should
+    handle this at configuration time, not silently fall through.
+
+    The caller should always include ``{"model", "model_provider"}`` on
+    top of the returned set since those are consumed by
+    ``_ConfigurableModel`` before reaching the model constructor.
+    """
+    from langchain.chat_models.base import _get_chat_model_creator
+
+    try:
+        creator = _get_chat_model_creator(provider)
+    except ValueError:
+        # Provider not in LangChain's built-in registry  ---  not an error,
+        # the caller will include model/model_provider which is sufficient.
+        return set()
+
+    cls = getattr(creator, "keywords", {}).get("cls")
+    if cls is None:
+        return set()
+
+    fields: set[str] = set()
+    for name, field in cls.model_fields.items():
+        fields.add(name)
+        if field.alias:
+            fields.add(field.alias)
+    return fields
 
 
 def create_configurable_model(logger: logging.Logger):
