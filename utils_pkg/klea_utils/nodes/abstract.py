@@ -125,13 +125,29 @@ class AbstractLLMNode[TSchema: BaseModel](
     """
 
     model_type: str = ""
+    """Key into ``llm_models`` dict (e.g. ``\"chat\"``, ``\"plan\"``, ``\"guard\"``).
+
+    Determines which ``LLMModel`` entry from the graph's ``llm_models``
+    this node uses.  Must match a key set up by the orchestrator in
+    ``_setup_models()``.
+    """
+    model_defaults: dict[str, Any] = {}
+    """Node-level model configuration defaults.
+
+    These are **frozen**  ---  user context overrides cannot change them.
+    Set this as a class attribute on each subclass to pin model params
+    (temperature, model, num_predict, etc.) that should never be
+    overridden at runtime.
+
+    Subclasses that need dynamic initialisation may also set
+    ``self.model_defaults`` in ``__init__``.
+    """
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float,
         output_schema: type[TSchema] | None = None,
     ):
         """Initialize with logger and model.
@@ -139,7 +155,6 @@ class AbstractLLMNode[TSchema: BaseModel](
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature
         :param output_schema: Pydantic schema for structured output
         """
         super().__init__(logger, label)
@@ -151,7 +166,6 @@ class AbstractLLMNode[TSchema: BaseModel](
                 f"Node '{type(self).__name__}' has model_type='{self.model_type}', "
                 f"but llm_models only has keys: {list(self.llm_models)}"
             ) from None
-        self.temperature = temperature
         self._output_schema = output_schema
 
     @final
@@ -302,7 +316,7 @@ class AbstractLLMNode[TSchema: BaseModel](
     async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue, config: RunnableConfig
     ) -> AIMessage | dict[str, Any]:
-        """Async invoke LLM — must use ``await llm.ainvoke()`` so the
+        """Async invoke LLM  ---  must use ``await llm.ainvoke()`` so the
         event loop can process streaming callbacks (waiter pattern)
         during the LLM call rather than blocking until it completes.
 
