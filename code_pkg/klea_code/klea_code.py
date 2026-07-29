@@ -56,10 +56,10 @@ class KleaCode(BaseLangGraph):
         """Set up the LLM chat model
 
         A single ``_ConfigurableModel`` is shared across all roles.  Per-role
-        ``model_name`` and ``parsed_model`` provide the defaults that
-        ``_invoke_llm`` uses when no override is active.
+        ``model_name`` provides the default that ``_build_invoke_config``
+        uses when no override is active.
         """
-        from klea_utils.llm import LLMModel, parse_model_name
+        from klea_utils.llm import LLMModel
 
         model = create_configurable_model(logger=self.logger)
 
@@ -67,17 +67,14 @@ class KleaCode(BaseLangGraph):
             "chat": LLMModel(
                 instance=model,
                 model_name=self.app_env.chat_model,
-                parsed_model=parse_model_name(self.app_env.chat_model),
             ),
             "plan": LLMModel(
                 instance=model,
                 model_name=self.app_env.reasoning_model,
-                parsed_model=parse_model_name(self.app_env.reasoning_model),
             ),
             "guard": LLMModel(
                 instance=model,
                 model_name=self.app_env.guard_model,
-                parsed_model=parse_model_name(self.app_env.guard_model),
             ),
         }
 

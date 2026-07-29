@@ -67,30 +67,27 @@ class RAG(BaseLangGraph):
         """Set up the LLM chat model
 
         A single ``_ConfigurableModel`` is shared across all roles.  Per-role
-        ``model_name`` and ``parsed_model`` provide the defaults that
+        ``model_name`` provides the default that
         ``_invoke_llm`` uses when no override is active.  Developers who need
         a fixed model for a particular role may assign a concrete instance
         instead of the shared configurable one.
         """
-        from klea_utils.llm import LLMModel, parse_model_name
+        from klea_utils.llm import LLMModel
 
         model = create_configurable_model(logger=self.logger)
         self.llm_models = {
             "chat": LLMModel(
                 instance=model,
                 model_name=self.app_env.chat_model,
-                parsed_model=parse_model_name(self.app_env.chat_model),
             ),
             "guard": LLMModel(
                 instance=model,
                 model_name=self.app_env.guard_model,
-                parsed_model=parse_model_name(self.app_env.guard_model),
                 modifiable=False,
             ),
             "embedding": LLMModel(
                 instance=None,
                 model_name=self.app_env.embedding_model,
-                parsed_model=parse_model_name(self.app_env.embedding_model),
             ),
         }
 

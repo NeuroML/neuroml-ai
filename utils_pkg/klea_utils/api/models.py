@@ -69,8 +69,11 @@ def create_models_router() -> APIRouter:
         defaults: dict[str, dict[str, Any]] = {}
         for role, entry in graph.llm_models.items():
             cfg: dict[str, Any] = {"model": entry.model_name or ""}
-            if entry.parsed_model:
-                cfg["provider"] = entry.parsed_model.provider or ""
+            from klea_utils.llm import parse_model_name
+
+            parsed = parse_model_name(entry.model_name)
+            if parsed.provider:
+                cfg["provider"] = parsed.provider
             cfg["modifiable"] = getattr(entry, "modifiable", True)
             defaults[role] = cfg
 

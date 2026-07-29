@@ -495,7 +495,6 @@ class LLMModel(BaseModel):
     """
 
     model_name: str = ""
-    parsed_model: Any = None
     instance: Any
     role_defaults: dict[str, Any] = {}
     modifiable: bool = True
