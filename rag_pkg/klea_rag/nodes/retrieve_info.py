@@ -111,19 +111,35 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         self.write_custom_stream(debug_event.model_dump())
 
         # Emit state event
+        # URLs, file name, score, not full content
         md_lines = []
         for domain, docs in reference_material.items():
-            md_lines.append(f"### {domain}")
-            for i, (doc, score) in enumerate(docs, 1):
-                preview = doc.page_content[:120].replace("\n", " ")
-                md_lines.append(f"{i}.  [{score:.2f}] {preview}...")
-        display_md = "\n".join(md_lines) if md_lines else "No documents retrieved"
+            md_lines.append(f"### {domain}\n")
+
+            ref_lines = []
+            for doc, score in docs:
+                line = f"1.  [{score:.2f}]"
+
+                url = doc.metadata.get("url", None)
+                file_name = doc.metadata.get("file_name", "")
+
+                if url:
+                    line += f" [{url}]({url})"
+                if file_name:
+                    line += f" ({file_name})"
+                ref_lines.append(line)
+
+            md_lines += "\n".join(set(ref_lines))
+            md_lines += "\n"
+
+        display_md = "".join(md_lines) if md_lines else "No documents retrieved"
         status_data = NodeStreamData(
             heading="Reference Material",
             summary=f"{total_docs} docs from {len(per_domain_counts)} domains",
             display=display_md,
         )
         status_event = NodeStreamEvent(type="state", node=self.label, data=status_data)
+        self.logger.debug(f"{status_event.model_dump() = }")
         self.write_custom_stream(status_event.model_dump())
 
         return {"reference_material": reference_material}

@@ -112,9 +112,10 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         newrefs = list(set([r.strip() for r in references]))
 
         if len(newrefs):
-            full_answer += "\n\nReferences:\n"
+            full_answer += "\n\nReferences:\n\n"
             for r in newrefs:
                 full_answer += f"- {r}\n"
+            self.logger.debug(f"{full_answer = }")
         else:
             self.logger.debug("No references included.")
 
