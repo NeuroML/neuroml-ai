@@ -17,7 +17,7 @@ from typing import Any, Literal, final
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel, Field
 
 
@@ -168,6 +168,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_variables = None
         self._last_prompt = None
         self._last_llm = None
+        self._last_config = None
         self._last_output = None
         self._last_result = None
         self._last_state_updates = None
@@ -190,8 +191,10 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_prompt = self._invoke_prompt(
             self._last_template, self._last_variables
         )
-        self._last_llm = self._configure_llm()
-        self._last_output = await self._invoke_llm(self._last_llm, self._last_prompt)
+        self._last_llm, self._last_config = self._configure_llm()
+        self._last_output = await self._invoke_llm(
+            self._last_llm, self._last_prompt, self._last_config
+        )
         self._last_result = self._process_output(self._last_output)
         self._last_state_updates = self._update_state(self._last_result, state)
 
@@ -286,17 +289,26 @@ class AbstractLLMNode[TSchema: BaseModel](
         return None
 
     @abstractmethod
-    def _configure_llm(self) -> Runnable:
-        """Configure LLM with structured output"""
+    def _configure_llm(self) -> tuple[Runnable, RunnableConfig]:
+        """Configure LLM with structured output and build per-invoke config.
+
+        :returns: (llm_with_structured_output, config_dict) where
+            config_dict is a ``RunnableConfig`` with the ``configurable``
+            key populated for ``llm.ainvoke()``.
+        """
         ...
 
     @abstractmethod
     async def _invoke_llm(
-        self, llm: Runnable, prompt: PromptValue
+        self, llm: Runnable, prompt: PromptValue, config: RunnableConfig
     ) -> AIMessage | dict[str, Any]:
         """Async invoke LLM — must use ``await llm.ainvoke()`` so the
         event loop can process streaming callbacks (waiter pattern)
-        during the LLM call rather than blocking until it completes."""
+        during the LLM call rather than blocking until it completes.
+
+        :param config: ``RunnableConfig`` (including the ``configurable``
+            key) produced by ``_configure_llm``.
+        """
         ...
 
     @abstractmethod

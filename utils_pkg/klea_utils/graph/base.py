@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Literal, final
+from typing import Any, Literal, cast, final
 
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
@@ -70,11 +70,11 @@ class LLMModel(BaseModel):
     )
     modifiable: bool = True
 
-    def build_config(self, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    def build_config(self, overrides: dict[str, Any] | None = None) -> RunnableConfig:
         config = deepcopy(self.config_template)
         if overrides:
             config.setdefault("configurable", {}).update(overrides)
-        return config
+        return cast(RunnableConfig, config)
 
 
 class _CustomChannelEnabler(StreamTransformer):
