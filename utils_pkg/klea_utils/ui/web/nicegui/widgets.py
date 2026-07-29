@@ -73,7 +73,7 @@ class ChatBubble(ui.element):
                     else f"whitespace-pre-wrap {text_align} msg-expanded"
                 )
                 with ui.element("div").classes(text_cls):
-                    ui.html(text)
+                    ui.markdown(text)
 
                 with ui.row().classes(
                     f"flex flex-row {bottom_align} items-center gap-1"
