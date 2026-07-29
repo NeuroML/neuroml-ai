@@ -10,10 +10,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from typing import Any, Dict, override
 
-from pydantic import BaseModel
-
 from klea_code.nodes.planner import Planner
 from klea_code.schemas import KleaCodeState, PlanSchema
+from pydantic import BaseModel
 
 
 class ExplorePlanner(Planner):
@@ -25,19 +24,14 @@ class ExplorePlanner(Planner):
     """
 
     @override
-    def __init__(
-        self, logger, label: str, llm_models: dict[str, Any], temperature: float = 0.01
-    ):
+    def __init__(self, logger, label: str, llm_models: dict[str, Any]):
         """Initialise the explore planner node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature
         """
-        super().__init__(
-            logger=logger, label=label, llm_models=llm_models, temperature=temperature
-        )
+        super().__init__(logger=logger, label=label, llm_models=llm_models)
         self.prompt_prefix = "ExplorePlanner"
 
     @override

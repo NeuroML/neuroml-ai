@@ -123,7 +123,6 @@ class KleaCode(BaseLangGraph):
             logger=self.logger,
             label="Checking safety",
             llm_models=self.llm_models,
-            temperature=0.3,
             memory=self.memory,
         )
         self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
@@ -146,7 +145,6 @@ class KleaCode(BaseLangGraph):
             logger=self.logger,
             label="Setting goal",
             llm_models=self.llm_models,
-            temperature=0.01,
             output_schema=GoalSchema,
             memory=False,
         )
@@ -158,7 +156,6 @@ class KleaCode(BaseLangGraph):
             logger=self.logger,
             label="Exploring",
             llm_models=self.llm_models,
-            temperature=0.01,
         )
         self.workflow.add_node(
             self._explore_planner_node.label, self._explore_planner_node.execute
@@ -168,14 +165,12 @@ class KleaCode(BaseLangGraph):
             logger=self.logger,
             label="Planning",
             llm_models=self.llm_models,
-            temperature=0.01,
         )
         self._planner_node.set_tools_description(self.tools_description)
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
-            temperature=0.01,
         )
         self._tools_picker_node.set_tools_description(self.tools_description)
         self._tools_caller_node = ToolsCaller(

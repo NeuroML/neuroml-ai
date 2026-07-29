@@ -31,6 +31,7 @@ class FallbackConfig(BaseModel):
 
 class AnswerGeneral(BaseLLMNode):
     model_type = "chat"
+    model_defaults = {"temperature": 0.3}
     """Answer general (non-domain) questions using the LLM's training data.
 
     Provides a conversational, user-friendly response. Optionally appends
@@ -42,7 +43,6 @@ class AnswerGeneral(BaseLLMNode):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float = 0.3,
         memory: bool = False,
         num_history_messages: int = 10,
         fallback_config: FallbackConfig | None = None,
@@ -52,7 +52,6 @@ class AnswerGeneral(BaseLLMNode):
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature for LLM calls
         :param memory: Whether to include conversation history in the prompt
         :param num_history_messages: Number of recent messages to include when memory is enabled
         :param fallback_config: Optional config for fallback warning text
@@ -61,7 +60,6 @@ class AnswerGeneral(BaseLLMNode):
             logger=logger,
             label=label,
             llm_models=llm_models,
-            temperature=temperature,
             output_schema=None,
             memory=memory,
         )

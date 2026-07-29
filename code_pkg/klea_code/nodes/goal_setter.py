@@ -11,23 +11,22 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, Dict, override
 
+from klea_code.schemas import GoalSchema, KleaCodeState
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
-
-from klea_code.schemas import GoalSchema, KleaCodeState
 
 
 class GoalSetter(BaseLLMNode[GoalSchema]):
     """Goal setter node"""
 
     model_type = "plan"
+    model_defaults = {"temperature": 0.01}
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float,
         output_schema: type[GoalSchema],
         memory: bool = False,
     ):
@@ -36,7 +35,6 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
         """
@@ -44,7 +42,6 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
             logger=logger,
             label=label,
             llm_models=llm_models,
-            temperature=temperature,
             output_schema=output_schema,
             memory=memory,
         )

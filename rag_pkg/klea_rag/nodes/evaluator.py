@@ -23,26 +23,24 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     """Node that evaluates a RAG-generated answer against retrieved context."""
 
     model_type = "chat"
+    model_defaults = {"temperature": 0.0}
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float = 0.0,
     ):
         """Initialise the evaluator node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature
         """
         super().__init__(
             logger=logger,
             label=label,
             llm_models=llm_models,
-            temperature=temperature,
             output_schema=EvaluateAnswerSchema,
             memory=False,
         )

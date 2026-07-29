@@ -157,7 +157,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Checking safety",
             llm_models=self.llm_models,
-            temperature=0.3,
             memory=self.memory,
         )
         self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
@@ -187,7 +186,6 @@ class RAG(BaseLangGraph):
             label="Classifying question",
             llm_models=self.llm_models,
             output_schema=self.QueryDomainSchema,
-            temperature=0.3,
             memory=self.memory,
             domains={
                 d: info.description for d, info in self.app_config.domains.items()
@@ -208,7 +206,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Generating search",
             llm_models=self.llm_models,
-            temperature=0.3,
         )
         self.workflow.add_node(
             self._generate_retrieval_query_node.label,
@@ -218,7 +215,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
-            temperature=0.01,
             domain_tools_description=self.tools_description,
         )
         self.workflow.add_node(
@@ -238,7 +234,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Answering generally",
             llm_models=self.llm_models,
-            temperature=0.3,
             memory=self.memory,
             fallback_config=FallbackConfig(
                 enabled=self.app_config.general.fallback_to_training_data,
@@ -272,7 +267,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Generating answer",
             llm_models=self.llm_models,
-            temperature=0.3,
             memory=False,
         )
         self.workflow.add_node(
@@ -283,7 +277,6 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Evaluating answer",
             llm_models=self.llm_models,
-            temperature=0.0,
         )
         self.workflow.add_node(
             self._evaluate_answer_node.label, self._evaluate_answer_node.execute
@@ -321,7 +314,6 @@ class RAG(BaseLangGraph):
                 logger=self.logger,
                 label="Summarizing history",
                 llm_models=self.llm_models,
-                temperature=0.3,
                 summarisation_threshold=10,
             )
             self.workflow.add_node(

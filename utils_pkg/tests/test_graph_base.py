@@ -77,7 +77,6 @@ class ToyGraph(BaseLangGraph):
             logger=self.logger,
             label="Saying hello",
             llm_models=self.llm_models,
-            temperature=0.3,
             memory=False,
         )
         workflow.add_node(self._answer_node.label, self._answer_node.execute)

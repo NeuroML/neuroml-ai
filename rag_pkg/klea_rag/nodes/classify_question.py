@@ -28,6 +28,7 @@ from klea_rag.schemas import RAGState
 # Type is calculated at runtime in orchestrator
 class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
     model_type = "chat"
+    model_defaults = {"temperature": 0.3}
     """Classify a user query into domain categories.
 
     Uses an LLM to determine which domains the query belongs to, based on
@@ -42,7 +43,6 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         llm_models: dict[str, Any],
         domains: dict[str, str],
         output_schema: type[TSchema],
-        temperature: float = 0.3,
         memory: bool = False,
         pre_prompt: str = "",
     ):
@@ -53,7 +53,6 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param domains: Domain name to description mapping
         :param output_schema: Pydantic schema for classification output
-        :param temperature: Sampling temperature for LLM calls
         :param memory: Whether to include conversation history in the prompt
         :param pre_prompt: Optional pre-prompt text for domain classification
         """
@@ -61,7 +60,6 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
             logger=logger,
             label=label,
             llm_models=llm_models,
-            temperature=temperature,
             output_schema=output_schema,
             memory=memory,
         )

@@ -22,13 +22,13 @@ class ToolsPicker(BaseLLMNode[RAGState]):
     """Node that selects tools to augment vector store retrieval."""
 
     model_type = "chat"
+    model_defaults = {"temperature": 0.01}
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float = 0.01,
         domain_tools_description: dict[str, str] | None = None,
     ):
         """Initialise the tools picker node.
@@ -36,14 +36,12 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature
         :param domain_tools_description: Per-domain tool descriptions
         """
         super().__init__(
             logger=logger,
             label=label,
             llm_models=llm_models,
-            temperature=temperature,
             output_schema=ToolCallsSchema,
             memory=False,
         )
