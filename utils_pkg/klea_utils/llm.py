@@ -402,6 +402,35 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
+def looks_like_structured_output_error(exc: Exception) -> bool:
+    """Heuristic: is this exception caused by structured output rejection?
+
+    Some providers (e.g. certain custom OpenAI-compatible endpoints) do
+    not support the ``response_format`` / ``json_schema`` parameter.
+    Rather than failing hard, we detect this by checking the error for
+    known indicators and fall back to prompt-based structured output.
+
+    Real errors (auth failure, model-not-found, rate limits) are left to
+    propagate — they use different HTTP status codes and error strings
+    not matched by these heuristics.
+    """
+    msg = str(exc).lower()
+
+    # OpenAI-style BadRequestError with structured-output rejection
+    if "400" in msg and "invalid_request_error" in msg:
+        return True
+
+    # Provider explicitly rejects the structured output parameter
+    if any(kw in msg for kw in ("response_format", "json_schema")):
+        return True
+
+    # LangChain's own message when structured output fails
+    if "structured output" in msg:
+        return True
+
+    return False
+
+
 def get_provider_allowed_fields(provider: str) -> set[str]:
     """Return the set of init-param names accepted by a given provider's model class.
 

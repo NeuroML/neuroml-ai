@@ -33,6 +33,7 @@ from ..llm import (
     add_memory_to_prompt,
     get_provider_allowed_fields,
     load_prompt,
+    looks_like_structured_output_error,
     parse_output_with_thought,
 )
 from .abstract import AbstractLLMNode
@@ -138,17 +139,17 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         return convert_to_json_schema(self.output_schema) if self.output_schema else {}
 
     def _configure_llm(self) -> tuple[Runnable, RunnableConfig]:
-        """Configure LLM with structured output and build per-invoke config.
+        """Configure LLM and build per-invoke config.
+
+        Returns the raw ``instance`` (a ``_ConfigurableModel``) without
+        wrapping it  ---  structured output is applied inside ``_invoke_llm``
+        so that providers that reject ``response_format`` can fall back to
+        prompt-based structured output.
 
         :returns: (llm_instance, config_dict) where config_dict is a
             ``RunnableConfig`` with ``configurable`` populated.
         """
         inst = self._llm_entry.instance
-        if self.output_schema:
-            inst = inst.with_structured_output(
-                self.output_schema, method="json_schema", include_raw=True
-            )
-
         config = self._build_invoke_config()
         self.logger.debug(f"{self.model_type = }\n{config = }")
         return inst, config
@@ -192,14 +193,31 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue, config: RunnableConfig
     ) -> AIMessage | dict[str, Any]:
-        """Async invoke LLM  ---  purely invocation.
+        """Async invoke LLM with optional structured output + fallback.
 
-        The per-invoke config dict is built by ``_configure_llm`` and
-        passed through so that the ``_ConfigurableModel`` receives the
-        model, provider, and all overrides needed to create the
-        underlying model instance.
+        Wraps the configurable model with ``with_structured_output``
+        when an output schema exists.  If the provider rejects the
+        ``response_format`` parameter (e.g. some custom OpenAI-compatible
+        endpoints), falls back to a plain invoke  ---  the prompt already
+        contains the JSON schema as text instructions.
         """
-        output = await llm.ainvoke(prompt, config=config)
+        inst = self._llm_entry.instance
+        if self.output_schema:
+            llm_wrapped = inst.with_structured_output(
+                self.output_schema, method="json_schema", include_raw=True
+            )
+            try:
+                output = await llm_wrapped.ainvoke(prompt, config=config)
+            except Exception as exc:
+                if looks_like_structured_output_error(exc):
+                    self.logger.warning(
+                        "Structured output not supported, falling back to prompt-based"
+                    )
+                    output = await inst.ainvoke(prompt, config=config)
+                else:
+                    raise
+        else:
+            output = await inst.ainvoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
 
