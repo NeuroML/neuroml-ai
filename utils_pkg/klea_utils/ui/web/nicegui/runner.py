@@ -649,8 +649,8 @@ def setup_layout(
     # ---- Right drawer (status pane, hidden by default) ----
     with (
         ui.right_drawer(value=True)
-        .props("width=420")
-        .classes("overflow-y-auto overflow-x-hidden bg-grey-1")
+        .props("width=420 bordered")
+        .classes("overflow-y-auto overflow-x-hidden")
     ):
 
         @ui.refreshable
