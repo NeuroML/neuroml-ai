@@ -143,6 +143,8 @@ def setup_layout(
     # Mutable containers so refreshable functions can pick up changes.
     _current_chat_id = [chat_id]
     toggle_icon_ref: list = [None]
+    _is_streaming: list = [False]
+    _inspector_item: list = [None]
 
     _expanded: set[int] = set()
 
@@ -389,15 +391,26 @@ def setup_layout(
     def _show_inspection_dialog() -> None:
         """Open a modal dialog with inspector/debug entries for the active chat."""
         current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
-        if not current_chat:
-            return
-        entries = current_chat.get("inspector_entries", [])
-        if not entries:
-            ui.notify("No inspection data available for this chat")
+        if not current_chat or not current_chat.get("inspector_entries"):
             return
 
+        logger.debug(
+            "Opening inspector dialog for chat %s (entries=%d)",
+            _current_chat_id[0],
+            len(current_chat["inspector_entries"]),
+        )
+
+        entries = list(current_chat["inspector_entries"])
         dialog = ui.dialog()
+        dialog.props("transition-show=none transition-hide=none")
         dialog.classes("w-3/4 max-w-3xl")
+
+        def _close_dialog():
+            logger.debug(
+                "Close button clicked for inspector dialog (chat %s)",
+                _current_chat_id[0],
+            )
+            dialog.close()
 
         with dialog, ui.card().classes("w-full p-4"):
             ui.label("Inspector").classes("text-lg font-bold mb-4")
@@ -434,10 +447,12 @@ def setup_layout(
                                 json.dumps(details, indent=2), language="json"
                             ).classes("text-xs")
             with ui.row().classes("w-full justify-end pt-4"):
-                ui.button("Close", on_click=dialog.close).props(
+                ui.button("Close", on_click=_close_dialog).props(
                     "unelevated color=primary"
                 )
+        logger.debug("Calling dialog.open() for chat %s", _current_chat_id[0])
         dialog.open()
+        logger.debug("dialog.open() returned for chat %s", _current_chat_id[0])
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry for the active chat."""
@@ -616,10 +631,20 @@ def setup_layout(
                 ui.tooltip("Start a new conversation")
             with ui.item_section():
                 ui.label("New Chat")
-        with ui.item(on_click=_show_inspection_dialog).props("dense").classes("w-full"):
+
+        def _on_inspector_click():
+            if not _is_streaming[0]:
+                _show_inspection_dialog()
+
+        _inspector_item[0] = (
+            ui.item(on_click=_on_inspector_click)
+            .props("dense disabled")
+            .classes("w-full")
+        )
+        with _inspector_item[0]:
             with ui.item_section().props("avatar"):
                 ui.icon("info")
-                ui.tooltip("Open inspection dialog")
+                ui.tooltip("Inspector available after query")
             with ui.item_section():
                 ui.label("Inspector")
 
@@ -773,6 +798,7 @@ def setup_layout(
                 """Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI."""
                 current_chat = ensure_chat(user_id, chat_id)
                 logger.debug("Clearing inspector entries for chat %s", chat_id)
+                _is_streaming[0] = True
                 current_chat["inspector_entries"] = []
                 current_chat["inspector_expanded"] = set()
                 current_chat["state_sections"] = {}
@@ -829,6 +855,9 @@ def setup_layout(
                                 )
                             )
                             _render_chat_area()
+                            _is_streaming[0] = False
+                            if _inspector_item[0]:
+                                _inspector_item[0].props(remove="disabled")
                             break
                         elif t == "error":
                             pg_row.delete()
@@ -840,6 +869,9 @@ def setup_layout(
                                 )
                             )
                             _render_chat_area()
+                            _is_streaming[0] = False
+                            if _inspector_item[0]:
+                                _inspector_item[0].props(remove="disabled")
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
@@ -851,6 +883,9 @@ def setup_layout(
                         )
                     )
                     _render_chat_area()
+                    _is_streaming[0] = False
+                    if _inspector_item[0]:
+                        _inspector_item[0].props(remove="disabled")
 
             def send() -> None:
                 """Append the current input text as a user message. Creates a new chat if none is active."""
