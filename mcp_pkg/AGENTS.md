@@ -54,11 +54,18 @@ pytest -m "not localonly"
 ### Package Structure
 ```
 neuroml_mcp/
-├── server/      # FastMCP server
-├── tools/       # Auto-discovered tools
-├── sandbox/     # Sandboxed code execution
-├── utils.py     # Utilities
-└── __init__.py
+├── server/        # FastMCP server
+│   ├── app_lifespan.py
+│   └── main.py
+├── tools/         # Auto-discovered tools
+│   ├── code_tools.py     # Code execution tools
+│   ├── neuroml_tools.py  # NeuroML model tools
+│   ├── web_tools.py      # Web search tools
+│   └── sandbox/           # Sandboxed code execution
+│       ├── docker.py     # Docker sandbox
+│       ├── local.py      # Local subprocess sandbox
+│       └── sandbox.py    # Abstract sandbox base
+└── utils.py
 ```
 
 ### Key Technologies

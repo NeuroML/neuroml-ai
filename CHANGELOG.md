@@ -2,6 +2,45 @@
 
 ## v0.4.0 (wip)
 
+### Configurable model system
+
+- Replaced `setup_llm()` with `create_configurable_model()` using LangChain's
+  `init_chat_model(model=None, configurable_fields="any")` -- model and provider
+  specified per-invoke via config dict, no stale config leakage across switches
+- `LLMModel.build_config` three-layer merge: `role_defaults` -> context overrides
+  -> `node_defaults` (frozen), with model string parsed into LangChain-compatible
+  components
+- Dynamic provider field filtering via `get_provider_allowed_fields()` --
+  introspects provider Pydantic model at runtime, replaces hardcoded
+  `PROVIDER_CONFIG_FIELDS`/`EXCLUDES` dicts
+- `model_defaults` class attribute on all 15+ node subclasses, replacing
+  per-constructor `temperature` param
+- Structured output fallback moved into `_invoke_llm` with try/except for
+  providers that reject `response_format`
+- `mask_sensitive` in plogging -- reusable helper to mask API keys in logs
+- HuggingFace auto-derivation from model string suffix (`local` -> `backend`,
+  remote -> `provider`) survives provider field filtering
+- `LLMModel` moved from `graph/base.py` to `llm.py` alongside `parse_model_name`,
+  `create_configurable_model`, `get_provider_allowed_fields`
+
+### Optional guard node
+
+- When `guard_model` is empty in config, `GuardNode._pre_exec` returns `False`
+  (skip the guard entirely)
+- `guard_decision` default changed from `"unsafe"` to `"safe"` in RAG state/init
+  node so the pipeline proceeds when guard is disabled
+
+### NiceGUI web UI
+
+- New 3-column layout: left drawer (chat list, inspector, new chat), center
+  (messages), right drawer (status pane with per-node progress)
+- Model configuration dialog for runtime model switching
+- Inspector dialog with debug entries (heading, summary, timing, expandable JSON)
+  -- snapshot-based, disabled during streaming, enabled on complete/error
+- Chat bubbles render markdown (`ui.markdown` instead of `ui.html`)
+- Status pane with per-node state sections, collapsible details
+- Auto-generated chat names via `coolname`
+
 ### Streaming infrastructure
 
 - Added `BaseLangGraph.run_graph_astream_events()` — LangGraph v3 protocol

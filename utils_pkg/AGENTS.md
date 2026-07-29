@@ -44,19 +44,60 @@ pytest -v
 ### Package Structure
 ```
 klea_utils/
-├── api.py       # Shared API utilities
-├── errors.py    # Custom exception classes
-├── graph.py     # BaseLangGraph abstract class
-├── llm.py       # LLM utilities
-├── plogging.py   # Logging configuration
-├── nodes.py     # Shared LangGraph nodes
-└── stores.py    # Vector stores management (ChromaDB)
+├── api.py          # Legacy API utilities (validate_url, check_api_is_ready)
+├── api/            # FastAPI app factory and endpoint routers
+│   ├── app.py      # make_app() -- FastAPI factory with lifespan (graph + session store)
+│   ├── chat.py     # /query/stream SSE endpoint for streaming graph execution
+│   ├── health.py   # /health endpoint for readiness probes
+│   ├── messages.py # message history CRUD per chat session
+│   ├── models.py   # per-session runtime model switching endpoints
+│   ├── server.py   # make_serve_app() -- Typer app wrapping uvicorn
+│   ├── sessions_db.py # SQLite session store for chat persistence
+│   ├── sessions.py # chat session CRUD (list, rename, delete)
+│   ├── sse.py      # SSE streaming client (async gen for NiceGUI/TUI, sync for Streamlit)
+│   └── utils.py    # URL validation, API readiness check
+├── cli/            # Shared CLI infrastructure
+│   └── parser.py   # make_parser() -- standard argparse for all frontends
+├── errors.py       # Custom exception classes
+├── graph/          # LangGraph orchestrator base
+│   └── base.py     # BaseLangGraph abstract class (setup, run, compile template)
+├── llm.py          # LLM utilities: configurable models, provider introspection,
+│                   #   model name parsing, three-layer config merge, HuggingFace
+│                   #   auto-derivation, structured output fallback
+├── nodes/          # Shared LangGraph node classes
+│   ├── abstract.py # AbstractLangGraphNode, NodeStreamData (streaming contract)
+│   ├── answer_general.py # General-purpose answer node (no retrieval needed)
+│   ├── base.py     # LangGraphNode, LLMModel, _ConfigurableModel
+│   ├── fixed_answer.py   # Node that returns a fixed/canned response
+│   ├── guard.py    # GuardNode -- content safety check (skippable when model empty)
+│   ├── guard_router.py   # GuardRouterNode -- routes based on guard_decision
+│   └── summarise_memory.py # Memory summarisation node
+│   └── prompts/    # Prompt markdown templates per node
+├── paths.py        # platformdirs wrapper for OS-appropriate cache/data/config dirs
+├── plogging.py     # Logging setup, mask_sensitive (API key masking), logfmt output
+├── stores/         # Vector store management
+│   ├── config.py   # Pydantic models for store configuration
+│   ├── ingestion.py # Document ingestion pipeline (chunking, embedding, storage)
+│   ├── retrieval.py # Retrieval from configured backends
+│   └── utils.py    # Shared store helpers
+├── tools.py        # MCP CallToolResult helpers (textualize content blocks)
+├── ui/             # User interface frontends
+│   ├── tui/        # Textual/TUI chat client (repl.py)
+│   ├── vs_create.py # CLI for vector store creation (klea-vs-create)
+│   └── web/        # Web frontends
+│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config)
+│       └── streamlit/ # Streamlit web UI
 ```
 
 ### Key Technologies
-- LangChain-core for base utilities
-- HuggingFace for embeddings
-- httpx for HTTP requests
+- FastAPI for REST/SSE API layer
+- LangGraph for state machine orchestration
+- LangChain-core for LLM abstractions (init_chat_model, configurable models)
+- NiceGUI for reactive web UI (optional frontend)
+- Streamlit for lightweight web UI (alternative frontend)
+- HuggingFace for embeddings and inference endpoints
+- Chroma / PGVector / Qdrant for vector store backends (URI-style config)
+- httpx for async HTTP and SSE streaming
 - tenacity for retry logic
 
 ## Code Style

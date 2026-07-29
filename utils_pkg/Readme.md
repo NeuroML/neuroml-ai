@@ -3,8 +3,9 @@
 Klea is a suite of AI tools for Neuroscience.
 
 This package provides shared infrastructure used by all other Klea
-packages: LLM setup, vector store management (ingestion and retrieval),
-LangGraph base classes, logging, and CLI tools for vector store
-creation.
+packages: FastAPI app factory (chat, health, sessions, streaming),
+configurable LLM setup with runtime model switching, vector store
+management (Chroma/PGVector/Qdrant), LangGraph base classes, logging
+with sensitive-data masking, and NiceGUI/Streamlit web UIs and TUI.
 
 Documentation: https://neuroklea.org
