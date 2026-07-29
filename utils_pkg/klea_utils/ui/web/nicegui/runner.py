@@ -386,6 +386,70 @@ def setup_layout(
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
+    def _show_inspection_dialog() -> None:
+        """Open a modal dialog with inspector/debug entries for the active chat."""
+        current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+        if not current_chat:
+            return
+        entries = current_chat.get("inspector_entries", [])
+        if not entries:
+            ui.notify("No inspection data available for this chat")
+            return
+
+        dialog = ui.dialog()
+        dialog.classes("w-3/4 max-w-3xl")
+
+        with dialog, ui.card().classes("w-full p-4"):
+            ui.label("Inspector").classes("text-lg font-bold mb-4")
+            for idx, entry in enumerate(entries):
+                heading = entry.get("heading", "")
+                timing = entry.get("timing_seconds", None)
+                with (
+                    ui.element("details")
+                    .props("open")
+                    .classes("inspector-entry mb-2 w-full")
+                ):
+                    with (
+                        ui.element("summary")
+                        .classes("text-xs font-bold cursor-pointer w-full")
+                        .on("click", lambda i=idx: _toggle_inspector_entry(i))
+                    ):
+                        with ui.row().classes("w-full flex-nowrap items-center"):
+                            ui.label(heading)
+                            if timing:
+                                ui.label(f"({timing:.1f}s)").classes(
+                                    "text-xs text-grey-5"
+                                )
+                    ui.label(entry.get("summary", "")).classes(
+                        "text-xs text-grey-6 mb-1 w-full"
+                    )
+                    details = entry.get("details", {})
+                    if details:
+                        with ui.element("details").classes(
+                            "inspector-details text-xs text-grey-5 cursor-pointer w-full"
+                        ):
+                            with ui.element("summary").classes("text-xs w-full"):
+                                ui.label("View details")
+                            ui.code(
+                                json.dumps(details, indent=2), language="json"
+                            ).classes("text-xs")
+            with ui.row().classes("w-full justify-end pt-4"):
+                ui.button("Close", on_click=dialog.close).props(
+                    "unelevated color=primary"
+                )
+        dialog.open()
+
+    def _toggle_inspector_entry(idx: int) -> None:
+        """Toggle the expanded/collapsed state of an inspector entry for the active chat."""
+        current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+        if not current_chat:
+            return
+        expanded = current_chat.setdefault("inspector_expanded", set())
+        if idx in expanded:
+            expanded.discard(idx)
+        else:
+            expanded.add(idx)
+
     def _new_chat():
         """Create a new chat and switch to it."""
         chat_id = coolname.generate_slug(2)
@@ -552,10 +616,10 @@ def setup_layout(
                 ui.tooltip("Start a new conversation")
             with ui.item_section():
                 ui.label("New Chat")
-        with ui.item(on_click=lambda: None).props("dense").classes("w-full"):
+        with ui.item(on_click=_show_inspection_dialog).props("dense").classes("w-full"):
             with ui.item_section().props("avatar"):
                 ui.icon("info")
-                ui.tooltip("Inspection dialog (coming soon)")
+                ui.tooltip("Open inspection dialog")
             with ui.item_section():
                 ui.label("Inspector")
 
@@ -581,17 +645,6 @@ def setup_layout(
                 ui.tooltip("Expand or collapse the sidebar")
             with ui.item_section():
                 ui.label("").classes("text-xs")
-
-    def _toggle_inspector_entry(idx: int) -> None:
-        """Toggle the expanded/collapsed state of an inspector entry for the active chat."""
-        current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
-        if not current_chat:
-            return
-        expanded = current_chat.setdefault("inspector_expanded", set())
-        if idx in expanded:
-            expanded.discard(idx)
-        else:
-            expanded.add(idx)
 
     # ---- Right drawer (status pane, hidden by default) ----
     with (
@@ -697,54 +750,6 @@ def setup_layout(
                             ).classes("text-xs")
 
         _status_pane()
-
-        # --- Debug section (commented out — location TBD) ---
-        # @ui.refreshable
-        # def _debug_panel() -> None:
-        #     """Render debug/info entries (old inspector) — unused pending frontend design."""
-        #     current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
-        #     if not current_chat:
-        #         return
-        #     entries = current_chat.get("inspector_entries", [])
-        #     if not entries:
-        #         return
-        #     ui.separator().classes("my-1")
-        #     ui.label("Debug").classes("text-xs font-bold mb-0")
-        #     for idx, entry in enumerate(entries):
-        #         heading = entry.get("heading", "")
-        #         timing = entry.get("timing_seconds", None)
-        #         expanded = idx in current_chat["inspector_expanded"]
-        #         with (
-        #             ui.element("details")
-        #             .props("open" if expanded else "")
-        #             .classes("inspector-entry mb-2 w-full")
-        #         ):
-        #             with (
-        #                 ui.element("summary")
-        #                 .classes("text-xs font-bold cursor-pointer w-full")
-        #                 .on("click", lambda i=idx: _toggle_inspector_entry(i))
-        #             ):
-        #                 with ui.row().classes("w-full flex-nowrap items-center"):
-        #                     ui.label(heading)
-        #                     if timing:
-        #                         ui.label(f"({timing:.1f}s)").classes(
-        #                             "text-xs text-grey-5"
-        #                         )
-        #             ui.label(entry.get("summary", "")).classes(
-        #                 "text-xs text-grey-6 mb-1 w-full"
-        #             )
-        #             details = entry.get("details", {})
-        #             if details:
-        #                 with ui.element("details").classes(
-        #                     "inspector-details text-xs text-grey-5 cursor-pointer w-full"
-        #                 ):
-        #                     with ui.element("summary").classes("text-xs w-full"):
-        #                         ui.label("View details")
-        #                     ui.code(
-        #                         json.dumps(details, indent=2), language="json"
-        #                     ).classes("text-xs")
-        #
-        # _debug_panel()
 
     # ---- Center: chat messages + input (pinned to bottom) ----
     with (
