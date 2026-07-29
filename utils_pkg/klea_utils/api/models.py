@@ -134,7 +134,10 @@ def create_models_router() -> APIRouter:
         store: SessionStore = request.app.state.chat_sessions
         store.create_chat(user_id, chat_id)
         store.set_override(
-            user_id, chat_id, role, payload.model_dump(exclude_none=True)
+            user_id,
+            chat_id,
+            role,
+            payload.model_dump(exclude={"user_id"}, exclude_none=True),
         )
         logger.debug(
             "set_chat_model_override(%s, %s, role=%s, model=%s)",
