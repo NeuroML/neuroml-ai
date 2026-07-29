@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -27,6 +27,8 @@ class GuardNode(BaseLLMNode):
     and returns a routing decision ("safe" or "unsafe").
 
     Note: to be used with llama-guard, which always returns safe/unsafe.
+
+    To skip, do not set a model.
     """
 
     def __init__(
@@ -52,6 +54,11 @@ class GuardNode(BaseLLMNode):
         )
 
     @override
+    def _pre_exec(self, state: BaseModel) -> bool:
+        """Skip execution if no guard model is configured."""
+        return bool(self._llm_entry.model_name)
+
+    @override
     def _get_prompt_variables(self, state: BaseModel) -> dict:
         """Format prompt with the user's query."""
         return {"query": state.query}  # type: ignore
@@ -61,13 +68,14 @@ class GuardNode(BaseLLMNode):
         return ""
 
     @override
-    def _update_state(self, result: AIMessage, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: AIMessage, state: BaseModel) -> dict[str, Any]:
         """Check result for safety and return routing decision."""
         self.logger.debug(f"{result = }")
 
         content = content_to_str(result.content)
         if "unsafe" in content:
             return {"guard_decision": "unsafe"}
+
         return {"guard_decision": "safe"}
 
     @override

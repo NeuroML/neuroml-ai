@@ -19,7 +19,7 @@ class AppEnv(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="KLEA_RAG_")
 
     chat_model: str = "ollama:qwen2.5-coder:3b"
-    guard_model: str = "ollama:llama-guard3:1b"
+    guard_model: str = ""
     embedding_model: str = "ollama:bge-m3:latest"
     app_config_file: str = "klea_rag.json"
 
