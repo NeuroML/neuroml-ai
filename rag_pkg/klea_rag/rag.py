@@ -72,8 +72,7 @@ class RAG(BaseLangGraph):
         a fixed model for a particular role may assign a concrete instance
         instead of the shared configurable one.
         """
-        from klea_utils.graph.base import LLMModel
-        from klea_utils.llm import parse_model_name
+        from klea_utils.llm import LLMModel, parse_model_name
 
         model = create_configurable_model(logger=self.logger)
         self.llm_models = {

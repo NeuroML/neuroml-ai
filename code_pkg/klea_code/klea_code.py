@@ -59,8 +59,7 @@ class KleaCode(BaseLangGraph):
         ``model_name`` and ``parsed_model`` provide the defaults that
         ``_invoke_llm`` uses when no override is active.
         """
-        from klea_utils.graph.base import LLMModel
-        from klea_utils.llm import parse_model_name
+        from klea_utils.llm import LLMModel, parse_model_name
 
         model = create_configurable_model(logger=self.logger)
 

@@ -12,8 +12,8 @@ import logging
 from typing import List, Type, override
 
 import pytest
-from klea_utils.graph.base import BaseLangGraph, LLMModel
-from klea_utils.llm import create_configurable_model, parse_model_name
+from klea_utils.graph.base import BaseLangGraph
+from klea_utils.llm import LLMModel, create_configurable_model, parse_model_name
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.plogging import setup_logger
