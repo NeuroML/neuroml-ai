@@ -44,8 +44,10 @@ Klea's architecture
 
 At a high level, a query flows through these stages:
 
-1. **Guard** -- the ``llama-guard3`` model checks whether the query
-   is safe and appropriate.  Unsafe queries are declined immediately.
+1. **Guard** (optional) -- a safety model (e.g. ``llama-guard3``)
+   checks whether the query is safe and appropriate.  Unsafe queries
+   are declined immediately.  Set ``KLEA_RAG_GUARD_MODEL`` to an empty
+   value to skip this step entirely.
 
 2. **Classify** -- a chat model classifies the query into one of the
    configured *domains* (e.g. "NeuroML documentation"), or routes it
@@ -102,4 +104,4 @@ right domain automatically.
    * :doc:`../tutorials/create-and-use-rag` -- walk through setting up a
      RAG system end to end
    * :doc:`../cli/klea-rag-serve` -- server CLI reference
-   * :doc:`../cli/klea-rag` -- client CLI reference
+   * :doc:`../cli/klea-rag` -- client CLI reference (CLI, NiceGUI, Streamlit)

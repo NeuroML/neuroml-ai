@@ -37,8 +37,10 @@ The project is organised as a monorepo with four installable packages:
      - MCP server for NeuroML tooling
 
 Each package is built on a shared foundation in ``klea_utils``, which
-provides LLM setup, vector store abstraction, and the
+provides configurable LLM setup (with runtime model switching), vector
+store abstraction (Chroma / PGVector / Qdrant), and the
 :class:`~klea_utils.graph.base.BaseLangGraph` orchestrator framework.
+Web interfaces are available via NiceGUI (primary) and Streamlit.
 
 Prototype Deployments
 ---------------------

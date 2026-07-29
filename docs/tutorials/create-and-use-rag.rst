@@ -197,11 +197,13 @@ For an interactive session:
 
 Type your questions at the prompt.  Use ``quit`` to exit.
 
-For a graphical interface, launch the Streamlit web UI:
+For a graphical interface, launch the NiceGUI web UI:
 
 .. code-block:: bash
 
    klea-rag web
+
+(The Streamlit UI is also available via ``klea-rag web --frontend streamlit``.)
 
 All three methods connect to the running server at ``http://127.0.0.1:8005``
 by default.  Use ``--server`` to point at a different address.

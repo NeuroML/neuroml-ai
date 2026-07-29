@@ -23,6 +23,21 @@ Chat endpoints
    :members:
    :show-inheritance:
 
+.. automodule:: klea_utils.api.messages
+   :members:
+   :show-inheritance:
+
+Session management
+------------------
+
+.. automodule:: klea_utils.api.sessions
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.api.sessions_db
+   :members:
+   :show-inheritance:
+
 Model configuration
 -------------------
 
