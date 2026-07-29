@@ -13,7 +13,7 @@ from typing import final, override
 
 from fastmcp.mcp_config import MCPConfig
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral, FallbackConfig
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
@@ -64,18 +64,26 @@ class RAG(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
-        """Set up the LLM chat model"""
+        """Set up the LLM chat model
+
+        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
+        ``model_name`` and ``parsed_model`` provide the defaults that
+        ``_invoke_llm`` uses when no override is active.  Developers who need
+        a fixed model for a particular role may assign a concrete instance
+        instead of the shared configurable one.
+        """
         from klea_utils.graph.base import LLMModel
         from klea_utils.llm import parse_model_name
 
+        model = create_configurable_model(logger=self.logger)
         self.llm_models = {
             "chat": LLMModel(
-                instance=setup_llm(self.app_env.chat_model, logger=self.logger),
+                instance=model,
                 model_name=self.app_env.chat_model,
                 parsed_model=parse_model_name(self.app_env.chat_model),
             ),
             "guard": LLMModel(
-                instance=setup_llm(self.app_env.guard_model, logger=self.logger),
+                instance=model,
                 model_name=self.app_env.guard_model,
                 parsed_model=parse_model_name(self.app_env.guard_model),
                 modifiable=False,

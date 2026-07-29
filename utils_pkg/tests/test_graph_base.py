@@ -12,14 +12,13 @@ import logging
 from typing import List, Type, override
 
 import pytest
-from langchain_core.messages import AnyMessage
-from pydantic import BaseModel, Field
-
 from klea_utils.graph.base import BaseLangGraph, LLMModel
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model, parse_model_name
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.plogging import setup_logger
+from langchain_core.messages import AnyMessage
+from pydantic import BaseModel, Field
 
 
 class ToyState(BaseModel):
@@ -59,9 +58,12 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
+        model = create_configurable_model(logger=self.logger)
         self.llm_models = {
             "chat": LLMModel(
-                instance=setup_llm("ollama:qwen3:0.6b", logger=self.logger)
+                instance=model,
+                model_name="ollama:qwen3:0.6b",
+                parsed_model=parse_model_name("ollama:qwen3:0.6b"),
             ),
         }
 

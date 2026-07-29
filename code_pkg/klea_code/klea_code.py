@@ -14,7 +14,7 @@ from typing import Any, final, override
 
 from fastmcp.mcp_config import MCPConfig, StdioMCPServer
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
@@ -53,33 +53,30 @@ class KleaCode(BaseLangGraph):
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
     def _setup_models(self) -> None:
-        """Set up the LLM chat model"""
-        from klea_utils.graph.base import LLMModel
+        """Set up the LLM chat model
 
-        chat = setup_llm(self.app_env.chat_model, logger=self.logger)
-        if self.app_env.chat_model == self.app_env.reasoning_model:
-            plan = chat
-            self.logger.info(
-                f"Same model used for both chat and reasoning: {self.app_env.chat_model}"
-            )
-        else:
-            plan = setup_llm(self.app_env.reasoning_model, self.logger)
-        guard = setup_llm(self.app_env.guard_model, logger=self.logger)
+        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
+        ``model_name`` and ``parsed_model`` provide the defaults that
+        ``_invoke_llm`` uses when no override is active.
+        """
+        from klea_utils.graph.base import LLMModel
         from klea_utils.llm import parse_model_name
+
+        model = create_configurable_model(logger=self.logger)
 
         self.llm_models = {
             "chat": LLMModel(
-                instance=chat,
+                instance=model,
                 model_name=self.app_env.chat_model,
                 parsed_model=parse_model_name(self.app_env.chat_model),
             ),
             "plan": LLMModel(
-                instance=plan,
+                instance=model,
                 model_name=self.app_env.reasoning_model,
                 parsed_model=parse_model_name(self.app_env.reasoning_model),
             ),
             "guard": LLMModel(
-                instance=guard,
+                instance=model,
                 model_name=self.app_env.guard_model,
                 parsed_model=parse_model_name(self.app_env.guard_model),
             ),

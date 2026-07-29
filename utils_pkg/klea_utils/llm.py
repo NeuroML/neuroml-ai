@@ -429,84 +429,29 @@ _COMMON_CONFIG_FIELDS: tuple[str, ...] = tuple(
 )
 
 
-def setup_llm(model_name_full: str, logger: logging.Logger):
-    """Set up a chat model"""
-    # Lazy: init_chat_model and huggingface classes pull in provider
-    # packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)
+def create_configurable_model(logger: logging.Logger):
+    """Set up a configurable chat model.
+
+    Creates a ``_ConfigurableModel`` with no default model.  Model,
+    provider, and all other parameters (``base_url``, ``api_key``,
+    ``temperature``, etc.) are specified per-invoke via the
+    ``config["configurable"]`` dict passed to ``ainvoke()``.
+
+    This enables runtime model switching  ---  each ``ainvoke()`` call
+    creates a fresh underlying model instance for the given provider,
+    so there is no stale configuration leakage between calls.
+
+    The lookup function ``check_model_works`` is deliberately **not**
+    called here  ---  we prefer a "leap before you look" approach so that
+    startup is fast and model availability is checked only at query time.
+    """
     from langchain.chat_models import init_chat_model
 
-    parsed = parse_model_name(model_name_full)
-
-    # fall back to openai for custom end points, assuming they are openai compatible
-    if parsed.provider == "custom":
-        logger.debug(
-            "Using openai-compatible model %s at custom endpoint %s",
-            parsed.model_name,
-            parsed.suffix,
-        )
-        model_var = init_chat_model(
-            parsed.model_name,
-            model_provider="openai",
-            configurable_fields=_COMMON_CONFIG_FIELDS,
-            base_url=parsed.suffix,
-        )
-    elif parsed.provider == "huggingface":
-        # "local" suffix -> pipeline backend (model loaded locally).
-        # Any other suffix is treated as an inference provider hint.
-        # The HF_TOKEN env var is read automatically in all cases.
-        if parsed.suffix == "local":
-            logger.debug(
-                "Using huggingface local pipeline model: %s",
-                parsed.model_name,
-            )
-            model_var = init_chat_model(
-                parsed.model_name,
-                model_provider="huggingface",
-                configurable_fields=_COMMON_CONFIG_FIELDS,
-                backend="pipeline",
-                task="text-generation",
-            )
-        else:
-            logger.debug(
-                "Using huggingface endpoint model: %s (provider: %s)",
-                parsed.model_name,
-                parsed.suffix or "auto",
-            )
-            model_var = init_chat_model(
-                parsed.model_name,
-                model_provider="huggingface",
-                configurable_fields=_COMMON_CONFIG_FIELDS,
-                backend="endpoint",
-                provider=parsed.suffix or "auto",
-                max_new_tokens=32768,
-                do_sample=False,
-                repetition_penalty=1.03,
-            )
-    else:
-        logger.debug("Using model: %s", model_name_full)
-        if parsed.provider == "ollama":
-            check_ollama_model(logger, parsed.model_name)
-
-        model_var = init_chat_model(
-            model_name_full,
-            configurable_fields=_COMMON_CONFIG_FIELDS,
-        )
-
-    state, msg = check_model_works(model_var, timeout=60)
-    if not state:
-        # handle special case where some models do not support "cheapest" on HF
-        if (
-            parsed.provider == "huggingface"
-            and "Provider 'cheapest' not supported" in msg
-        ):
-            logger.error(f"Model does not work: {state}, {msg}")
-            logger.debug("Replacing 'cheapest' with 'auto' and retrying")
-            return setup_llm(model_name_full.replace(":cheapest", ":auto"), logger)
-
-        logger.error(f"Model does not work: {state}, {msg}")
-        assert state
-
-    logger.info(f"Using chat model: {model_name_full}")
+    model_var = init_chat_model(
+        model=None,
+        configurable_fields="any",
+    )
+    logger.info("Configurable chat model created (provider/model set per invoke)")
 
     return model_var
 
