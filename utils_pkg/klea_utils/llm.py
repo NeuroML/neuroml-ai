@@ -411,7 +411,7 @@ def looks_like_structured_output_error(exc: Exception) -> bool:
     known indicators and fall back to prompt-based structured output.
 
     Real errors (auth failure, model-not-found, rate limits) are left to
-    propagate — they use different HTTP status codes and error strings
+    propagate  ---  they use different HTTP status codes and error strings
     not matched by these heuristics.
     """
     msg = str(exc).lower()
@@ -429,6 +429,16 @@ def looks_like_structured_output_error(exc: Exception) -> bool:
         return True
 
     return False
+
+
+# Extra fields accepted by provider model constructors that are not part
+# of the Pydantic model class (e.g. kwargs passed to a factory method).
+_PROVIDER_EXTRA_FIELDS: dict[str, set[str]] = {
+    # ChatHuggingFace.from_model_id() accepts backend, provider, etc.
+    # which flow through to HuggingFaceEndpoint but are not fields on
+    # ChatHuggingFace itself.
+    "huggingface": {"backend", "provider"},
+}
 
 
 def get_provider_allowed_fields(provider: str) -> set[str]:
@@ -465,7 +475,7 @@ def get_provider_allowed_fields(provider: str) -> set[str]:
         fields.add(name)
         if field.alias:
             fields.add(field.alias)
-    return fields
+    return fields | _PROVIDER_EXTRA_FIELDS.get(provider, set())
 
 
 def create_configurable_model(logger: logging.Logger):
@@ -588,7 +598,7 @@ class LLMModel(BaseModel):
         # Klea stores full provider-prefixed model strings internally (e.g.
         # "custom:gpt-4o:https://endpoint/v1"), but the _ConfigurableModel
         # expects the bare model name plus separate model_provider and base_url.
-        # parse_model_name is defined in this module — no lazy import needed.
+        # parse_model_name is defined in this module  ---  no lazy import needed.
         parsed = parse_model_name(overrides["model"])
         overrides["model"] = parsed.model_name
         if parsed.provider == "custom":
@@ -598,6 +608,20 @@ class LLMModel(BaseModel):
         if parsed.suffix:
             overrides["base_url"] = parsed.suffix
         logger.debug(f"After model string parse:\n{mask_sensitive(overrides) = }")
+
+        # Inject HuggingFace from_model_id kwargs derived from the model
+        # string suffix.  These are not fields on ChatHuggingFace itself
+        # (they flow through to HuggingFaceEndpoint) so they'd be filtered
+        # out later  ---  we set them here so they survive provider filtering.
+        if overrides.get("model_provider") == "huggingface" and parsed.suffix:
+            if parsed.suffix == "local":
+                overrides.setdefault("backend", "pipeline")
+            else:
+                overrides.setdefault("backend", "endpoint")
+                overrides.setdefault("provider", parsed.suffix)
+            logger.debug(
+                f"HuggingFace kwargs injected:\n{mask_sensitive(overrides) = }"
+            )
 
         # Map generic "api_key" to provider-specific token field names so a
         # single user-facing field works across all providers.
