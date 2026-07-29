@@ -15,7 +15,6 @@ import os
 import sys
 import time
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, Literal, cast, final
@@ -29,11 +28,14 @@ from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
 from platformdirs import PlatformDirs
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, create_model
 
 from klea_utils.paths import init_dir
+from klea_utils.plogging import setup_logger
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+
+_log = setup_logger(__name__)
 
 # Per-request context variable carrying per-session model overrides (api_key,
 # model, provider, etc.).  Set by the API layer before graph.ainvoke() and
@@ -45,16 +47,26 @@ model_overrides_ctx: contextvars.ContextVar[dict[str, Any]] = contextvars.Contex
 
 
 class LLMModel(BaseModel):
-    """Container for a single LLM model instance and its runtime config template.
+    """Container for a single LLM model instance and its runtime configuration.
 
     ``instance`` holds the model object (typically a ``_ConfigurableModel``
-    returned by ``init_chat_model``).  ``config_template`` stores the default
-    ``configurable`` fields that will be merged into every ``invoke()`` call
-    (e.g. temperature).  Nodes may override specific fields per-call.
+    returned by ``init_chat_model``).  ``role_defaults`` stores role-wide
+    default parameters (e.g. ``max_tokens``, ``temperature``) that apply to
+    every node sharing this role, unless overridden by node or user config.
 
-    Use ``build_config()`` to produce a per-invocation config dict:
-    ``build_config({"temperature": 0.5})`` returns a copy of the template
-    with temperature overridden.
+    ``build_config()`` performs a four-layer merge:
+
+    **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.
+    ``{"max_tokens": 4096}``).
+
+    **Layer 1**  ---  ``model_name``: the default model identifier from
+    the graph config.
+
+    **Layer 2**  ---  ``context_overrides``: per-request fields from the API
+    (``model``, ``api_key``, etc.).  Only applied when ``modifiable=True``,
+    and skipping any keys frozen by node defaults.
+
+    **Layer 3**  ---  ``node_defaults``: frozen per-node defaults (always win).
 
     ``modifiable`` controls whether the model can be changed at runtime
     (both the API and web UI reject modifications to locked roles).
@@ -65,16 +77,89 @@ class LLMModel(BaseModel):
     model_name: str = ""
     parsed_model: Any = None
     instance: Any
-    config_template: dict[str, Any] = Field(
-        default_factory=lambda: {"configurable": {}}
-    )
+    role_defaults: dict[str, Any] = {}
     modifiable: bool = True
 
-    def build_config(self, overrides: dict[str, Any] | None = None) -> RunnableConfig:
-        config = deepcopy(self.config_template)
-        if overrides:
-            config.setdefault("configurable", {}).update(overrides)
-        return cast(RunnableConfig, config)
+    def build_config(
+        self,
+        context_overrides: dict[str, Any] | None = None,
+        node_defaults: dict[str, Any] | None = None,
+    ) -> RunnableConfig:
+        """Merge up to four layers of model configuration into a ``RunnableConfig``.
+
+        Layer order (lowest -> highest priority):
+
+        0. ``self.role_defaults``   ---   role-wide parameters
+        1. ``self.model_name``      ---   role model from graph config
+        2. ``context_overrides``    ---   per-request user overrides
+        3. ``node_defaults``        ---   frozen per-node defaults
+
+        :param context_overrides: Per-request fields from the API
+            (e.g. ``model``, ``api_key``).  Only applied when
+            ``self.modifiable is True``, and skipping any keys
+            present in ``node_defaults``.
+        :param node_defaults: Frozen per-node defaults (e.g.
+            ``{"temperature": 0.3}``).  Always win.
+        :returns: A ``RunnableConfig`` with the ``configurable`` key
+            populated.
+        """
+        _log.debug(
+            f"{self.modifiable = }\n"
+            f"{self.role_defaults = }\n"
+            f"{self.model_name = }\n"
+            f"{context_overrides = }\n"
+            f"{node_defaults = }"
+        )
+
+        # Layer 0: role-wide defaults from graph config
+        overrides: dict[str, Any] = dict(self.role_defaults)
+        _log.debug(f"Layer 0 (role defaults):\n{overrides = }")
+
+        # Layer 1: role model identifier
+        overrides["model"] = self.model_name
+        _log.debug(f"Layer 1 (model):\n{overrides = }")
+
+        # Layer 2: context overrides (only if modifiable).
+        # Skip any keys the node has frozen in model_defaults.
+        if self.modifiable and context_overrides:
+            for k, v in context_overrides.items():
+                if node_defaults and k in node_defaults:
+                    _log.debug(
+                        f"Skipping context override '{k}' (frozen by node defaults)"
+                    )
+                    continue
+                overrides[k] = v
+            _log.debug(f"Layer 2 (context):\n{overrides = }")
+
+        # Layer 3: node defaults  ---  always win
+        if node_defaults:
+            overrides.update(node_defaults)
+            _log.debug(f"Layer 3 (node defaults):\n{overrides = }")
+
+        # Parse the final model string into LangChain-compatible components.
+        # Klea stores full provider-prefixed model strings internally (e.g.
+        # "custom:gpt-4o:https://endpoint/v1"), but the _ConfigurableModel
+        # expects the bare model name plus separate model_provider and base_url.
+        from klea_utils.llm import parse_model_name
+
+        parsed = parse_model_name(overrides["model"])
+        overrides["model"] = parsed.model_name
+        if parsed.provider == "custom":
+            overrides["model_provider"] = "openai"
+        elif parsed.provider:
+            overrides["model_provider"] = parsed.provider
+        if parsed.suffix:
+            overrides["base_url"] = parsed.suffix
+        _log.debug(f"After model string parse:\n{overrides = }")
+
+        # Map generic "api_key" to provider-specific token field names so a
+        # single user-facing field works across all providers.
+        if "api_key" in overrides:
+            overrides.setdefault("huggingfacehub_api_token", overrides["api_key"])
+            _log.debug(f"After api_key mapping:\n{overrides = }")
+
+        # Wrap in the "configurable" key expected by _ConfigurableModel.
+        return cast(RunnableConfig, {"configurable": overrides})
 
 
 class _CustomChannelEnabler(StreamTransformer):
