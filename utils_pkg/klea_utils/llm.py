@@ -24,7 +24,7 @@ from langchain_core.prompt_values import PromptValue
 from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
-from .plogging import setup_logger
+from .plogging import mask_sensitive, setup_logger
 
 logger = setup_logger(__name__)
 
@@ -526,17 +526,17 @@ class LLMModel(BaseModel):
             f"{self.modifiable = }\n"
             f"{self.role_defaults = }\n"
             f"{self.model_name = }\n"
-            f"{context_overrides = }\n"
+            f"{mask_sensitive(context_overrides or {}) = }\n"
             f"{node_defaults = }"
         )
 
         # Layer 0: role-wide defaults from graph config
         overrides: dict[str, Any] = dict(self.role_defaults)
-        logger.debug(f"Layer 0 (role defaults):\n{overrides = }")
+        logger.debug(f"Layer 0 (role defaults):\n{mask_sensitive(overrides) = }")
 
         # Layer 1: role model identifier
         overrides["model"] = self.model_name
-        logger.debug(f"Layer 1 (model):\n{overrides = }")
+        logger.debug(f"Layer 1 (model):\n{mask_sensitive(overrides) = }")
 
         # Layer 2: context overrides (only if modifiable).
         # Skip any keys the node has frozen in model_defaults.
@@ -548,12 +548,12 @@ class LLMModel(BaseModel):
                     )
                     continue
                 overrides[k] = v
-            logger.debug(f"Layer 2 (context):\n{overrides = }")
+            logger.debug(f"Layer 2 (context):\n{mask_sensitive(overrides) = }")
 
         # Layer 3: node defaults  ---  always win
         if node_defaults:
             overrides.update(node_defaults)
-            logger.debug(f"Layer 3 (node defaults):\n{overrides = }")
+            logger.debug(f"Layer 3 (node defaults):\n{mask_sensitive(overrides) = }")
 
         # Parse the final model string into LangChain-compatible components.
         # Klea stores full provider-prefixed model strings internally (e.g.
@@ -568,13 +568,13 @@ class LLMModel(BaseModel):
             overrides["model_provider"] = parsed.provider
         if parsed.suffix:
             overrides["base_url"] = parsed.suffix
-        logger.debug(f"After model string parse:\n{overrides = }")
+        logger.debug(f"After model string parse:\n{mask_sensitive(overrides) = }")
 
         # Map generic "api_key" to provider-specific token field names so a
         # single user-facing field works across all providers.
         if "api_key" in overrides:
             overrides.setdefault("huggingfacehub_api_token", overrides["api_key"])
-            logger.debug(f"After api_key mapping:\n{overrides = }")
+            logger.debug(f"After api_key mapping:\n{mask_sensitive(overrides) = }")
 
         # Wrap in the "configurable" key expected by _ConfigurableModel.
         return cast(RunnableConfig, {"configurable": overrides})

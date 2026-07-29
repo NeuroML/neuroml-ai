@@ -26,6 +26,7 @@ from langchain_core.utils.function_calling import convert_to_json_schema
 from pydantic import BaseModel
 
 from klea_utils.graph.base import model_overrides_ctx
+from klea_utils.plogging import mask_sensitive
 
 from ..errors import PromptTemplateError
 from ..llm import (
@@ -162,9 +163,9 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """
         role_overrides = model_overrides_ctx.get().get(self.model_type, {})
         self.logger.debug(
-            f"{model_overrides_ctx.get() = }\n"
+            f"{mask_sensitive(model_overrides_ctx.get()) = }\n"
             f"{self.model_type = }\n"
-            f"{role_overrides = }\n"
+            f"{mask_sensitive(role_overrides) = }\n"
             f"{self.model_defaults = }"
         )
 
@@ -183,7 +184,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         allowed = provider_allowed | {"model", "model_provider"}
         overrides = {k: v for k, v in overrides.items() if k in allowed}
         self.logger.debug(
-            f"After provider field filtering ({active_provider = }):\n{overrides = }"
+            f"After provider field filtering ({active_provider = }):\n{mask_sensitive(overrides) = }"
         )
 
         return cast(RunnableConfig, {"configurable": overrides})

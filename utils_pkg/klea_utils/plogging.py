@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 import sys
+from typing import Any
 
 
 class LoggerNotInfoFilter(logging.Filter):
@@ -68,3 +69,25 @@ def setup_logger(name: str, stderr_level: int = logging.DEBUG) -> logging.Logger
     logger.addHandler(stderr_handler)
 
     return logger
+
+
+def mask_sensitive(
+    data: dict[str, Any],
+    sensitive_keys: set[str] | None = None,
+) -> dict[str, Any]:
+    """Return a copy with sensitive values masked for logging.
+
+    Shows only the last 4 characters of each value to prevent secrets
+    (API keys, tokens) from appearing in plaintext in log output.
+
+    :param data: The dict to sanitize.
+    :param sensitive_keys: Keys whose values should be masked.
+        Defaults to ``{"api_key"}``.
+    :returns: New dict with masked values.
+    """
+    safe = dict(data)
+    for key in sensitive_keys or {"api_key"}:
+        if key in safe and safe[key]:
+            val = str(safe[key])
+            safe[key] = f"...{val[-4:]}"
+    return safe
