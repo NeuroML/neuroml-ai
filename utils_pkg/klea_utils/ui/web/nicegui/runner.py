@@ -12,6 +12,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import re
 import uuid
 from datetime import datetime
 
@@ -130,7 +131,26 @@ def setup_layout(
         ".status-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
     )
     ui.add_css(
-        ".status-entry .md-div { overflow: hidden !important; height: auto !important; }"
+        ".status-entry .nicegui-markdown { overflow: hidden !important; height: auto !important; }"
+    )
+    # Keep heading sizes in status pane small so they don't compete with
+    # the section summary label.  Nodes can use # freely without worrying
+    # about hierarchy.
+    ui.add_css(
+        ".status-entry .nicegui-markdown h1, .status-entry .nicegui-markdown h2, "
+        ".status-entry .nicegui-markdown h3, .status-entry .nicegui-markdown h4, "
+        ".status-entry .nicegui-markdown h5, .status-entry .nicegui-markdown h6 { "
+        "font-size: 0.7rem !important; "
+        "font-weight: 600; "
+        "margin: 0.15rem 0; "
+        "line-height: 1.2; }"
+    )
+    # Reduce default padding on lists in the status pane (40px is too wide
+    # at text-xs scale).
+    ui.add_css(
+        ".status-entry .nicegui-markdown ul, "
+        ".status-entry .nicegui-markdown ol { "
+        "padding-inline-start: 1rem; }"
     )
 
     # --- Persistent dark mode ---
@@ -147,6 +167,17 @@ def setup_layout(
     _inspector_item: list = [None]
 
     _expanded: set[int] = set()
+
+    # ------------------------------------------------------------------
+    # Linkify helper — convert bare URLs in markdown source to
+    # clickable [url](url) so markdown2 renders them as <a> tags.
+    # The negative lookbehind avoids re-wrapping URLs already inside
+    # markdown link syntax, e.g. [text](url).
+    # ------------------------------------------------------------------
+    _BARE_URL_RE = re.compile(r"(?<!\()(https?://[^\s<)]+)")
+
+    def _linkify_md(text: str) -> str:
+        return _BARE_URL_RE.sub(r"[\1](\1)", text)
 
     def _render_chat_area() -> None:
         """Rebuild the scroll-area content (welcome or messages).
@@ -180,7 +211,7 @@ def setup_layout(
                 for idx, (text, stamp, is_user) in enumerate(msgs):
                     collapsed = idx not in _expanded
                     ChatBubble(
-                        text=text,
+                        text=_linkify_md(text),
                         stamp=stamp,
                         is_user=is_user,
                         collapsed=collapsed,
@@ -756,7 +787,7 @@ def setup_layout(
                         ui.label(section.get("heading", node_label))
                     display = section.get("display", "")
                     if display:
-                        ui.markdown(display).classes("text-xs w-full")
+                        ui.markdown(_linkify_md(display)).classes("text-xs w-full")
                     summary = section.get("summary", "")
                     if summary and not display:
                         ui.label(summary).classes("text-xs text-grey-6 mb-1 w-full")
