@@ -16,12 +16,12 @@ import logging
 from functools import cached_property
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, cast
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.utils.function_calling import convert_to_json_schema
 from pydantic import BaseModel
 
@@ -29,12 +29,9 @@ from klea_utils.graph.base import model_overrides_ctx
 
 from ..errors import PromptTemplateError
 from ..llm import (
-    PROVIDER_CONFIG_FIELDS,
-    PROVIDER_CONFIG_FIELDS_DEFAULTS,
-    PROVIDER_CONFIG_FIELDS_EXCLUDES,
     add_memory_to_prompt,
+    get_provider_allowed_fields,
     load_prompt,
-    parse_model_name,
     parse_output_with_thought,
 )
 from .abstract import AbstractLLMNode
@@ -61,7 +58,6 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        temperature: float,
         output_schema: Type[TSchema] | None,
         memory: bool = False,
         num_history_messages: int = 10,
@@ -71,14 +67,11 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param temperature: Sampling temperature for LLM calls
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
         :param num_history_messages: Number of recent messages to include
         """
-        super().__init__(
-            logger, label, llm_models, temperature, output_schema=output_schema
-        )
+        super().__init__(logger, label, llm_models, output_schema=output_schema)
 
         self._prompt_prefix: str | None = None
         self._prompt_registry_location: Path | None = None
@@ -143,72 +136,68 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """Return JSON schema string for use in prompts."""
         return convert_to_json_schema(self.output_schema) if self.output_schema else {}
 
-    def _configure_llm(self) -> Runnable:
-        """Configure LLM with structured output"""
+    def _configure_llm(self) -> tuple[Runnable, RunnableConfig]:
+        """Configure LLM with structured output and build per-invoke config.
+
+        :returns: (llm_instance, config_dict) where config_dict is a
+            ``RunnableConfig`` with ``configurable`` populated.
+        """
         inst = self._llm_entry.instance
-        if self.output_schema and getattr(inst, "_supports_structured_output", True):
-            return inst.with_structured_output(
+        if self.output_schema:
+            inst = inst.with_structured_output(
                 self.output_schema, method="json_schema", include_raw=True
             )
-        return inst
 
-    async def _invoke_llm(
-        self, llm: Runnable, prompt: PromptValue
-    ) -> AIMessage | dict[str, Any]:
-        """Async invoke LLM  ---  uses ``ainvoke`` so the event loop can
-        process streaming callbacks during the LLM call."""
-        overrides: dict[str, Any] = {"temperature": self.temperature}
+        config = self._build_invoke_config()
+        self.logger.debug(f"{self.model_type = }\n{config = }")
+        return inst, config
+
+    def _build_invoke_config(self) -> RunnableConfig:
+        """Build the per-invoke RunnableConfig.
+
+        Delegates the full merge (role defaults -> context overrides ->
+        node defaults, including model-string parsing) to
+        ``LLMModel.build_config()``, then applies provider field
+        filtering to strip fields invalid for the resolved provider.
+        """
         role_overrides = model_overrides_ctx.get().get(self.model_type, {})
         self.logger.debug(
-            f"{model_overrides_ctx.get() = }\n{self.model_type = }\n{role_overrides = }"
-        )
-        if "model" in role_overrides:
-            parsed = parse_model_name(role_overrides["model"])
-            if parsed:
-                role_overrides["model"] = parsed.model_name
-                if parsed.provider:
-                    role_overrides["model_provider"] = parsed.provider
-                if parsed.suffix:
-                    role_overrides["base_url"] = parsed.suffix
-        overrides.update(role_overrides)
-
-        # Map generic api_key to provider-specific token field names so
-        # that a single user-facing field works for all providers.
-        if "api_key" in overrides:
-            overrides.setdefault("huggingfacehub_api_token", overrides["api_key"])
-
-        # Resolve the active provider (default from model_name + any override)
-        default_provider = (
-            self._llm_entry.parsed_model.provider
-            if self._llm_entry.parsed_model
-            else None
-        )
-        active_provider = (
-            overrides.get("model_provider") or default_provider or "openai"
+            f"{model_overrides_ctx.get() = }\n"
+            f"{self.model_type = }\n"
+            f"{role_overrides = }\n"
+            f"{self.model_defaults = }"
         )
 
-        # Strip fields not relevant to the active provider so they don't
-        # leak into the concrete model constructor.
-        allowed = PROVIDER_CONFIG_FIELDS["all"] | PROVIDER_CONFIG_FIELDS.get(
-            active_provider, set()
+        # Delegate merge + model parsing to LLMModel.
+        config = self._llm_entry.build_config(
+            context_overrides=role_overrides,
+            node_defaults=self.model_defaults,
         )
-        self.logger.debug(f"{allowed = }")
+
+        # Get the merged configurable dict for provider field filtering.
+        overrides: dict[str, Any] = config["configurable"]
+
+        # --- Provider field filtering ---
+        active_provider = overrides.get("model_provider") or "openai"
+        provider_allowed = get_provider_allowed_fields(active_provider)
+        allowed = provider_allowed | {"model", "model_provider"}
         overrides = {k: v for k, v in overrides.items() if k in allowed}
-        self.logger.debug(f"{overrides = }")
+        self.logger.debug(
+            f"After provider field filtering ({active_provider = }):\n{overrides = }"
+        )
 
-        excluded = PROVIDER_CONFIG_FIELDS_EXCLUDES.get(active_provider, set())
-        self.logger.debug(f"{excluded = }")
+        return cast(RunnableConfig, {"configurable": overrides})
 
-        for k in excluded:
-            if k in overrides:
-                overrides[k] = None
+    async def _invoke_llm(
+        self, llm: Runnable, prompt: PromptValue, config: RunnableConfig
+    ) -> AIMessage | dict[str, Any]:
+        """Async invoke LLM  ---  purely invocation.
 
-        self.logger.debug(f"{overrides = }")
-        # defaults = PROVIDER_CONFIG_FIELDS_DEFAULTS.get(active_provider, {})
-        # overrides.update(defaults)
-
-        config = self._llm_entry.build_config(overrides)
-        self.logger.debug(f"{self.model_type = }\n{overrides = }\n{config = }")
+        The per-invoke config dict is built by ``_configure_llm`` and
+        passed through so that the ``_ConfigurableModel`` receives the
+        model, provider, and all overrides needed to create the
+        underlying model instance.
+        """
         output = await llm.ainvoke(prompt, config=config)
         self.logger.debug(f"{output = }")
         return output
