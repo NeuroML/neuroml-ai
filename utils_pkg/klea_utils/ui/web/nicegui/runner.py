@@ -402,8 +402,6 @@ def setup_layout(
 
         entries = list(current_chat["inspector_entries"])
         dialog = ui.dialog()
-        dialog.props("transition-show=none transition-hide=none")
-        dialog.classes("w-3/4 max-w-3xl")
 
         def _close_dialog():
             logger.debug(
