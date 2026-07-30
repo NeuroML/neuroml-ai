@@ -131,7 +131,7 @@ def setup_layout(
         ".status-details code { white-space: pre-wrap !important; word-break: break-all !important; }"
     )
     ui.add_css(
-        ".status-entry .nicegui-markdown { overflow: hidden !important; height: auto !important; }"
+        ".status-entry .nicegui-markdown { overflow: hidden !important; height: auto !important; overflow-wrap: break-word !important; word-break: break-word !important; }"
     )
     # Keep heading sizes in status pane small so they don't compete with
     # the section summary label.  Nodes can use # freely without worrying
