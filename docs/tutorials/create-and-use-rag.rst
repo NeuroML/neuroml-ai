@@ -128,8 +128,8 @@ vector store to a domain:
 
    {
        "general": {
-           "default_k": 3,
-           "k_max": 5,
+        "default_k": 5,
+        "k_max": 10,
            "non_domain_chat": true,
            "fallback_to_training_data": true
        },
@@ -232,7 +232,7 @@ Once the basic pipeline works, here are natural next steps:
 **MCP tools**
    Add ``mcp_servers`` to a domain config to give the LLM access to
    external tools (e.g. a NeuroML validation server).  See the example
-   in ``rag_pkg/klea_rag.json``.
+   in ``rag_pkg/example-configs/klea_rag.json``.
 
 **Separate chunk-and-store workflow**
    Use ``klea-vs-create chunk`` to convert and cache without writing

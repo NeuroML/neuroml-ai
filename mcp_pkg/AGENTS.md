@@ -91,7 +91,7 @@ neuroml_mcp/
 
 ### File Organization
 - **Header**: All Python files must start with `#!/usr/bin/env python3` shebang
-- **Copyright**: Follow with copyright format: `# Copyright 2025 Ankur Sinha <ankursinha@fedoraproject.org>`
+- **Copyright**: Follow with copyright format: `# Copyright 2026 Ankur Sinha <ankursinha@fedoraproject.org>`
 - **Docstrings**: Use reStructuredText format with parameter and return type documentation
 - **Module structure**: `__init__.py` files should be minimal or empty
 

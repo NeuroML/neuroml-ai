@@ -96,10 +96,11 @@ Usage::
 
    pip install klea_rag[full]
 
-klea-code and neuroml-mcp (from source)
-----------------------------------------
+klea-code (WIP: coming soon) and neuroml-mcp (from source)
+----------------------------------------------------------
 
-These packages are in active development.  They are not yet on PyPI.
+``klea-code`` is under active development and not yet ready for general use.
+``neuroml-mcp`` is also in active development.  Neither is on PyPI.
 To install them, clone the repository and follow the
 :doc:`development workflow <contributing>`.
 
@@ -115,7 +116,7 @@ Both the RAG and Code packages load configuration from:
 
 2. A JSON configuration file referenced inside the env file.
 
-   * ``rag_pkg/klea_rag.json`` for RAG domains and vector stores
+   * ``rag_pkg/example-configs/klea_rag.json`` or a copy you customise
    * ``code_pkg/mcp.json`` for Code MCP server configuration
 
 Example env file::

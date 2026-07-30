@@ -1,6 +1,9 @@
 klea-code-serve
 ===============
 
+**WIP: coming soon** -- this server is under active development and not yet
+ready for general use.
+
 Run the Klea Code API server.
 
 .. typer:: klea_code.api.server:serve_app

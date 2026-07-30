@@ -5,7 +5,7 @@ Generic RAG (Retrieval Augmented Generation) implementation for NeuroML.
 ## Package Overview
 
 Package: `klea_rag`
-CLI entry: `nml-gen-rag`
+CLI entry: `klea-rag`, `klea-rag-serve`
 
 ## Development Commands
 

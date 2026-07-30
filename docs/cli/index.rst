@@ -26,8 +26,8 @@ MCP
 
    nml-mcp
 
-Coding / Workflow
------------------
+Coding / Workflow  (WIP: coming soon)
+-------------------------------------
 
 .. toctree::
    :maxdepth: 1
