@@ -54,6 +54,16 @@ def make_parser(
         help="Footer HTML content",
     )
     parser.add_argument(
+        "--nicegui-url",
+        default="0.0.0.0:7860",
+        help="Host:port to bind the NiceGUI web server to (default: 0.0.0.0:7860)",
+    )
+    parser.add_argument(
+        "--storage-secret",
+        default="klea-nicegui-secret-change-me",
+        help="NiceGUI storage secret for session persistence",
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable auto-reload on file changes (supported by nicegui only)",

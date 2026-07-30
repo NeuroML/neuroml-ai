@@ -31,4 +31,6 @@ if __name__ in {"__main__", "__mp_main__"}:
         disclaimer=args.disclaimer,
         footer_text=args.footer,
         debug=args.debug,
+        nicegui_url=args.nicegui_url,
+        storage_secret=args.storage_secret,
     )

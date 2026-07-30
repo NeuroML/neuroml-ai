@@ -984,6 +984,8 @@ def run_nicegui_app(
     disclaimer: str = "",
     footer_text: str = 'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
     debug: bool = False,
+    nicegui_url: str = "0.0.0.0:7860",
+    storage_secret: str = "klea-nicegui-secret-change-me",
 ) -> None:
     """Start the NiceGUI web server with the Klea chat interface.
 
@@ -1001,7 +1003,13 @@ def run_nicegui_app(
     :param footer_text: HTML content for the footer bar.
     :param debug: When ``True``, enable NiceGUI's file-watch hot
         reload (``reload=True``).  Set to ``False`` in production.
+    :param nicegui_url: ``host:port`` to bind the NiceGUI web server to
+        (default: ``"0.0.0.0:7860"``).
+    :param storage_secret: Secret used by NiceGUI for browser session
+        persistence (default: ``"klea-nicegui-secret-change-me"``).
     """
+    host, port_str = nicegui_url.rsplit(":", 1)
+    port = int(port_str)
 
     @ui.page("/", response_timeout=30)
     async def main_page():
@@ -1055,10 +1063,10 @@ def run_nicegui_app(
         )
 
     ui.run(
-        port=7860,
-        host="0.0.0.0",
+        port=port,
+        host=host,
         title=title,
         show=False,
         reload=debug,
-        storage_secret="klea-nicegui-secret-change-me",
+        storage_secret=storage_secret,
     )

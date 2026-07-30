@@ -89,6 +89,16 @@ def web(
         help="KLEA Code server URL:port",
         callback=_validate_url,
     ),
+    nicegui_url: str = typer.Option(
+        "0.0.0.0:7860",
+        "--nicegui-url",
+        help="Host:port to bind the NiceGUI web server to",
+    ),
+    storage_secret: str = typer.Option(
+        "klea-nicegui-secret-change-me",
+        "--storage-secret",
+        help="NiceGUI storage secret for session persistence",
+    ),
     debug: bool = typer.Option(
         False, "--debug", "-d", help="Enable auto-reload on file changes"
     ),
@@ -103,6 +113,8 @@ def web(
                 f"python app.py '{title}' '{subtitle}' '{server_url}'"
                 + f" --disclaimer '{disclaimer}'"
                 + f" --footer '{footer_text}'"
+                + f" --nicegui-url '{nicegui_url}'"
+                + f" --storage-secret '{storage_secret}'"
                 + (" --debug" if debug else "")
             )
         )
