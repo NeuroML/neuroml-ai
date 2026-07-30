@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from collections.abc import Hashable
 from typing import Any, override
 
 from klea_utils.nodes.abstract import (
@@ -116,20 +117,28 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         for domain, docs in reference_material.items():
             md_lines.append(f"### {domain}\n")
 
-            ref_lines = []
-            for doc, score in docs:
-                line = f"1.  [{score:.2f}]"
-
-                url = doc.metadata.get("url", None)
-                file_name = doc.metadata.get("file_name", "")
-
-                if url:
-                    line += f" [{url}]({url})"
-                if file_name:
-                    line += f" ({file_name})"
-                ref_lines.append(line)
-
-            md_lines += "\n".join(set(ref_lines))
+            seen: dict[Hashable, tuple[float, list[str]]] = {}
+            for doc, score in sorted(docs, key=lambda x: x[1], reverse=True):
+                url_values = [v for k, v in doc.metadata.items() if k.startswith("url")]
+                file_name = doc.metadata.get("file_name", "") or ""
+                if url_values:
+                    key: Hashable = tuple(sorted(url_values))
+                    display_values = url_values
+                elif file_name:
+                    key = file_name
+                    display_values = [file_name]
+                else:
+                    self.logger.warning(f"No metadata to show for {doc}")
+                    continue
+                if key not in seen or score > seen[key][0]:
+                    seen[key] = (score, display_values)
+            ref_lines = [
+                f"1.  [{score:.2f}]\n" + "\n".join(f"    - {v}" for v in values)
+                for score, values in sorted(
+                    seen.values(), key=lambda x: x[0], reverse=True
+                )
+            ]
+            md_lines += "\n".join(ref_lines)
             md_lines += "\n"
 
         display_md = "".join(md_lines) if md_lines else "No documents retrieved"
