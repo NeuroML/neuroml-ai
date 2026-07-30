@@ -334,22 +334,31 @@ ready for general use.</p>
  Klea Code web client (NiceGUI)                                       
                                                                       
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ --title       -t      &lt;str&gt;  Application title (shown in header)   │
-│                              [default: KLEA Code]                  │
-│ --subtitle    -b      &lt;str&gt;  Subtitle shown next to title in       │
-│                              header                                │
-│ --disclaimer  -c      &lt;str&gt;  Disclaimer text shown below the chat  │
-│                              area                                  │
-│                              [default: Answers use LLM technology  │
-│                              and may be incorrect. Please          │
-│                              re-confirm.]                          │
-│ --footer              &lt;str&gt;  Footer HTML content                   │
-│                              [default: Powered by &lt;a               │
-│                              href=&quot;https://github.com/neuroml/kle… │
-│ --server      -s      &lt;str&gt;  KLEA Code server URL:port             │
-│                              [default: http://127.0.0.1:8005]      │
-│ --debug       -d             Enable auto-reload on file changes    │
-│ --help                       Show this message and exit.           │
+│ --title           -t      &lt;str&gt;  Application title (shown in       │
+│                                  header)                           │
+│                                  [default: KLEA Code]              │
+│ --subtitle        -b      &lt;str&gt;  Subtitle shown next to title in   │
+│                                  header                            │
+│ --disclaimer      -c      &lt;str&gt;  Disclaimer text shown below the   │
+│                                  chat area                         │
+│                                  [default: Answers use LLM         │
+│                                  technology and may be incorrect.  │
+│                                  Please re-confirm.]               │
+│ --footer                  &lt;str&gt;  Footer HTML content               │
+│                                  [default: Powered by &lt;a           │
+│                                  href=&quot;https://github.com/neuroml… │
+│ --server          -s      &lt;str&gt;  KLEA Code server URL:port         │
+│                                  [default: http://127.0.0.1:8005]  │
+│ --nicegui-url             &lt;str&gt;  Host:port to bind the NiceGUI web │
+│                                  server to                         │
+│                                  [default: 0.0.0.0:7860]           │
+│ --storage-secret          &lt;str&gt;  NiceGUI storage secret for        │
+│                                  session persistence               │
+│                                  [default:                         │
+│                                  klea-nicegui-secret-change-me]    │
+│ --debug           -d             Enable auto-reload on file        │
+│                                  changes                           │
+│ --help                           Show this message and exit.       │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>

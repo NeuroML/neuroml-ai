@@ -1269,6 +1269,8 @@
     <span class="n">disclaimer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="n">footer_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;Powered by &lt;a href=&quot;https://github.com/neuroml/klea&quot;&gt;Klea&lt;/a&gt;&#39;</span><span class="p">,</span>
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">nicegui_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0:7860&quot;</span><span class="p">,</span>
+    <span class="n">storage_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea-nicegui-secret-change-me&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the NiceGUI web server with the Klea chat interface.</span>
 
@@ -1286,7 +1288,13 @@
 <span class="sd">    :param footer_text: HTML content for the footer bar.</span>
 <span class="sd">    :param debug: When ``True``, enable NiceGUI&#39;s file-watch hot</span>
 <span class="sd">        reload (``reload=True``).  Set to ``False`` in production.</span>
+<span class="sd">    :param nicegui_url: ``host:port`` to bind the NiceGUI web server to</span>
+<span class="sd">        (default: ``&quot;0.0.0.0:7860&quot;``).</span>
+<span class="sd">    :param storage_secret: Secret used by NiceGUI for browser session</span>
+<span class="sd">        persistence (default: ``&quot;klea-nicegui-secret-change-me&quot;``).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">host</span><span class="p">,</span> <span class="n">port_str</span> <span class="o">=</span> <span class="n">nicegui_url</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">port_str</span><span class="p">)</span>
 
     <span class="nd">@ui</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">response_timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main_page</span><span class="p">():</span>
@@ -1340,12 +1348,12 @@
         <span class="p">)</span>
 
     <span class="n">ui</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="n">port</span><span class="o">=</span><span class="mi">7860</span><span class="p">,</span>
-        <span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
         <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
         <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="n">reload</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span>
-        <span class="n">storage_secret</span><span class="o">=</span><span class="s2">&quot;klea-nicegui-secret-change-me&quot;</span><span class="p">,</span>
+        <span class="n">storage_secret</span><span class="o">=</span><span class="n">storage_secret</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 </pre></div>
