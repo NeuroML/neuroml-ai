@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_code.schemas import KleaCodeState, ToolCallSchema
 from klea_utils.nodes.base import BaseLLMNode
@@ -69,7 +69,7 @@ class ToolsPicker(BaseLLMNode[KleaCodeState]):
     @override
     def _update_state(
         self, result: ToolCallSchema, state: KleaCodeState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update state with the selected tool call."""
         return {"tool_call": result}
 

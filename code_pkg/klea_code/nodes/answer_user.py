@@ -9,14 +9,13 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
-
-from klea_utils.nodes.abstract import AbstractLangGraphNode
+from typing import Any, override
 
 from klea_code.schemas import KleaCodeState
+from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
-class AnswerUser(AbstractLangGraphNode[KleaCodeState, Dict[str, Any]]):
+class AnswerUser(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
     """Node that returns the final message to the user."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -28,7 +27,7 @@ class AnswerUser(AbstractLangGraphNode[KleaCodeState, Dict[str, Any]]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: KleaCodeState) -> Dict[str, Any]:
+    async def execute(self, state: KleaCodeState) -> dict[str, Any]:
         """Return the message for the user.
 
         :param state: Current graph state

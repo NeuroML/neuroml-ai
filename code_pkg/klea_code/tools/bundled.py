@@ -12,11 +12,10 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from pydantic import Field
-from typing_extensions import Annotated
 
 bundle_server = FastMCP(
     "KleaBundled",
@@ -65,7 +64,7 @@ async def list_files(
     max_results: Annotated[
         int, Field(description="Maximum number of entries to return", ge=1, le=10000)
     ] = 100,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """List files and directories with filtering and metadata.
     Use this tool to explore file system structure and find specific files.
 
@@ -74,8 +73,8 @@ async def list_files(
     the_path = Path(path)
     truncated = "False"
     error = ""
-    files: List[Dict[str, Any]] = []
-    paths: List[Path] = []
+    files: list[dict[str, Any]] = []
+    paths: list[Path] = []
 
     if ".." in path:
         return {

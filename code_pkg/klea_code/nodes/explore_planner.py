@@ -8,7 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_code.nodes.planner import Planner
 from klea_code.schemas import KleaCodeState, PlanSchema
@@ -49,7 +49,7 @@ class ExplorePlanner(Planner):
         }
 
     @override
-    def _update_state(self, result: PlanSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: PlanSchema, state: BaseModel) -> dict[str, Any]:
         """Update exploration_plan in state."""
         return {"plan": result}
 

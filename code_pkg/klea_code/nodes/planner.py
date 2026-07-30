@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_code.schemas import KleaCodeState, PlanSchema
 from klea_utils.nodes.base import BaseLLMNode
@@ -64,7 +64,7 @@ class Planner(BaseLLMNode[PlanSchema]):
         }
 
     @override
-    def _update_state(self, result: PlanSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: PlanSchema, state: BaseModel) -> dict[str, Any]:
         """Update plan and generate summary for user."""
         plan_summary = "## Plan summary:\n\n"
         for step in result.step_list:

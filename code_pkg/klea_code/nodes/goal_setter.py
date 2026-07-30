@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from klea_code.schemas import GoalSchema, KleaCodeState
 from klea_utils.nodes.base import BaseLLMNode
@@ -54,7 +54,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         return variables
 
     @override
-    def _update_state(self, result: GoalSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: GoalSchema, state: BaseModel) -> dict[str, Any]:
         """Update and return state dictionary"""
         state_update = {"goal": result, "message_for_user": result.goal}
         self.logger.debug(state_update)

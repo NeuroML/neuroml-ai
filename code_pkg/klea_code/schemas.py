@@ -8,24 +8,26 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from typing import Literal
+
 from fastmcp.client.client import CallToolResult
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
-from typing_extensions import Any, Dict, List, Literal
+from typing_extensions import Any
 
 
 class ToolCallSchema(BaseModel):
     """Schema for tool call response."""
 
     tool: str = ""
-    args: Dict[str, Any] = Field(default_factory=dict)
+    args: dict[str, Any] = Field(default_factory=dict)
     reason: str = ""
 
 
 class CodeSchema(BaseModel):
     code: str = ""
     version: int = 0
-    patches: List[str] = []
+    patches: list[str] = []
 
 
 class StepSchema(BaseModel):
@@ -37,7 +39,7 @@ class StepSchema(BaseModel):
 
 
 class PlanSchema(BaseModel):
-    step_list: List[StepSchema] = Field(default_factory=list)
+    step_list: list[StepSchema] = Field(default_factory=list)
     status: Literal["not_started", "in_progress", "completed", "failed", "aborted"] = (
         Field(default="not_started")
     )
@@ -76,7 +78,7 @@ class KleaCodeState(BaseModel):
     """The state of the graph"""
 
     query: str = ""
-    messages: List[AnyMessage] = Field(default_factory=list)
+    messages: list[AnyMessage] = Field(default_factory=list)
     guard_decision: str = "safe"
     usage_metrics: TokenUsage
 
@@ -86,7 +88,7 @@ class KleaCodeState(BaseModel):
     # planning related
     goal: GoalSchema = GoalSchema()
     plan: PlanSchema = PlanSchema()
-    step_outputs: Dict[int, list[CallToolResult]] = Field(default_factory=dict)
+    step_outputs: dict[int, list[CallToolResult]] = Field(default_factory=dict)
     # global project discovery information
     # only to be updated if files change
     discovery_persistent: Discovery = Discovery()
@@ -94,7 +96,7 @@ class KleaCodeState(BaseModel):
     discovery_per_step: Discovery = Discovery()
 
     # { id -> artefact }
-    artefacts: Dict[str, ArtefactSchema] = Field(default_factory=dict)
+    artefacts: dict[str, ArtefactSchema] = Field(default_factory=dict)
 
     # summarised version of context so far
     context_summary: str = ""

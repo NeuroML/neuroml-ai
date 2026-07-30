@@ -14,9 +14,8 @@ from typing import Any, override
 
 from fastmcp import Client
 from fastmcp.client.client import CallToolResult
-from klea_utils.nodes.abstract import AbstractLangGraphNode
-
 from klea_code.schemas import KleaCodeState
+from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
 class ToolsCaller(AbstractLangGraphNode[KleaCodeState, CallToolResult]):
