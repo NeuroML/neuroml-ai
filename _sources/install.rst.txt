@@ -147,8 +147,18 @@ Model names are prefixed according to their provider:
 
 * ``ollama:<model_name>:<tag>`` for Ollama models
 * ``huggingface:<model_id>`` for HuggingFace inference providers.
-  HuggingFace models additionally require the ``HF_TOKEN`` environment
-  variable to be set (see `HuggingFace tokens
-  <https://huggingface.co/docs/hub/security-tokens>`_).
+  The suffix ``:local`` selects the pipeline backend (runs the model
+  locally), while any other suffix (e.g. ``:endpoint``) selects the
+  HuggingFace Endpoints API.  HuggingFace models additionally require
+  the ``HF_TOKEN`` environment variable to be set (see
+  `HuggingFace tokens <https://huggingface.co/docs/hub/security-tokens>`_).
+* ``custom:<model_name>:<base_url>`` for OpenAI-compatible endpoints
+  (e.g. ``custom:Qwen:https://inf01.example.com/v1/``).  These use the
+  ``ChatOpenAI`` provider under the hood and require the
+  ``OPENAI_API_KEY`` environment variable.
 * Others (e.g. OpenAI, Anthropic) use their standard model names and
   environment variables as supported by LangChain.
+
+Guard models follow the same format.  The guard node is optional --
+set ``KLEA_RAG_GUARD_MODEL`` to an empty value to skip safety
+screening entirely.

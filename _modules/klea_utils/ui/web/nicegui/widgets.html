@@ -345,33 +345,33 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;w-full flex flex-col </span><span class="si">{</span><span class="n">align</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="k">with</span> <span class="bp">self</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;flex flex-col rounded-2xl </span><span class="si">{</span><span class="n">bg</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">corner</span><span class="si">}</span><span class="s2"> p-3 gap-1 </span><span class="si">{</span><span class="n">bubble_w</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">):</span>
-                <span class="n">text_cls</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;whitespace-pre-wrap </span><span class="si">{</span><span class="n">text_align</span><span class="si">}</span><span class="s2"> msg-collapsed&quot;</span>
-                    <span class="k">if</span> <span class="n">collapsed</span>
-                    <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;whitespace-pre-wrap </span><span class="si">{</span><span class="n">text_align</span><span class="si">}</span><span class="s2"> msg-expanded&quot;</span>
-                <span class="p">)</span>
-                <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="n">text_cls</span><span class="p">):</span>
-                    <span class="n">ui</span><span class="o">.</span><span class="n">html</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">):</span>
+            <span class="n">text_cls</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">text_align</span><span class="si">}</span><span class="s2"> msg-collapsed&quot;</span>
+                <span class="k">if</span> <span class="n">collapsed</span>
+                <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">text_align</span><span class="si">}</span><span class="s2"> msg-expanded&quot;</span>
+            <span class="p">)</span>
+            <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="n">text_cls</span><span class="p">):</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">markdown</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
 
-                <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;flex flex-row </span><span class="si">{</span><span class="n">bottom_align</span><span class="si">}</span><span class="s2"> items-center gap-1&quot;</span>
-                <span class="p">):</span>
-                    <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">stamp</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;flex flex-row </span><span class="si">{</span><span class="n">bottom_align</span><span class="si">}</span><span class="s2"> items-center gap-1&quot;</span><span class="p">):</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">stamp</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5&quot;</span><span class="p">)</span>
 
-                    <span class="k">if</span> <span class="n">on_copy</span><span class="p">:</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;content_copy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span>
-                            <span class="s2">&quot;flat dense round size=sm&quot;</span>
-                        <span class="p">)</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;click&quot;</span><span class="p">,</span> <span class="n">on_copy</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">on_copy</span><span class="p">:</span>
+                    <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;content_copy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round size=sm&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">on</span><span class="p">(</span>
+                        <span class="s2">&quot;click&quot;</span><span class="p">,</span> <span class="n">on_copy</span>
+                    <span class="p">)</span>
 
-                    <span class="k">if</span> <span class="n">on_expand</span><span class="p">:</span>
-                        <span class="n">icon</span> <span class="o">=</span> <span class="s2">&quot;expand_less&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">collapsed</span> <span class="k">else</span> <span class="s2">&quot;expand_more&quot;</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="n">icon</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round size=sm&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">on</span><span class="p">(</span>
-                            <span class="s2">&quot;click&quot;</span><span class="p">,</span> <span class="n">on_expand</span>
-                        <span class="p">)</span></div>
+                <span class="k">if</span> <span class="n">on_expand</span><span class="p">:</span>
+                    <span class="n">icon</span> <span class="o">=</span> <span class="s2">&quot;expand_less&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">collapsed</span> <span class="k">else</span> <span class="s2">&quot;expand_more&quot;</span>
+                    <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="n">icon</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round size=sm&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">on</span><span class="p">(</span>
+                        <span class="s2">&quot;click&quot;</span><span class="p">,</span> <span class="n">on_expand</span>
+                    <span class="p">)</span></div>
 
 </pre></div>
         </article>

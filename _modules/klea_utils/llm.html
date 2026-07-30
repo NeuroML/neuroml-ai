@@ -297,13 +297,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">textwrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">dedent</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Type</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">cast</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">HumanMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompt_values</span><span class="w"> </span><span class="kn">import</span> <span class="n">PromptValue</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask_sensitive</span><span class="p">,</span> <span class="n">setup_logger</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -398,7 +399,7 @@
 <div class="viewcode-block" id="parse_output_with_thought">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.parse_output_with_thought">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_output_with_thought</span><span class="p">[</span><span class="n">TSchema</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">](</span>
-    <span class="n">message</span><span class="p">:</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span>
+    <span class="n">message</span><span class="p">:</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TSchema</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse AI message with thought to a dict based on given schema&quot;&quot;&quot;</span>
     <span class="c1"># Lazy: JsonOutputParser pulls in langchain parsers</span>
@@ -708,110 +709,249 @@
     <span class="k">return</span> <span class="n">model_var</span>
 
 
-<span class="c1"># Per-provider configurable field sets.  &quot;all&quot; covers every field any provider</span>
-<span class="c1"># might need.  _COMMON_CONFIG_FIELDS is the union  ---  the superset used by every</span>
-<span class="c1"># _ConfigurableModel so that runtime provider switching works.</span>
-<span class="n">PROVIDER_CONFIG_FIELDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;all&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;model&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;model_provider&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;temperature&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;max_tokens&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;api_key&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;base_url&quot;</span><span class="p">,</span>
-    <span class="p">},</span>
-    <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;huggingfacehub_api_token&quot;</span><span class="p">,</span> <span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;backend&quot;</span><span class="p">},</span>
-    <span class="s2">&quot;ollama&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;num_predict&quot;</span><span class="p">},</span>
+<div class="viewcode-block" id="looks_like_structured_output_error">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.looks_like_structured_output_error">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">looks_like_structured_output_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Heuristic: is this exception caused by structured output rejection?</span>
+
+<span class="sd">    Some providers (e.g. certain custom OpenAI-compatible endpoints) do</span>
+<span class="sd">    not support the ``response_format`` / ``json_schema`` parameter.</span>
+<span class="sd">    Rather than failing hard, we detect this by checking the error for</span>
+<span class="sd">    known indicators and fall back to prompt-based structured output.</span>
+
+<span class="sd">    Real errors (auth failure, model-not-found, rate limits) are left to</span>
+<span class="sd">    propagate  ---  they use different HTTP status codes and error strings</span>
+<span class="sd">    not matched by these heuristics.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="c1"># OpenAI-style BadRequestError with structured-output rejection</span>
+    <span class="k">if</span> <span class="s2">&quot;400&quot;</span> <span class="ow">in</span> <span class="n">msg</span> <span class="ow">and</span> <span class="s2">&quot;invalid_request_error&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># Provider explicitly rejects the structured output parameter</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">kw</span> <span class="ow">in</span> <span class="n">msg</span> <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;response_format&quot;</span><span class="p">,</span> <span class="s2">&quot;json_schema&quot;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># LangChain&#39;s own message when structured output fails</span>
+    <span class="k">if</span> <span class="s2">&quot;structured output&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
+<span class="c1"># Extra fields accepted by provider model constructors that are not part</span>
+<span class="c1"># of the Pydantic model class (e.g. kwargs passed to a factory method).</span>
+<span class="n">_PROVIDER_EXTRA_FIELDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># ChatHuggingFace.from_model_id() accepts backend, provider, etc.</span>
+    <span class="c1"># which flow through to HuggingFaceEndpoint but are not fields on</span>
+    <span class="c1"># ChatHuggingFace itself.</span>
+    <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;provider&quot;</span><span class="p">},</span>
 <span class="p">}</span>
-<span class="n">_COMMON_CONFIG_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-    <span class="n">PROVIDER_CONFIG_FIELDS</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">]</span>
-    <span class="o">|</span> <span class="n">PROVIDER_CONFIG_FIELDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;huggingface&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
-    <span class="o">|</span> <span class="n">PROVIDER_CONFIG_FIELDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ollama&quot;</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
-<span class="p">)</span>
 
 
-<div class="viewcode-block" id="setup_llm">
-<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.setup_llm">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">setup_llm</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up a chat model&quot;&quot;&quot;</span>
-    <span class="c1"># Lazy: init_chat_model and huggingface classes pull in provider</span>
-    <span class="c1"># packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)</span>
+<div class="viewcode-block" id="get_provider_allowed_fields">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_provider_allowed_fields">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_provider_allowed_fields</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the set of init-param names accepted by a given provider&#39;s model class.</span>
+
+<span class="sd">    Uses LangChain&#39;s internal provider registry to look up the Pydantic</span>
+<span class="sd">    model class and introspect its fields (including aliases so that</span>
+<span class="sd">    both ``api_key`` and ``openai_api_key`` pass through).</span>
+
+<span class="sd">    Falls back to an empty set if the provider is not registered in</span>
+<span class="sd">    LangChain&#39;s built-in providers.  Raises ``ImportError`` if the</span>
+<span class="sd">    provider&#39;s integration package is not installed  ---  callers should</span>
+<span class="sd">    handle this at configuration time, not silently fall through.</span>
+
+<span class="sd">    The caller should always include ``{&quot;model&quot;, &quot;model_provider&quot;}`` on</span>
+<span class="sd">    top of the returned set since those are consumed by</span>
+<span class="sd">    ``_ConfigurableModel`` before reaching the model constructor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">_get_chat_model_creator</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">creator</span> <span class="o">=</span> <span class="n">_get_chat_model_creator</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="c1"># Provider not in LangChain&#39;s built-in registry  ---  not an error,</span>
+        <span class="c1"># the caller will include model/model_provider which is sufficient.</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="bp">cls</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">creator</span><span class="p">,</span> <span class="s2">&quot;keywords&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cls&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="n">fields</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">model_fields</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">fields</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">field</span><span class="o">.</span><span class="n">alias</span><span class="p">:</span>
+            <span class="n">fields</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">alias</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fields</span> <span class="o">|</span> <span class="n">_PROVIDER_EXTRA_FIELDS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="create_configurable_model">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.create_configurable_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_configurable_model</span><span class="p">(</span><span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up a configurable chat model.</span>
+
+<span class="sd">    Creates a ``_ConfigurableModel`` with no default model.  Model,</span>
+<span class="sd">    provider, and all other parameters (``base_url``, ``api_key``,</span>
+<span class="sd">    ``temperature``, etc.) are specified per-invoke via the</span>
+<span class="sd">    ``config[&quot;configurable&quot;]`` dict passed to ``ainvoke()``.</span>
+
+<span class="sd">    This enables runtime model switching  ---  each ``ainvoke()`` call</span>
+<span class="sd">    creates a fresh underlying model instance for the given provider,</span>
+<span class="sd">    so there is no stale configuration leakage between calls.</span>
+
+<span class="sd">    The lookup function ``check_model_works`` is deliberately **not**</span>
+<span class="sd">    called here  ---  we prefer a &quot;leap before you look&quot; approach so that</span>
+<span class="sd">    startup is fast and model availability is checked only at query time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_chat_model</span>
 
-    <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">)</span>
-
-    <span class="c1"># fall back to openai for custom end points, assuming they are openai compatible</span>
-    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;Using openai-compatible model </span><span class="si">%s</span><span class="s2"> at custom endpoint </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-            <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
-            <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-            <span class="n">model_provider</span><span class="o">=</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span>
-            <span class="n">configurable_fields</span><span class="o">=</span><span class="n">_COMMON_CONFIG_FIELDS</span><span class="p">,</span>
-            <span class="n">base_url</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
-        <span class="p">)</span>
-    <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span>
-        <span class="c1"># &quot;local&quot; suffix -&gt; pipeline backend (model loaded locally).</span>
-        <span class="c1"># Any other suffix is treated as an inference provider hint.</span>
-        <span class="c1"># The HF_TOKEN env var is read automatically in all cases.</span>
-        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Using huggingface local pipeline model: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-                <span class="n">model_provider</span><span class="o">=</span><span class="s2">&quot;huggingface&quot;</span><span class="p">,</span>
-                <span class="n">configurable_fields</span><span class="o">=</span><span class="n">_COMMON_CONFIG_FIELDS</span><span class="p">,</span>
-                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
-                <span class="n">task</span><span class="o">=</span><span class="s2">&quot;text-generation&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Using huggingface endpoint model: </span><span class="si">%s</span><span class="s2"> (provider: </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-                <span class="n">model_provider</span><span class="o">=</span><span class="s2">&quot;huggingface&quot;</span><span class="p">,</span>
-                <span class="n">configurable_fields</span><span class="o">=</span><span class="n">_COMMON_CONFIG_FIELDS</span><span class="p">,</span>
-                <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;endpoint&quot;</span><span class="p">,</span>
-                <span class="n">provider</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-                <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">32768</span><span class="p">,</span>
-                <span class="n">do_sample</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">repetition_penalty</span><span class="o">=</span><span class="mf">1.03</span><span class="p">,</span>
-            <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Using model: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">model_name_full</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
-            <span class="n">check_ollama_model</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
-
-        <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
-            <span class="n">model_name_full</span><span class="p">,</span>
-            <span class="n">configurable_fields</span><span class="o">=</span><span class="n">_COMMON_CONFIG_FIELDS</span><span class="p">,</span>
-        <span class="p">)</span>
-
-    <span class="n">state</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">check_model_works</span><span class="p">(</span><span class="n">model_var</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="p">:</span>
-        <span class="c1"># handle special case where some models do not support &quot;cheapest&quot; on HF</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span>
-            <span class="ow">and</span> <span class="s2">&quot;Provider &#39;cheapest&#39; not supported&quot;</span> <span class="ow">in</span> <span class="n">msg</span>
-        <span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model does not work: </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Replacing &#39;cheapest&#39; with &#39;auto&#39; and retrying&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">setup_llm</span><span class="p">(</span><span class="n">model_name_full</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:cheapest&quot;</span><span class="p">,</span> <span class="s2">&quot;:auto&quot;</span><span class="p">),</span> <span class="n">logger</span><span class="p">)</span>
-
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model does not work: </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">state</span>
-
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using chat model: </span><span class="si">{</span><span class="n">model_name_full</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">configurable_fields</span><span class="o">=</span><span class="s2">&quot;any&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Configurable chat model created (provider/model set per invoke)&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">model_var</span></div>
+
+
+
+<div class="viewcode-block" id="LLMModel">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.LLMModel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LLMModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for a single LLM model instance and its runtime configuration.</span>
+
+<span class="sd">    ``instance`` holds the model object (typically a ``_ConfigurableModel``</span>
+<span class="sd">    returned by ``init_chat_model``).  ``role_defaults`` stores role-wide</span>
+<span class="sd">    default parameters (e.g. ``max_tokens``, ``temperature``) that apply to</span>
+<span class="sd">    every node sharing this role, unless overridden by node or user config.</span>
+
+<span class="sd">    ``build_config()`` performs a four-layer merge:</span>
+
+<span class="sd">    **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.</span>
+<span class="sd">    ``{&quot;max_tokens&quot;: 4096}``).</span>
+
+<span class="sd">    **Layer 1**  ---  ``model_name``: the default model identifier from</span>
+<span class="sd">    the graph config.</span>
+
+<span class="sd">    **Layer 2**  ---  ``context_overrides``: per-request fields from the API</span>
+<span class="sd">    (``model``, ``api_key``, etc.).  Only applied when ``modifiable=True``,</span>
+<span class="sd">    and skipping any keys frozen by node defaults.</span>
+
+<span class="sd">    **Layer 3**  ---  ``node_defaults``: frozen per-node defaults (always win).</span>
+
+<span class="sd">    ``modifiable`` controls whether the model can be changed at runtime</span>
+<span class="sd">    (both the API and web UI reject modifications to locked roles).</span>
+<span class="sd">    Set to ``False`` to lock a role (e.g. guard) against user overrides</span>
+<span class="sd">    in managed deployments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">instance</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">role_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">modifiable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="LLMModel.build_config">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.LLMModel.build_config">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_config</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">context_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">node_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunnableConfig</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge up to four layers of model configuration into a ``RunnableConfig``.</span>
+
+<span class="sd">        Layer order (lowest -&gt; highest priority):</span>
+
+<span class="sd">        0. ``self.role_defaults``   ---   role-wide parameters</span>
+<span class="sd">        1. ``self.model_name``      ---   role model from graph config</span>
+<span class="sd">        2. ``context_overrides``    ---   per-request user overrides</span>
+<span class="sd">        3. ``node_defaults``        ---   frozen per-node defaults</span>
+
+<span class="sd">        :param context_overrides: Per-request fields from the API</span>
+<span class="sd">            (e.g. ``model``, ``api_key``).  Only applied when</span>
+<span class="sd">            ``self.modifiable is True``, and skipping any keys</span>
+<span class="sd">            present in ``node_defaults``.</span>
+<span class="sd">        :param node_defaults: Frozen per-node defaults (e.g.</span>
+<span class="sd">            ``{&quot;temperature&quot;: 0.3}``).  Always win.</span>
+<span class="sd">        :returns: A ``RunnableConfig`` with the ``configurable`` key</span>
+<span class="sd">            populated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">modifiable</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">role_defaults</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">context_overrides</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node_defaults</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Layer 0: role-wide defaults from graph config</span>
+        <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">role_defaults</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 0 (role defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Layer 1: role model identifier</span>
+        <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 1 (model):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Layer 2: context overrides (only if modifiable).</span>
+        <span class="c1"># Skip any keys the node has frozen in model_defaults.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">modifiable</span> <span class="ow">and</span> <span class="n">context_overrides</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">context_overrides</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">node_defaults</span> <span class="ow">and</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">node_defaults</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Skipping context override &#39;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&#39; (frozen by node defaults)&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="n">overrides</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 2 (context):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Layer 3: node defaults  ---  always win</span>
+        <span class="k">if</span> <span class="n">node_defaults</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">node_defaults</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 3 (node defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Parse the final model string into LangChain-compatible components.</span>
+        <span class="c1"># Klea stores full provider-prefixed model strings internally (e.g.</span>
+        <span class="c1"># &quot;custom:gpt-4o:https://endpoint/v1&quot;), but the _ConfigurableModel</span>
+        <span class="c1"># expects the bare model name plus separate model_provider and base_url.</span>
+        <span class="c1"># parse_model_name is defined in this module  ---  no lazy import needed.</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+        <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model_provider&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;openai&quot;</span>
+        <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model_provider&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After model string parse:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Inject HuggingFace from_model_id kwargs derived from the model</span>
+        <span class="c1"># string suffix.  These are not fields on ChatHuggingFace itself</span>
+        <span class="c1"># (they flow through to HuggingFaceEndpoint) so they&#39;d be filtered</span>
+        <span class="c1"># out later  ---  we set them here so they survive provider filtering.</span>
+        <span class="k">if</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span> <span class="ow">and</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;endpoint&quot;</span><span class="p">)</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;HuggingFace kwargs injected:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Map generic &quot;api_key&quot; to provider-specific token field names so a</span>
+        <span class="c1"># single user-facing field works across all providers.</span>
+        <span class="k">if</span> <span class="s2">&quot;api_key&quot;</span> <span class="ow">in</span> <span class="n">overrides</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;huggingfacehub_api_token&quot;</span><span class="p">,</span> <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After api_key mapping:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Wrap in the &quot;configurable&quot; key expected by _ConfigurableModel.</span>
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">RunnableConfig</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="n">overrides</span><span class="p">})</span></div>
+</div>
 
 
 

@@ -290,6 +290,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 
 <div class="viewcode-block" id="LoggerNotInfoFilter">
@@ -362,6 +363,31 @@
     <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">stderr_handler</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">logger</span></div>
+
+
+
+<div class="viewcode-block" id="mask_sensitive">
+<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.mask_sensitive">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mask_sensitive</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">sensitive_keys</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy with sensitive values masked for logging.</span>
+
+<span class="sd">    Shows only the last 4 characters of each value to prevent secrets</span>
+<span class="sd">    (API keys, tokens) from appearing in plaintext in log output.</span>
+
+<span class="sd">    :param data: The dict to sanitize.</span>
+<span class="sd">    :param sensitive_keys: Keys whose values should be masked.</span>
+<span class="sd">        Defaults to ``{&quot;api_key&quot;}``.</span>
+<span class="sd">    :returns: New dict with masked values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">safe</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sensitive_keys</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;api_key&quot;</span><span class="p">}:</span>
+        <span class="k">if</span> <span class="n">safe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">safe</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">safe</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;...</span><span class="si">{</span><span class="n">val</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">safe</span></div>
 
 </pre></div>
         </article>

@@ -297,7 +297,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompt_values</span><span class="w"> </span><span class="kn">import</span> <span class="n">PromptValue</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatPromptTemplate</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.runnables</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runnable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.runnables</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
 
 
@@ -422,13 +422,29 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Key into ``llm_models`` dict (e.g. ``\&quot;chat\&quot;``, ``\&quot;plan\&quot;``, ``\&quot;guard\&quot;``).</span>
+
+<span class="sd">    Determines which ``LLMModel`` entry from the graph&#39;s ``llm_models``</span>
+<span class="sd">    this node uses.  Must match a key set up by the orchestrator in</span>
+<span class="sd">    ``_setup_models()``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Node-level model configuration defaults.</span>
+
+<span class="sd">    These are **frozen**  ---  user context overrides cannot change them.</span>
+<span class="sd">    Set this as a class attribute on each subclass to pin model params</span>
+<span class="sd">    (temperature, model, num_predict, etc.) that should never be</span>
+<span class="sd">    overridden at runtime.</span>
+
+<span class="sd">    Subclasses that need dynamic initialisation may also set</span>
+<span class="sd">    ``self.model_defaults`` in ``__init__``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span>
         <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">output_schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize with logger and model.</span>
@@ -436,7 +452,6 @@
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
 <span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
-<span class="sd">        :param temperature: Sampling temperature</span>
 <span class="sd">        :param output_schema: Pydantic schema for structured output</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
@@ -448,7 +463,6 @@
                 <span class="sa">f</span><span class="s2">&quot;Node &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39; has model_type=&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
                 <span class="sa">f</span><span class="s2">&quot;but llm_models only has keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="n">temperature</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_output_schema</span> <span class="o">=</span> <span class="n">output_schema</span>
 
 <div class="viewcode-block" id="AbstractLLMNode.execute">
@@ -467,6 +481,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_variables</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_config</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="o">=</span> <span class="kc">None</span>
@@ -489,8 +504,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invoke_prompt</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_last_template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_variables</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configure_llm</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invoke_llm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configure_llm</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invoke_llm</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_config</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
 
@@ -586,17 +603,26 @@
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_configure_llm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Runnable</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure LLM with structured output&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_configure_llm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Runnable</span><span class="p">,</span> <span class="n">RunnableConfig</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure LLM with structured output and build per-invoke config.</span>
+
+<span class="sd">        :returns: (llm_with_structured_output, config_dict) where</span>
+<span class="sd">            config_dict is a ``RunnableConfig`` with the ``configurable``</span>
+<span class="sd">            key populated for ``llm.ainvoke()``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_invoke_llm</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">llm</span><span class="p">:</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">prompt</span><span class="p">:</span> <span class="n">PromptValue</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">llm</span><span class="p">:</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">prompt</span><span class="p">:</span> <span class="n">PromptValue</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Async invoke LLM — must use ``await llm.ainvoke()`` so the</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Async invoke LLM  ---  must use ``await llm.ainvoke()`` so the</span>
 <span class="sd">        event loop can process streaming callbacks (waiter pattern)</span>
-<span class="sd">        during the LLM call rather than blocking until it completes.&quot;&quot;&quot;</span>
+<span class="sd">        during the LLM call rather than blocking until it completes.</span>
+
+<span class="sd">        :param config: ``RunnableConfig`` (including the ``configurable``</span>
+<span class="sd">            key) produced by ``_configure_llm``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>

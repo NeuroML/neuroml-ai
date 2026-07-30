@@ -145,7 +145,7 @@ is to fork the existing template and customise it.
    MCP server or remove the line entirely.
 
    The ``--title`` flag sets the heading shown in the browser tab and
-   the Streamlit page header.  Other flags such as ``--subtitle`` and
+   the NiceGUI page header.  Other flags such as ``--subtitle`` and
    ``--page-icon`` are available too --- see :doc:`../cli/klea-rag` for
    the full reference.
 
@@ -219,7 +219,7 @@ The container runs three services in a single process group:
     Runs in the background.
 
 ``klea-rag web``
-    The Streamlit frontend that provides the chat interface.  Listens on
+    The NiceGUI frontend that provides the chat interface.  Listens on
     ``0.0.0.0:7860`` (the port HuggingFace Spaces exposes).
     Runs in the foreground as the container's main process.
 

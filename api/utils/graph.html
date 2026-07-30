@@ -286,31 +286,6 @@
         <article role="main" id="furo-main-content">
           <section id="orchestrator-framework">
 <h1>Orchestrator framework<a class="headerlink" href="#orchestrator-framework" title="Link to this heading">¶</a></h1>
-<section id="data-model">
-<h2>Data model<a class="headerlink" href="#data-model" title="Link to this heading">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="klea_utils.graph.base.LLMModel">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.graph.base.</span></span><span class="sig-name descname"><span class="pre">LLMModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parsed_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">config_template</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#LLMModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.LLMModel" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
-<p>Container for a single LLM model instance and its runtime config template.</p>
-<p><code class="docutils literal notranslate"><span class="pre">instance</span></code> holds the model object (typically a <code class="docutils literal notranslate"><span class="pre">_ConfigurableModel</span></code>
-returned by <code class="docutils literal notranslate"><span class="pre">init_chat_model</span></code>).  <code class="docutils literal notranslate"><span class="pre">config_template</span></code> stores the default
-<code class="docutils literal notranslate"><span class="pre">configurable</span></code> fields that will be merged into every <code class="docutils literal notranslate"><span class="pre">invoke()</span></code> call
-(e.g. temperature).  Nodes may override specific fields per-call.</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">build_config()</span></code> to produce a per-invocation config dict:
-<code class="docutils literal notranslate"><span class="pre">build_config({&quot;temperature&quot;:</span> <span class="pre">0.5})</span></code> returns a copy of the template
-with temperature overridden.</p>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="klea_utils.graph.base.LLMModel.model_config">
-<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#klea_utils.graph.base.LLMModel.model_config" title="Link to this definition">¶</a></dt>
-<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
-</dd></dl>
-
-</dd></dl>
-
-</section>
-<section id="orchestrator">
-<h2>Orchestrator<a class="headerlink" href="#orchestrator" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.graph.base.</span></span><span class="sig-name descname"><span class="pre">BaseLangGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logging_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'inmemory'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph" title="Link to this definition">¶</a></dt>
@@ -482,7 +457,6 @@ flow through.</p>
 </dd></dl>
 
 </section>
-</section>
 
         </article>
       </div>
@@ -539,14 +513,6 @@ flow through.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Orchestrator framework</a><ul>
-<li><a class="reference internal" href="#data-model">Data model</a><ul>
-<li><a class="reference internal" href="#klea_utils.graph.base.LLMModel"><code class="docutils literal notranslate"><span class="pre">LLMModel</span></code></a><ul>
-<li><a class="reference internal" href="#klea_utils.graph.base.LLMModel.model_config"><code class="docutils literal notranslate"><span class="pre">LLMModel.model_config</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a class="reference internal" href="#orchestrator">Orchestrator</a><ul>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.config_class"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.config_class</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_class"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_class</span></code></a></li>
@@ -559,8 +525,6 @@ flow through.</p>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke_state()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_stream()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.setup"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.setup()</span></code></a></li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>

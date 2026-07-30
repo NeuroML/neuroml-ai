@@ -329,8 +329,10 @@ document collection, RAG is the simpler and more maintainable choice.</p>
 <h2>Klea’s architecture<a class="headerlink" href="#klea-s-architecture" title="Link to this heading">¶</a></h2>
 <p>At a high level, a query flows through these stages:</p>
 <ol class="arabic simple">
-<li><p><strong>Guard</strong> – the <code class="docutils literal notranslate"><span class="pre">llama-guard3</span></code> model checks whether the query
-is safe and appropriate.  Unsafe queries are declined immediately.</p></li>
+<li><p><strong>Guard</strong> (optional) – a safety model (e.g. <code class="docutils literal notranslate"><span class="pre">llama-guard3</span></code>)
+checks whether the query is safe and appropriate.  Unsafe queries
+are declined immediately.  Set <code class="docutils literal notranslate"><span class="pre">KLEA_RAG_GUARD_MODEL</span></code> to an empty
+value to skip this step entirely.</p></li>
 <li><p><strong>Classify</strong> – a chat model classifies the query into one of the
 configured <em>domains</em> (e.g. “NeuroML documentation”), or routes it
 to general chat, or refuses if no domain matches.</p></li>
@@ -380,7 +382,7 @@ right domain automatically.</p>
 <li><p><a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> – walk through setting up a
 RAG system end to end</p></li>
 <li><p><a class="reference internal" href="../cli/klea-rag-serve.html"><span class="doc">klea-rag-serve</span></a> – server CLI reference</p></li>
-<li><p><a class="reference internal" href="../cli/klea-rag.html"><span class="doc">klea-rag</span></a> – client CLI reference</p></li>
+<li><p><a class="reference internal" href="../cli/klea-rag.html"><span class="doc">klea-rag</span></a> – client CLI reference (CLI, NiceGUI, Streamlit)</p></li>
 </ul>
 </div>
 </section>

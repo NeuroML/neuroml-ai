@@ -327,8 +327,10 @@ for modelling and analysis.</p>
 </table>
 </div>
 <p>Each package is built on a shared foundation in <code class="docutils literal notranslate"><span class="pre">klea_utils</span></code>, which
-provides LLM setup, vector store abstraction, and the
-<a class="reference internal" href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a> orchestrator framework.</p>
+provides configurable LLM setup (with runtime model switching), vector
+store abstraction (Chroma / PGVector / Qdrant), and the
+<a class="reference internal" href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a> orchestrator framework.
+Web interfaces are available via NiceGUI (primary) and Streamlit.</p>
 </section>
 <section id="prototype-deployments">
 <h2>Prototype Deployments<a class="headerlink" href="#prototype-deployments" title="Link to this heading">¶</a></h2>
