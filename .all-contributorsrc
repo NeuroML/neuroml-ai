@@ -1,0 +1,15 @@
+{
+  "projectName": "neuroklea",
+  "projectOwner": "NeuroML",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "Readme.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributors": [],
+  "contributorsPerLine": 7,
+  "linkToUsage": true
+}
