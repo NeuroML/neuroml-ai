@@ -202,25 +202,37 @@
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cookbook/huggingface.html">Deploying Klea RAG on HuggingFace Spaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-vs-create.html">klea-vs-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/nml-mcp.html">nml-mcp</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-code.html">klea-code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cli/klea-code-serve.html">klea-code-serve</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../api/utils/ui.html">UI</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/nodes.html">Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/paths.html">Path utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/tools.html">Tool formatting</a></li>
@@ -269,11 +281,25 @@
 <ul><li><a href="klea_utils/api/app.html">klea_utils.api.app</a></li>
 <li><a href="klea_utils/api/chat.html">klea_utils.api.chat</a></li>
 <li><a href="klea_utils/api/health.html">klea_utils.api.health</a></li>
+<li><a href="klea_utils/api/messages.html">klea_utils.api.messages</a></li>
+<li><a href="klea_utils/api/models.html">klea_utils.api.models</a></li>
 <li><a href="klea_utils/api/server.html">klea_utils.api.server</a></li>
+<li><a href="klea_utils/api/sessions.html">klea_utils.api.sessions</a></li>
+<li><a href="klea_utils/api/sessions_db.html">klea_utils.api.sessions_db</a></li>
+<li><a href="klea_utils/api/sse.html">klea_utils.api.sse</a></li>
 <li><a href="klea_utils/api/utils.html">klea_utils.api.utils</a></li>
+<li><a href="klea_utils/cli/parser.html">klea_utils.cli.parser</a></li>
 <li><a href="klea_utils/errors.html">klea_utils.errors</a></li>
 <li><a href="klea_utils/graph/base.html">klea_utils.graph.base</a></li>
 <li><a href="klea_utils/llm.html">klea_utils.llm</a></li>
+<li><a href="klea_utils/nodes/abstract.html">klea_utils.nodes.abstract</a></li>
+<li><a href="klea_utils/nodes/answer_general.html">klea_utils.nodes.answer_general</a></li>
+<li><a href="klea_utils/nodes/base.html">klea_utils.nodes.base</a></li>
+<li><a href="klea_utils/nodes/fixed_answer.html">klea_utils.nodes.fixed_answer</a></li>
+<li><a href="klea_utils/nodes/guard.html">klea_utils.nodes.guard</a></li>
+<li><a href="klea_utils/nodes/guard_router.html">klea_utils.nodes.guard_router</a></li>
+<li><a href="klea_utils/nodes/summarise_memory.html">klea_utils.nodes.summarise_memory</a></li>
+<li><a href="klea_utils/paths.html">klea_utils.paths</a></li>
 <li><a href="klea_utils/plogging.html">klea_utils.plogging</a></li>
 <li><a href="klea_utils/stores/config.html">klea_utils.stores.config</a></li>
 <li><a href="klea_utils/stores/ingestion.html">klea_utils.stores.ingestion</a></li>
@@ -281,7 +307,10 @@
 <li><a href="klea_utils/stores/utils.html">klea_utils.stores.utils</a></li>
 <li><a href="klea_utils/tools.html">klea_utils.tools</a></li>
 <li><a href="klea_utils/ui/tui/repl.html">klea_utils.ui.tui.repl</a></li>
-<li><a href="klea_utils/ui/web/streamlit/runner.html">klea_utils.ui.web.streamlit.runner</a></li>
+<li><a href="klea_utils/ui/web/nicegui/client.html">klea_utils.ui.web.nicegui.client</a></li>
+<li><a href="klea_utils/ui/web/nicegui/runner.html">klea_utils.ui.web.nicegui.runner</a></li>
+<li><a href="klea_utils/ui/web/nicegui/state.html">klea_utils.ui.web.nicegui.state</a></li>
+<li><a href="klea_utils/ui/web/nicegui/widgets.html">klea_utils.ui.web.nicegui.widgets</a></li>
 </ul>
         </article>
       </div>

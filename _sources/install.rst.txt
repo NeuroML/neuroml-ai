@@ -50,9 +50,12 @@ klea-utils extras
    * - ``ingest``
      - ``docling``, ``typer``, ``xxhash``
      - Document ingestion pipeline
+   * - ``nicegui``
+     - ``nicegui``
+     - NiceGUI web UI frontend
    * - ``full``
      - All of the above
-     - All optional extras (vector stores + inference providers)
+     - All optional extras (vector stores + inference providers + frontends)
 
 Usage::
 
@@ -82,6 +85,9 @@ klea-rag extras
    * - ``ollama``
      - ``klea_utils[ollama]``
      - Ollama inference provider for RAG
+   * - ``nicegui``
+     - ``klea_utils[nicegui]``
+     - NiceGUI web UI frontend
    * - ``full``
      - All vector store and inference provider extras
      - All RAG optional extras
@@ -90,10 +96,11 @@ Usage::
 
    pip install klea_rag[full]
 
-klea-code and neuroml-mcp (from source)
-----------------------------------------
+klea-code (WIP: coming soon) and neuroml-mcp (from source)
+----------------------------------------------------------
 
-These packages are in active development.  They are not yet on PyPI.
+``klea-code`` is under active development and not yet ready for general use.
+``neuroml-mcp`` is also in active development.  Neither is on PyPI.
 To install them, clone the repository and follow the
 :doc:`development workflow <contributing>`.
 
@@ -109,7 +116,7 @@ Both the RAG and Code packages load configuration from:
 
 2. A JSON configuration file referenced inside the env file.
 
-   * ``rag_pkg/klea_rag.json`` for RAG domains and vector stores
+   * ``rag_pkg/example-configs/klea_rag.json`` or a copy you customise
    * ``code_pkg/mcp.json`` for Code MCP server configuration
 
 Example env file::
@@ -141,8 +148,18 @@ Model names are prefixed according to their provider:
 
 * ``ollama:<model_name>:<tag>`` for Ollama models
 * ``huggingface:<model_id>`` for HuggingFace inference providers.
-  HuggingFace models additionally require the ``HF_TOKEN`` environment
-  variable to be set (see `HuggingFace tokens
-  <https://huggingface.co/docs/hub/security-tokens>`_).
+  The suffix ``:local`` selects the pipeline backend (runs the model
+  locally), while any other suffix (e.g. ``:endpoint``) selects the
+  HuggingFace Endpoints API.  HuggingFace models additionally require
+  the ``HF_TOKEN`` environment variable to be set (see
+  `HuggingFace tokens <https://huggingface.co/docs/hub/security-tokens>`_).
+* ``custom:<model_name>:<base_url>`` for OpenAI-compatible endpoints
+  (e.g. ``custom:Qwen:https://inf01.example.com/v1/``).  These use the
+  ``ChatOpenAI`` provider under the hood and require the
+  ``OPENAI_API_KEY`` environment variable.
 * Others (e.g. OpenAI, Anthropic) use their standard model names and
   environment variables as supported by LangChain.
+
+Guard models follow the same format.  The guard node is optional --
+set ``KLEA_RAG_GUARD_MODEL`` to an empty value to skip safety
+screening entirely.

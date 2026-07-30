@@ -203,25 +203,37 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../cookbook/huggingface.html">Deploying Klea RAG on HuggingFace Spaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-vs-create.html">klea-vs-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/nml-mcp.html">nml-mcp</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-code.html">klea-code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-code-serve.html">klea-code-serve</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
-<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ui.html">UI</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="ui-nicegui.html">UI — NiceGUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-tui.html">UI — TUI / REPL</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nodes.html">Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="paths.html">Path utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tools.html">Tool formatting</a></li>
@@ -276,7 +288,7 @@
 <h1>Orchestrator framework<a class="headerlink" href="#orchestrator-framework" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.graph.base.</span></span><span class="sig-name descname"><span class="pre">BaseLangGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logging_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.graph.base.</span></span><span class="sig-name descname"><span class="pre">BaseLangGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">logging_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'inmemory'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
 <p>Abstract base class for LangGraph-based orchestrators.</p>
 <p>Provides common infrastructure for:
@@ -292,14 +304,14 @@
 - Set <code class="docutils literal notranslate"><span class="pre">env_class</span></code> to the appropriate Pydantic settings class</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.config_class">
-<span class="sig-name descname"><span class="pre">config_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.14)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.config_class" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">config_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.config_class" title="Link to this definition">¶</a></dt>
 <dd><p>Pydantic BaseModel class for configuration loading.
 Subclasses must set this to their AppConfig class.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.env_class">
-<span class="sig-name descname"><span class="pre">env_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.14)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_class" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">env_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_class" title="Link to this definition">¶</a></dt>
 <dd><p>Pydantic BaseSettings class for env loading.
 Subclasses must set this to their AppEnv class.</p>
 </dd></dl>
@@ -314,6 +326,13 @@ Subclasses must set this to their AppEnv class.</p>
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.env_var">
 <span class="sig-name descname"><span class="pre">env_var</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ENV_FILE'</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_var" title="Link to this definition">¶</a></dt>
 <dd><p>Name of the environment variable that controls the env file path.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.graph_name">
+<span class="sig-name descname"><span class="pre">graph_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BaseLangGraph'</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.graph_name" title="Link to this definition">¶</a></dt>
+<dd><p>Logger name for this orchestrator, also used as the app name
+for <code class="docutils literal notranslate"><span class="pre">platformdirs</span></code> data/cache directories.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -333,12 +352,6 @@ Subclasses must set this to their AppEnv class.</p>
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.logger_name">
-<span class="sig-name descname"><span class="pre">logger_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BaseLangGraph'</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.logger_name" title="Link to this definition">¶</a></dt>
-<dd><p>Logger name for this orchestrator.</p>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">
 <span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">run_graph_astream_events</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'default_thread'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph.run_graph_astream_events"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events" title="Link to this definition">¶</a></dt>
@@ -347,7 +360,13 @@ Subclasses must set this to their AppEnv class.</p>
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;progress&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>When the graph enters a new node (via <code class="docutils literal notranslate"><span class="pre">write_custom_stream</span></code>)</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;info&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;,</span> <span class="pre">&quot;data&quot;:</span> <span class="pre">{...}}</span></code></dt><dd><p>Structured summary data from a node after execution</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;debug&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;,</span> <span class="pre">&quot;data&quot;:</span> <span class="pre">{...}}</span></code></dt><dd><p>Full data dump from a node after execution</p>
+</dd>
 <dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;token&quot;,</span> <span class="pre">&quot;content&quot;:</span> <span class="pre">&quot;&lt;chunk&gt;&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;}</span></code></dt><dd><p>LLM token chunk from the current node</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;usage&quot;,</span> <span class="pre">&quot;node&quot;:</span> <span class="pre">&quot;&lt;label&gt;&quot;,</span> <span class="pre">&quot;data&quot;:</span> <span class="pre">{...}}</span></code></dt><dd><p>Per-node token usage (input / output / total tokens)</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">{&quot;type&quot;:</span> <span class="pre">&quot;complete&quot;,</span> <span class="pre">&quot;message_for_user&quot;:</span> <span class="pre">&quot;&lt;answer&gt;&quot;}</span></code></dt><dd><p>Final answer from the completed graph</p>
 </dd>
@@ -428,12 +447,13 @@ flow through.</p>
 <dd><p>Set up the orchestrator.</p>
 <p>Calls hooks and template methods in this order:
 1. <code class="docutils literal notranslate"><span class="pre">_pre_setup()</span></code>
-2. <code class="docutils literal notranslate"><span class="pre">_load_env()</span></code>
-3. <code class="docutils literal notranslate"><span class="pre">_setup_models()</span></code>
-4. <code class="docutils literal notranslate"><span class="pre">_create_mcp_client()</span></code>
-5. <code class="docutils literal notranslate"><span class="pre">_pre_graph()</span></code>
-6. <code class="docutils literal notranslate"><span class="pre">_create_graph()</span></code>
-7. <code class="docutils literal notranslate"><span class="pre">_post_setup()</span></code></p>
+2. <code class="docutils literal notranslate"><span class="pre">_setup_checkpointer()</span></code>
+3. <code class="docutils literal notranslate"><span class="pre">_load_env()</span></code>
+4. <code class="docutils literal notranslate"><span class="pre">_setup_models()</span></code>
+5. <code class="docutils literal notranslate"><span class="pre">_create_mcp_client()</span></code>
+6. <code class="docutils literal notranslate"><span class="pre">_pre_graph()</span></code>
+7. <code class="docutils literal notranslate"><span class="pre">_create_graph()</span></code>
+8. <code class="docutils literal notranslate"><span class="pre">_post_setup()</span></code></p>
 </dd></dl>
 
 </dd></dl>
@@ -500,8 +520,8 @@ flow through.</p>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_class"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_class</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_file_default"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_file_default</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_var"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_var</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_name"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_name</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_stream()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.logger_name"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.logger_name</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_astream_events()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke_state()</span></code></a></li>

@@ -203,25 +203,37 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../cookbook/huggingface.html">Deploying Klea RAG on HuggingFace Spaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-vs-create.html">klea-vs-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/nml-mcp.html">nml-mcp</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-code.html">klea-code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-code-serve.html">klea-code-serve</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
-<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
-<li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ui.html">UI</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="ui-nicegui.html">UI — NiceGUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-tui.html">UI — TUI / REPL</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nodes.html">Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="paths.html">Path utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tools.html">Tool formatting</a></li>
@@ -272,8 +284,10 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-klea_utils.stores.config">
-<span id="vector-stores"></span><h1>Vector stores<a class="headerlink" href="#module-klea_utils.stores.config" title="Link to this heading">¶</a></h1>
+          <section id="vector-stores">
+<h1>Vector stores<a class="headerlink" href="#vector-stores" title="Link to this heading">¶</a></h1>
+<section id="module-klea_utils.stores.config">
+<span id="configuration"></span><h2>Configuration<a class="headerlink" href="#module-klea_utils.stores.config" title="Link to this heading">¶</a></h2>
 <p>Vector store configuration models</p>
 <p>File: klea_utils/stores/config.py</p>
 <p>Copyright 2026 Ankur Sinha
@@ -317,6 +331,9 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 
 </dd></dl>
 
+</section>
+<section id="ingestion">
+<h2>Ingestion<a class="headerlink" href="#ingestion" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.stores.ingestion.VSBuilder">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.ingestion.</span></span><span class="sig-name descname"><span class="pre">VSBuilder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">450</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_peers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'BAAI/bge-m3'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/ingestion.html#VSBuilder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.ingestion.VSBuilder" title="Link to this definition">¶</a></dt>
@@ -408,6 +425,9 @@ written alongside it)</p></li>
 
 </dd></dl>
 
+</section>
+<section id="retrieval">
+<h2>Retrieval<a class="headerlink" href="#retrieval" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.stores.retrieval.VSRetriever">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.retrieval.</span></span><span class="sig-name descname"><span class="pre">VSRetriever</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vs_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#klea_utils.stores.config.VectorStoresConfig" title="klea_utils.stores.config.VectorStoresConfig"><span class="pre">VectorStoresConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/retrieval.html#VSRetriever"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.retrieval.VSRetriever" title="Link to this definition">¶</a></dt>
@@ -489,7 +509,10 @@ retrieval across multiple stores within a domain.</p>
 
 </dd></dl>
 
-<p id="module-klea_utils.stores.utils">Vector store utilities</p>
+</section>
+<section id="module-klea_utils.stores.utils">
+<span id="utilities"></span><h2>Utilities<a class="headerlink" href="#module-klea_utils.stores.utils" title="Link to this heading">¶</a></h2>
+<p>Vector store utilities</p>
 <p>File: klea_utils/stores/utils.py</p>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
@@ -529,7 +552,7 @@ ChromaDB store does not exist</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.serialize_vs_retrieval">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">serialize_vs_retrieval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.14)"><span class="pre">Dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.14)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.14)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#serialize_vs_retrieval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.serialize_vs_retrieval" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">serialize_vs_retrieval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#serialize_vs_retrieval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.serialize_vs_retrieval" title="Link to this definition">¶</a></dt>
 <dd><p>Serialize vector store retrieval results into text for use in prompt context.</p>
 <p>Documents are sorted by relevance score within each group.
 Uses Docling <code class="docutils literal notranslate"><span class="pre">HybridChunker</span></code> metadata format:</p>
@@ -549,6 +572,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 </dl>
 </dd></dl>
 
+</section>
 </section>
 
         </article>
@@ -606,6 +630,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Vector stores</a><ul>
+<li><a class="reference internal" href="#module-klea_utils.stores.config">Configuration</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.config.PerDomainConfig"><code class="docutils literal notranslate"><span class="pre">PerDomainConfig</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.config.PerDomainConfig.model_config"><code class="docutils literal notranslate"><span class="pre">PerDomainConfig.model_config</span></code></a></li>
 </ul>
@@ -618,6 +643,9 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 <li><a class="reference internal" href="#klea_utils.stores.config.VectorStoresConfig.model_config"><code class="docutils literal notranslate"><span class="pre">VectorStoresConfig.model_config</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ingestion">Ingestion</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.VSBuilder"><code class="docutils literal notranslate"><span class="pre">VSBuilder</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.VSBuilder.build"><code class="docutils literal notranslate"><span class="pre">VSBuilder.build()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.VSBuilder.chunk_all"><code class="docutils literal notranslate"><span class="pre">VSBuilder.chunk_all()</span></code></a></li>
@@ -625,6 +653,9 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.VSBuilder.write_heading_template"><code class="docutils literal notranslate"><span class="pre">VSBuilder.write_heading_template()</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#retrieval">Retrieval</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.VSRetriever"><code class="docutils literal notranslate"><span class="pre">VSRetriever</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.VSRetriever.domains"><code class="docutils literal notranslate"><span class="pre">VSRetriever.domains</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.VSRetriever.inc_k"><code class="docutils literal notranslate"><span class="pre">VSRetriever.inc_k()</span></code></a></li>
@@ -635,8 +666,13 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.VSRetriever.setup"><code class="docutils literal notranslate"><span class="pre">VSRetriever.setup()</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-klea_utils.stores.utils">Utilities</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.utils.instantiate_vector_store"><code class="docutils literal notranslate"><span class="pre">instantiate_vector_store()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.serialize_vs_retrieval"><code class="docutils literal notranslate"><span class="pre">serialize_vs_retrieval()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

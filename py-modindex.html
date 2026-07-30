@@ -201,25 +201,37 @@
 <li class="toctree-l2"><a class="reference internal" href="tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="cookbook/huggingface.html">Deploying Klea RAG on HuggingFace Spaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-vs-create.html">klea-vs-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/nml-mcp.html">nml-mcp</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-code.html">klea-code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea-code-serve.html">klea-code-serve</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/utils/ui.html">UI</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/nodes.html">Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/paths.html">Path utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/tools.html">Tool formatting</a></li>
@@ -304,13 +316,49 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
+        <a href="api/utils/api.html#module-klea_utils.api.messages"><code class="xref">klea_utils.api.messages</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/api.html#module-klea_utils.api.models"><code class="xref">klea_utils.api.models</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
         <a href="api/utils/api.html#module-klea_utils.api.server"><code class="xref">klea_utils.api.server</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
+        <a href="api/utils/api.html#module-klea_utils.api.sessions"><code class="xref">klea_utils.api.sessions</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/api.html#module-klea_utils.api.sessions_db"><code class="xref">klea_utils.api.sessions_db</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/api.html#module-klea_utils.api.sse"><code class="xref">klea_utils.api.sse</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
         <a href="api/utils/api.html#module-klea_utils.api.utils"><code class="xref">klea_utils.api.utils</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/cli.html#module-klea_utils.cli.parser"><code class="xref">klea_utils.cli.parser</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
@@ -323,6 +371,54 @@
     <td></td>
     <td>&#160;&#160;&#160;
         <a href="api/utils/llm.html#module-klea_utils.llm"><code class="xref">klea_utils.llm</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.abstract"><code class="xref">klea_utils.nodes.abstract</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.answer_general"><code class="xref">klea_utils.nodes.answer_general</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.base"><code class="xref">klea_utils.nodes.base</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.fixed_answer"><code class="xref">klea_utils.nodes.fixed_answer</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.guard"><code class="xref">klea_utils.nodes.guard</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.guard_router"><code class="xref">klea_utils.nodes.guard_router</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/nodes.html#module-klea_utils.nodes.summarise_memory"><code class="xref">klea_utils.nodes.summarise_memory</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/paths.html#module-klea_utils.paths"><code class="xref">klea_utils.paths</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
@@ -352,13 +448,31 @@
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="api/utils/ui.html#module-klea_utils.ui.tui.repl"><code class="xref">klea_utils.ui.tui.repl</code></a></td><td>
+        <a href="api/utils/ui-tui.html#module-klea_utils.ui.tui.repl"><code class="xref">klea_utils.ui.tui.repl</code></a></td><td>
     <em></em></td>
   </tr>
   <tr class="cg-1">
     <td></td>
     <td>&#160;&#160;&#160;
-        <a href="api/utils/ui.html#module-klea_utils.ui.web.streamlit.runner"><code class="xref">klea_utils.ui.web.streamlit.runner</code></a></td><td>
+        <a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.client"><code class="xref">klea_utils.ui.web.nicegui.client</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.runner"><code class="xref">klea_utils.ui.web.nicegui.runner</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.state"><code class="xref">klea_utils.ui.web.nicegui.state</code></a></td><td>
+    <em></em></td>
+  </tr>
+  <tr class="cg-1">
+    <td></td>
+    <td>&#160;&#160;&#160;
+        <a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.widgets"><code class="xref">klea_utils.ui.web.nicegui.widgets</code></a></td><td>
     <em></em></td>
   </tr>
 </table>
