@@ -197,16 +197,13 @@ For an interactive session:
 
 Type your questions at the prompt.  Use ``quit`` to exit.
 
-For a graphical interface, launch the NiceGUI web UI:
+For a graphical interface, launch the Streamlit web UI:
 
 .. code-block:: bash
 
    klea-rag web
 
-The web UI uses NiceGUI and requires the ``[nicegui]`` extra, while the
-CLI mode has no extra dependencies.
-
-Both methods connect to the running server at ``http://127.0.0.1:8005``
+All three methods connect to the running server at ``http://127.0.0.1:8005``
 by default.  Use ``--server`` to point at a different address.
 
 Going further

@@ -202,36 +202,25 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../cookbook/huggingface.html">Deploying Klea RAG on HuggingFace Spaces</a></li>
-</ul>
-</li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-vs-create.html">klea-vs-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/nml-mcp.html">nml-mcp</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-code.html">klea-code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-code-serve.html">klea-code-serve</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/nodes.html">Nodes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/ui.html">UI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/plogging.html">Logging</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/errors.html">Error types</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/tools.html">Tool formatting</a></li>
@@ -288,25 +277,27 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">uuid4</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIRouter</span><span class="p">,</span> <span class="n">HTTPException</span><span class="p">,</span> <span class="n">Request</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.responses</span><span class="w"> </span><span class="kn">import</span> <span class="n">StreamingResponse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.sessions_db</span><span class="w"> </span><span class="kn">import</span> <span class="n">SessionStore</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span>
+<span class="p">)</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
-
-<span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ChatPayload">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.chat.ChatPayload">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ChatPayload</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></div>
+    <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span></div>
 
 
 
@@ -317,88 +308,46 @@
 
 <span class="sd">    The router reads the graph instance from ``request.app.state.graph``</span>
 <span class="sd">    (set by :func:`klea_utils.api.app.make_app`).</span>
-<span class="sd">    Chat-session data is stored via the ``SessionStore`` on</span>
-<span class="sd">    ``app.state.chat_sessions``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">()</span>
 
     <span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/query&quot;</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">ChatPayload</span><span class="p">):</span>
         <span class="c1"># Lazy: BaseLangGraph is the base class for all graphs</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLangGraph</span><span class="p">,</span> <span class="n">model_overrides_ctx</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLangGraph</span>
 
         <span class="n">graph</span><span class="p">:</span> <span class="n">BaseLangGraph</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">graph</span>
-        <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
-        <span class="n">thread_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;user_</span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:chat_</span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">thread_id</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">session_id</span>
+        <span class="n">sessions</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">sessions</span>
 
-        <span class="n">store</span><span class="o">.</span><span class="n">create_chat</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">)</span>
-        <span class="n">model_overrides_ctx</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">get_overrides</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">thread_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sessions</span><span class="p">:</span>
+            <span class="n">sessions</span><span class="p">[</span><span class="n">thread_id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">graph</span><span class="o">.</span><span class="n">run_graph_invoke</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">query</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">)</span>
-            <span class="n">message</span> <span class="o">=</span> <span class="n">result</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-            <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
-            <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">detail</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">detail</span><span class="p">)</span>
-            <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span>
-                <span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
-                <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span>
-                <span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
             <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="n">detail</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">message</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">}</span>
 
     <span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/query/stream&quot;</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">query_stream</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">ChatPayload</span><span class="p">):</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLangGraph</span><span class="p">,</span> <span class="n">model_overrides_ctx</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLangGraph</span>
 
         <span class="n">graph</span><span class="p">:</span> <span class="n">BaseLangGraph</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">graph</span>
-        <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
-        <span class="n">thread_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;user_</span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:chat_</span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span>
-
-        <span class="n">store</span><span class="o">.</span><span class="n">create_chat</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">)</span>
-        <span class="n">model_overrides_ctx</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">get_overrides</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">))</span>
+        <span class="n">thread_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;session_</span><span class="si">{</span><span class="n">payload</span><span class="o">.</span><span class="n">session_id</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="n">uuid4</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
 
         <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">event_stream</span><span class="p">():</span>
-            <span class="n">query</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">query</span>
-            <span class="n">user_id</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">user_id</span>
-            <span class="n">chat_id</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span>
-            <span class="n">message_stored</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">run_graph_astream_events</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">):</span>
-                    <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;complete&quot;</span><span class="p">:</span>
-                        <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
-                        <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span>
-                            <span class="n">user_id</span><span class="p">,</span>
-                            <span class="n">chat_id</span><span class="p">,</span>
-                            <span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
-                            <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                        <span class="p">)</span>
-                        <span class="n">message_stored</span> <span class="o">=</span> <span class="kc">True</span>
-                    <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
-                        <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span>
-                            <span class="n">user_id</span><span class="p">,</span>
-                            <span class="n">chat_id</span><span class="p">,</span>
-                            <span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
-                            <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                        <span class="p">)</span>
-                        <span class="n">message_stored</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">run_graph_astream_events</span><span class="p">(</span>
+                    <span class="n">payload</span><span class="o">.</span><span class="n">query</span><span class="p">,</span> <span class="n">thread_id</span>
+                <span class="p">):</span>
                     <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">event</span><span class="p">)</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">detail</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">detail</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">message_stored</span><span class="p">:</span>
-                    <span class="n">store</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span>
-                        <span class="n">user_id</span><span class="p">,</span>
-                        <span class="n">chat_id</span><span class="p">,</span>
-                        <span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
-                        <span class="sa">f</span><span class="s2">&quot;Unexpected error during streaming: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                    <span class="p">)</span>
                 <span class="n">error_event</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)})</span>
                 <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">error_event</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
 
