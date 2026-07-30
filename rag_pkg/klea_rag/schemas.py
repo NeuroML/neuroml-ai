@@ -43,6 +43,12 @@ class ToolCallsSchema(BaseModel):
     tool_calls: list[ToolCallSchema] = Field(default_factory=list)
 
 
+class TokenUsage(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+
+
 class RAGState(BaseModel):
     """The state of the graph"""
 
@@ -75,3 +81,6 @@ class RAGState(BaseModel):
 
     # generated retrieval query for the current round
     retrieval_query: str = ""
+
+    # token usage tracking
+    usage_metrics: TokenUsage = TokenUsage()

@@ -485,6 +485,8 @@ class BaseLangGraph(ABC):
             Full data dump from a node after execution
         ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
             LLM token chunk from the current node
+        ``{"type": "usage", "node": "<label>", "data": {...}}``
+            Per-node token usage (input / output / total tokens)
         ``{"type": "complete", "message_for_user": "<answer>"}``
             Final answer from the completed graph
 
@@ -541,7 +543,7 @@ class BaseLangGraph(ABC):
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
 
-                elif event_type in ("info", "debug", "state"):
+                elif event_type in ("info", "debug", "state", "usage"):
                     data_out = data.get("data", {}).copy()
                     data_out["timing_seconds"] = round(time.monotonic() - node_start, 2)
                     yield {

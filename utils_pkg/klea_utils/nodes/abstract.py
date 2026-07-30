@@ -50,7 +50,7 @@ class NodeStreamEvent(BaseModel):
     This is the contract between the graph infrastructure and the frontend.
     """
 
-    type: Literal["info", "debug", "state"] = Field(description="Event type")
+    type: Literal["info", "debug", "state", "usage"] = Field(description="Event type")
     node: str = Field(description="Node label")
     data: NodeStreamData = Field(description="Event payload")
 
@@ -186,6 +186,8 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_output = None
         self._last_result = None
         self._last_state_updates = None
+        self._final_state = None
+        self._token_usage: dict[str, int] | None = None
 
         self.logger.debug(f"{state =}")
 
@@ -212,10 +214,16 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_result = self._process_output(self._last_output)
         self._last_state_updates = self._update_state(self._last_result, state)
 
+        # token calculations
+        self._token_usage = self._update_usage(self._last_output, state)
+        self._final_state = self._update_usage_metrics(
+            self._token_usage, self._last_state_updates
+        )
+
         self._post_exec_stream()
 
-        self.logger.debug(f"{self._last_state_updates =}")
-        return self._last_state_updates
+        self.logger.debug(f"{self._final_state =}")
+        return self._final_state
 
     @abstractmethod
     def _pre_exec(self, state: BaseModel) -> bool:
@@ -237,9 +245,9 @@ class AbstractLLMNode[TSchema: BaseModel](
     def _post_exec_stream(self) -> None:
         """Emit streaming events after LLM invocation.
 
-        Default: emits ``info``, ``debug``, and ``state`` events from
-        ``_get_info``, ``_get_debug``, and ``_get_status`` if they
-        return non-None values.
+        Default: emits ``info``, ``debug``, ``state``, and ``usage``
+        events from ``_get_info``, ``_get_debug``, ``_get_status``,
+        and ``_get_usage`` if they return non-None values.
         Override to customise post-execution streaming.
         """
         info = self._get_info()
@@ -254,6 +262,76 @@ class AbstractLLMNode[TSchema: BaseModel](
         if status:
             event = NodeStreamEvent(type="state", node=self.label, data=status)
             self.write_custom_stream(event.model_dump())
+        usage = self._get_usage()
+        if usage:
+            event = NodeStreamEvent(type="usage", node=self.label, data=usage)
+            self.write_custom_stream(event.model_dump())
+
+    def _update_usage(
+        self, output: AIMessage | dict[str, Any], state: BaseModel
+    ) -> dict[str, int] | None:
+        """Extract token usage from LLM output and add to the state's running total.
+
+        :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``)
+        :param state: Current graph state (must have ``usage_metrics`` field)
+        :returns: Dict with ``input_tokens``, ``output_tokens``, ``total_tokens``,
+            or ``None`` if usage information is unavailable
+        """
+        if not isinstance(output, AIMessage) or not hasattr(output, "usage_metadata"):
+            return None
+        meta = output.usage_metadata
+        if not meta:
+            return None
+        metrics = getattr(state, "usage_metrics", None)
+        if metrics is None:
+            return None
+        token_usage: dict[str, int] = {
+            "input_tokens": getattr(metrics, "input_tokens", 0)
+            + meta.get("input_tokens", 0),
+            "output_tokens": getattr(metrics, "output_tokens", 0)
+            + meta.get("output_tokens", 0),
+        }
+        token_usage["total_tokens"] = (
+            token_usage["input_tokens"] + token_usage["output_tokens"]
+        )
+        self.logger.debug(f"Token usage: {token_usage}")
+        return token_usage
+
+    def _get_usage(self) -> NodeStreamData | None:
+        """Build a ``NodeStreamData`` wrapper for the current node's token usage.
+
+        :returns: ``NodeStreamData`` with a ``display`` string
+            (e.g. ``"258 in / 1,024 out"``), or ``None`` if no usage recorded
+        """
+        if self._token_usage:
+            o_str = (
+                f"{self._token_usage['input_tokens']} in / "
+                f"{self._token_usage['output_tokens']} out"
+            )
+            self.logger.debug(f"{o_str =}")
+            return NodeStreamData(summary="", display=o_str)
+        return None
+
+    def _update_usage_metrics(
+        self,
+        token_usage: dict[str, int] | None = None,
+        current_state_updates: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Merge accumulated token usage into the state updates dict.
+
+        :param token_usage: Dict with ``input_tokens``, ``output_tokens``,
+            ``total_tokens`` (returned by :meth:`_update_usage`)
+        :param current_state_updates: The dict returned by :meth:`_update_state`
+        :returns: ``current_state_updates`` with ``usage_metrics`` injected,
+            or an empty dict if both arguments are falsy
+        """
+        result = current_state_updates or {}
+        if token_usage:
+            result["usage_metrics"] = token_usage
+            self.logger.debug(
+                "Injected token usage into state updates: %s", token_usage
+            )
+        return result
 
     def _get_info(self) -> NodeStreamData | None:
         """Return structured summary data for an ``info`` stream event.

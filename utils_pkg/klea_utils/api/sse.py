@@ -37,6 +37,7 @@ async def stream_events(
         info        {"type": "info", "node": "<label>", "data": {...}}
         debug       {"type": "debug", "node": "<label>", "data": {...}}
         token       {"type": "token", "content": "<chunk>", "node": "<label>"}
+        usage       {"type": "usage", "node": "<label>", "data": {...}}
         complete    {"type": "complete", "message_for_user": "<text>"}
         error       {"type": "error", "message": "<text>"}
 
