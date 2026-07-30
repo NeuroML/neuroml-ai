@@ -1,8 +1,8 @@
 {
     "general":
     {
-        "default_k": 5,
-        "k_max": 10,
+        "default_k": 15,
+        "k_max": 25,
         "non_domain_chat": true,
         "pre_prompt": "",
         "fallback_to_training_data": true,
