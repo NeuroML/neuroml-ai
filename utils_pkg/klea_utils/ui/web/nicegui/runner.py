@@ -174,10 +174,15 @@ def setup_layout(
     # The negative lookbehind avoids re-wrapping URLs already inside
     # markdown link syntax, e.g. [text](url).
     # ------------------------------------------------------------------
-    _BARE_URL_RE = re.compile(r"(?<!\()(https?://[^\s<)]+)")
+    _BARE_URL_RE = re.compile(r"(\[[^\]]*\]\([^)]*\))|(?<!\()(https?://[^\s<)]+)")
 
     def _linkify_md(text: str) -> str:
-        return _BARE_URL_RE.sub(r"[\1](\1)", text)
+        def _replacer(m: re.Match) -> str:
+            if m.group(1):
+                return m.group(1)
+            return f"[{m.group(2)}]({m.group(2)})"
+
+        return _BARE_URL_RE.sub(_replacer, text)
 
     def _render_chat_area() -> None:
         """Rebuild the scroll-area content (welcome or messages).
