@@ -203,9 +203,10 @@ For a graphical interface, launch the NiceGUI web UI:
 
    klea-rag web
 
-(The Streamlit UI is also available via ``klea-rag web --frontend streamlit``.)
+The web UI uses NiceGUI and requires the ``[nicegui]`` extra, while the
+CLI mode has no extra dependencies.
 
-All three methods connect to the running server at ``http://127.0.0.1:8005``
+Both methods connect to the running server at ``http://127.0.0.1:8005``
 by default.  Use ``--server`` to point at a different address.
 
 Going further

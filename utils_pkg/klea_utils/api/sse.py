@@ -114,7 +114,7 @@ def fetch_active_models_sync(
 ) -> dict[str, dict[str, str]]:
     """Synchronous counterpart of :func:`fetch_active_models`.
 
-    Intended for Streamlit and TUI frontends.
+    Intended for frontends that cannot use asyncio.
 
     :param server_url: Base URL of the backend API server.
     :param user_id: Opaque persistent user identifier.
@@ -176,15 +176,8 @@ def stream_events_sync(
 ) -> Generator[dict, None, None]:
     """Synchronous counterpart of :func:`stream_events`.
 
-    Intended for the Streamlit frontend only.
-
-    Streamlit runs the script top-to-bottom on every interaction, and
-    ``st.write_stream`` consumes a **synchronous** generator.  Calling
-    ``asyncio.run()`` inside a Streamlit re-run context creates nested
-    event-loop problems, so the SSE client must be sync here.
-
-    Async frontends (NiceGUI, TUI) should use :func:`stream_events`
-    instead.
+    Intended for frontends that cannot use asyncio.  Async frontends
+    (NiceGUI, TUI) should use :func:`stream_events` instead.
 
     :param query: User's query string.
     :param chat_id: Chat conversation identifier.

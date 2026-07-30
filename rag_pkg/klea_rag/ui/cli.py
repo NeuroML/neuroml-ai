@@ -75,44 +75,6 @@ def web(
         "Answers use LLM technology and may be incorrect. Please re-confirm.",
         "--disclaimer",
         "-c",
-        help="Disclaimer text shown below interface",
-    ),
-    server_url: str = typer.Option(
-        "http://127.0.0.1:8005",
-        "--server",
-        "-s",
-        help="KLEA RAG server URL:port",
-        callback=_validate_url,
-    ),
-):
-    """Klea RAG Streamlit client"""
-    spec = importlib.util.find_spec("klea_utils.ui.web.streamlit.app")
-    assert spec and spec.origin, "Could not locate streamlit app entry point"
-    cwd = Path(spec.origin).parent
-    with chdir(cwd):
-        subprocess.run(
-            shlex.split(
-                f"streamlit run app.py -- '{title}' '{subtitle}' '{server_url}'"
-                + f" --disclaimer '{disclaimer}'"
-            )
-        )
-
-
-@rag_app.command()
-def web_nicegui(
-    title: str = typer.Option(
-        "KLEA RAG", "--title", "-t", help="Application title (shown in header)"
-    ),
-    subtitle: str = typer.Option(
-        "",
-        "--subtitle",
-        "-b",
-        help="Subtitle shown next to title in header",
-    ),
-    disclaimer: str = typer.Option(
-        "Answers use LLM technology and may be incorrect. Please re-confirm.",
-        "--disclaimer",
-        "-c",
         help="Disclaimer text shown below the chat area",
     ),
     footer_text: str = typer.Option(
@@ -131,7 +93,7 @@ def web_nicegui(
         False, "--debug", "-d", help="Enable auto-reload on file changes"
     ),
 ):
-    """Klea RAG NiceGUI client"""
+    """Klea RAG web client (NiceGUI)"""
     spec = importlib.util.find_spec("klea_utils.ui.web.nicegui.app")
     assert spec and spec.origin, "Could not locate nicegui app entry point"
     cwd = Path(spec.origin).parent
