@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import List, Type, override
+from typing import override
 
 import pytest
 from klea_utils.graph.base import BaseLangGraph
@@ -26,15 +26,15 @@ class ToyState(BaseModel):
 
     query: str = ""
     message_for_user: str = ""
-    messages: List[AnyMessage] = Field(default_factory=list)
+    messages: list[AnyMessage] = Field(default_factory=list)
     context_summary: str = ""
 
 
 class ToyGraph(BaseLangGraph):
     """Minimal graph: AnswerGeneral (LLM) -> FixedAnswer (non-LLM) -> END."""
 
-    env_class: Type[BaseModel] = BaseModel
-    config_class: Type[BaseModel] = BaseModel
+    env_class: type[BaseModel] = BaseModel
+    config_class: type[BaseModel] = BaseModel
     env_var: str = "TOY_ENV_FILE"
     env_file_default: str = "toy.env"
     graph_name: str = "ToyGraph"

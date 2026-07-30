@@ -17,10 +17,9 @@ import os
 import unittest
 
 import pytest
-from ollama import ResponseError
-
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+from ollama import ResponseError
 
 
 class TestStores(unittest.TestCase):

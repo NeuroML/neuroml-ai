@@ -8,7 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any, List
+from typing import Any
 
 from fastmcp.client.client import CallToolResult
 from mcp.types import EmbeddedResource, TextContent
@@ -34,7 +34,7 @@ def _textualize_content_block(block: Any) -> str:
 
 
 def textualize_tool_results(
-    tool_results: List[CallToolResult],
+    tool_results: list[CallToolResult],
 ) -> str:
     """Format tool call results as LLM-ready text for use in prompt context.
 

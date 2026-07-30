@@ -17,7 +17,7 @@ import time
 from functools import lru_cache
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, NamedTuple, Type, cast
+from typing import Any, NamedTuple, cast
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompt_values import PromptValue
@@ -108,7 +108,7 @@ def check_ollama_model(logger, model, exit=False):
 
 
 def parse_output_with_thought[TSchema: BaseModel](
-    message: AIMessage, schema: Type[TSchema]
+    message: AIMessage, schema: type[TSchema]
 ) -> tuple[TSchema, str]:
     """Parse AI message with thought to a dict based on given schema"""
     # Lazy: JsonOutputParser pulls in langchain parsers

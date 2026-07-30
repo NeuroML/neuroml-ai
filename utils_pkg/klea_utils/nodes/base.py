@@ -16,7 +16,7 @@ import logging
 from functools import cached_property
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, Type, cast
+from typing import Any, cast
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
@@ -60,7 +60,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        output_schema: Type[TSchema] | None,
+        output_schema: type[TSchema] | None,
         memory: bool = False,
         num_history_messages: int = 10,
     ):
@@ -124,12 +124,12 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         return True
 
     @property
-    def output_schema(self) -> Type[TSchema] | None:
+    def output_schema(self) -> type[TSchema] | None:
         """Return Pydantic schema for structured output if required"""
         return self._output_schema
 
     @output_schema.setter
-    def output_schema(self, value: Type[TSchema] | None) -> None:
+    def output_schema(self, value: type[TSchema] | None) -> None:
         """Set Pydantic schema for structured output"""
         self._output_schema = value
 
@@ -261,7 +261,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         return result
 
     def _invoke_prompt(
-        self, prompt_template: ChatPromptTemplate, variables: Any | Dict[str, Any]
+        self, prompt_template: ChatPromptTemplate, variables: Any | dict[str, Any]
     ) -> PromptValue:
         """Format prompt with state-specific parameters"""
         prompt = prompt_template.invoke(variables)

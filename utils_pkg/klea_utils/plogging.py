@@ -87,7 +87,7 @@ def mask_sensitive(
     """
     safe = dict(data)
     for key in sensitive_keys or {"api_key"}:
-        if key in safe and safe[key]:
+        if safe.get(key):
             val = str(safe[key])
             safe[key] = f"...{val[-4:]}"
     return safe

@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -88,7 +88,7 @@ class SummariseMemoryNode(BaseLLMNode):
         }
 
     @override
-    def _update_state(self, result: Any, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: BaseModel) -> dict[str, Any]:
         """Extract summary from raw AIMessage output."""
         self.logger.debug(f"Current history summary is:\n{result.content}")
         content = content_to_str(result.content)

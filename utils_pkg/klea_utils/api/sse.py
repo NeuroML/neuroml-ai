@@ -48,20 +48,22 @@ async def stream_events(
     :param user_id: Opaque persistent user identifier.
     """
     url = f"{server_url}/query/stream"
-    async with httpx.AsyncClient(timeout=None) as client:
-        async with client.stream(
+    async with (
+        httpx.AsyncClient(timeout=None) as client,
+        client.stream(
             "POST",
             url,
             json={"query": query, "chat_id": chat_id, "user_id": user_id},
-        ) as response:
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if not line.startswith("data: "):
-                    if line.strip():
-                        logger.warning("Skipping non-data line: %s", line[:80])
-                    continue
-                # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
-                yield json.loads(line[6:])
+        ) as response,
+    ):
+        response.raise_for_status()
+        async for line in response.aiter_lines():
+            if not line.startswith("data: "):
+                if line.strip():
+                    logger.warning("Skipping non-data line: %s", line[:80])
+                continue
+            # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
+            yield json.loads(line[6:])
 
 
 # TODO: if more fetch-json-from-endpoint functions are added, consider
@@ -190,17 +192,19 @@ def stream_events_sync(
     :param user_id: Opaque persistent user identifier.
     """
     url = f"{server_url}/query/stream"
-    with httpx.Client(timeout=None) as client:
-        with client.stream(
+    with (
+        httpx.Client(timeout=None) as client,
+        client.stream(
             "POST",
             url,
             json={"query": query, "chat_id": chat_id, "user_id": user_id},
-        ) as response:
-            response.raise_for_status()
-            for line in response.iter_lines():
-                if not line.startswith("data: "):
-                    if line.strip():
-                        logger.warning("Skipping non-data line: %s", line[:80])
-                    continue
-                # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
-                yield json.loads(line[6:])
+        ) as response,
+    ):
+        response.raise_for_status()
+        for line in response.iter_lines():
+            if not line.startswith("data: "):
+                if line.strip():
+                    logger.warning("Skipping non-data line: %s", line[:80])
+                continue
+            # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
+            yield json.loads(line[6:])

@@ -13,10 +13,9 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ollama import ResponseError
-
 from klea_utils.stores.ingestion import VSBuilder
 from klea_utils.stores.utils import instantiate_vector_store
+from ollama import ResponseError
 
 TEST_MD_CONTENT = """# Test Document
 ## Section 1

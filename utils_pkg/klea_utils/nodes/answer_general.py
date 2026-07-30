@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -73,7 +73,7 @@ class AnswerGeneral(BaseLLMNode):
         return {"query": state.query}  # type: ignore
 
     @override
-    def _update_state(self, result: Any, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: BaseModel) -> dict[str, Any]:
         """Extract answer, append fallback warning if configured, update messages."""
         answer = ""
 

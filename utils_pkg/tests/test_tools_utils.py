@@ -9,11 +9,10 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from fastmcp.client.client import CallToolResult
-from mcp.types import EmbeddedResource, TextContent, TextResourceContents
-from pydantic.networks import AnyUrl
-
 from klea_utils.plogging import setup_logger
 from klea_utils.tools import textualize_tool_results
+from mcp.types import EmbeddedResource, TextContent, TextResourceContents
+from pydantic.networks import AnyUrl
 
 logger = setup_logger(__name__)
 
