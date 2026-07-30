@@ -227,7 +227,6 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-streamlit.html">UI — Streamlit</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
 </ul>
@@ -402,7 +401,7 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous counterpart of :func:`fetch_active_models`.</span>
 
-<span class="sd">    Intended for Streamlit and TUI frontends.</span>
+<span class="sd">    Intended for frontends that cannot use asyncio.</span>
 
 <span class="sd">    :param server_url: Base URL of the backend API server.</span>
 <span class="sd">    :param user_id: Opaque persistent user identifier.</span>
@@ -470,15 +469,8 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous counterpart of :func:`stream_events`.</span>
 
-<span class="sd">    Intended for the Streamlit frontend only.</span>
-
-<span class="sd">    Streamlit runs the script top-to-bottom on every interaction, and</span>
-<span class="sd">    ``st.write_stream`` consumes a **synchronous** generator.  Calling</span>
-<span class="sd">    ``asyncio.run()`` inside a Streamlit re-run context creates nested</span>
-<span class="sd">    event-loop problems, so the SSE client must be sync here.</span>
-
-<span class="sd">    Async frontends (NiceGUI, TUI) should use :func:`stream_events`</span>
-<span class="sd">    instead.</span>
+<span class="sd">    Intended for frontends that cannot use asyncio.  Async frontends</span>
+<span class="sd">    (NiceGUI, TUI) should use :func:`stream_events` instead.</span>
 
 <span class="sd">    :param query: User&#39;s query string.</span>
 <span class="sd">    :param chat_id: Chat conversation identifier.</span>
