@@ -164,7 +164,6 @@ def setup_layout(
     _current_chat_id = [chat_id]
     toggle_icon_ref: list = [None]
     _is_streaming: list = [False]
-    _inspector_item: list = [None]
 
     _expanded: set[int] = set()
 
@@ -665,22 +664,6 @@ def setup_layout(
             with ui.item_section():
                 ui.label("New Chat")
 
-        def _on_inspector_click():
-            if not _is_streaming[0]:
-                _show_inspection_dialog()
-
-        _inspector_item[0] = (
-            ui.item(on_click=_on_inspector_click)
-            .props("dense disabled")
-            .classes("w-full")
-        )
-        with _inspector_item[0]:
-            with ui.item_section().props("avatar"):
-                ui.icon("info")
-                ui.tooltip("Inspector available after query")
-            with ui.item_section():
-                ui.label("Inspector")
-
         # Session list header (no icon — plain text signals a section heading)
         with ui.item().props("dense").classes("w-full"), ui.item_section():
             ui.label("Chats").classes("text-sm font-bold")
@@ -740,6 +723,22 @@ def setup_layout(
                             icon="settings", on_click=lambda: _model_config_dialog()
                         ).props("flat dense round color=grey-9").classes("text-sm")
                         ui.tooltip("Choose models")
+                        has_entries = bool(current_chat.get("inspector_entries"))
+                        btn = (
+                            ui.button(
+                                icon="info",
+                                on_click=lambda: (
+                                    _show_inspection_dialog()
+                                    if not _is_streaming[0]
+                                    else None
+                                ),
+                            )
+                            .props("flat dense round color=grey-9")
+                            .classes("text-sm")
+                        )
+                        if _is_streaming[0] or not has_entries:
+                            btn.props("disabled")
+                        ui.tooltip("Inspector available after query")
                 model_info = current_chat.get("model_info", {})
                 if model_info:
                     tooltip_parts: list[str] = []
@@ -889,8 +888,7 @@ def setup_layout(
                             )
                             _render_chat_area()
                             _is_streaming[0] = False
-                            if _inspector_item[0]:
-                                _inspector_item[0].props(remove="disabled")
+                            _status_pane.refresh()
                             break
                         elif t == "error":
                             pg_row.delete()
@@ -903,8 +901,7 @@ def setup_layout(
                             )
                             _render_chat_area()
                             _is_streaming[0] = False
-                            if _inspector_item[0]:
-                                _inspector_item[0].props(remove="disabled")
+                            _status_pane.refresh()
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
@@ -917,8 +914,7 @@ def setup_layout(
                     )
                     _render_chat_area()
                     _is_streaming[0] = False
-                    if _inspector_item[0]:
-                        _inspector_item[0].props(remove="disabled")
+                    _status_pane.refresh()
 
             def send() -> None:
                 """Append the current input text as a user message. Creates a new chat if none is active."""
