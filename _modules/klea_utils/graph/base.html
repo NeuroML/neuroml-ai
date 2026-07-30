@@ -783,6 +783,8 @@
 <span class="sd">            Full data dump from a node after execution</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;&lt;chunk&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
 <span class="sd">            LLM token chunk from the current node</span>
+<span class="sd">        ``{&quot;type&quot;: &quot;usage&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">            Per-node token usage (input / output / total tokens)</span>
 <span class="sd">        ``{&quot;type&quot;: &quot;complete&quot;, &quot;message_for_user&quot;: &quot;&lt;answer&gt;&quot;}``</span>
 <span class="sd">            Final answer from the completed graph</span>
 
@@ -839,7 +841,7 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Progress: </span><span class="si">{</span><span class="n">current_node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                         <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">current_node</span><span class="p">}</span>
 
-                <span class="k">elif</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">):</span>
+                <span class="k">elif</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;usage&quot;</span><span class="p">):</span>
                     <span class="n">data_out</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
                     <span class="n">data_out</span><span class="p">[</span><span class="s2">&quot;timing_seconds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
                     <span class="k">yield</span> <span class="p">{</span>

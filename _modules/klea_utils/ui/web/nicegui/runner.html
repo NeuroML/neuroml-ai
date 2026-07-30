@@ -393,7 +393,7 @@
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
         <span class="s2">&quot;.model-tooltip { white-space: pre-wrap !important; max-width: none !important; }&quot;</span>
     <span class="p">)</span>
-    <span class="c1"># Status pane styling — uses disclosure triangles (same pattern as inspector)</span>
+    <span class="c1"># Status pane styling  ---  uses disclosure triangles (same pattern as inspector)</span>
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
         <span class="s2">&quot;.status-entry &gt; summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }&quot;</span>
     <span class="p">)</span>
@@ -449,7 +449,7 @@
     <span class="n">_expanded</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
-    <span class="c1"># Linkify helper — convert bare URLs in markdown source to</span>
+    <span class="c1"># Linkify helper  ---  convert bare URLs in markdown source to</span>
     <span class="c1"># clickable [url](url) so markdown2 renders them as &lt;a&gt; tags.</span>
     <span class="c1"># The negative lookbehind avoids re-wrapping URLs already inside</span>
     <span class="c1"># markdown link syntax, e.g. [text](url).</span>
@@ -521,7 +521,7 @@
 <span class="sd">        Uses Quasar&#39;s ``setScrollPosition`` (via NiceGUI&#39;s</span>
 <span class="sd">        ``scroll_to(pixels=99999)``) instead of raw JavaScript because</span>
 <span class="sd">        NiceGUI batches UI updates and JS into the same WebSocket packet</span>
-<span class="sd">        — by the time a ``setTimeout`` or ``requestAnimationFrame``</span>
+<span class="sd">         ---  by the time a ``setTimeout`` or ``requestAnimationFrame``</span>
 <span class="sd">        callback fires the new DOM may not be laid out yet, so</span>
 <span class="sd">        ``scrollTop = scrollHeight`` or ``scrollIntoView`` land at the</span>
 <span class="sd">        wrong position.</span>
@@ -529,7 +529,7 @@
 <span class="sd">        ``setScrollPosition`` is Quasar&#39;s own scroll API on</span>
 <span class="sd">        ``QScrollArea``; it coordinates with its internal layout cycle</span>
 <span class="sd">        so the scroll lands correctly after the content updates are</span>
-<span class="sd">        painted.  The large pixel value is safe — Quasar clamps it to</span>
+<span class="sd">        painted.  The large pixel value is safe  ---  Quasar clamps it to</span>
 <span class="sd">        the actual scrollable extent.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;attempting scroll for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -945,7 +945,7 @@
             <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">item_section</span><span class="p">():</span>
                 <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;New Chat&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Session list header (no icon — plain text signals a section heading)</span>
+        <span class="c1"># Session list header (no icon  ---  plain text signals a section heading)</span>
         <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;dense&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">),</span> <span class="n">ui</span><span class="o">.</span><span class="n">item_section</span><span class="p">():</span>
             <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;Chats&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm font-bold&quot;</span><span class="p">)</span>
 
@@ -1048,8 +1048,11 @@
                             <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tooltip_parts</span><span class="p">))</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
                                 <span class="s2">&quot;model-tooltip&quot;</span>
                             <span class="p">)</span>
+            <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_usage&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">token_usage</span><span class="p">:</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">token_usage</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5 mb-0&quot;</span><span class="p">)</span>
             <span class="n">sections</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_sections&quot;</span><span class="p">,</span> <span class="p">{})</span>
-            <span class="n">has_content</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span>
+            <span class="n">has_content</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">token_usage</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">has_content</span><span class="p">:</span>
                 <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;State updates will appear here&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
                     <span class="s2">&quot;text-sm text-gray-500&quot;</span>
@@ -1142,6 +1145,10 @@
                                     <span class="s2">&quot;timing_seconds&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timing_seconds&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
                                 <span class="p">}</span>
                             <span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;usage&quot;</span><span class="p">:</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;token_usage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                            <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span>
                             <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
                             <span class="n">node</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
