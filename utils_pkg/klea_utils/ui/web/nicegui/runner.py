@@ -112,7 +112,7 @@ def setup_layout(
     ui.add_css(
         ".model-tooltip { white-space: pre-wrap !important; max-width: none !important; }"
     )
-    # Status pane styling — uses disclosure triangles (same pattern as inspector)
+    # Status pane styling  ---  uses disclosure triangles (same pattern as inspector)
     ui.add_css(
         ".status-entry > summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
     )
@@ -168,7 +168,7 @@ def setup_layout(
     _expanded: set[int] = set()
 
     # ------------------------------------------------------------------
-    # Linkify helper — convert bare URLs in markdown source to
+    # Linkify helper  ---  convert bare URLs in markdown source to
     # clickable [url](url) so markdown2 renders them as <a> tags.
     # The negative lookbehind avoids re-wrapping URLs already inside
     # markdown link syntax, e.g. [text](url).
@@ -240,7 +240,7 @@ def setup_layout(
         Uses Quasar's ``setScrollPosition`` (via NiceGUI's
         ``scroll_to(pixels=99999)``) instead of raw JavaScript because
         NiceGUI batches UI updates and JS into the same WebSocket packet
-        — by the time a ``setTimeout`` or ``requestAnimationFrame``
+         ---  by the time a ``setTimeout`` or ``requestAnimationFrame``
         callback fires the new DOM may not be laid out yet, so
         ``scrollTop = scrollHeight`` or ``scrollIntoView`` land at the
         wrong position.
@@ -248,7 +248,7 @@ def setup_layout(
         ``setScrollPosition`` is Quasar's own scroll API on
         ``QScrollArea``; it coordinates with its internal layout cycle
         so the scroll lands correctly after the content updates are
-        painted.  The large pixel value is safe — Quasar clamps it to
+        painted.  The large pixel value is safe  ---  Quasar clamps it to
         the actual scrollable extent.
         """
         logger.debug("attempting scroll for chat=%s", _current_chat_id[0])
@@ -664,7 +664,7 @@ def setup_layout(
             with ui.item_section():
                 ui.label("New Chat")
 
-        # Session list header (no icon — plain text signals a section heading)
+        # Session list header (no icon  ---  plain text signals a section heading)
         with ui.item().props("dense").classes("w-full"), ui.item_section():
             ui.label("Chats").classes("text-sm font-bold")
 
@@ -767,8 +767,11 @@ def setup_layout(
                             ui.tooltip("\n".join(tooltip_parts)).classes(
                                 "model-tooltip"
                             )
+            token_usage = current_chat.get("token_usage", "")
+            if token_usage:
+                ui.label(token_usage).classes("text-xs text-grey-5 mb-0")
             sections = current_chat.get("state_sections", {})
-            has_content = bool(model_info) or bool(sections)
+            has_content = bool(model_info) or bool(sections) or bool(token_usage)
             if not has_content:
                 ui.label("State updates will appear here").classes(
                     "text-sm text-gray-500"
@@ -861,6 +864,10 @@ def setup_layout(
                                     "timing_seconds": data.get("timing_seconds", None),
                                 }
                             )
+                        elif t == "usage":
+                            data = event.get("data", {})
+                            current_chat["token_usage"] = data.get("display", "")
+                            _status_pane.refresh()
                         elif t == "state":
                             data = event.get("data", {})
                             node = event.get("node", "")

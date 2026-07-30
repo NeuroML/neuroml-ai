@@ -272,17 +272,24 @@ class AbstractLLMNode[TSchema: BaseModel](
     ) -> dict[str, int] | None:
         """Extract token usage from LLM output and add to the state's running total.
 
-        :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``)
+        :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``,
+            or a structured-output dict with a ``"raw"`` key)
         :param state: Current graph state (must have ``usage_metrics`` field)
         :returns: Dict with ``input_tokens``, ``output_tokens``, ``total_tokens``,
             or ``None`` if usage information is unavailable
         """
+        if isinstance(output, dict) and "raw" in output:
+            output = output["raw"]
         if not isinstance(output, AIMessage) or not hasattr(output, "usage_metadata"):
+            self.logger.debug("No message/metadata to get token usage from")
             return None
         meta = output.usage_metadata
         if not meta:
+            self.logger.debug("usage_metadata is empty")
             return None
         metrics = getattr(state, "usage_metrics", None)
+
+        self.logger.debug(f"Current usage_metrics: {metrics}")
         if metrics is None:
             return None
         token_usage: dict[str, int] = {
@@ -294,7 +301,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         token_usage["total_tokens"] = (
             token_usage["input_tokens"] + token_usage["output_tokens"]
         )
-        self.logger.debug(f"Token usage: {token_usage}")
+        self.logger.debug(f"Updated token usage: {token_usage}")
         return token_usage
 
     def _get_usage(self) -> NodeStreamData | None:
