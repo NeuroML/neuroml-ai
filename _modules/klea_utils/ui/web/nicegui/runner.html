@@ -1049,11 +1049,16 @@
                             <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tooltip_parts</span><span class="p">))</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
                                 <span class="s2">&quot;model-tooltip&quot;</span>
                             <span class="p">)</span>
-            <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_usage&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">token_usage</span><span class="p">:</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">token_usage</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5 mb-0&quot;</span><span class="p">)</span>
+            <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_usage&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">has_token_usage</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">token_usage</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">has_token_usage</span><span class="p">:</span>
+                <span class="n">usage_display</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">token_usage</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;input_tokens&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> in / &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">token_usage</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;output_tokens&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> out&quot;</span>
+                <span class="p">)</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">usage_display</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5 mb-0&quot;</span><span class="p">)</span>
             <span class="n">sections</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_sections&quot;</span><span class="p">,</span> <span class="p">{})</span>
-            <span class="n">has_content</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">token_usage</span><span class="p">)</span>
+            <span class="n">has_content</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">bool</span><span class="p">(</span><span class="n">sections</span><span class="p">)</span> <span class="ow">or</span> <span class="n">has_token_usage</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">has_content</span><span class="p">:</span>
                 <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;State updates will appear here&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
                     <span class="s2">&quot;text-sm text-gray-500&quot;</span>
@@ -1148,7 +1153,21 @@
                             <span class="p">)</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;usage&quot;</span><span class="p">:</span>
                             <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;token_usage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                            <span class="n">details</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                            <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                                <span class="s2">&quot;token_usage&quot;</span><span class="p">,</span>
+                                <span class="p">{</span>
+                                    <span class="s2">&quot;input_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                    <span class="s2">&quot;output_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                    <span class="s2">&quot;total_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="p">},</span>
+                            <span class="p">)</span>
+                            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span>
+                                <span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;total_tokens&quot;</span><span class="p">,</span>
+                            <span class="p">):</span>
+                                <span class="n">token_usage</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
                             <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span>
                             <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>

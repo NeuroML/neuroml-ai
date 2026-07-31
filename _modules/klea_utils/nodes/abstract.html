@@ -300,6 +300,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.runnables</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenUsage</span>
+
 
 <div class="viewcode-block" id="NodeStreamData">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.NodeStreamData">[docs]</a>
@@ -486,7 +488,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">state</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -514,7 +516,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
 
         <span class="c1"># token calculations</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_usage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_usage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_usage_metrics</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span>
         <span class="p">)</span>
@@ -567,16 +569,13 @@
             <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;usage&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_update_usage</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract token usage from LLM output and add to the state&#39;s running total.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract this node&#39;s token usage from the LLM output.</span>
 
 <span class="sd">        :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``,</span>
 <span class="sd">            or a structured-output dict with a ``&quot;raw&quot;`` key)</span>
-<span class="sd">        :param state: Current graph state (must have ``usage_metrics`` field)</span>
-<span class="sd">        :returns: Dict with ``input_tokens``, ``output_tokens``, ``total_tokens``,</span>
-<span class="sd">            or ``None`` if usage information is unavailable</span>
+<span class="sd">        :returns: ``TokenUsage`` for this node, or ``None`` if usage information is</span>
+<span class="sd">            unavailable</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;raw&quot;</span> <span class="ow">in</span> <span class="n">output</span><span class="p">:</span>
             <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">&quot;raw&quot;</span><span class="p">]</span>
@@ -587,47 +586,35 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;usage_metadata is empty&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">metrics</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;usage_metrics&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current usage_metrics: </span><span class="si">{</span><span class="n">metrics</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">metrics</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">token_usage</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;input_tokens&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;output_tokens&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">metrics</span><span class="p">,</span> <span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">}</span>
-        <span class="n">token_usage</span><span class="p">[</span><span class="s2">&quot;total_tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">token_usage</span><span class="p">[</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">token_usage</span><span class="p">[</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">]</span>
+        <span class="n">token_usage</span> <span class="o">=</span> <span class="n">TokenUsage</span><span class="p">(</span>
+            <span class="n">input_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">output_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">total_tokens</span><span class="o">=</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Updated token usage: </span><span class="si">{</span><span class="n">token_usage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Node token usage: </span><span class="si">{</span><span class="n">token_usage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">token_usage</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a ``NodeStreamData`` wrapper for the current node&#39;s token usage.</span>
 
-<span class="sd">        :returns: ``NodeStreamData`` with a ``display`` string</span>
-<span class="sd">            (e.g. ``&quot;258 in / 1,024 out&quot;``), or ``None`` if no usage recorded</span>
+<span class="sd">        :returns: ``NodeStreamData`` with numeric token details, or ``None`` if no</span>
+<span class="sd">            usage recorded</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">:</span>
-            <span class="n">o_str</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">[</span><span class="s1">&#39;input_tokens&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> in / &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">[</span><span class="s1">&#39;output_tokens&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> out&quot;</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">o_str</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="n">o_str</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">details</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="n">details</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_usage_metrics</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">token_usage</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">token_usage</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">current_state_updates</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge accumulated token usage into the state updates dict.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add this node&#39;s token usage delta to the state updates dict.</span>
 
-<span class="sd">        :param token_usage: Dict with ``input_tokens``, ``output_tokens``,</span>
-<span class="sd">            ``total_tokens`` (returned by :meth:`_update_usage`)</span>
+<span class="sd">        :param token_usage: Usage for this node (returned by</span>
+<span class="sd">            :meth:`_extract_usage`)</span>
 <span class="sd">        :param current_state_updates: The dict returned by :meth:`_update_state`</span>
 <span class="sd">        :returns: ``current_state_updates`` with ``usage_metrics`` injected,</span>
 <span class="sd">            or an empty dict if both arguments are falsy</span>

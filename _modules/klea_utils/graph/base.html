@@ -311,6 +311,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">create_model</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_dir</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">VectorStoresConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval</span><span class="w"> </span><span class="kn">import</span> <span class="n">VSRetriever</span>
@@ -403,7 +404,7 @@
         <span class="c1"># and do NOT change this dict.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LLMModel</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">tools_description</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ToolInfo</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">domain_mcp_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MCPConfig</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">=</span> <span class="n">checkpoint</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">!=</span> <span class="s2">&quot;none&quot;</span>
@@ -482,11 +483,11 @@
             <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span><span class="o">.</span><span class="n">list_tools</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_build_tools_description</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_build_tools_info</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_build_tools_description</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build per-domain tool descriptions from fetched MCP tools.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tools_description</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_tools_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build per-domain tool metadata from fetched MCP tools.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain_mcp_configs</span><span class="p">:</span>
             <span class="k">return</span>
 
@@ -499,8 +500,8 @@
                 <span class="n">num_servers</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">mcpServers</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
 
         <span class="k">for</span> <span class="n">domain</span><span class="p">,</span> <span class="n">server_names</span> <span class="ow">in</span> <span class="n">domain_servers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">desc</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
             <span class="n">ctr</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">domain_tools_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ToolInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="p">:</span>
                 <span class="k">if</span> <span class="s2">&quot;dummy&quot;</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
                     <span class="k">continue</span>
@@ -510,7 +511,7 @@
                         <span class="k">continue</span>
                 <span class="c1"># otherwise, there&#39;s only one server</span>
                 <span class="n">ctr</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">desc</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+                <span class="n">tool_description</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                    ## </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">.  </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="si">}</span>
 
 <span class="s2">                    ### Description</span>
@@ -519,13 +520,18 @@
 
 <span class="s2">                    &quot;&quot;&quot;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">inputSchema</span><span class="p">:</span>
-                    <span class="n">desc</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+                    <span class="n">tool_description</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">                        ### Parameters</span>
 
 <span class="s2">                        </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">inputSchema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;properties&quot;</span><span class="p">)</span><span class="si">}</span>
 
 <span class="s2">                        &quot;&quot;&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tools_description</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">desc</span>
+                <span class="n">domain_tools_info</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ToolInfo</span><span class="p">(</span>
+                    <span class="n">title</span><span class="o">=</span><span class="n">t</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="n">tool_description</span><span class="p">,</span>
+                    <span class="n">meta</span><span class="o">=</span><span class="n">t</span><span class="o">.</span><span class="n">meta</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">domain_tools_info</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_vector_stores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get vector stores&quot;&quot;&quot;</span>
