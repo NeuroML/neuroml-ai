@@ -47,10 +47,15 @@ async def create_server(port: int = 8542):
     @mcp.custom_route("/list", methods=["GET"])
     async def tool_list(request: Request) -> JSONResponse:
         all_tools = await mcp.list_tools()
-        tools_description = [
-            {str(tool.name): str(tool.description)} for tool in all_tools
+        tools_info = [
+            {
+                "name": str(tool.name),
+                "title": tool.title,
+                "description": tool.description,
+            }
+            for tool in all_tools
         ]
-        resp = {"registered_tools": tools_description}
+        resp = {"registered_tools": tools_info}
         return JSONResponse(resp)
 
     docs = FastMCPDocs(mcp, title="NeuroML MCP")
