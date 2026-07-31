@@ -18,10 +18,14 @@ from fastmcp import FastMCP
 from pydantic import Field
 from typing_extensions import Annotated
 
+from klea_code.tools.web_fetch import web_fetch
+
 bundle_server = FastMCP(
     "KleaBundled",
     instructions="Built-in tools for code exploration and file operations.",
 )
+
+bundle_server.tool(web_fetch)
 
 
 @bundle_server.tool
