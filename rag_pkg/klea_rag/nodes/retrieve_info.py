@@ -115,6 +115,9 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         # URLs, file name, score, not full content
         md_lines = []
         for domain, docs in reference_material.items():
+            if not docs:
+                continue
+
             md_lines.append(f"### {domain}\n")
 
             seen: dict[Hashable, tuple[float, list[str]]] = {}
@@ -139,7 +142,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 )
             ]
             md_lines += "\n".join(ref_lines)
-            md_lines += "\n"
+            md_lines += "\n\n"
 
         display_md = "".join(md_lines) if md_lines else "No documents retrieved"
         status_data = NodeStreamData(
