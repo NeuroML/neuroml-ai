@@ -53,7 +53,9 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         for d in domains:
             if d in self._domain_tools_description:
                 parts.append(self._domain_tools_description[d])
-        return "\n\n".join(parts)
+        if parts:
+            return "\n\n".join(parts)
+        return ""
 
     @override
     def _pre_exec(self, state: RAGState) -> bool:
@@ -61,9 +63,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
 
         If no tool description is available for the current domain, skip.
         """
-        if not self._get_tool_descriptions(state.query_domains):
-            return False
-        return True
+        return bool(self._get_tool_descriptions(state.query_domains))
 
     @override
     def _get_human_prompt(self, state: RAGState) -> str:
@@ -93,7 +93,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         """Return selected tools."""
         assert self._last_state_updates is not None
         tool_calls = self._last_state_updates.get("tool_calls", [])
-        tool_names = [tc.name for tc in tool_calls]
+        tool_names = [tc.tool for tc in tool_calls]
         if tool_names:
             summary = f"Selected {len(tool_names)} tool(s): {', '.join(tool_names)}"
         else:
@@ -128,9 +128,26 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         tool_calls = self._last_state_updates.get("tool_calls", [])
         if tool_calls:
             details["tool_calls"] = [
-                {"name": tc.name, "arguments": tc.arguments, "reason": tc.reason}
+                {"name": tc.tool, "arguments": tc.args, "reason": tc.reason}
                 for tc in tool_calls
             ]
         return NodeStreamData(
             heading=info.heading, summary=info.summary, details=details
+        )
+
+    @override
+    def _get_status(self) -> NodeStreamData:
+        """Return status update"""
+        assert self._last_state_updates is not None
+        tool_calls = self._last_state_updates.get("tool_calls", [])
+
+        tools_text = ""
+        for tc in tool_calls:
+            args = ", ".join(f"{k}={v}" for k, v in tc.args.items())
+            tools_text += f"1. `{tc.tool}({args})`\n"
+
+        return NodeStreamData(
+            heading="Tool Selection",
+            summary=f"Tools called: {len(tool_calls)}",
+            display=tools_text,
         )
