@@ -297,16 +297,13 @@ class AbstractLLMNode[TSchema: BaseModel](
     def _get_usage(self) -> NodeStreamData | None:
         """Build a ``NodeStreamData`` wrapper for the current node's token usage.
 
-        :returns: ``NodeStreamData`` with a ``display`` string
-            (e.g. ``"258 in / 1,024 out"``), or ``None`` if no usage recorded
+        :returns: ``NodeStreamData`` with numeric token details, or ``None`` if no
+            usage recorded
         """
         if self._token_usage is not None:
-            o_str = (
-                f"{self._token_usage.input_tokens} in / "
-                f"{self._token_usage.output_tokens} out"
-            )
-            self.logger.debug(f"{o_str =}")
-            return NodeStreamData(summary="", display=o_str)
+            details = self._token_usage.model_dump()
+            self.logger.debug(f"{details =}")
+            return NodeStreamData(summary="", details=details)
         return None
 
     def _update_usage_metrics(

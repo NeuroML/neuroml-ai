@@ -47,6 +47,8 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
                             pane, ordered by first insertion (per node label).
         model_info          Dict of active model config per role
                             (from ``fetch_active_models``).
+        token_usage         Numeric token totals accumulated for this in-memory
+                            chat session.
     """
     key = f"{user_id}:{chat_id}"
     if key not in chats:
@@ -61,6 +63,11 @@ def ensure_chat(user_id: str, chat_id: str) -> dict:
             "inspector_expanded": set(),
             "state_sections": {},
             "model_info": {},
+            "token_usage": {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+            },
         }
     else:
         logger.debug("found existing %s", key)

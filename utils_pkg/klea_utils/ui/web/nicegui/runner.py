@@ -767,11 +767,16 @@ def setup_layout(
                             ui.tooltip("\n".join(tooltip_parts)).classes(
                                 "model-tooltip"
                             )
-            token_usage = current_chat.get("token_usage", "")
-            if token_usage:
-                ui.label(token_usage).classes("text-xs text-grey-5 mb-0")
+            token_usage = current_chat.get("token_usage", {})
+            has_token_usage = any(token_usage.values())
+            if has_token_usage:
+                usage_display = (
+                    f"{token_usage.get('input_tokens', 0)} in / "
+                    f"{token_usage.get('output_tokens', 0)} out"
+                )
+                ui.label(usage_display).classes("text-xs text-grey-5 mb-0")
             sections = current_chat.get("state_sections", {})
-            has_content = bool(model_info) or bool(sections) or bool(token_usage)
+            has_content = bool(model_info) or bool(sections) or has_token_usage
             if not has_content:
                 ui.label("State updates will appear here").classes(
                     "text-sm text-gray-500"
@@ -866,7 +871,21 @@ def setup_layout(
                             )
                         elif t == "usage":
                             data = event.get("data", {})
-                            current_chat["token_usage"] = data.get("display", "")
+                            details = data.get("details", {})
+                            token_usage = current_chat.setdefault(
+                                "token_usage",
+                                {
+                                    "input_tokens": 0,
+                                    "output_tokens": 0,
+                                    "total_tokens": 0,
+                                },
+                            )
+                            for key in (
+                                "input_tokens",
+                                "output_tokens",
+                                "total_tokens",
+                            ):
+                                token_usage[key] += details.get(key, 0)
                             _status_pane.refresh()
                         elif t == "state":
                             data = event.get("data", {})
