@@ -158,7 +158,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
             )
             title = tool_info.title if tool_info and tool_info.title else tc.tool
             display_parts.append(
-                "**{title}**\n{arguments}".format(
+                "**{title}**\n\n{arguments}".format(
                     title=title,
                     arguments="\n".join(
                         f"- `{key}`: `{value if isinstance(value, str) else json.dumps(value)}`"
