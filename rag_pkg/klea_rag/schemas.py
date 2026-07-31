@@ -8,9 +8,11 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastmcp.client.client import CallToolResult
+from klea_utils.graph.reducers import add_token_usage
+from klea_utils.graph.schemas import TokenUsage
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 
@@ -41,12 +43,6 @@ class ToolCallSchema(BaseModel):
 # For Tool Picker
 class ToolCallsSchema(BaseModel):
     tool_calls: list[ToolCallSchema] = Field(default_factory=list)
-
-
-class TokenUsage(BaseModel):
-    input_tokens: int = 0
-    output_tokens: int = 0
-    total_tokens: int = 0
 
 
 class RAGState(BaseModel):
@@ -82,5 +78,7 @@ class RAGState(BaseModel):
     # generated retrieval query for the current round
     retrieval_query: str = ""
 
-    # token usage tracking
-    usage_metrics: TokenUsage = TokenUsage()
+    # Token usage is reduced so parallel nodes can update it safely.
+    usage_metrics: Annotated[TokenUsage, add_token_usage] = Field(
+        default_factory=TokenUsage
+    )

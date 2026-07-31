@@ -8,9 +8,11 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastmcp.client.client import CallToolResult
+from klea_utils.graph.reducers import add_token_usage
+from klea_utils.graph.schemas import TokenUsage
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 from typing_extensions import Any
@@ -59,12 +61,6 @@ class ArtefactSchema(BaseModel):
     metadata: dict[str, Any] = {}
 
 
-class TokenUsage(BaseModel):
-    input_tokens: int = 0
-    output_tokens: int = 0
-    context_size: int = 0
-
-
 class Discovery(BaseModel):
     # when it was created
     timestamp: int = 0
@@ -80,7 +76,9 @@ class KleaCodeState(BaseModel):
     query: str = ""
     messages: list[AnyMessage] = Field(default_factory=list)
     guard_decision: str = "safe"
-    usage_metrics: TokenUsage
+    usage_metrics: Annotated[TokenUsage, add_token_usage] = Field(
+        default_factory=TokenUsage
+    )
 
     # code string if any
     code: CodeSchema = CodeSchema()
