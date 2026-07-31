@@ -20,6 +20,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel, Field
 
+from klea_utils.graph.schemas import TokenUsage
+
 
 class NodeStreamData(BaseModel):
     """Data payload for node streaming events.
@@ -187,7 +189,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_result = None
         self._last_state_updates = None
         self._final_state = None
-        self._token_usage: dict[str, int] | None = None
+        self._token_usage: TokenUsage | None = None
 
         self.logger.debug(f"{state =}")
 
@@ -215,7 +217,7 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_state_updates = self._update_state(self._last_result, state)
 
         # token calculations
-        self._token_usage = self._update_usage(self._last_output, state)
+        self._token_usage = self._extract_usage(self._last_output)
         self._final_state = self._update_usage_metrics(
             self._token_usage, self._last_state_updates
         )
@@ -267,16 +269,13 @@ class AbstractLLMNode[TSchema: BaseModel](
             event = NodeStreamEvent(type="usage", node=self.label, data=usage)
             self.write_custom_stream(event.model_dump())
 
-    def _update_usage(
-        self, output: AIMessage | dict[str, Any], state: BaseModel
-    ) -> dict[str, int] | None:
-        """Extract token usage from LLM output and add to the state's running total.
+    def _extract_usage(self, output: AIMessage | dict[str, Any]) -> TokenUsage | None:
+        """Extract this node's token usage from the LLM output.
 
         :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``,
             or a structured-output dict with a ``"raw"`` key)
-        :param state: Current graph state (must have ``usage_metrics`` field)
-        :returns: Dict with ``input_tokens``, ``output_tokens``, ``total_tokens``,
-            or ``None`` if usage information is unavailable
+        :returns: ``TokenUsage`` for this node, or ``None`` if usage information is
+            unavailable
         """
         if isinstance(output, dict) and "raw" in output:
             output = output["raw"]
@@ -287,21 +286,12 @@ class AbstractLLMNode[TSchema: BaseModel](
         if not meta:
             self.logger.debug("usage_metadata is empty")
             return None
-        metrics = getattr(state, "usage_metrics", None)
-
-        self.logger.debug(f"Current usage_metrics: {metrics}")
-        if metrics is None:
-            return None
-        token_usage: dict[str, int] = {
-            "input_tokens": getattr(metrics, "input_tokens", 0)
-            + meta.get("input_tokens", 0),
-            "output_tokens": getattr(metrics, "output_tokens", 0)
-            + meta.get("output_tokens", 0),
-        }
-        token_usage["total_tokens"] = (
-            token_usage["input_tokens"] + token_usage["output_tokens"]
+        token_usage = TokenUsage(
+            input_tokens=meta.get("input_tokens", 0),
+            output_tokens=meta.get("output_tokens", 0),
+            total_tokens=(meta.get("input_tokens", 0) + meta.get("output_tokens", 0)),
         )
-        self.logger.debug(f"Updated token usage: {token_usage}")
+        self.logger.debug(f"Node token usage: {token_usage}")
         return token_usage
 
     def _get_usage(self) -> NodeStreamData | None:
@@ -310,10 +300,10 @@ class AbstractLLMNode[TSchema: BaseModel](
         :returns: ``NodeStreamData`` with a ``display`` string
             (e.g. ``"258 in / 1,024 out"``), or ``None`` if no usage recorded
         """
-        if self._token_usage:
+        if self._token_usage is not None:
             o_str = (
-                f"{self._token_usage['input_tokens']} in / "
-                f"{self._token_usage['output_tokens']} out"
+                f"{self._token_usage.input_tokens} in / "
+                f"{self._token_usage.output_tokens} out"
             )
             self.logger.debug(f"{o_str =}")
             return NodeStreamData(summary="", display=o_str)
@@ -321,13 +311,13 @@ class AbstractLLMNode[TSchema: BaseModel](
 
     def _update_usage_metrics(
         self,
-        token_usage: dict[str, int] | None = None,
+        token_usage: TokenUsage | None = None,
         current_state_updates: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Merge accumulated token usage into the state updates dict.
+        """Add this node's token usage delta to the state updates dict.
 
-        :param token_usage: Dict with ``input_tokens``, ``output_tokens``,
-            ``total_tokens`` (returned by :meth:`_update_usage`)
+        :param token_usage: Usage for this node (returned by
+            :meth:`_extract_usage`)
         :param current_state_updates: The dict returned by :meth:`_update_state`
         :returns: ``current_state_updates`` with ``usage_metrics`` injected,
             or an empty dict if both arguments are falsy
