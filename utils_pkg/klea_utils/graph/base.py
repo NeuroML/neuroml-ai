@@ -31,6 +31,7 @@ from platformdirs import PlatformDirs
 from pydantic import BaseModel, create_model
 
 from klea_utils.llm import LLMModel
+from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
@@ -121,7 +122,7 @@ class BaseLangGraph(ABC):
         # and do NOT change this dict.
         self.llm_models: dict[str, LLMModel] = {}
 
-        self.tools_description: dict[str, str] = {}
+        self.tools_info: dict[str, dict[str, ToolInfo]] = {}
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
         self.checkpointer_mode = checkpoint
         self.memory = checkpoint != "none"
@@ -200,11 +201,11 @@ class BaseLangGraph(ABC):
             async with self.mcp_client:
                 self.mcp_tools = await self.mcp_client.list_tools()
             self.logger.debug(f"{self.mcp_tools =}")
-            self._build_tools_description()
+            self._build_tools_info()
 
-    def _build_tools_description(self) -> None:
-        """Build per-domain tool descriptions from fetched MCP tools."""
-        self.tools_description = {}
+    def _build_tools_info(self) -> None:
+        """Build per-domain tool metadata from fetched MCP tools."""
+        self.tools_info = {}
         if not self.mcp_tools or not self.domain_mcp_configs:
             return
 
@@ -217,8 +218,8 @@ class BaseLangGraph(ABC):
                 num_servers += len(list(config.mcpServers.keys()))
 
         for domain, server_names in domain_servers.items():
-            desc = ""
             ctr = 0
+            domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
                 if "dummy" in t.name:
                     continue
@@ -228,7 +229,7 @@ class BaseLangGraph(ABC):
                         continue
                 # otherwise, there's only one server
                 ctr += 1
-                desc += dedent(f"""
+                tool_description = dedent(f"""
                     ## {ctr}.  {t.name}
 
                     ### Description
@@ -237,13 +238,18 @@ class BaseLangGraph(ABC):
 
                     """)
                 if t.inputSchema:
-                    desc += dedent(f"""
+                    tool_description += dedent(f"""
                         ### Parameters
 
                         {t.inputSchema.get("properties")}
 
                         """)
-            self.tools_description[domain] = desc
+                domain_tools_info[t.name] = ToolInfo(
+                    title=t.title,
+                    description=tool_description,
+                    meta=t.meta,
+                )
+            self.tools_info[domain] = domain_tools_info
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
