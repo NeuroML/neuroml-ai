@@ -298,6 +298,7 @@ async def get_models_from_neuromldb_tool(
         return {"Error": "NeuroML-DB session not initialized"}
 
     neuromldb_search_url = "http://neuroml-db.org/api/search"
+    neuromldb_model_url = "http://neuroml-db.org/model_info?model_id="
     neuromldb_model_xml_url = "https://neuroml-db.org/render_xml_file"
     models: dict[str, Any] = {}
 
@@ -318,13 +319,13 @@ async def get_models_from_neuromldb_tool(
     # Process up to num results
     for i, m in enumerate(res[:num]):
         mcopy = m.copy()
+        model_id = m.get("Model_ID", f"unknown_{i}")
+        mcopy["url"] = neuromldb_model_url + model_id
 
         if download:
             # Rate limit: sleep between requests (but not before the first)
             if i > 0:
                 await asyncio.sleep(1)
-
-            model_id = m.get("Model_ID", f"unknown_{i}")
 
             if model_id in NEUROMLDB_XML_CACHE:
                 logger.debug(f"Cache hit for XML: {model_id}")
@@ -349,7 +350,7 @@ async def get_models_from_neuromldb_tool(
                     mcopy["resource"] = None
         else:
             mcopy["resource"] = None
-        models[m.get("Model_ID", f"unknown_{i}")] = mcopy
+        models[model_id] = mcopy
 
     return models
 
