@@ -26,7 +26,7 @@ from .sandbox import nml_mcp_sandbox
 sbox = nml_mcp_sandbox
 
 
-@tool_meta(ToolInfo(tags={"testing"}))
+@tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
 async def dummy_code_tool(
     astring: Annotated[str, Field(description="String to be echoed back")],
 ) -> str:
@@ -39,7 +39,7 @@ async def dummy_code_tool(
     return f"I got {astring}"
 
 
-@tool_meta(ToolInfo(tags={"testing"}))
+@tool_meta(ToolInfo(title="List files and directories", tags={"testing"}))
 async def list_files_tool(
     path: Annotated[
         str,
@@ -137,7 +137,7 @@ async def list_files_tool(
     return result
 
 
-@tool_meta(ToolInfo(tags={"testing"}))
+@tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
 async def run_python_code_tool(
     code: Annotated[
         str,
