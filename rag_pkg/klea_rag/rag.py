@@ -211,7 +211,7 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
-            domain_tools_description=self.tools_description,
+            domain_tools_info=self.tools_info,
         )
         self.workflow.add_node(
             self._tools_picker_node.label, self._tools_picker_node.execute

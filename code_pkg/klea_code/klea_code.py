@@ -162,13 +162,13 @@ class KleaCode(BaseLangGraph):
             label="Planning",
             llm_models=self.llm_models,
         )
-        self._planner_node.set_tools_description(self.tools_description)
+        self._planner_node.set_tools_info(self.tools_info)
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
         )
-        self._tools_picker_node.set_tools_description(self.tools_description)
+        self._tools_picker_node.set_tools_info(self.tools_info)
         self._tools_caller_node = ToolsCaller(
             logger=self.logger, label="Running tools", mcp_client=self.mcp_client
         )

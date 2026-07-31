@@ -8,10 +8,12 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import json
 import logging
 from typing import Any, override
 
 from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
+from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 
@@ -29,14 +31,14 @@ class ToolsPicker(BaseLLMNode[RAGState]):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
-        domain_tools_description: dict[str, str] | None = None,
+        domain_tools_info: dict[str, dict[str, ToolInfo]] | None = None,
     ):
         """Initialise the tools picker node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
-        :param domain_tools_description: Per-domain tool descriptions
+        :param domain_tools_info: Per-domain tool metadata
         """
         super().__init__(
             logger=logger,
@@ -45,14 +47,17 @@ class ToolsPicker(BaseLLMNode[RAGState]):
             output_schema=ToolCallsSchema,
             memory=False,
         )
-        self._domain_tools_description = domain_tools_description or {}
+        self._domain_tools_info = domain_tools_info or {}
 
     def _get_tool_descriptions(self, domains: list[str]) -> str:
         """Get combined tool descriptions for the given domains."""
         parts = []
         for d in domains:
-            if d in self._domain_tools_description:
-                parts.append(self._domain_tools_description[d])
+            if d in self._domain_tools_info:
+                parts.extend(
+                    info.description or ""
+                    for info in self._domain_tools_info[d].values()
+                )
         if parts:
             return "\n\n".join(parts)
         return ""
@@ -137,17 +142,32 @@ class ToolsPicker(BaseLLMNode[RAGState]):
 
     @override
     def _get_status(self) -> NodeStreamData:
-        """Return status update"""
+        """Return human-readable selected tool calls."""
         assert self._last_state_updates is not None
         tool_calls = self._last_state_updates.get("tool_calls", [])
 
-        tools_text = ""
+        display_parts: list[str] = []
         for tc in tool_calls:
-            args = ", ".join(f"{k}={v}" for k, v in tc.args.items())
-            tools_text += f"1. `{tc.tool}({args})`\n"
-
+            tool_info = next(
+                (
+                    info
+                    for domain_tools in self._domain_tools_info.values()
+                    if (info := domain_tools.get(tc.tool)) is not None
+                ),
+                None,
+            )
+            title = tool_info.title if tool_info and tool_info.title else tc.tool
+            display_parts.append(
+                "**{title}**\n{arguments}".format(
+                    title=title,
+                    arguments="\n".join(
+                        f"- `{key}`: `{value if isinstance(value, str) else json.dumps(value)}`"
+                        for key, value in tc.args.items()
+                    ),
+                )
+            )
         return NodeStreamData(
             heading="Tool Selection",
-            summary=f"Tools called: {len(tool_calls)}",
-            display=tools_text,
+            summary=f"Tools selected: {len(tool_calls)}",
+            display="\n\n".join(display_parts),
         )

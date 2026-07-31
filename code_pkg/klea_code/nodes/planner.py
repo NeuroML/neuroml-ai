@@ -12,6 +12,7 @@ import logging
 from typing import Any, override
 
 from klea_code.schemas import KleaCodeState, PlanSchema
+from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
 
@@ -43,10 +44,16 @@ class Planner(BaseLLMNode[PlanSchema]):
         )
         self._tools_description = ""
 
-    def set_tools_description(self, description: dict[str, str]) -> None:
-        """Set tool descriptions (called by orchestrator after construction)."""
+    def set_tools_info(self, tools_info: dict[str, dict[str, ToolInfo]]) -> None:
+        """Set tool metadata (called by orchestrator after construction)."""
         self._tools_description = (
-            "\n\n".join(description.values()) if description else ""
+            "\n\n".join(
+                info.description or ""
+                for domain_info in tools_info.values()
+                for info in domain_info.values()
+            )
+            if tools_info
+            else ""
         )
 
     @override
