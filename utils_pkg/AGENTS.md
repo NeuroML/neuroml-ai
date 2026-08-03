@@ -119,12 +119,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 import httpx
 
 # 3. Local imports
-from klea_utils.plogging import setup_logging
+from klea_utils.plogging import setup_root_logger
 from klea_utils.llm import get_default_model
 ```
 
 ### Naming Conventions
-- **Functions**: snake_case (`setup_logging`, `get_default_model`)
+- **Functions**: snake_case (`setup_root_logger`, `get_default_model`)
 - **Classes**: PascalCase (`NeuroMLLogger`, `LLMConfig`)
 - **Variables**: snake_case (`model_name`, `api_key`)
 - **Constants**: UPPER_CASE (`DEFAULT_MODEL`, `LOG_FORMAT`)
