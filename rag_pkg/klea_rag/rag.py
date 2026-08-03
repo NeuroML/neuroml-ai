@@ -79,11 +79,13 @@ class RAG(BaseLangGraph):
             "chat": LLMModel(
                 instance=model,
                 model_name=self.app_env.chat_model,
+                provider_defaults=self._provider_defaults_for_role("chat"),
             ),
             "guard": LLMModel(
                 instance=model,
                 model_name=self.app_env.guard_model,
                 modifiable=False,
+                provider_defaults=self._provider_defaults_for_role("guard"),
             ),
             "embedding": LLMModel(
                 instance=None,
