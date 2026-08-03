@@ -583,6 +583,33 @@
 
 
 
+<div class="viewcode-block" id="is_output_truncated">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.is_output_truncated">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_output_truncated</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if an LLM output was truncated by the max-token limit.</span>
+
+<span class="sd">    Providers signal truncation via ``finish_reason == &quot;length&quot;`` on the</span>
+<span class="sd">    message metadata.  Handles both plain ``AIMessage`` outputs and</span>
+<span class="sd">    structured-output dicts (``{&quot;raw&quot;: AIMessage, ...}``), and the</span>
+<span class="sd">    list-form ``finish_reason`` some providers return.</span>
+
+<span class="sd">    :param output: The raw output from ``llm.invoke()``.</span>
+<span class="sd">    :returns: True when the model stopped because it hit the output cap.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">raw</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">response_metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">finish_reason</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;finish_reason&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">finish_reason</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">finish_reason</span> <span class="o">=</span> <span class="n">finish_reason</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">finish_reason</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">finish_reason</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;length&quot;</span></div>
+
+
+
 <div class="viewcode-block" id="get_token_limit_param">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_token_limit_param">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
