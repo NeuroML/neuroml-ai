@@ -31,7 +31,7 @@ class FallbackConfig(BaseModel):
 
 class AnswerGeneral(BaseLLMNode):
     model_type = "chat"
-    model_defaults = {"temperature": 0.3}
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
     """Answer general (non-domain) questions using the LLM's training data.
 
     Provides a conversational, user-friendly response. Optionally appends

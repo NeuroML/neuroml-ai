@@ -28,7 +28,7 @@ from klea_rag.schemas import RAGState
 # Type is calculated at runtime in orchestrator
 class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
     model_type = "chat"
-    model_defaults = {"temperature": 0.3}
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
     """Classify a user query into domain categories.
 
     Uses an LLM to determine which domains the query belongs to, based on

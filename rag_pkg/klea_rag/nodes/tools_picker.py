@@ -24,7 +24,7 @@ class ToolsPicker(BaseLLMNode[RAGState]):
     """Node that selects tools to augment vector store retrieval."""
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.01}
+    model_defaults = {"temperature": 0.01, "max_output_tokens": 2048}
 
     def __init__(
         self,

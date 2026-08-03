@@ -29,7 +29,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     """Node that generates a concise retrieval query from the user's question."""
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.3}
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
 
     def __init__(
         self,

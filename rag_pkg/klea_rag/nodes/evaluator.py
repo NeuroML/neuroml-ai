@@ -23,7 +23,7 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     """Node that evaluates a RAG-generated answer against retrieved context."""
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.0}
+    model_defaults = {"temperature": 0.0, "max_output_tokens": 4096}
 
     def __init__(
         self,
