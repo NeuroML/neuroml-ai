@@ -21,6 +21,7 @@ def build(
     modifiable=True,
     context_overrides=None,
     node_defaults=None,
+    provider_defaults=None,
 ):
     """Convenience wrapper: create an LLMModel and call build_config()."""
     model = LLMModel(
@@ -28,6 +29,7 @@ def build(
         instance=None,
         role_defaults=role_defaults or {},
         modifiable=modifiable,
+        provider_defaults=provider_defaults or {},
     )
     return model.build_config(
         context_overrides=context_overrides,
@@ -225,6 +227,49 @@ class TestApiKeyMapping:
             )
         )
         assert c["huggingfacehub_api_token"] == "hf-xyz"
+
+
+# ---------------------------------------------------------------------------
+# Layer 4: provider_defaults (post-parse, setdefault)
+# ---------------------------------------------------------------------------
+
+
+class TestProviderDefaults:
+    """Layer 4 - per-provider defaults from graph config."""
+
+    def test_applied_for_matching_provider(self):
+        c = configurable(
+            build(
+                model_name="huggingface:org/model:auto",
+                provider_defaults={
+                    "huggingface": {"max_output_tokens": 2048, "temperature": 0.1}
+                },
+            )
+        )
+        assert c["max_output_tokens"] == 2048
+        assert c["temperature"] == 0.1
+
+    def test_ignored_for_other_provider(self):
+        c = configurable(
+            build(
+                model_name="openai:gpt-4o",
+                provider_defaults={"huggingface": {"max_output_tokens": 2048}},
+            )
+        )
+        assert "max_output_tokens" not in c
+
+    def test_role_defaults_win_over_provider_defaults(self):
+        c = configurable(
+            build(
+                model_name="huggingface:org/model:auto",
+                role_defaults={"max_output_tokens": 4096, "temperature": 0.5},
+                provider_defaults={
+                    "huggingface": {"max_output_tokens": 2048, "temperature": 0.1}
+                },
+            )
+        )
+        assert c["max_output_tokens"] == 4096
+        assert c["temperature"] == 0.5
 
 
 # ---------------------------------------------------------------------------

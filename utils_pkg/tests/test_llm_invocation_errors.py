@@ -18,7 +18,9 @@ class TestTokenLimitParam(unittest.TestCase):
     """Tests for get_token_limit_param provider mapping."""
 
     def test_huggingface(self):
-        self.assertEqual(get_token_limit_param("huggingface"), "max_new_tokens")
+        # ChatHuggingFace exposes max_tokens (mapped to max_new_tokens on
+        # the underlying HF endpoint).
+        self.assertEqual(get_token_limit_param("huggingface"), "max_tokens")
 
     def test_ollama(self):
         self.assertEqual(get_token_limit_param("ollama"), "num_predict")
