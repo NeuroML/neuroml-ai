@@ -35,6 +35,7 @@ from ..llm import (
     get_provider_allowed_fields,
     load_prompt,
     parse_output_with_thought,
+    resolve_output_token_limit,
 )
 from .abstract import AbstractLLMNode
 
@@ -158,9 +159,11 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """Build the per-invoke RunnableConfig.
 
         Delegates the full merge (role defaults -> context overrides ->
-        node defaults, including model-string parsing) to
-        ``LLMModel.build_config()``, then applies provider field
-        filtering to strip fields invalid for the resolved provider.
+        node defaults -> provider defaults, including model-string parsing)
+        to ``LLMModel.build_config()``, then resolves the bounded max-output
+        token param (translated + clamped to the catalog's output/context
+        limits) before applying provider field filtering to strip fields
+        invalid for the resolved provider.
         """
         role_overrides = model_overrides_ctx.get().get(self.model_type, {})
         self.logger.debug(
@@ -178,6 +181,19 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
         # Get the merged configurable dict for provider field filtering.
         overrides: dict[str, Any] = config["configurable"]
+
+        # --- Bounded output tokens ---
+        # Guarantee a finite max-output token param for the resolved
+        # provider, clamped to the model's catalog output limit and total
+        # budget (input + output <= context).  Must run before provider
+        # field filtering so the translated provider token param survives.
+        input_chars = len(self._last_prompt.to_string()) if self._last_prompt else None
+        resolve_output_token_limit(
+            overrides,
+            provider=overrides.get("model_provider") or "openai",
+            role=self.model_type,
+            input_chars=input_chars,
+        )
 
         # --- Provider field filtering ---
         active_provider = overrides.get("model_provider") or "openai"
