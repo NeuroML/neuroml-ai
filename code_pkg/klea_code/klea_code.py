@@ -44,6 +44,10 @@ class KleaCode(BaseLangGraph):
     config_class = AppConfig
     graph_name = "klea-code"
 
+    # type hints
+    app_env: AppEnv
+    app_config: AppConfig
+
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
@@ -67,14 +71,17 @@ class KleaCode(BaseLangGraph):
             "chat": LLMModel(
                 instance=model,
                 model_name=self.app_env.chat_model,
+                provider_defaults=self._provider_defaults_for_role("chat"),
             ),
             "plan": LLMModel(
                 instance=model,
                 model_name=self.app_env.reasoning_model,
+                provider_defaults=self._provider_defaults_for_role("plan"),
             ),
             "guard": LLMModel(
                 instance=model,
                 model_name=self.app_env.guard_model,
+                provider_defaults=self._provider_defaults_for_role("guard"),
             ),
         }
 
