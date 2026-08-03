@@ -13,10 +13,11 @@ from __future__ import annotations
 import inspect
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from functools import cached_property
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
@@ -30,14 +31,28 @@ from klea_utils.plogging import mask_sensitive
 
 from ..errors import LLMInvocationErrorCategory, PromptTemplateError
 from ..llm import (
+    DEFAULT_MAX_OUTPUT_TOKENS,
     add_memory_to_prompt,
     classify_llm_invocation_error,
     get_provider_allowed_fields,
+    get_token_limit_param,
+    is_output_truncated,
     load_prompt,
     parse_output_with_thought,
     resolve_output_token_limit,
 )
 from .abstract import AbstractLLMNode
+
+#: Max times to retry an invoke that overflowed the context window, each
+#: time shrinking the reserved output window to free headroom.
+MAX_CONTEXT_OVERFLOW_RETRIES = 3
+
+#: Max times to retry an invoke whose output was truncated (``finish_reason
+#: == "length"``), each time growing the reserved output window.
+MAX_TRUNCATION_RETRIES = 2
+
+#: Floor for the reserved output window when shrinking it on overflow.
+MIN_OUTPUT_TOKENS = 64
 
 
 class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
@@ -216,6 +231,9 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         ``response_format`` parameter (e.g. some custom OpenAI-compatible
         endpoints), falls back to a plain invoke  ---  the prompt already
         contains the JSON schema as text instructions.
+
+        Both paths route through :meth:`_invoke_with_retries` for adaptive
+        retries on context overflow / truncated output.
         """
         inst = self._llm_entry.instance
         if self.output_schema:
@@ -223,7 +241,9 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
                 self.output_schema, method="json_schema", include_raw=True
             )
             try:
-                output = await llm_wrapped.ainvoke(prompt, config=config)
+                output = await self._invoke_with_retries(
+                    llm_wrapped.ainvoke, prompt, config
+                )
             except Exception as exc:
                 if (
                     classify_llm_invocation_error(exc)
@@ -232,13 +252,131 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
                     self.logger.warning(
                         "Structured output not supported, falling back to prompt-based"
                     )
-                    output = await inst.ainvoke(prompt, config=config)
+                    output = await self._invoke_with_retries(
+                        inst.ainvoke, prompt, config
+                    )
                 else:
                     raise
         else:
-            output = await inst.ainvoke(prompt, config=config)
+            output = await self._invoke_with_retries(inst.ainvoke, prompt, config)
         self.logger.debug(f"{output = }")
         return output
+
+    def _update_output_window(
+        self, config: RunnableConfig, direction: Literal["shrink", "grow"]
+    ) -> bool:
+        """Resize the reserved output window and re-apply catalog clamps.
+
+        Updates ``config["configurable"]`` in place.  ``"shrink"`` halves
+        the window (context-overflow retry), ``"grow"`` doubles it
+        (truncation retry); both are re-clamped to the model's catalog
+        output limit and total budget via ``resolve_output_token_limit``.
+
+        :param config: The per-invoke RunnableConfig to update in place.
+        :param direction: ``"shrink"`` or ``"grow"``.
+        :returns: True if the window actually changed, False if it was
+            already at a bound (no point retrying).
+        """
+        overrides = config["configurable"]
+        provider = overrides.get("model_provider") or "openai"
+        token_param = get_token_limit_param(provider)
+        current = int(overrides.get(token_param, DEFAULT_MAX_OUTPUT_TOKENS))
+
+        if direction == "shrink":
+            target = max(MIN_OUTPUT_TOKENS, current // 2)
+        else:
+            target = current * 2
+
+        # Set the provider token param directly (rather than the generic
+        # key) so the resolver's "explicit value wins" precedence does not
+        # pick up a stale explicit value; resolve then re-applies the
+        # catalog output / total-budget clamps to *target*.
+        overrides[token_param] = target
+        last_prompt = getattr(self, "_last_prompt", None)
+        input_chars = len(last_prompt.to_string()) if last_prompt else None
+        resolve_output_token_limit(
+            overrides,
+            provider=provider,
+            role=self.model_type,
+            input_chars=input_chars,
+        )
+        new_value = int(overrides[token_param])
+        self.logger.debug(
+            f"Output window {direction}: {current} -> {new_value} ({provider = })"
+        )
+        return new_value != current
+
+    async def _invoke_with_retries(
+        self,
+        invoke: Callable[..., Awaitable[Any]],
+        prompt: PromptValue,
+        config: RunnableConfig,
+    ) -> AIMessage | dict[str, Any]:
+        """Invoke an LLM with adaptive retries on length-related failures.
+
+        Two retry behaviours, both bounded:
+
+        * ``context_overflow`` errors (request rejected because input plus
+          the reserved output exceeds the window) retry up to
+          :data:`MAX_CONTEXT_OVERFLOW_RETRIES` times, shrinking the
+          output window each time.
+        * Successful calls that were truncated (``finish_reason ==
+          "length"``) retry up to :data:`MAX_TRUNCATION_RETRIES` times,
+          growing the output window each time.
+
+        All other failures (rate limits, auth, model-not-found, ...) are
+        re-raised immediately.  Retrying stops early if resizing the
+        window makes no progress (already at a bound).
+
+        :param invoke: Async callable ``(prompt, config) -> output``.
+        :param prompt: The prompt to invoke.
+        :param config: Per-invoke RunnableConfig (mutated between attempts).
+        :returns: The (non-truncated) LLM output.
+        """
+        overflow_retries = 0
+        truncation_retries = 0
+
+        while True:
+            try:
+                output = await invoke(prompt, config=config)
+            except Exception as exc:
+                category = classify_llm_invocation_error(exc)
+                if (
+                    category is LLMInvocationErrorCategory.CONTEXT_OVERFLOW
+                    and overflow_retries < MAX_CONTEXT_OVERFLOW_RETRIES
+                ):
+                    overflow_retries += 1
+                    if not self._update_output_window(config, "shrink"):
+                        self.logger.warning(
+                            "Context overflow but output window cannot shrink further"
+                        )
+                        raise
+                    self.logger.warning(
+                        "Context overflow, retrying with smaller output window (%d/%d)",
+                        overflow_retries,
+                        MAX_CONTEXT_OVERFLOW_RETRIES,
+                    )
+                    continue
+                raise
+
+            if (
+                is_output_truncated(output)
+                and truncation_retries < MAX_TRUNCATION_RETRIES
+            ):
+                truncation_retries += 1
+                if not self._update_output_window(config, "grow"):
+                    self.logger.warning(
+                        "Output truncated but output window cannot grow further"
+                    )
+                    return output
+                self.logger.warning(
+                    "Output truncated, retrying with larger output window (%d/%d)",
+                    truncation_retries,
+                    MAX_TRUNCATION_RETRIES,
+                )
+                continue
+
+            return output
 
     def _process_output(self, output: AIMessage | dict[str, Any]) -> Any:
         """Common output processing with error handling"""

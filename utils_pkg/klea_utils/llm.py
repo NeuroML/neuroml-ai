@@ -279,6 +279,30 @@ def extract_llm_output_content(output: AIMessage | dict) -> str:
     return str(output)
 
 
+def is_output_truncated(output: AIMessage | dict[str, Any]) -> bool:
+    """Return True if an LLM output was truncated by the max-token limit.
+
+    Providers signal truncation via ``finish_reason == "length"`` on the
+    message metadata.  Handles both plain ``AIMessage`` outputs and
+    structured-output dicts (``{"raw": AIMessage, ...}``), and the
+    list-form ``finish_reason`` some providers return.
+
+    :param output: The raw output from ``llm.invoke()``.
+    :returns: True when the model stopped because it hit the output cap.
+    """
+    if isinstance(output, dict):
+        raw = output.get("raw")
+        if isinstance(raw, AIMessage):
+            output = raw
+    if not isinstance(output, AIMessage):
+        return False
+    metadata = output.response_metadata or {}
+    finish_reason = metadata.get("finish_reason")
+    if isinstance(finish_reason, list):
+        finish_reason = finish_reason[-1] if finish_reason else None
+    return str(finish_reason).lower() == "length"
+
+
 def get_token_limit_param(provider: str) -> str:
     """Return the max-output token parameter name for a provider.
 
