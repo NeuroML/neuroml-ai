@@ -52,4 +52,5 @@ class PerDomainConfig(BasePerDomainConfig):
 
 class AppConfig(BaseModel):
     general: GeneralConfig
+    providers: dict[str, dict[str, dict[str, Any]]] = Field(default_factory=dict)
     domains: dict[str, PerDomainConfig]

@@ -25,6 +25,7 @@ from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
 from .errors import LLMInvocationErrorCategory
+from .models_catalog import get_model_limits
 from .plogging import mask_sensitive
 
 logger = logging.getLogger(__name__)
@@ -282,18 +283,116 @@ def get_token_limit_param(provider: str) -> str:
     """Return the max-output token parameter name for a provider.
 
     Providers disagree on the parameter name for the maximum number of
-    output tokens: HuggingFace uses ``max_new_tokens``, Ollama uses
-    ``num_predict``, and most OpenAI-compatible providers use
-    ``max_tokens``.
+    output tokens: Ollama uses ``num_predict``, while HuggingFace's
+    ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)
+    and other OpenAI-compatible providers all use ``max_tokens``.
 
     :param provider: Klea provider id (``huggingface``, ``ollama``, ...)
     :returns: The token parameter name to send in the invoke config.
     """
-    if provider == "huggingface":
-        return "max_new_tokens"
     if provider == "ollama":
         return "num_predict"
     return "max_tokens"
+
+
+#: Fallback max output tokens used when no node/role default provides a value.
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
+
+#: Built-in per-role max output token defaults.  Nodes may override these
+#: with the generic ``max_output_tokens`` key in ``model_defaults``, and
+#: admins may override them per provider via the ``providers`` config
+#: section.
+_ROLE_MAX_OUTPUT_TOKENS: dict[str, int] = {
+    "chat": 4096,
+    "plan": 4096,
+    "guard": 1024,
+}
+
+#: The three max-output token parameter names used across providers.
+_TOKEN_PARAMS = ("max_tokens", "max_new_tokens", "num_predict")
+
+
+def estimate_input_tokens(input_chars: int) -> int:
+    """Rough token estimate for a prompt's character count.
+
+    Used only to keep the reserved output window within a model's total
+    budget (input + output <= context).  ~4 characters per token is a
+    reasonable average for mixed English/code text; an exact count would
+    require provider-specific tokenizers.
+
+    :param input_chars: Number of characters in the prompt.
+    :returns: Estimated token count.
+    """
+    return input_chars // 4
+
+
+def resolve_output_token_limit(
+    overrides: dict[str, Any],
+    provider: str,
+    role: str | None = None,
+    input_chars: int | None = None,
+) -> None:
+    """Ensure a bounded max-output token param is set in *overrides*.
+
+    HuggingFace-style providers apply a *total budget*: the reserved
+    output window (``max_new_tokens``) is accounted against the model's
+    context window alongside the input, and an unset value makes them
+    reserve the entire remaining window (causing spurious usage limits
+    and rate limiting).  This helper guarantees a finite, clamped value.
+
+    Resolution precedence:
+
+    1. An explicit provider token param (``max_tokens`` /
+       ``max_new_tokens`` / ``num_predict``) already present in
+       ``overrides`` (user/node/role value).
+    2. The generic ``max_output_tokens`` key (provider-agnostic count).
+    3. The built-in per-role fallback for *role*.
+
+    The resolved value is clamped to ``min(value, catalog limit.output)``
+    and, when the catalog exposes a context window and *input_chars* is
+    given, to the remaining budget (``context - estimated input tokens``)
+    so HuggingFace's total-budget check is never exceeded.
+
+    :param overrides: The merged ``configurable`` dict to update in place.
+    :param provider: Klea provider id (``huggingface``, ``ollama``, ...).
+    :param role: Model role (e.g. ``"chat"``), used for the built-in
+        per-role fallback.
+    :param input_chars: Character count of the prompt, to bound the output
+        within the total budget.
+    """
+    token_param = get_token_limit_param(provider)
+
+    # Resolve the configured value, preferring an explicit provider-specific
+    # token param over the generic provider-agnostic key.
+    value: int | None = None
+    for param in _TOKEN_PARAMS:
+        if param in overrides:
+            value = overrides[param]
+            break
+    if value is None:
+        value = overrides.get("max_output_tokens")
+    if value is None:
+        value = _ROLE_MAX_OUTPUT_TOKENS.get(role or "", DEFAULT_MAX_OUTPUT_TOKENS)
+    value = int(value)
+
+    # Clamp to the model's catalog output limit and total budget, if known.
+    limits = get_model_limits(provider, overrides.get("model", ""))
+    if limits and limits.output:
+        value = min(value, limits.output)
+    if limits and limits.context and input_chars is not None:
+        headroom = limits.context - estimate_input_tokens(input_chars)
+        if headroom > 0:
+            value = min(value, headroom)
+
+    # Remove the generic and any stale token params; set the provider one.
+    overrides.pop("max_output_tokens", None)
+    for param in _TOKEN_PARAMS:
+        overrides.pop(param, None)
+    overrides[token_param] = value
+    logger.debug(
+        f"Resolved {token_param = } for {provider = } {role = }: "
+        f"{value = } (input_chars = {input_chars})"
+    )
 
 
 def check_model_works(model, timeout=30, retries=5):
@@ -627,7 +726,7 @@ class LLMModel(BaseModel):
     default parameters (e.g. ``max_tokens``, ``temperature``) that apply to
     every node sharing this role, unless overridden by node or user config.
 
-    ``build_config()`` performs a four-layer merge:
+    ``build_config()`` performs a five-layer merge:
 
     **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.
     ``{"max_tokens": 4096}``).
@@ -641,6 +740,11 @@ class LLMModel(BaseModel):
 
     **Layer 3**  ---  ``node_defaults``: frozen per-node defaults (always win).
 
+    **Layer 4**  ---  ``provider_defaults``: per-provider defaults from the
+    graph config (e.g. HuggingFace role budgets), applied *after* the model
+    string is parsed so the resolved provider is known.  Applied with
+    ``setdefault`` so explicit role/context/node values always win.
+
     ``modifiable`` controls whether the model can be changed at runtime
     (both the API and web UI reject modifications to locked roles).
     Set to ``False`` to lock a role (e.g. guard) against user overrides
@@ -650,6 +754,7 @@ class LLMModel(BaseModel):
     model_name: str = ""
     instance: Any
     role_defaults: dict[str, Any] = {}
+    provider_defaults: dict[str, dict[str, Any]] = {}
     modifiable: bool = True
 
     def build_config(
@@ -657,7 +762,7 @@ class LLMModel(BaseModel):
         context_overrides: dict[str, Any] | None = None,
         node_defaults: dict[str, Any] | None = None,
     ) -> RunnableConfig:
-        """Merge up to four layers of model configuration into a ``RunnableConfig``.
+        """Merge up to five layers of model configuration into a ``RunnableConfig``.
 
         Layer order (lowest -> highest priority):
 
@@ -665,6 +770,7 @@ class LLMModel(BaseModel):
         1. ``self.model_name``      ---   role model from graph config
         2. ``context_overrides``    ---   per-request user overrides
         3. ``node_defaults``        ---   frozen per-node defaults
+        4. ``self.provider_defaults`` ---  per-provider defaults (``setdefault``)
 
         :param context_overrides: Per-request fields from the API
             (e.g. ``model``, ``api_key``).  Only applied when
@@ -735,6 +841,18 @@ class LLMModel(BaseModel):
                 overrides.setdefault("provider", parsed.suffix)
             logger.debug(
                 f"HuggingFace kwargs injected:\n{mask_sensitive(overrides) = }"
+            )
+
+        # Layer 4: per-provider defaults from graph config.  Only fills in
+        # keys not already set by role/context/node layers (setdefault), so
+        # explicit values always win.  The provider is resolved by now.
+        provider = overrides.get("model_provider") or "openai"
+        provider_defaults = self.provider_defaults.get(provider)
+        if provider_defaults:
+            for k, v in provider_defaults.items():
+                overrides.setdefault(k, v)
+            logger.debug(
+                f"Layer 4 (provider defaults):\n{mask_sensitive(overrides) = }"
             )
 
         # Map generic "api_key" to provider-specific token field names so a

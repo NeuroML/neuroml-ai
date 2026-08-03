@@ -333,6 +333,29 @@ class BaseLangGraph(ABC):
         """
         ...
 
+    def _provider_defaults_for_role(self, role: str) -> dict[str, dict[str, Any]]:
+        """Return per-provider default params for *role* from the config.
+
+        Reads the optional ``providers`` config section, e.g.::
+
+            {"huggingface": {"chat": {"max_output_tokens": 2048}}}
+
+        and returns just the entries relevant to *role*, so each
+        ``LLMModel`` carries the defaults for its own role.  Shared by all
+        graphs so ``_setup_models`` implementations do not repeat it.
+
+        :param role: Model role (``chat``, ``plan``, ``guard``, ...).
+        :returns: ``{provider: {param: value}}`` for *role*.
+        """
+        result: dict[str, dict[str, Any]] = {}
+        # ``app_config`` is the concrete ``config_class`` instance; access
+        # via getattr so this works for any subclass without extra typing.
+        providers = getattr(self.app_config, "providers", {})
+        for provider, role_configs in providers.items():
+            if role in role_configs:
+                result[provider] = dict(role_configs[role])
+        return result
+
     @abstractmethod
     async def _create_graph(self) -> None:
         """Build and compile the LangGraph, storing it in ``self.graph``.
