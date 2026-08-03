@@ -21,6 +21,7 @@ from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel, Field
 
 from klea_utils.graph.schemas import TokenUsage
+from klea_utils.llm import extract_llm_output_content
 
 
 class NodeStreamData(BaseModel):
@@ -209,10 +210,14 @@ class AbstractLLMNode[TSchema: BaseModel](
         self._last_prompt = self._invoke_prompt(
             self._last_template, self._last_variables
         )
+        chars_sent = len(self._last_prompt.to_string())
+        self.logger.debug(f"{chars_sent = } characters sent to LLM")
         self._last_llm, self._last_config = self._configure_llm()
         self._last_output = await self._invoke_llm(
             self._last_llm, self._last_prompt, self._last_config
         )
+        chars_received = len(extract_llm_output_content(self._last_output))
+        self.logger.debug(f"{chars_received = } characters received from LLM")
         self._last_result = self._process_output(self._last_output)
         self._last_state_updates = self._update_state(self._last_result, state)
 
