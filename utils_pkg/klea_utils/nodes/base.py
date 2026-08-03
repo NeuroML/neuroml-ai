@@ -28,12 +28,12 @@ from pydantic import BaseModel
 from klea_utils.graph.base import model_overrides_ctx
 from klea_utils.plogging import mask_sensitive
 
-from ..errors import PromptTemplateError
+from ..errors import LLMInvocationErrorCategory, PromptTemplateError
 from ..llm import (
     add_memory_to_prompt,
+    classify_llm_invocation_error,
     get_provider_allowed_fields,
     load_prompt,
-    looks_like_structured_output_error,
     parse_output_with_thought,
 )
 from .abstract import AbstractLLMNode
@@ -209,7 +209,10 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             try:
                 output = await llm_wrapped.ainvoke(prompt, config=config)
             except Exception as exc:
-                if looks_like_structured_output_error(exc):
+                if (
+                    classify_llm_invocation_error(exc)
+                    is LLMInvocationErrorCategory.STRUCTURED_OUTPUT_REJECTED
+                ):
                     self.logger.warning(
                         "Structured output not supported, falling back to prompt-based"
                     )

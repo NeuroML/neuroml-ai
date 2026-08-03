@@ -24,6 +24,7 @@ from langchain_core.prompt_values import PromptValue
 from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
+from .errors import LLMInvocationErrorCategory
 from .plogging import mask_sensitive
 
 logger = logging.getLogger(__name__)
@@ -277,6 +278,24 @@ def extract_llm_output_content(output: AIMessage | dict) -> str:
     return str(output)
 
 
+def get_token_limit_param(provider: str) -> str:
+    """Return the max-output token parameter name for a provider.
+
+    Providers disagree on the parameter name for the maximum number of
+    output tokens: HuggingFace uses ``max_new_tokens``, Ollama uses
+    ``num_predict``, and most OpenAI-compatible providers use
+    ``max_tokens``.
+
+    :param provider: Klea provider id (``huggingface``, ``ollama``, ...)
+    :returns: The token parameter name to send in the invoke config.
+    """
+    if provider == "huggingface":
+        return "max_new_tokens"
+    if provider == "ollama":
+        return "num_predict"
+    return "max_tokens"
+
+
 def check_model_works(model, timeout=30, retries=5):
     """Check if a model works since it is not tested when loaded"""
     assert timeout >= 0
@@ -285,11 +304,12 @@ def check_model_works(model, timeout=30, retries=5):
     # check cheap without triggering warnings about unknown kwargs.
     llm_type = getattr(model, "_llm_type", "")
     if "huggingface" in llm_type:
-        token_param = "max_new_tokens"
+        provider = "huggingface"
     elif "ollama" in llm_type:
-        token_param = "num_predict"
+        provider = "ollama"
     else:
-        token_param = "max_tokens"
+        provider = "openai"
+    token_param = get_token_limit_param(provider)
 
     configurable = {token_param: 5}
 
@@ -402,33 +422,127 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
-def looks_like_structured_output_error(exc: Exception) -> bool:
-    """Heuristic: is this exception caused by structured output rejection?
+#: Tolerant patterns for "the prompt/context does not fit" errors.  Based on
+#: the error strings seen from OpenAI-compatible, HuggingFace, and vLLM
+#: providers (and informed by opencode's ``provider-error.ts``).  Patterns
+#: are matched case-insensitively over the whole exception message.
+_CONTEXT_OVERFLOW_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"context[ _-]*length[ _-]*exceed", re.IGNORECASE),
+    re.compile(r"context[ _-]*window[ _-]*exceed", re.IGNORECASE),
+    re.compile(r"context_length_exceeded", re.IGNORECASE),
+    re.compile(r"prompt is too long", re.IGNORECASE),
+    re.compile(r"input is too long", re.IGNORECASE),
+    re.compile(r"too many tokens", re.IGNORECASE),
+    re.compile(r"token limit exceeded", re.IGNORECASE),
+    re.compile(r"exceed[s]? the limit of \d+", re.IGNORECASE),
+    re.compile(r"maximum context length", re.IGNORECASE),
+    re.compile(r"maximum length is \d+", re.IGNORECASE),
+    re.compile(r"must be <= \d+ tokens", re.IGNORECASE),
+    re.compile(r"requested token count", re.IGNORECASE),
+]
 
-    Some providers (e.g. certain custom OpenAI-compatible endpoints) do
-    not support the ``response_format`` / ``json_schema`` parameter.
-    Rather than failing hard, we detect this by checking the error for
-    known indicators and fall back to prompt-based structured output.
+#: Tolerant patterns for rate-limit / quota errors.
+_RATE_LIMIT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b429\b", re.IGNORECASE),
+    re.compile(r"rate[ _-]*limit", re.IGNORECASE),
+    re.compile(r"rate_limit_exceeded", re.IGNORECASE),
+    re.compile(r"too many requests", re.IGNORECASE),
+    re.compile(r"quota", re.IGNORECASE),
+    re.compile(r"usage limit", re.IGNORECASE),
+]
 
-    Real errors (auth failure, model-not-found, rate limits) are left to
-    propagate  ---  they use different HTTP status codes and error strings
-    not matched by these heuristics.
+#: Tolerant patterns for authentication / authorisation failures.
+_AUTH_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b401\b", re.IGNORECASE),
+    re.compile(r"\b403\b", re.IGNORECASE),
+    re.compile(r"unauthori[sz]ed", re.IGNORECASE),
+    re.compile(r"invalid api key", re.IGNORECASE),
+    re.compile(r"incorrect api key", re.IGNORECASE),
+    re.compile(r"api key.*must be set", re.IGNORECASE),
+    re.compile(r"authentication", re.IGNORECASE),
+    re.compile(r"authorization", re.IGNORECASE),
+    re.compile(r"forbidden", re.IGNORECASE),
+]
+
+#: Tolerant patterns for "model does not exist" errors.
+_MODEL_NOT_FOUND_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b404\b", re.IGNORECASE),
+    re.compile(r"model[ _-]*not[ _-]*found", re.IGNORECASE),
+    re.compile(r"does not exist", re.IGNORECASE),
+    re.compile(r"model.*not found", re.IGNORECASE),
+    re.compile(r"not found", re.IGNORECASE),
+    re.compile(r"a valid model was not found", re.IGNORECASE),
+]
+
+#: Tolerant patterns for timeout errors.
+_TIMEOUT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"timeout", re.IGNORECASE),
+    re.compile(r"timed out", re.IGNORECASE),
+]
+
+#: Tolerant patterns for providers rejecting the structured-output
+#: ``response_format`` / ``json_schema`` parameter.  Fall back to
+#: prompt-based structured output when these match.
+_STRUCTURED_OUTPUT_REJECTED_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"response_format", re.IGNORECASE),
+    re.compile(r"json_schema", re.IGNORECASE),
+    re.compile(r"structured output", re.IGNORECASE),
+    re.compile(r"\b400\b[^\n]*invalid_request_error", re.IGNORECASE),
+]
+
+
+def _flatten_exception_messages(exc: BaseException) -> list[str]:
+    """Collect the message from an exception and its cause chain.
+
+    LangChain and httpx wrap underlying provider errors, so a bare
+    ``str(exc)`` may miss the informative inner message.  This walks the
+    ``__cause__`` / ``__context__`` chain and returns all messages.
+
+    :param exc: The exception to flatten.
+    :returns: A list of message strings, outermost first.
     """
-    msg = str(exc).lower()
+    messages: list[str] = []
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        messages.append(str(current))
+        current = current.__cause__ or current.__context__
+    return messages
 
-    # OpenAI-style BadRequestError with structured-output rejection
-    if "400" in msg and "invalid_request_error" in msg:
-        return True
 
-    # Provider explicitly rejects the structured output parameter
-    if any(kw in msg for kw in ("response_format", "json_schema")):
-        return True
+def _matches_any(patterns: list[re.Pattern[str]], text: str) -> bool:
+    """Return True if any pattern matches anywhere in *text*."""
+    return any(p.search(text) for p in patterns)
 
-    # LangChain's own message when structured output fails
-    if "structured output" in msg:
-        return True
 
-    return False
+def classify_llm_invocation_error(exc: BaseException) -> LLMInvocationErrorCategory:
+    """Classify an LLM invocation exception into a category.
+
+    Providers report failures inconsistently, so this uses tolerant regex
+    matching over the exception message and its cause chain.  Categories
+    are checked in order of specificity (context overflow first), so a
+    message matching several heuristics lands in the most actionable
+    bucket.
+
+    :param exc: The exception raised by an LLM invocation.
+    :returns: The best-effort :class:`klea_utils.errors.LLMInvocationErrorCategory`.
+    """
+    text = "\n".join(_flatten_exception_messages(exc))
+
+    if _matches_any(_CONTEXT_OVERFLOW_PATTERNS, text):
+        return LLMInvocationErrorCategory.CONTEXT_OVERFLOW
+    if _matches_any(_RATE_LIMIT_PATTERNS, text):
+        return LLMInvocationErrorCategory.RATE_LIMITED
+    if _matches_any(_AUTH_PATTERNS, text):
+        return LLMInvocationErrorCategory.AUTH_FAILED
+    if _matches_any(_MODEL_NOT_FOUND_PATTERNS, text):
+        return LLMInvocationErrorCategory.MODEL_NOT_FOUND
+    if _matches_any(_TIMEOUT_PATTERNS, text):
+        return LLMInvocationErrorCategory.TIMEOUT
+    if _matches_any(_STRUCTURED_OUTPUT_REJECTED_PATTERNS, text):
+        return LLMInvocationErrorCategory.STRUCTURED_OUTPUT_REJECTED
+    return LLMInvocationErrorCategory.UNKNOWN
 
 
 # Extra fields accepted by provider model constructors that are not part
