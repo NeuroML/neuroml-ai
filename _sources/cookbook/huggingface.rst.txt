@@ -100,6 +100,11 @@ is to fork the existing template and customise it.
    ``mcp_servers``) --- keep the ones that are relevant to your use case
    and adjust the rest.
 
+   Individual vector stores may override the ``general`` retrieval
+   settings (``default_k``, ``k_max``, ``k_inc``) with their own
+   per-store values, e.g. a store covering a large corpus can set
+   ``"default_k": 10, "k_max": 25, "k_inc": 5`` on its entry.
+
    See :doc:`../tutorials/create-and-use-rag` for a full explanation of
    the configuration schema.
 

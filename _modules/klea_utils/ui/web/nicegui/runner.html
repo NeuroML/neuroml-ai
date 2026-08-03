@@ -292,6 +292,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
@@ -308,7 +309,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_api_is_ready</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_model_name</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">....plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.client</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">clear_model_override</span><span class="p">,</span>
     <span class="n">create_chat_on_server</span><span class="p">,</span>
@@ -320,7 +320,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">chats</span><span class="p">,</span> <span class="n">ensure_chat</span><span class="p">,</span> <span class="n">get_chats_sorted</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatBubble</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="setup_layout">
@@ -1290,6 +1290,7 @@
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">nicegui_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;0.0.0.0:7860&quot;</span><span class="p">,</span>
     <span class="n">storage_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea-nicegui-secret-change-me&quot;</span><span class="p">,</span>
+    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea-web&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the NiceGUI web server with the Klea chat interface.</span>
 
@@ -1311,7 +1312,22 @@
 <span class="sd">        (default: ``&quot;0.0.0.0:7860&quot;``).</span>
 <span class="sd">    :param storage_secret: Secret used by NiceGUI for browser session</span>
 <span class="sd">        persistence (default: ``&quot;klea-nicegui-secret-change-me&quot;``).</span>
+<span class="sd">    :param app_name: Log identity for this frontend process, used as the</span>
+<span class="sd">        log file name so each app keeps its own logs (e.g.</span>
+<span class="sd">        ``&quot;klea-rag-web&quot;``).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Configure process-wide logging for this client process.  Lazy:</span>
+    <span class="c1"># platformdirs / plogging imports are cheap and this is a CLI entry.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+
+    <span class="n">setup_root_logger</span><span class="p">(</span>
+        <span class="n">app_name</span><span class="p">,</span>
+        <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+        <span class="n">log_dir</span><span class="o">=</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">,</span>
+    <span class="p">)</span>
+
     <span class="n">host</span><span class="p">,</span> <span class="n">port_str</span> <span class="o">=</span> <span class="n">nicegui_url</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">port_str</span><span class="p">)</span>
 

@@ -418,8 +418,11 @@ vector store to a domain:</p>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">general</span></code> section controls retrieval behaviour:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">default_k</span></code> – number of documents to retrieve per query.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">default_k</span></code> – number of documents to retrieve per query.  This is the
+graph-wide default; individual vector stores can override it (see below).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">k_max</span></code> – maximum <code class="docutils literal notranslate"><span class="pre">k</span></code> when the evaluator requests more context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">k_inc</span></code> – how much <code class="docutils literal notranslate"><span class="pre">k</span></code> is increased by each time the evaluator
+requests more information.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">non_domain_chat</span></code> – whether to fall back to the LLM’s training data
 for questions that do not match any domain.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fallback_to_training_data</span></code> – whether to let the LLM answer from its
@@ -428,6 +431,42 @@ own knowledge when retrieval returns nothing useful.</p></li>
 <p>Each entry under <code class="docutils literal notranslate"><span class="pre">domains</span></code> defines a knowledge area with one or more
 vector stores.  The <code class="docutils literal notranslate"><span class="pre">description</span></code> helps the classifier route queries
 to the right domain.</p>
+<p>Vector stores can override the retrieval settings independently.  Stores
+that set their own <code class="docutils literal notranslate"><span class="pre">default_k</span></code>, <code class="docutils literal notranslate"><span class="pre">k_max</span></code>, and <code class="docutils literal notranslate"><span class="pre">k_inc</span></code> use those
+values instead of the <code class="docutils literal notranslate"><span class="pre">general</span></code> fallbacks, which is useful when stores
+cover corpora of very different sizes:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;domains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;MyDomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Documents related to my project&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vector_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;large-corpus&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/large-store.db&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;small-corpus&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/small-store.db&quot;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">]</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Here <code class="docutils literal notranslate"><span class="pre">large-corpus</span></code> retrieves up to 10 documents and can grow to 25 in
+steps of 5 when the evaluator asks for more context, while <code class="docutils literal notranslate"><span class="pre">small-corpus</span></code>
+inherits the <code class="docutils literal notranslate"><span class="pre">general</span></code> settings (5, capped at 10, stepping by 1).  The
+dynamic <code class="docutils literal notranslate"><span class="pre">k_inc</span></code>/<code class="docutils literal notranslate"><span class="pre">k_max</span></code> adjustments only apply to stores that are
+already loaded, so a store only grows once it has been queried once.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for details on HuggingFace, OpenAI, and other

@@ -387,6 +387,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">logging_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;inmemory&quot;</span><span class="p">,</span>
+        <span class="n">log_file</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the base orchestrator.</span>
 
@@ -395,6 +396,11 @@
 <span class="sd">            ``&quot;sqlite&quot;`` (persistent via ``self.paths.user_data_dir``),</span>
 <span class="sd">            or ``&quot;none&quot;`` (no checkpointing).  When set to ``&quot;none&quot;``, nodes</span>
 <span class="sd">            that need conversation history receive ``memory=False``.</span>
+<span class="sd">        :param log_file: When ``True`` (default), configure the process-wide</span>
+<span class="sd">            root logger with a rotating file handler writing to</span>
+<span class="sd">            ``{self.paths.user_data_dir}/{self.graph_name}.log``, alongside</span>
+<span class="sd">            the checkpoints and session database.  Set to ``False`` in</span>
+<span class="sd">            short-lived processes (e.g. tests) to avoid writing log files.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_file_default</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="p">:</span> <span class="n">BaseModel</span>
@@ -422,14 +428,23 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">stores_config</span><span class="p">:</span> <span class="n">VectorStoresConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="p">:</span> <span class="n">VSRetriever</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># Graph-wide fallback retrieval settings.  Individual vector stores</span>
+        <span class="c1"># may override these in the config with their own default_k / k_max /</span>
+        <span class="c1"># k_inc values.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">default_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging_level</span><span class="p">)</span>
+        <span class="n">setup_root_logger</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">,</span>
+            <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging_level</span><span class="p">,</span>
+            <span class="n">log_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">user_data_dir</span> <span class="k">if</span> <span class="n">log_file</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load env file, and configuration</span>
@@ -543,6 +558,7 @@
                 <span class="n">embedding_model</span><span class="o">=</span><span class="n">emb</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
                 <span class="n">default_k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">default_k</span><span class="p">,</span>
                 <span class="n">k_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_max</span><span class="p">,</span>
+                <span class="n">k_inc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Vector stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>

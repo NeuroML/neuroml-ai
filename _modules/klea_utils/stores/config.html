@@ -296,10 +296,19 @@
 <div class="viewcode-block" id="VectorStoreInfo">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">VectorStoreInfo</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Information about a single vector store.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Information about a single vector store.</span>
+
+<span class="sd">    ``default_k``, ``k_max``, and ``k_inc`` configure retrieval depth per</span>
+<span class="sd">    store.  When left ``None`` they fall back to the global values set on</span>
+<span class="sd">    the ``VSRetriever``, so stores that do not need tuning inherit the</span>
+<span class="sd">    graph-wide defaults.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">default_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">k_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">k_inc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">loaded_object</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 

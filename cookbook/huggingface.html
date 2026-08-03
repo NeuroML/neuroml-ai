@@ -375,6 +375,10 @@ your content.  The store path format is
 additional fields (<code class="docutils literal notranslate"><span class="pre">fallback_to_training_data</span></code>, <code class="docutils literal notranslate"><span class="pre">fallback_warning</span></code>,
 <code class="docutils literal notranslate"><span class="pre">mcp_servers</span></code>) — keep the ones that are relevant to your use case
 and adjust the rest.</p>
+<p>Individual vector stores may override the <code class="docutils literal notranslate"><span class="pre">general</span></code> retrieval
+settings (<code class="docutils literal notranslate"><span class="pre">default_k</span></code>, <code class="docutils literal notranslate"><span class="pre">k_max</span></code>, <code class="docutils literal notranslate"><span class="pre">k_inc</span></code>) with their own
+per-store values, e.g. a store covering a large corpus can set
+<code class="docutils literal notranslate"><span class="pre">&quot;default_k&quot;:</span> <span class="pre">10,</span> <span class="pre">&quot;k_max&quot;:</span> <span class="pre">25,</span> <span class="pre">&quot;k_inc&quot;:</span> <span class="pre">5</span></code> on its entry.</p>
 <p>See <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for a full explanation of
 the configuration schema.</p>
 </li>

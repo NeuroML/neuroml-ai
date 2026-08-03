@@ -288,6 +288,8 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
 
 <div class="viewcode-block" id="run_repl">
 <a class="viewcode-back" href="../../../../api/utils/ui-tui.html#klea_utils.ui.tui.repl.run_repl">[docs]</a>
@@ -296,6 +298,7 @@
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">single_query</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
     <span class="n">app_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea&quot;</span><span class="p">,</span>
+    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea-tui&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Run an interactive or single-query chat REPL.</span>
 
@@ -309,7 +312,22 @@
 <span class="sd">    :param title: Application title displayed on start</span>
 <span class="sd">    :param single_query: If set, run one query and exit instead of REPL loop</span>
 <span class="sd">    :param app_prefix: Prefix for user/assistant labels (e.g. ``&quot;klea&quot;``)</span>
+<span class="sd">    :param app_name: Log identity for this frontend, used as the log file</span>
+<span class="sd">        name so each process keeps its own logs (e.g. ``&quot;klea-rag-tui&quot;``)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Configure process-wide logging for this client process.  Lazy:</span>
+    <span class="c1"># platformdirs / plogging imports are cheap, and everything else is</span>
+    <span class="c1"># deferred below so --help stays fast.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+
+    <span class="n">setup_root_logger</span><span class="p">(</span>
+        <span class="n">app_name</span><span class="p">,</span>
+        <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+        <span class="n">log_dir</span><span class="o">=</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">,</span>
+    <span class="p">)</span>
+
     <span class="c1"># Lazy: avoids importing yaspin (and its deps) at module level</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">coolname</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">yaspin</span><span class="w"> </span><span class="kn">import</span> <span class="n">yaspin</span>

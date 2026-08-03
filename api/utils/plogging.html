@@ -287,9 +287,18 @@
           <section id="module-klea_utils.plogging">
 <span id="logging"></span><h1>Logging<a class="headerlink" href="#module-klea_utils.plogging" title="Link to this heading">¶</a></h1>
 <p>Logging related utils</p>
-<p>File: klea_utils/logging.py</p>
+<p>File: klea_utils/plogging.py</p>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.plogging.KLEA_LOG_NAMESPACES">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.plogging.</span></span><span class="sig-name descname"><span class="pre">KLEA_LOG_NAMESPACES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('klea_utils',</span> <span class="pre">'klea_rag',</span> <span class="pre">'klea_code',</span> <span class="pre">'neuroml_mcp')</span></span><a class="headerlink" href="#klea_utils.plogging.KLEA_LOG_NAMESPACES" title="Link to this definition">¶</a></dt>
+<dd><p>Klea logger namespaces that are turned up to DEBUG by
+<code class="docutils literal notranslate"><span class="pre">setup_root_logger</span></code>.  Everything else (third-party libraries) inherits
+the root logger’s INFO level, so their DEBUG output is filtered at the
+source without having to enumerate them.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.plogging.LoggerInfoFilter">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.plogging.</span></span><span class="sig-name descname"><span class="pre">LoggerInfoFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/plogging.html#LoggerInfoFilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.plogging.LoggerInfoFilter" title="Link to this definition">¶</a></dt>
@@ -341,23 +350,39 @@ Defaults to <code class="docutils literal notranslate"><span class="pre">{&quot;
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.plogging.setup_logger">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.plogging.</span></span><span class="sig-name descname"><span class="pre">setup_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">stderr_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/plogging.html#setup_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.plogging.setup_logger" title="Link to this definition">¶</a></dt>
-<dd><p>Configure a dual-stream logger.</p>
-<p>Idempotent — subsequent calls with the same <em>name</em> return the
-already-configured logger unchanged.</p>
-<p>INFO-level messages go to stdout with a simple format.  All other
-levels (DEBUG, WARNING, ERROR, CRITICAL) go to stderr with a
-format that includes the function name.</p>
+<dt class="sig sig-object py" id="klea_utils.plogging.setup_root_logger">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.plogging.</span></span><span class="sig-name descname"><span class="pre">setup_root_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">stderr_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/plogging.html#setup_root_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.plogging.setup_root_logger" title="Link to this definition">¶</a></dt>
+<dd><p>Configure the root logger once per process.</p>
+<p>Idempotent: if the root logger already has handlers, this is a no-op
+and the existing configuration is returned unchanged.</p>
+<p>Adds, on the root logger:</p>
+<ul class="simple">
+<li><p>a stdout handler for INFO messages (simple format)</p></li>
+<li><p>a stderr handler for all other levels at <code class="docutils literal notranslate"><span class="pre">stderr_level</span></code> (format
+includes the function name)</p></li>
+<li><p>an optional <code class="docutils literal notranslate"><span class="pre">RotatingFileHandler</span></code> at <code class="docutils literal notranslate"><span class="pre">{log_dir}/{app_name}.log</span></code>
+logging all levels at DEBUG when <code class="docutils literal notranslate"><span class="pre">log_dir</span></code> is provided</p></li>
+</ul>
+<p>The root logger is set to INFO.  The Klea logger namespaces (see
+<code class="docutils literal notranslate"><span class="pre">KLEA_LOG_NAMESPACES</span></code>) and the application logger (<code class="docutils literal notranslate"><span class="pre">app_name</span></code>) are
+raised to DEBUG so our own logs are captured in full.  Because module
+loggers propagate to the root logger by default, a single call from each
+application entry point routes all Klea logs (library modules, graph
+nodes, API routers) through the same console and file handlers.
+Third-party libraries inherit the root’s INFO level, so their DEBUG
+output is filtered at the source without enumerating them.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> – Name of the logger (passed to <code class="docutils literal notranslate"><span class="pre">logging.getLogger</span></code>)</p></li>
+<li><p><strong>app_name</strong> – Application name, used as the log file name to keep
+per-app logs separate (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;klea-rag&quot;</span></code>).</p></li>
 <li><p><strong>stderr_level</strong> – Level for the stderr handler (default <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code>)</p></li>
+<li><p><strong>log_dir</strong> – Directory for the log file.  <code class="docutils literal notranslate"><span class="pre">None</span></code> disables file
+logging.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Configured logger with handlers attached</p>
+<dd class="field-even"><p>The configured root logger</p>
 </dd>
 </dl>
 </dd></dl>
@@ -419,6 +444,7 @@ format that includes the function name.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Logging</a><ul>
+<li><a class="reference internal" href="#klea_utils.plogging.KLEA_LOG_NAMESPACES"><code class="docutils literal notranslate"><span class="pre">KLEA_LOG_NAMESPACES</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.plogging.LoggerInfoFilter"><code class="docutils literal notranslate"><span class="pre">LoggerInfoFilter</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.plogging.LoggerInfoFilter.filter"><code class="docutils literal notranslate"><span class="pre">LoggerInfoFilter.filter()</span></code></a></li>
 </ul>
@@ -428,7 +454,7 @@ format that includes the function name.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#klea_utils.plogging.mask_sensitive"><code class="docutils literal notranslate"><span class="pre">mask_sensitive()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.plogging.setup_logger"><code class="docutils literal notranslate"><span class="pre">setup_logger()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.plogging.setup_root_logger"><code class="docutils literal notranslate"><span class="pre">setup_root_logger()</span></code></a></li>
 </ul>
 </li>
 </ul>
