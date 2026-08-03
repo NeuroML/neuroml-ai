@@ -24,9 +24,9 @@ from langchain_core.prompt_values import PromptValue
 from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
-from .plogging import mask_sensitive, setup_logger
+from .plogging import mask_sensitive
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ParsedModelName(NamedTuple):

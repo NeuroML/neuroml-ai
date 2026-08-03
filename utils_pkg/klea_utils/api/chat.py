@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 import traceback
 
 from fastapi import APIRouter, HTTPException, Request
@@ -17,9 +18,7 @@ from pydantic import BaseModel
 
 from klea_utils.api.sessions_db import SessionStore
 
-from ..plogging import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ChatPayload(BaseModel):

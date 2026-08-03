@@ -8,9 +8,11 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
+
 import typer
 
-from ..plogging import setup_logger
+from ..plogging import setup_root_logger
 
 app = typer.Typer(help="Create vector stores from documents")
 
@@ -72,7 +74,8 @@ def build(
             }
         }
     """
-    logger = setup_logger("klea-vs-create")
+    setup_root_logger("klea-vs-create")
+    logger = logging.getLogger("klea-vs-create")
 
     logger.info(
         f"Building vector store '{collection_name}' at {store_path}"
@@ -126,7 +129,8 @@ def chunk(
     metadata values and pass the file to
     ``klea-vs-create store --metadata-map``.
     """
-    logger = setup_logger("klea-vs-create")
+    setup_root_logger("klea-vs-create")
+    logger = logging.getLogger("klea-vs-create")
 
     logger.info(f"Chunking documents in {source_dir}\n  Max tokens: {max_tokens}")
 
@@ -195,7 +199,8 @@ def store(
     Run ``klea-vs-create chunk`` first to populate the cache and
     generate a ``metadata-map.template.json``.
     """
-    logger = setup_logger("klea-vs-create")
+    setup_root_logger("klea-vs-create")
+    logger = logging.getLogger("klea-vs-create")
 
     logger.info(
         f"Storing cached chunks to '{collection_name}' at {store_path}"

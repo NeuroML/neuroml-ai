@@ -33,4 +33,5 @@ if __name__ in {"__main__", "__mp_main__"}:
         debug=args.debug,
         nicegui_url=args.nicegui_url,
         storage_secret=args.storage_secret,
+        app_name=args.app_name,
     )

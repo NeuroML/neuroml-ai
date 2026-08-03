@@ -8,12 +8,15 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
+
 
 async def run_repl(
     url: str,
     title: str,
     single_query: str = "",
     app_prefix: str = "klea",
+    app_name: str = "klea-tui",
 ) -> None:
     """Run an interactive or single-query chat REPL.
 
@@ -27,7 +30,22 @@ async def run_repl(
     :param title: Application title displayed on start
     :param single_query: If set, run one query and exit instead of REPL loop
     :param app_prefix: Prefix for user/assistant labels (e.g. ``"klea"``)
+    :param app_name: Log identity for this frontend, used as the log file
+        name so each process keeps its own logs (e.g. ``"klea-rag-tui"``)
     """
+    # Configure process-wide logging for this client process.  Lazy:
+    # platformdirs / plogging imports are cheap, and everything else is
+    # deferred below so --help stays fast.
+    from platformdirs import PlatformDirs
+
+    from klea_utils.plogging import setup_root_logger
+
+    setup_root_logger(
+        app_name,
+        stderr_level=logging.INFO,
+        log_dir=PlatformDirs(app_name).user_data_dir,
+    )
+
     # Lazy: avoids importing yaspin (and its deps) at module level
     import coolname
     from yaspin import yaspin

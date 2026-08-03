@@ -11,11 +11,10 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
 from datetime import datetime
 
-from ....plogging import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Per-chat data store.  External modules may read/write this dict
 # directly for performance; the helper functions below cover the

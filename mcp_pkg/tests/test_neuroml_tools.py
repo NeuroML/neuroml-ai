@@ -8,17 +8,17 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
+
 import aiohttp
 import pytest
 import pytest_asyncio
-from klea_utils.plogging import setup_logger
-
 from neuroml_mcp.tools.neuroml_tools import (
     get_models_from_neuromldb_tool,
     get_repositories_from_open_source_brain_tool,
 )
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class MockContext(object):

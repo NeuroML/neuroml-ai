@@ -8,13 +8,14 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
+
 import aiohttp
 from fastmcp.server.lifespan import lifespan
-from klea_utils.plogging import setup_logger
 
 from ..utils import cleanup_cache_dir, init_cache_dir
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @lifespan

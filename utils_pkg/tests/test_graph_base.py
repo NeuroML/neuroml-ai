@@ -16,7 +16,6 @@ from klea_utils.graph.base import BaseLangGraph
 from klea_utils.llm import LLMModel, create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
-from klea_utils.plogging import setup_logger
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 
@@ -40,12 +39,11 @@ class ToyGraph(BaseLangGraph):
     graph_name: str = "ToyGraph"
 
     def __init__(self):
-        super().__init__(logging_level=logging.WARNING, checkpoint="none")
+        super().__init__(logging_level=logging.INFO, checkpoint="none", log_file=False)
         from platformdirs import PlatformDirs
 
         self.paths = PlatformDirs(self.graph_name.lower())
-        self.logger = setup_logger(self.graph_name, stderr_level=logging.INFO)
-        self.logger.propagate = False
+        self.logger = logging.getLogger(self.graph_name)
 
     @override
     def _load_env(self) -> None:

@@ -19,6 +19,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 import sqlite3
 import threading
 from collections.abc import Sequence
@@ -26,9 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..plogging import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SessionStore:

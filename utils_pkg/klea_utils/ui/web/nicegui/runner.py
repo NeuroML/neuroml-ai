@@ -12,6 +12,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 import re
 import uuid
 from datetime import datetime
@@ -28,7 +29,6 @@ from klea_utils.api.sse import (
 from klea_utils.api.utils import check_api_is_ready
 from klea_utils.llm import parse_model_name
 
-from ....plogging import setup_logger
 from .client import (
     clear_model_override,
     create_chat_on_server,
@@ -40,7 +40,7 @@ from .client import (
 from .state import chats, ensure_chat, get_chats_sorted
 from .widgets import ChatBubble
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def setup_layout(
@@ -1005,6 +1005,7 @@ def run_nicegui_app(
     debug: bool = False,
     nicegui_url: str = "0.0.0.0:7860",
     storage_secret: str = "klea-nicegui-secret-change-me",
+    app_name: str = "klea-web",
 ) -> None:
     """Start the NiceGUI web server with the Klea chat interface.
 
@@ -1026,7 +1027,22 @@ def run_nicegui_app(
         (default: ``"0.0.0.0:7860"``).
     :param storage_secret: Secret used by NiceGUI for browser session
         persistence (default: ``"klea-nicegui-secret-change-me"``).
+    :param app_name: Log identity for this frontend process, used as the
+        log file name so each app keeps its own logs (e.g.
+        ``"klea-rag-web"``).
     """
+    # Configure process-wide logging for this client process.  Lazy:
+    # platformdirs / plogging imports are cheap and this is a CLI entry.
+    from platformdirs import PlatformDirs
+
+    from klea_utils.plogging import setup_root_logger
+
+    setup_root_logger(
+        app_name,
+        stderr_level=logging.INFO,
+        log_dir=PlatformDirs(app_name).user_data_dir,
+    )
+
     host, port_str = nicegui_url.rsplit(":", 1)
     port = int(port_str)
 

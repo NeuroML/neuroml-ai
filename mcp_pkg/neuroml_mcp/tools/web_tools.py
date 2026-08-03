@@ -9,11 +9,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import asyncio
+import logging
 from pathlib import Path
 
 import aiohttp
 from klea_utils.paths import get_cache_dir
-from klea_utils.plogging import setup_logger
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -23,7 +23,7 @@ from tenacity import (
 
 from ..utils import NML_MCP_DIRS
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @retry(

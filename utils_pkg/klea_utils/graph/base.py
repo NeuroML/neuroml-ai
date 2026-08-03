@@ -105,6 +105,7 @@ class BaseLangGraph(ABC):
         self,
         logging_level: int = logging.DEBUG,
         checkpoint: str = "inmemory",
+        log_file: bool = True,
     ):
         """Initialise the base orchestrator.
 
@@ -113,6 +114,11 @@ class BaseLangGraph(ABC):
             ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
             or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
             that need conversation history receive ``memory=False``.
+        :param log_file: When ``True`` (default), configure the process-wide
+            root logger with a rotating file handler writing to
+            ``{self.paths.user_data_dir}/{self.graph_name}.log``, alongside
+            the checkpoints and session database.  Set to ``False`` in
+            short-lived processes (e.g. tests) to avoid writing log files.
         """
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
@@ -149,9 +155,14 @@ class BaseLangGraph(ABC):
 
         self.QueryDomainSchema: type[BaseModel] | None = None
 
-        from klea_utils.plogging import setup_logger
+        from klea_utils.plogging import setup_root_logger
 
-        self.logger = setup_logger(self.graph_name, stderr_level=logging_level)
+        setup_root_logger(
+            self.graph_name,
+            stderr_level=logging_level,
+            log_dir=self.paths.user_data_dir if log_file else None,
+        )
+        self.logger = logging.getLogger(self.graph_name)
 
     def _load_env(self) -> None:
         """Load env file, and configuration

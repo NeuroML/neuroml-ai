@@ -14,6 +14,8 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
+
 import coolname
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -21,9 +23,7 @@ from pydantic import BaseModel
 from klea_utils.api.sessions_db import SessionStore
 from klea_utils.graph.base import BaseLangGraph
 
-from ..plogging import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CreateChatPayload(BaseModel):

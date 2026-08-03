@@ -11,14 +11,14 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
 from datetime import datetime
 
 import httpx
 
-from ....plogging import setup_logger
 from .state import chats, ensure_chat
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def hydrate_chats(server_url: str, user_id: str) -> None:

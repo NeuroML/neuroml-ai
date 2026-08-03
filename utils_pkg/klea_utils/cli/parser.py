@@ -68,4 +68,9 @@ def make_parser(
         action="store_true",
         help="Enable auto-reload on file changes (supported by nicegui only)",
     )
+    parser.add_argument(
+        "--app-name",
+        default="klea-web",
+        help="Log identity for this frontend process (used for the log file name)",
+    )
     return parser

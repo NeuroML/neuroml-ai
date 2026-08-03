@@ -13,14 +13,14 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 from collections.abc import AsyncGenerator, Generator
 
 import httpx
 
 from ..llm import parse_model_name
-from ..plogging import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 async def stream_events(

@@ -54,6 +54,7 @@ def cli(
                 title=title,
                 single_query=single_query or "",
                 app_prefix="klea",
+                app_name="klea-rag-tui",
             )
         )
     except KeyboardInterrupt:
@@ -115,6 +116,7 @@ def web(
                 + f" --footer '{footer_text}'"
                 + f" --nicegui-url '{nicegui_url}'"
                 + f" --storage-secret '{storage_secret}'"
+                + " --app-name 'klea-rag-web'"
                 + (" --debug" if debug else "")
             )
         )

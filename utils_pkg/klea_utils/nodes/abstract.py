@@ -77,10 +77,10 @@ class AbstractLangGraphNode[TSchema: BaseModel, TReturn](ABC):
         :param label: Human-readable label for this node, used as the
             LangGraph node name for UI progress display
         """
-        # Child logger -- inherits the parent's dual-stream handlers
-        # (set up by BaseLangGraph via plogging.setup_logger) through
-        # propagation, so this class does NOT configure its own
-        # handlers.
+        # Child logger -- inherits the parent's dual-stream + file handlers
+        # (set up by BaseLangGraph via plogging.setup_root_logger on the
+        # root logger) through propagation, so this class does NOT configure
+        # its own handlers.
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
         self.label = label
 
