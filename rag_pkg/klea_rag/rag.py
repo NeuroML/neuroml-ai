@@ -130,6 +130,7 @@ class RAG(BaseLangGraph):
         self.stores_config = VectorStoresConfig(domains=domain_vs)
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
+        self.k_inc = self.app_config.general.k_inc
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
 
         # store per-domain MCP configs for domain-aware tool descriptions

@@ -14,10 +14,19 @@ from pydantic import BaseModel
 
 
 class VectorStoreInfo(BaseModel):
-    """Information about a single vector store."""
+    """Information about a single vector store.
+
+    ``default_k``, ``k_max``, and ``k_inc`` configure retrieval depth per
+    store.  When left ``None`` they fall back to the global values set on
+    the ``VSRetriever``, so stores that do not need tuning inherit the
+    graph-wide defaults.
+    """
 
     name: str
     path: str
+    default_k: int | None = None
+    k_max: int | None = None
+    k_inc: int | None = None
     loaded_object: Any | None = None
 
 

@@ -25,8 +25,15 @@ class AppEnv(BaseSettings):
 
 
 class GeneralConfig(BaseModel):
+    """General configuration.
+
+    ``default_k``, ``k_max``, and ``k_inc`` are the graph-wide fallbacks
+    applied to vector stores that do not define their own per-store values.
+    """
+
     default_k: int = 5
     k_max: int = 10
+    k_inc: int = 1
     # TODO: unused---what is this for?
     pre_prompt: str = ""
     non_domain_chat: bool = True

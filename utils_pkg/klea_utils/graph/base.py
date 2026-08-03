@@ -140,8 +140,12 @@ class BaseLangGraph(ABC):
 
         self.stores_config: VectorStoresConfig | None = None
         self.stores: VSRetriever | None = None
+        # Graph-wide fallback retrieval settings.  Individual vector stores
+        # may override these in the config with their own default_k / k_max /
+        # k_inc values.
         self.default_k: int = 5
         self.k_max: int = 10
+        self.k_inc: int = 1
 
         self.QueryDomainSchema: type[BaseModel] | None = None
 
@@ -261,6 +265,7 @@ class BaseLangGraph(ABC):
                 embedding_model=emb.model_name,
                 default_k=self.default_k,
                 k_max=self.k_max,
+                k_inc=self.k_inc,
             )
             self.stores.setup()
             self.logger.info(f"Vector stores loaded: {self.stores.domains}")
