@@ -1,8 +1,8 @@
 {
     "general":
     {
-        "default_k": 15,
-        "k_max": 25,
+        "default_k": 10,
+        "k_max": 15,
         "non_domain_chat": true,
         "pre_prompt": "",
         "fallback_to_training_data": true,
@@ -14,7 +14,10 @@
             "vector_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs_bge-m3.db"
+                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs_bge-m3.db",
+                    "default_k": 10,
+                    "k_max": 20,
+                    "k_inc": 5
                 },
                 {
                     "name": "nml-elife",
