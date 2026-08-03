@@ -615,6 +615,29 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_provider_defaults_for_role</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return per-provider default params for *role* from the config.</span>
+
+<span class="sd">        Reads the optional ``providers`` config section, e.g.::</span>
+
+<span class="sd">            {&quot;huggingface&quot;: {&quot;chat&quot;: {&quot;max_output_tokens&quot;: 2048}}}</span>
+
+<span class="sd">        and returns just the entries relevant to *role*, so each</span>
+<span class="sd">        ``LLMModel`` carries the defaults for its own role.  Shared by all</span>
+<span class="sd">        graphs so ``_setup_models`` implementations do not repeat it.</span>
+
+<span class="sd">        :param role: Model role (``chat``, ``plan``, ``guard``, ...).</span>
+<span class="sd">        :returns: ``{provider: {param: value}}`` for *role*.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># ``app_config`` is the concrete ``config_class`` instance; access</span>
+        <span class="c1"># via getattr so this works for any subclass without extra typing.</span>
+        <span class="n">providers</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="p">,</span> <span class="s2">&quot;providers&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">for</span> <span class="n">provider</span><span class="p">,</span> <span class="n">role_configs</span> <span class="ow">in</span> <span class="n">providers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">role_configs</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">provider</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">role_configs</span><span class="p">[</span><span class="n">role</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span>
+
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_create_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build and compile the LangGraph, storing it in ``self.graph``.</span>

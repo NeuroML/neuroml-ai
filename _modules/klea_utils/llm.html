@@ -304,6 +304,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMInvocationErrorCategory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models_catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model_limits</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask_sensitive</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -581,6 +583,131 @@
 
 
 
+<div class="viewcode-block" id="get_token_limit_param">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_token_limit_param">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the max-output token parameter name for a provider.</span>
+
+<span class="sd">    Providers disagree on the parameter name for the maximum number of</span>
+<span class="sd">    output tokens: Ollama uses ``num_predict``, while HuggingFace&#39;s</span>
+<span class="sd">    ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)</span>
+<span class="sd">    and other OpenAI-compatible providers all use ``max_tokens``.</span>
+
+<span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...)</span>
+<span class="sd">    :returns: The token parameter name to send in the invoke config.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;num_predict&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;max_tokens&quot;</span></div>
+
+
+
+<span class="c1">#: Fallback max output tokens used when no node/role default provides a value.</span>
+<span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span> <span class="o">=</span> <span class="mi">4096</span>
+
+<span class="c1">#: Built-in per-role max output token defaults.  Nodes may override these</span>
+<span class="c1">#: with the generic ``max_output_tokens`` key in ``model_defaults``, and</span>
+<span class="c1">#: admins may override them per provider via the ``providers`` config</span>
+<span class="c1">#: section.</span>
+<span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;chat&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+    <span class="s2">&quot;plan&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+    <span class="s2">&quot;guard&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">#: The three max-output token parameter names used across providers.</span>
+<span class="n">_TOKEN_PARAMS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;max_tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;max_new_tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;num_predict&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="estimate_input_tokens">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.estimate_input_tokens">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_input_tokens</span><span class="p">(</span><span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rough token estimate for a prompt&#39;s character count.</span>
+
+<span class="sd">    Used only to keep the reserved output window within a model&#39;s total</span>
+<span class="sd">    budget (input + output &lt;= context).  ~4 characters per token is a</span>
+<span class="sd">    reasonable average for mixed English/code text; an exact count would</span>
+<span class="sd">    require provider-specific tokenizers.</span>
+
+<span class="sd">    :param input_chars: Number of characters in the prompt.</span>
+<span class="sd">    :returns: Estimated token count.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">input_chars</span> <span class="o">//</span> <span class="mi">4</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_output_token_limit">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.resolve_output_token_limit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_output_token_limit</span><span class="p">(</span>
+    <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">role</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensure a bounded max-output token param is set in *overrides*.</span>
+
+<span class="sd">    HuggingFace-style providers apply a *total budget*: the reserved</span>
+<span class="sd">    output window (``max_new_tokens``) is accounted against the model&#39;s</span>
+<span class="sd">    context window alongside the input, and an unset value makes them</span>
+<span class="sd">    reserve the entire remaining window (causing spurious usage limits</span>
+<span class="sd">    and rate limiting).  This helper guarantees a finite, clamped value.</span>
+
+<span class="sd">    Resolution precedence:</span>
+
+<span class="sd">    1. An explicit provider token param (``max_tokens`` /</span>
+<span class="sd">       ``max_new_tokens`` / ``num_predict``) already present in</span>
+<span class="sd">       ``overrides`` (user/node/role value).</span>
+<span class="sd">    2. The generic ``max_output_tokens`` key (provider-agnostic count).</span>
+<span class="sd">    3. The built-in per-role fallback for *role*.</span>
+
+<span class="sd">    The resolved value is clamped to ``min(value, catalog limit.output)``</span>
+<span class="sd">    and, when the catalog exposes a context window and *input_chars* is</span>
+<span class="sd">    given, to the remaining budget (``context - estimated input tokens``)</span>
+<span class="sd">    so HuggingFace&#39;s total-budget check is never exceeded.</span>
+
+<span class="sd">    :param overrides: The merged ``configurable`` dict to update in place.</span>
+<span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...).</span>
+<span class="sd">    :param role: Model role (e.g. ``&quot;chat&quot;``), used for the built-in</span>
+<span class="sd">        per-role fallback.</span>
+<span class="sd">    :param input_chars: Character count of the prompt, to bound the output</span>
+<span class="sd">        within the total budget.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+
+    <span class="c1"># Resolve the configured value, preferring an explicit provider-specific</span>
+    <span class="c1"># token param over the generic provider-agnostic key.</span>
+    <span class="n">value</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">_TOKEN_PARAMS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">overrides</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">overrides</span><span class="p">[</span><span class="n">param</span><span class="p">]</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_output_tokens&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">role</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span><span class="p">)</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="c1"># Clamp to the model&#39;s catalog output limit and total budget, if known.</span>
+    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="ow">and</span> <span class="n">input_chars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">headroom</span> <span class="o">=</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="o">-</span> <span class="n">estimate_input_tokens</span><span class="p">(</span><span class="n">input_chars</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">headroom</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">headroom</span><span class="p">)</span>
+
+    <span class="c1"># Remove the generic and any stale token params; set the provider one.</span>
+    <span class="n">overrides</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;max_output_tokens&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">_TOKEN_PARAMS</span><span class="p">:</span>
+        <span class="n">overrides</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">overrides</span><span class="p">[</span><span class="n">token_param</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Resolved </span><span class="si">{</span><span class="n">token_param</span><span class="w"> </span><span class="si">= }</span><span class="s2"> for </span><span class="si">{</span><span class="n">provider</span><span class="w"> </span><span class="si">= }</span><span class="s2"> </span><span class="si">{</span><span class="n">role</span><span class="w"> </span><span class="si">= }</span><span class="s2">: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="w"> </span><span class="si">= }</span><span class="s2"> (input_chars = </span><span class="si">{</span><span class="n">input_chars</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span></div>
+
+
+
 <div class="viewcode-block" id="check_model_works">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.check_model_works">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">check_model_works</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
@@ -591,11 +718,12 @@
     <span class="c1"># check cheap without triggering warnings about unknown kwargs.</span>
     <span class="n">llm_type</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_llm_type&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="s2">&quot;huggingface&quot;</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
-        <span class="n">token_param</span> <span class="o">=</span> <span class="s2">&quot;max_new_tokens&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;huggingface&quot;</span>
     <span class="k">elif</span> <span class="s2">&quot;ollama&quot;</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
-        <span class="n">token_param</span> <span class="o">=</span> <span class="s2">&quot;num_predict&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;ollama&quot;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">token_param</span> <span class="o">=</span> <span class="s2">&quot;max_tokens&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;openai&quot;</span>
+    <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
 
     <span class="n">configurable</span> <span class="o">=</span> <span class="p">{</span><span class="n">token_param</span><span class="p">:</span> <span class="mi">5</span><span class="p">}</span>
 
@@ -709,35 +837,129 @@
     <span class="k">return</span> <span class="n">model_var</span>
 
 
-<div class="viewcode-block" id="looks_like_structured_output_error">
-<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.looks_like_structured_output_error">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">looks_like_structured_output_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Heuristic: is this exception caused by structured output rejection?</span>
+<span class="c1">#: Tolerant patterns for &quot;the prompt/context does not fit&quot; errors.  Based on</span>
+<span class="c1">#: the error strings seen from OpenAI-compatible, HuggingFace, and vLLM</span>
+<span class="c1">#: providers (and informed by opencode&#39;s ``provider-error.ts``).  Patterns</span>
+<span class="c1">#: are matched case-insensitively over the whole exception message.</span>
+<span class="n">_CONTEXT_OVERFLOW_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context[ _-]*length[ _-]*exceed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context[ _-]*window[ _-]*exceed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context_length_exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;prompt is too long&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;input is too long&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;too many tokens&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;token limit exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;exceed[s]? the limit of \d+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;maximum context length&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;maximum length is \d+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;must be &lt;= \d+ tokens&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;requested token count&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
 
-<span class="sd">    Some providers (e.g. certain custom OpenAI-compatible endpoints) do</span>
-<span class="sd">    not support the ``response_format`` / ``json_schema`` parameter.</span>
-<span class="sd">    Rather than failing hard, we detect this by checking the error for</span>
-<span class="sd">    known indicators and fall back to prompt-based structured output.</span>
+<span class="c1">#: Tolerant patterns for rate-limit / quota errors.</span>
+<span class="n">_RATE_LIMIT_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b429\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;rate[ _-]*limit&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;rate_limit_exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;too many requests&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;quota&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;usage limit&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
 
-<span class="sd">    Real errors (auth failure, model-not-found, rate limits) are left to</span>
-<span class="sd">    propagate  ---  they use different HTTP status codes and error strings</span>
-<span class="sd">    not matched by these heuristics.</span>
+<span class="c1">#: Tolerant patterns for authentication / authorisation failures.</span>
+<span class="n">_AUTH_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b401\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b403\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;unauthori[sz]ed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;invalid api key&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;incorrect api key&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;api key.*must be set&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;authentication&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;authorization&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;forbidden&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1">#: Tolerant patterns for &quot;model does not exist&quot; errors.</span>
+<span class="n">_MODEL_NOT_FOUND_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b404\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;model[ _-]*not[ _-]*found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;does not exist&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;model.*not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;a valid model was not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1">#: Tolerant patterns for timeout errors.</span>
+<span class="n">_TIMEOUT_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;timed out&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="c1">#: Tolerant patterns for providers rejecting the structured-output</span>
+<span class="c1">#: ``response_format`` / ``json_schema`` parameter.  Fall back to</span>
+<span class="c1">#: prompt-based structured output when these match.</span>
+<span class="n">_STRUCTURED_OUTPUT_REJECTED_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;response_format&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;structured output&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b400\b[^\n]*invalid_request_error&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_flatten_exception_messages</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Collect the message from an exception and its cause chain.</span>
+
+<span class="sd">    LangChain and httpx wrap underlying provider errors, so a bare</span>
+<span class="sd">    ``str(exc)`` may miss the informative inner message.  This walks the</span>
+<span class="sd">    ``__cause__`` / ``__context__`` chain and returns all messages.</span>
+
+<span class="sd">    :param exc: The exception to flatten.</span>
+<span class="sd">    :returns: A list of message strings, outermost first.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">exc</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">id</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+        <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="n">__cause__</span> <span class="ow">or</span> <span class="n">current</span><span class="o">.</span><span class="n">__context__</span>
+    <span class="k">return</span> <span class="n">messages</span>
 
-    <span class="c1"># OpenAI-style BadRequestError with structured-output rejection</span>
-    <span class="k">if</span> <span class="s2">&quot;400&quot;</span> <span class="ow">in</span> <span class="n">msg</span> <span class="ow">and</span> <span class="s2">&quot;invalid_request_error&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
 
-    <span class="c1"># Provider explicitly rejects the structured output parameter</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">kw</span> <span class="ow">in</span> <span class="n">msg</span> <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;response_format&quot;</span><span class="p">,</span> <span class="s2">&quot;json_schema&quot;</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="kc">True</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_matches_any</span><span class="p">(</span><span class="n">patterns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if any pattern matches anywhere in *text*.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">)</span>
 
-    <span class="c1"># LangChain&#39;s own message when structured output fails</span>
-    <span class="k">if</span> <span class="s2">&quot;structured output&quot;</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
 
-    <span class="k">return</span> <span class="kc">False</span></div>
+<div class="viewcode-block" id="classify_llm_invocation_error">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.classify_llm_invocation_error">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">classify_llm_invocation_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LLMInvocationErrorCategory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Classify an LLM invocation exception into a category.</span>
+
+<span class="sd">    Providers report failures inconsistently, so this uses tolerant regex</span>
+<span class="sd">    matching over the exception message and its cause chain.  Categories</span>
+<span class="sd">    are checked in order of specificity (context overflow first), so a</span>
+<span class="sd">    message matching several heuristics lands in the most actionable</span>
+<span class="sd">    bucket.</span>
+
+<span class="sd">    :param exc: The exception raised by an LLM invocation.</span>
+<span class="sd">    :returns: The best-effort :class:`klea_utils.errors.LLMInvocationErrorCategory`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_flatten_exception_messages</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_CONTEXT_OVERFLOW_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">CONTEXT_OVERFLOW</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_RATE_LIMIT_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">RATE_LIMITED</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_AUTH_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">AUTH_FAILED</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_MODEL_NOT_FOUND_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">MODEL_NOT_FOUND</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_TIMEOUT_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">TIMEOUT</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_STRUCTURED_OUTPUT_REJECTED_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">STRUCTURED_OUTPUT_REJECTED</span>
+    <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">UNKNOWN</span></div>
 
 
 
@@ -831,7 +1053,7 @@
 <span class="sd">    default parameters (e.g. ``max_tokens``, ``temperature``) that apply to</span>
 <span class="sd">    every node sharing this role, unless overridden by node or user config.</span>
 
-<span class="sd">    ``build_config()`` performs a four-layer merge:</span>
+<span class="sd">    ``build_config()`` performs a five-layer merge:</span>
 
 <span class="sd">    **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.</span>
 <span class="sd">    ``{&quot;max_tokens&quot;: 4096}``).</span>
@@ -845,6 +1067,11 @@
 
 <span class="sd">    **Layer 3**  ---  ``node_defaults``: frozen per-node defaults (always win).</span>
 
+<span class="sd">    **Layer 4**  ---  ``provider_defaults``: per-provider defaults from the</span>
+<span class="sd">    graph config (e.g. HuggingFace role budgets), applied *after* the model</span>
+<span class="sd">    string is parsed so the resolved provider is known.  Applied with</span>
+<span class="sd">    ``setdefault`` so explicit role/context/node values always win.</span>
+
 <span class="sd">    ``modifiable`` controls whether the model can be changed at runtime</span>
 <span class="sd">    (both the API and web UI reject modifications to locked roles).</span>
 <span class="sd">    Set to ``False`` to lock a role (e.g. guard) against user overrides</span>
@@ -854,6 +1081,7 @@
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">instance</span><span class="p">:</span> <span class="n">Any</span>
     <span class="n">role_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">provider_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">modifiable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 
 <div class="viewcode-block" id="LLMModel.build_config">
@@ -863,7 +1091,7 @@
         <span class="n">context_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">node_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunnableConfig</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge up to four layers of model configuration into a ``RunnableConfig``.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge up to five layers of model configuration into a ``RunnableConfig``.</span>
 
 <span class="sd">        Layer order (lowest -&gt; highest priority):</span>
 
@@ -871,6 +1099,7 @@
 <span class="sd">        1. ``self.model_name``      ---   role model from graph config</span>
 <span class="sd">        2. ``context_overrides``    ---   per-request user overrides</span>
 <span class="sd">        3. ``node_defaults``        ---   frozen per-node defaults</span>
+<span class="sd">        4. ``self.provider_defaults`` ---  per-provider defaults (``setdefault``)</span>
 
 <span class="sd">        :param context_overrides: Per-request fields from the API</span>
 <span class="sd">            (e.g. ``model``, ``api_key``).  Only applied when</span>
@@ -941,6 +1170,18 @@
                 <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;HuggingFace kwargs injected:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Layer 4: per-provider defaults from graph config.  Only fills in</span>
+        <span class="c1"># keys not already set by role/context/node layers (setdefault), so</span>
+        <span class="c1"># explicit values always win.  The provider is resolved by now.</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;openai&quot;</span>
+        <span class="n">provider_defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">provider_defaults</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">provider_defaults</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">provider_defaults</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Layer 4 (provider defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
             <span class="p">)</span>
 
         <span class="c1"># Map generic &quot;api_key&quot; to provider-specific token field names so a</span>

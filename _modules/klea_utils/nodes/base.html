@@ -308,13 +308,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_overrides_ctx</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask_sensitive</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">PromptTemplateError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMInvocationErrorCategory</span><span class="p">,</span> <span class="n">PromptTemplateError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">add_memory_to_prompt</span><span class="p">,</span>
+    <span class="n">classify_llm_invocation_error</span><span class="p">,</span>
     <span class="n">get_provider_allowed_fields</span><span class="p">,</span>
     <span class="n">load_prompt</span><span class="p">,</span>
-    <span class="n">looks_like_structured_output_error</span><span class="p">,</span>
     <span class="n">parse_output_with_thought</span><span class="p">,</span>
+    <span class="n">resolve_output_token_limit</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.abstract</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractLLMNode</span>
 
@@ -440,9 +441,11 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build the per-invoke RunnableConfig.</span>
 
 <span class="sd">        Delegates the full merge (role defaults -&gt; context overrides -&gt;</span>
-<span class="sd">        node defaults, including model-string parsing) to</span>
-<span class="sd">        ``LLMModel.build_config()``, then applies provider field</span>
-<span class="sd">        filtering to strip fields invalid for the resolved provider.</span>
+<span class="sd">        node defaults -&gt; provider defaults, including model-string parsing)</span>
+<span class="sd">        to ``LLMModel.build_config()``, then resolves the bounded max-output</span>
+<span class="sd">        token param (translated + clamped to the catalog&#39;s output/context</span>
+<span class="sd">        limits) before applying provider field filtering to strip fields</span>
+<span class="sd">        invalid for the resolved provider.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">role_overrides</span> <span class="o">=</span> <span class="n">model_overrides_ctx</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="p">,</span> <span class="p">{})</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
@@ -460,6 +463,19 @@
 
         <span class="c1"># Get the merged configurable dict for provider field filtering.</span>
         <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;configurable&quot;</span><span class="p">]</span>
+
+        <span class="c1"># --- Bounded output tokens ---</span>
+        <span class="c1"># Guarantee a finite max-output token param for the resolved</span>
+        <span class="c1"># provider, clamped to the model&#39;s catalog output limit and total</span>
+        <span class="c1"># budget (input + output &lt;= context).  Must run before provider</span>
+        <span class="c1"># field filtering so the translated provider token param survives.</span>
+        <span class="n">input_chars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">resolve_output_token_limit</span><span class="p">(</span>
+            <span class="n">overrides</span><span class="p">,</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;openai&quot;</span><span class="p">,</span>
+            <span class="n">role</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="p">,</span>
+            <span class="n">input_chars</span><span class="o">=</span><span class="n">input_chars</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="c1"># --- Provider field filtering ---</span>
         <span class="n">active_provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;openai&quot;</span>
@@ -491,7 +507,10 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">output</span> <span class="o">=</span> <span class="k">await</span> <span class="n">llm_wrapped</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">looks_like_structured_output_error</span><span class="p">(</span><span class="n">exc</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">classify_llm_invocation_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                    <span class="ow">is</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">STRUCTURED_OUTPUT_REJECTED</span>
+                <span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                         <span class="s2">&quot;Structured output not supported, falling back to prompt-based&quot;</span>
                     <span class="p">)</span>

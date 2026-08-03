@@ -302,7 +302,7 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.guard.GuardNode">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GuardNode</span><span class="p">(</span><span class="n">BaseLLMNode</span><span class="p">):</span>
     <span class="n">model_type</span> <span class="o">=</span> <span class="s2">&quot;guard&quot;</span>
-    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">}</span>
+    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;max_output_tokens&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">}</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Safety guard node that checks if user queries are safe to process.</span>
 
 <span class="sd">    Evaluates whether a query contains potentially harmful content</span>

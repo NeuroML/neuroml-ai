@@ -290,16 +290,22 @@
 <p>File: klea_rag/llm.py</p>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.llm.DEFAULT_MAX_OUTPUT_TOKENS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_MAX_OUTPUT_TOKENS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4096</span></span><a class="headerlink" href="#klea_utils.llm.DEFAULT_MAX_OUTPUT_TOKENS" title="Link to this definition">¶</a></dt>
+<dd><p>Fallback max output tokens used when no node/role default provides a value.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.llm.LLMModel">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">LLMModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">role_defaults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modifiable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/llm.html#LLMModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.LLMModel" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">LLMModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">role_defaults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider_defaults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">modifiable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/llm.html#LLMModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.LLMModel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
 <p>Container for a single LLM model instance and its runtime configuration.</p>
 <p><code class="docutils literal notranslate"><span class="pre">instance</span></code> holds the model object (typically a <code class="docutils literal notranslate"><span class="pre">_ConfigurableModel</span></code>
 returned by <code class="docutils literal notranslate"><span class="pre">init_chat_model</span></code>).  <code class="docutils literal notranslate"><span class="pre">role_defaults</span></code> stores role-wide
 default parameters (e.g. <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>, <code class="docutils literal notranslate"><span class="pre">temperature</span></code>) that apply to
 every node sharing this role, unless overridden by node or user config.</p>
-<p><code class="docutils literal notranslate"><span class="pre">build_config()</span></code> performs a four-layer merge:</p>
+<p><code class="docutils literal notranslate"><span class="pre">build_config()</span></code> performs a five-layer merge:</p>
 <p><strong>Layer 0</strong>  —  <code class="docutils literal notranslate"><span class="pre">role_defaults</span></code>: role-wide parameters (e.g.
 <code class="docutils literal notranslate"><span class="pre">{&quot;max_tokens&quot;:</span> <span class="pre">4096}</span></code>).</p>
 <p><strong>Layer 1</strong>  —  <code class="docutils literal notranslate"><span class="pre">model_name</span></code>: the default model identifier from
@@ -308,6 +314,10 @@ the graph config.</p>
 (<code class="docutils literal notranslate"><span class="pre">model</span></code>, <code class="docutils literal notranslate"><span class="pre">api_key</span></code>, etc.).  Only applied when <code class="docutils literal notranslate"><span class="pre">modifiable=True</span></code>,
 and skipping any keys frozen by node defaults.</p>
 <p><strong>Layer 3</strong>  —  <code class="docutils literal notranslate"><span class="pre">node_defaults</span></code>: frozen per-node defaults (always win).</p>
+<p><strong>Layer 4</strong>  —  <code class="docutils literal notranslate"><span class="pre">provider_defaults</span></code>: per-provider defaults from the
+graph config (e.g. HuggingFace role budgets), applied <em>after</em> the model
+string is parsed so the resolved provider is known.  Applied with
+<code class="docutils literal notranslate"><span class="pre">setdefault</span></code> so explicit role/context/node values always win.</p>
 <p><code class="docutils literal notranslate"><span class="pre">modifiable</span></code> controls whether the model can be changed at runtime
 (both the API and web UI reject modifications to locked roles).
 Set to <code class="docutils literal notranslate"><span class="pre">False</span></code> to lock a role (e.g. guard) against user overrides
@@ -315,13 +325,14 @@ in managed deployments.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="klea_utils.llm.LLMModel.build_config">
 <span class="sig-name descname"><span class="pre">build_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_overrides</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_defaults</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">langgraph.types.RunnableConfig</span></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#LLMModel.build_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.LLMModel.build_config" title="Link to this definition">¶</a></dt>
-<dd><p>Merge up to four layers of model configuration into a <code class="docutils literal notranslate"><span class="pre">RunnableConfig</span></code>.</p>
+<dd><p>Merge up to five layers of model configuration into a <code class="docutils literal notranslate"><span class="pre">RunnableConfig</span></code>.</p>
 <p>Layer order (lowest -&gt; highest priority):</p>
 <ol class="arabic simple" start="0">
 <li><p><code class="docutils literal notranslate"><span class="pre">self.role_defaults</span></code>   —   role-wide parameters</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">self.model_name</span></code>      —   role model from graph config</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">context_overrides</span></code>    —   per-request user overrides</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">node_defaults</span></code>        —   frozen per-node defaults</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">self.provider_defaults</span></code> —  per-provider defaults (<code class="docutils literal notranslate"><span class="pre">setdefault</span></code>)</p></li>
 </ol>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -420,6 +431,25 @@ populated.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.llm.classify_llm_invocation_error">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">classify_llm_invocation_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#BaseException" title="(in Python v3.14)"><span class="pre">BaseException</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="errors.html#klea_utils.errors.LLMInvocationErrorCategory" title="klea_utils.errors.LLMInvocationErrorCategory"><span class="pre">LLMInvocationErrorCategory</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#classify_llm_invocation_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.classify_llm_invocation_error" title="Link to this definition">¶</a></dt>
+<dd><p>Classify an LLM invocation exception into a category.</p>
+<p>Providers report failures inconsistently, so this uses tolerant regex
+matching over the exception message and its cause chain.  Categories
+are checked in order of specificity (context overflow first), so a
+message matching several heuristics lands in the most actionable
+bucket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> – The exception raised by an LLM invocation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The best-effort <a class="reference internal" href="errors.html#klea_utils.errors.LLMInvocationErrorCategory" title="klea_utils.errors.LLMInvocationErrorCategory"><code class="xref py py-class docutils literal notranslate"><span class="pre">klea_utils.errors.LLMInvocationErrorCategory</span></code></a>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.llm.content_to_str">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">content_to_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#content_to_str"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.content_to_str" title="Link to this definition">¶</a></dt>
 <dd><p>Normalise an <code class="docutils literal notranslate"><span class="pre">AIMessage.content</span></code> value to a plain string.</p>
@@ -451,6 +481,24 @@ so there is no stale configuration leakage between calls.</p>
 <p>The lookup function <code class="docutils literal notranslate"><span class="pre">check_model_works</span></code> is deliberately <strong>not</strong>
 called here  —  we prefer a “leap before you look” approach so that
 startup is fast and model availability is checked only at query time.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.llm.estimate_input_tokens">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">estimate_input_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_chars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#estimate_input_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.estimate_input_tokens" title="Link to this definition">¶</a></dt>
+<dd><p>Rough token estimate for a prompt’s character count.</p>
+<p>Used only to keep the reserved output window within a model’s total
+budget (input + output &lt;= context).  ~4 characters per token is a
+reasonable average for mixed English/code text; an exact count would
+require provider-specific tokenizers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>input_chars</strong> – Number of characters in the prompt.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Estimated token count.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -510,6 +558,24 @@ top of the returned set since those are consumed by
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.llm.get_token_limit_param">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">get_token_limit_param</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#get_token_limit_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.get_token_limit_param" title="Link to this definition">¶</a></dt>
+<dd><p>Return the max-output token parameter name for a provider.</p>
+<p>Providers disagree on the parameter name for the maximum number of
+output tokens: Ollama uses <code class="docutils literal notranslate"><span class="pre">num_predict</span></code>, while HuggingFace’s
+<code class="docutils literal notranslate"><span class="pre">ChatHuggingFace</span></code> (which internally maps it to <code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code>)
+and other OpenAI-compatible providers all use <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>provider</strong> – Klea provider id (<code class="docutils literal notranslate"><span class="pre">huggingface</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code>, …)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The token parameter name to send in the invoke config.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.llm.load_prompt">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">load_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prompt_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt_registry_location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/llm.html#load_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.load_prompt" title="Link to this definition">¶</a></dt>
 <dd><p>Load a prompt from file called prompt_name.md</p>
@@ -524,19 +590,6 @@ top of the returned set since those are consumed by
 <dd class="field-even"><p>loaded prompt text</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.llm.looks_like_structured_output_error">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">looks_like_structured_output_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.14)"><span class="pre">Exception</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#looks_like_structured_output_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.looks_like_structured_output_error" title="Link to this definition">¶</a></dt>
-<dd><p>Heuristic: is this exception caused by structured output rejection?</p>
-<p>Some providers (e.g. certain custom OpenAI-compatible endpoints) do
-not support the <code class="docutils literal notranslate"><span class="pre">response_format</span></code> / <code class="docutils literal notranslate"><span class="pre">json_schema</span></code> parameter.
-Rather than failing hard, we detect this by checking the error for
-known indicators and fall back to prompt-based structured output.</p>
-<p>Real errors (auth failure, model-not-found, rate limits) are left to
-propagate  —  they use different HTTP status codes and error strings
-not matched by these heuristics.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -586,6 +639,41 @@ already substituted).</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A list of <code class="docutils literal notranslate"><span class="pre">{&quot;role&quot;:</span> <span class="pre">&quot;...&quot;,</span> <span class="pre">&quot;content&quot;:</span> <span class="pre">&quot;...&quot;}</span></code> dicts.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.llm.resolve_output_token_limit">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">resolve_output_token_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">role</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_chars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#resolve_output_token_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.resolve_output_token_limit" title="Link to this definition">¶</a></dt>
+<dd><p>Ensure a bounded max-output token param is set in <em>overrides</em>.</p>
+<p>HuggingFace-style providers apply a <em>total budget</em>: the reserved
+output window (<code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code>) is accounted against the model’s
+context window alongside the input, and an unset value makes them
+reserve the entire remaining window (causing spurious usage limits
+and rate limiting).  This helper guarantees a finite, clamped value.</p>
+<p>Resolution precedence:</p>
+<ol class="arabic simple">
+<li><p>An explicit provider token param (<code class="docutils literal notranslate"><span class="pre">max_tokens</span></code> /
+<code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code> / <code class="docutils literal notranslate"><span class="pre">num_predict</span></code>) already present in
+<code class="docutils literal notranslate"><span class="pre">overrides</span></code> (user/node/role value).</p></li>
+<li><p>The generic <code class="docutils literal notranslate"><span class="pre">max_output_tokens</span></code> key (provider-agnostic count).</p></li>
+<li><p>The built-in per-role fallback for <em>role</em>.</p></li>
+</ol>
+<p>The resolved value is clamped to <code class="docutils literal notranslate"><span class="pre">min(value,</span> <span class="pre">catalog</span> <span class="pre">limit.output)</span></code>
+and, when the catalog exposes a context window and <em>input_chars</em> is
+given, to the remaining budget (<code class="docutils literal notranslate"><span class="pre">context</span> <span class="pre">-</span> <span class="pre">estimated</span> <span class="pre">input</span> <span class="pre">tokens</span></code>)
+so HuggingFace’s total-budget check is never exceeded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>overrides</strong> – The merged <code class="docutils literal notranslate"><span class="pre">configurable</span></code> dict to update in place.</p></li>
+<li><p><strong>provider</strong> – Klea provider id (<code class="docutils literal notranslate"><span class="pre">huggingface</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code>, …).</p></li>
+<li><p><strong>role</strong> – Model role (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;chat&quot;</span></code>), used for the built-in
+per-role fallback.</p></li>
+<li><p><strong>input_chars</strong> – Character count of the prompt, to bound the output
+within the total budget.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -653,6 +741,7 @@ already substituted).</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">LLM utilities</a><ul>
+<li><a class="reference internal" href="#klea_utils.llm.DEFAULT_MAX_OUTPUT_TOKENS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MAX_OUTPUT_TOKENS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.LLMModel"><code class="docutils literal notranslate"><span class="pre">LLMModel</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.llm.LLMModel.build_config"><code class="docutils literal notranslate"><span class="pre">LLMModel.build_config()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.LLMModel.model_config"><code class="docutils literal notranslate"><span class="pre">LLMModel.model_config</span></code></a></li>
@@ -667,16 +756,19 @@ already substituted).</p>
 <li><a class="reference internal" href="#klea_utils.llm.add_memory_to_prompt"><code class="docutils literal notranslate"><span class="pre">add_memory_to_prompt()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.check_model_works"><code class="docutils literal notranslate"><span class="pre">check_model_works()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.check_ollama_model"><code class="docutils literal notranslate"><span class="pre">check_ollama_model()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.llm.classify_llm_invocation_error"><code class="docutils literal notranslate"><span class="pre">classify_llm_invocation_error()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.content_to_str"><code class="docutils literal notranslate"><span class="pre">content_to_str()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.create_configurable_model"><code class="docutils literal notranslate"><span class="pre">create_configurable_model()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.llm.estimate_input_tokens"><code class="docutils literal notranslate"><span class="pre">estimate_input_tokens()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.extract_llm_output_content"><code class="docutils literal notranslate"><span class="pre">extract_llm_output_content()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.get_last_n_conversations"><code class="docutils literal notranslate"><span class="pre">get_last_n_conversations()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.get_provider_allowed_fields"><code class="docutils literal notranslate"><span class="pre">get_provider_allowed_fields()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.llm.get_token_limit_param"><code class="docutils literal notranslate"><span class="pre">get_token_limit_param()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.load_prompt"><code class="docutils literal notranslate"><span class="pre">load_prompt()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.llm.looks_like_structured_output_error"><code class="docutils literal notranslate"><span class="pre">looks_like_structured_output_error()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.parse_model_name"><code class="docutils literal notranslate"><span class="pre">parse_model_name()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.parse_output_with_thought"><code class="docutils literal notranslate"><span class="pre">parse_output_with_thought()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.prompt_value_to_messages"><code class="docutils literal notranslate"><span class="pre">prompt_value_to_messages()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.llm.resolve_output_token_limit"><code class="docutils literal notranslate"><span class="pre">resolve_output_token_limit()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.split_output_by_section"><code class="docutils literal notranslate"><span class="pre">split_output_by_section()</span></code></a></li>
 </ul>
 </li>

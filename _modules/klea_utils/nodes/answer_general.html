@@ -316,7 +316,7 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.answer_general.AnswerGeneral">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AnswerGeneral</span><span class="p">(</span><span class="n">BaseLLMNode</span><span class="p">):</span>
     <span class="n">model_type</span> <span class="o">=</span> <span class="s2">&quot;chat&quot;</span>
-    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">}</span>
+    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;max_output_tokens&quot;</span><span class="p">:</span> <span class="mi">2048</span><span class="p">}</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Answer general (non-domain) questions using the LLM&#39;s training data.</span>
 
 <span class="sd">    Provides a conversational, user-friendly response. Optionally appends</span>
