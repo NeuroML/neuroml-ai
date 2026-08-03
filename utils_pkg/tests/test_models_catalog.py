@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+"""
+Tests for the models.dev catalog client.
+
+File: tests/test_models_catalog.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import json
+import os
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from klea_utils import models_catalog
+
+_SAMPLE_CATALOG = {
+    "openai": {
+        "name": "OpenAI",
+        "models": {
+            "gpt-4o": {
+                "id": "gpt-4o",
+                "limit": {"context": 128000, "output": 16384},
+            },
+            "no-output-limit": {
+                "id": "no-output-limit",
+                "limit": {"context": 1000},
+            },
+        },
+    },
+    "huggingface": {
+        "name": "Hugging Face",
+        "models": {
+            "Qwen/Qwen3-Coder-30B-A3B-Instruct": {
+                "id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+                "limit": {"context": 262144, "input": 200000, "output": 65536},
+            },
+        },
+    },
+}
+
+
+class TestModelsCatalog(unittest.TestCase):
+    """Tests for the models.dev catalog cache and lookups."""
+
+    def setUp(self):
+        # Route the on-disk cache to a temp dir and reset the in-memory
+        # lru_cache so each test starts from a known state.
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._cache_path = Path(self._tmpdir.name) / "models-dev.json"
+        self._path_patcher = mock.patch.object(
+            models_catalog, "_disk_cache_path", return_value=self._cache_path
+        )
+        self._path_patcher.start()
+        self.addCleanup(self._path_patcher.stop)
+        self.addCleanup(models_catalog._catalog.cache_clear)
+        models_catalog._catalog.cache_clear()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _write_disk_cache(self, catalog=None, age_seconds=0):
+        """Write a catalog to the on-disk cache, optionally aging it."""
+        catalog = catalog if catalog is not None else _SAMPLE_CATALOG
+        self._cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self._cache_path, "w") as f:
+            json.dump(catalog, f)
+        if age_seconds:
+            old = time.time() - age_seconds
+            os.utime(self._cache_path, (old, old))
+
+    def test_first_fetch_writes_disk_cache(self):
+        """A missing cache triggers a fetch, which is mirrored to disk."""
+        with mock.patch.object(
+            models_catalog, "_fetch_catalog", return_value=_SAMPLE_CATALOG
+        ) as fetch:
+            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
+        self.assertEqual(limit, 16384)
+        fetch.assert_called_once()
+        self.assertTrue(self._cache_path.exists())
+
+    def test_fresh_disk_cache_no_network(self):
+        """A fresh on-disk cache is used without a network fetch."""
+        self._write_disk_cache()
+        with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
+            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
+        self.assertEqual(limit, 16384)
+        fetch.assert_not_called()
+
+    def test_expired_disk_cache_refetches(self):
+        """An expired on-disk cache is replaced by a fresh fetch."""
+        self._write_disk_cache(age_seconds=models_catalog.DISK_CACHE_TTL_SECONDS + 10)
+        with mock.patch.object(
+            models_catalog, "_fetch_catalog", return_value=_SAMPLE_CATALOG
+        ) as fetch:
+            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
+        self.assertEqual(limit, 16384)
+        fetch.assert_called_once()
+
+    def test_offline_no_cache_returns_none(self):
+        """A fetch failure with no disk copy resolves to None, not an error."""
+        with mock.patch.object(
+            models_catalog, "_fetch_catalog", side_effect=RuntimeError("offline")
+        ):
+            self.assertIsNone(models_catalog.get_model_output_limit("openai", "gpt-4o"))
+            self.assertIsNone(models_catalog.get_model_limits("openai", "gpt-4o"))
+
+    def test_offline_falls_back_to_stale_disk(self):
+        """A fetch failure falls back to a stale on-disk copy."""
+        self._write_disk_cache(age_seconds=models_catalog.DISK_CACHE_TTL_SECONDS + 10)
+        with mock.patch.object(
+            models_catalog, "_fetch_catalog", side_effect=RuntimeError("offline")
+        ):
+            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
+        self.assertEqual(limit, 16384)
+
+    def test_missing_model_returns_none(self):
+        """A model absent from the catalog resolves to None."""
+        self._write_disk_cache()
+        with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
+            self.assertIsNone(
+                models_catalog.get_model_output_limit("openai", "no-such-model")
+            )
+        fetch.assert_not_called()
+
+    def test_provider_without_catalog_entry_returns_none(self):
+        """Local providers (ollama) have no catalog entry -> None."""
+        self._write_disk_cache()
+        with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
+            self.assertIsNone(
+                models_catalog.get_model_output_limit("ollama", "qwen3:0.6b")
+            )
+        fetch.assert_not_called()
+
+    def test_unknown_provider_returns_none(self):
+        """An unknown provider is passed through and simply misses."""
+        self._write_disk_cache()
+        self.assertIsNone(
+            models_catalog.get_model_output_limit("not-a-provider", "gpt-4o")
+        )
+
+    def test_custom_provider_maps_to_openai(self):
+        """custom: maps to the openai catalog entry, mirroring build_config."""
+        self._write_disk_cache()
+        self.assertEqual(
+            models_catalog.get_model_output_limit("custom", "gpt-4o"), 16384
+        )
+
+    def test_context_input_output_limits(self):
+        """All defined limit fields are returned in ModelLimits."""
+        self._write_disk_cache()
+        limits = models_catalog.get_model_limits(
+            "huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct"
+        )
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.context, 262144)
+        self.assertEqual(limits.input, 200000)
+        self.assertEqual(limits.output, 65536)
+        self.assertEqual(
+            models_catalog.get_model_context_limit(
+                "huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct"
+            ),
+            262144,
+        )
+
+    def test_missing_output_field(self):
+        """Models without an output limit expose it as None."""
+        self._write_disk_cache()
+        limits = models_catalog.get_model_limits("openai", "no-output-limit")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.context, 1000)
+        self.assertIsNone(limits.input)
+        self.assertIsNone(limits.output)
+        self.assertIsNone(
+            models_catalog.get_model_output_limit("openai", "no-output-limit")
+        )
+
+    def test_fetch_uses_configured_url(self):
+        """The catalog URL honours the KLEA_MODELS_DEV_URL override."""
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = _SAMPLE_CATALOG
+        with (
+            mock.patch("httpx.get", return_value=mock_resp) as get,
+            mock.patch.dict(
+                "os.environ",
+                {"KLEA_MODELS_DEV_URL": "https://mirror.example/api.json"},
+            ),
+        ):
+            models_catalog._catalog.cache_clear()
+            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
+        self.assertEqual(limit, 16384)
+        get.assert_called_once()
+        args, kwargs = get.call_args
+        self.assertEqual(args[0], "https://mirror.example/api.json")
+        self.assertEqual(kwargs["timeout"], models_catalog.FETCH_TIMEOUT_SECONDS)
+
+
+if __name__ == "__main__":
+    unittest.main()
