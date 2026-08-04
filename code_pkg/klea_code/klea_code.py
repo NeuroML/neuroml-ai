@@ -14,7 +14,7 @@ from typing import Any, final, override
 
 from fastmcp.mcp_config import MCPConfig, StdioMCPServer
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
@@ -33,9 +33,6 @@ from klea_code.nodes.tools_router import ToolsRouter
 from .config import AppConfig, AppEnv
 from .schemas import GoalSchema, KleaCodeState
 
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
-
 
 @final
 class KleaCode(BaseLangGraph):
@@ -45,30 +42,48 @@ class KleaCode(BaseLangGraph):
     env_var = "KLEA_CODE_ENV_FILE"
     env_file_default = "klea_code.env"
     config_class = AppConfig
-    logger_name = "KleaCode"
+    graph_name = "klea-code"
+
+    # type hints
+    app_env: AppEnv
+    app_config: AppConfig
 
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        checkpoint: str = "inmemory",
     ):
         """Initialise"""
-        super().__init__(logging_level=logging_level, memory=memory)
-
-        self.r_model = None
-        self.g_model = None
+        super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
     def _setup_models(self) -> None:
-        """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, self.logger)
-        if self.app_env.chat_model == self.app_env.reasoning_model:
-            self.r_model = self.c_model
-            self.logger.info(
-                f"Same model used for both chat and reasoning: {self.app_env.chat_model}"
-            )
-        else:
-            self.r_model = setup_llm(self.app_env.reasoning_model, self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, self.logger)
+        """Set up the LLM chat model
+
+        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
+        ``model_name`` provides the default that ``_build_invoke_config``
+        uses when no override is active.
+        """
+        from klea_utils.llm import LLMModel
+
+        model = create_configurable_model(logger=self.logger)
+
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                model_name=self.app_env.chat_model,
+                provider_defaults=self._provider_defaults_for_role("chat"),
+            ),
+            "plan": LLMModel(
+                instance=model,
+                model_name=self.app_env.reasoning_model,
+                provider_defaults=self._provider_defaults_for_role("plan"),
+            ),
+            "guard": LLMModel(
+                instance=model,
+                model_name=self.app_env.guard_model,
+                provider_defaults=self._provider_defaults_for_role("guard"),
+            ),
+        }
 
     @override
     def _configure_resources(self) -> None:
@@ -110,8 +125,7 @@ class KleaCode(BaseLangGraph):
         self._guard_node = GuardNode(
             logger=self.logger,
             label="Checking safety",
-            model=self.g_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=self.memory,
         )
         self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
@@ -133,8 +147,7 @@ class KleaCode(BaseLangGraph):
         self._goal_setter_node = GoalSetter(
             logger=self.logger,
             label="Setting goal",
-            model=self.r_model,
-            temperature=0.01,
+            llm_models=self.llm_models,
             output_schema=GoalSchema,
             memory=False,
         )
@@ -143,23 +156,26 @@ class KleaCode(BaseLangGraph):
         )
 
         self._explore_planner_node = ExplorePlanner(
-            logger=self.logger, label="Exploring", model=self.r_model, temperature=0.01
+            logger=self.logger,
+            label="Exploring",
+            llm_models=self.llm_models,
         )
         self.workflow.add_node(
             self._explore_planner_node.label, self._explore_planner_node.execute
         )
 
         self._planner_node = Planner(
-            logger=self.logger, label="Planning", model=self.r_model, temperature=0.01
+            logger=self.logger,
+            label="Planning",
+            llm_models=self.llm_models,
         )
-        self._planner_node.set_tools_description(self.tools_description)
+        self._planner_node.set_tools_info(self.tools_info)
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
-            model=self.r_model,
-            temperature=0.01,
+            llm_models=self.llm_models,
         )
-        self._tools_picker_node.set_tools_description(self.tools_description)
+        self._tools_picker_node.set_tools_info(self.tools_info)
         self._tools_caller_node = ToolsCaller(
             logger=self.logger, label="Running tools", mcp_client=self.mcp_client
         )

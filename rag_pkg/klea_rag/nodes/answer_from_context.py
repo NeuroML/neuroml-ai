@@ -9,9 +9,14 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
-from klea_utils.llm import split_output_by_section
+from klea_utils.llm import (
+    extract_llm_output_content,
+    prompt_value_to_messages,
+    split_output_by_section,
+)
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from klea_utils.stores.utils import serialize_vs_retrieval
 from klea_utils.tools import textualize_tool_results
@@ -27,27 +32,27 @@ class AnswerSchema(BaseModel):
 class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     """Generate an answer from the provided context"""
 
+    model_type = "chat"
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 4096}
+
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        temperature: float = 0.3,
+        llm_models: dict[str, Any],
         memory: bool = False,
     ):
         """Initialise the node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param memory: Whether to include conversation memory in the prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=AnswerSchema,
             memory=memory,
         )
@@ -70,7 +75,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         }
 
     @override
-    def _update_state(self, result: AnswerSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: AnswerSchema, state: BaseModel) -> dict[str, Any]:
         """Update state with the generated answer and formatted references."""
         thought, answer = split_output_by_section(result.answer, "<think>", "</think>")
         refs = result.references
@@ -107,13 +112,55 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         newrefs = list(set([r.strip() for r in references]))
 
         if len(newrefs):
-            full_answer += "\n\nReferences:\n"
+            full_answer += "\n\nReferences:\n\n"
             for r in newrefs:
                 full_answer += f"- {r}\n"
+            self.logger.debug(f"{full_answer = }")
         else:
             self.logger.debug("No references included.")
 
         return full_answer
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return answer generation summary."""
+        assert self._last_state_updates is not None
+        answer = ""
+        refs = []
+        result = self._last_result
+        if isinstance(result, AnswerSchema):
+            answer = result.answer
+            refs = result.references
+        preview = answer[:120] + "..." if len(answer) > 120 else answer
+        return NodeStreamData(
+            heading="Answer Generation",
+            summary=f"Generated answer ({len(answer)} chars, {len(refs)} references)",
+            details={
+                "answer_preview": preview,
+                "char_count": len(answer),
+                "reference_count": len(refs),
+                "references": refs,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + input prompt, raw output, and processed output."""
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
+        info = self._get_info()
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
+                "processed_output": str(self._last_result),
+            }
+        )
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
 
     @override
     def _get_default_error_result(self) -> Any:

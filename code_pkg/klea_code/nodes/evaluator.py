@@ -11,14 +11,13 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 # TODO: complete
 
 import logging
-from typing import Any, Dict, override
-
-from klea_utils.nodes.abstract import AbstractLangGraphNode
+from typing import Any, override
 
 from klea_code.schemas import KleaCodeState
+from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
-class Evaluator(AbstractLangGraphNode[KleaCodeState, Dict[str, Any]]):
+class Evaluator(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
     """Node that evaluates whether all plan steps are completed."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -30,7 +29,7 @@ class Evaluator(AbstractLangGraphNode[KleaCodeState, Dict[str, Any]]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: KleaCodeState) -> Dict[str, Any]:
+    async def execute(self, state: KleaCodeState) -> dict[str, Any]:
         """Check if all steps are completed and update plan status.
 
         :param state: Current graph state
@@ -39,7 +38,7 @@ class Evaluator(AbstractLangGraphNode[KleaCodeState, Dict[str, Any]]):
         self.write_custom_stream({"type": "progress", "node": self.label})
         self.logger.debug(f"{state =}")
         plan = state.plan
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         if plan.current_step_index >= len(plan.step_list):
             plan.status = "completed"

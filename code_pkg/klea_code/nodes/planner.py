@@ -9,41 +9,51 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
-
-from klea_utils.nodes.base import BaseLLMNode
-from pydantic import BaseModel
+from typing import Any, override
 
 from klea_code.schemas import KleaCodeState, PlanSchema
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.nodes.base import BaseLLMNode
+from pydantic import BaseModel
 
 
 class Planner(BaseLLMNode[PlanSchema]):
     """Node that creates or updates an execution plan."""
 
+    model_type = "plan"
+    model_defaults = {"temperature": 0.01}
+
     def __init__(
-        self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.01
+        self,
+        logger: logging.Logger,
+        label: str,
+        llm_models: dict[str, Any],
     ):
         """Initialise the planner node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance (reasoning model)
-        :param temperature: Sampling temperature
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=PlanSchema,
             memory=False,
         )
         self._tools_description = ""
 
-    def set_tools_description(self, description: dict[str, str]) -> None:
-        """Set tool descriptions (called by orchestrator after construction)."""
+    def set_tools_info(self, tools_info: dict[str, dict[str, ToolInfo]]) -> None:
+        """Set tool metadata (called by orchestrator after construction)."""
         self._tools_description = (
-            "\n\n".join(description.values()) if description else ""
+            "\n\n".join(
+                info.description or ""
+                for domain_info in tools_info.values()
+                for info in domain_info.values()
+            )
+            if tools_info
+            else ""
         )
 
     @override
@@ -61,7 +71,7 @@ class Planner(BaseLLMNode[PlanSchema]):
         }
 
     @override
-    def _update_state(self, result: PlanSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: PlanSchema, state: BaseModel) -> dict[str, Any]:
         """Update plan and generate summary for user."""
         plan_summary = "## Plan summary:\n\n"
         for step in result.step_list:

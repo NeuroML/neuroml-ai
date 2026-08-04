@@ -10,7 +10,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from langchain_core.documents import Document
 
@@ -18,7 +17,7 @@ _INTERNAL_META_KEYS = {"file_name", "source_path", "file_hash", "headings"}
 
 
 def serialize_vs_retrieval(
-    reference_material: Dict[str, List[Tuple[Document, float]]],
+    reference_material: dict[str, list[tuple[Document, float]]],
 ) -> str:
     """Serialize vector store retrieval results into text for use in prompt context.
 

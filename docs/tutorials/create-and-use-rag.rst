@@ -128,8 +128,8 @@ vector store to a domain:
 
    {
        "general": {
-           "default_k": 3,
-           "k_max": 5,
+        "default_k": 5,
+        "k_max": 10,
            "non_domain_chat": true,
            "fallback_to_training_data": true
        },
@@ -148,8 +148,11 @@ vector store to a domain:
 
 The ``general`` section controls retrieval behaviour:
 
-* ``default_k`` -- number of documents to retrieve per query.
+* ``default_k`` -- number of documents to retrieve per query.  This is the
+  graph-wide default; individual vector stores can override it (see below).
 * ``k_max`` -- maximum ``k`` when the evaluator requests more context.
+* ``k_inc`` -- how much ``k`` is increased by each time the evaluator
+  requests more information.
 * ``non_domain_chat`` -- whether to fall back to the LLM's training data
   for questions that do not match any domain.
 * ``fallback_to_training_data`` -- whether to let the LLM answer from its
@@ -158,6 +161,45 @@ The ``general`` section controls retrieval behaviour:
 Each entry under ``domains`` defines a knowledge area with one or more
 vector stores.  The ``description`` helps the classifier route queries
 to the right domain.
+
+Vector stores can override the retrieval settings independently.  Stores
+that set their own ``default_k``, ``k_max``, and ``k_inc`` use those
+values instead of the ``general`` fallbacks, which is useful when stores
+cover corpora of very different sizes:
+
+.. code-block:: json
+
+   {
+       "general": {
+           "default_k": 5,
+           "k_max": 10,
+           "k_inc": 1
+       },
+       "domains": {
+           "MyDomain": {
+               "description": "Documents related to my project",
+               "vector_stores": [
+                   {
+                       "name": "large-corpus",
+                       "path": "chroma:/path/to/large-store.db",
+                       "default_k": 10,
+                       "k_max": 25,
+                       "k_inc": 5
+                   },
+                   {
+                       "name": "small-corpus",
+                       "path": "chroma:/path/to/small-store.db"
+                   }
+               ]
+           }
+       }
+   }
+
+Here ``large-corpus`` retrieves up to 10 documents and can grow to 25 in
+steps of 5 when the evaluator asks for more context, while ``small-corpus``
+inherits the ``general`` settings (5, capped at 10, stepping by 1).  The
+dynamic ``k_inc``/``k_max`` adjustments only apply to stores that are
+already loaded, so a store only grows once it has been queried once.
 
 .. seealso::
 
@@ -197,13 +239,16 @@ For an interactive session:
 
 Type your questions at the prompt.  Use ``quit`` to exit.
 
-For a graphical interface, launch the Streamlit web UI:
+For a graphical interface, launch the NiceGUI web UI:
 
 .. code-block:: bash
 
    klea-rag web
 
-All three methods connect to the running server at ``http://127.0.0.1:8005``
+The web UI uses NiceGUI and requires the ``[nicegui]`` extra, while the
+CLI mode has no extra dependencies.
+
+Both methods connect to the running server at ``http://127.0.0.1:8005``
 by default.  Use ``--server`` to point at a different address.
 
 Going further
@@ -229,7 +274,7 @@ Once the basic pipeline works, here are natural next steps:
 **MCP tools**
    Add ``mcp_servers`` to a domain config to give the LLM access to
    external tools (e.g. a NeuroML validation server).  See the example
-   in ``rag_pkg/klea_rag.json``.
+   in ``rag_pkg/example-configs/klea_rag.json``.
 
 **Separate chunk-and-store workflow**
    Use ``klea-vs-create chunk`` to convert and cache without writing

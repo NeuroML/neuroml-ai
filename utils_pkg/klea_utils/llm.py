@@ -8,25 +8,27 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from __future__ import annotations
+
 import logging
-import os
 import re
 import sys
 import time
 from functools import lru_cache
 from pathlib import Path
 from textwrap import dedent
-from typing import NamedTuple, Type
+from typing import Any, NamedTuple, cast
 
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompt_values import PromptValue
+from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
+from .errors import LLMInvocationErrorCategory
+from .models_catalog import get_model_limits
+from .plogging import mask_sensitive
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class ParsedModelName(NamedTuple):
@@ -43,17 +45,18 @@ def parse_model_name(raw: str) -> ParsedModelName:
     Follows the ``provider:model_id`` convention.  The provider is
     expected to be explicitly included; no provider inference is done.
 
-    ``huggingface`` is the only special case: a third ``:`` segment
-    denotes a provider hint (``auto``, ``cheapest``, ``fastest``)
-    rather than a model tag.  For all other providers the second and
-    third segments together form the model name.
+    With three segments the third is treated as a ``suffix``
+    (provider hint, model tag, base URL, etc.) *unless* the provider
+    is ``ollama``, for which the second and third segments form the
+    model name (``model_name:tag``).
 
     Examples:
 
-    * ``ollama:bge-m3:latest`` -> provider=ollama, model=bge-m3:latest
+    * ``ollama:bge-m3:latest`` -> provider=ollama, model=bge-m3:latest, suffix=None
     * ``huggingface:org/model:auto`` -> provider=huggingface, model=org/model, suffix=auto
-    * ``openai:gpt-4o`` -> provider=openai, model=gpt-4o
-    * ``bge-m3`` -> provider=None, model=bge-m3
+    * ``custom:model:https://example.com/v1`` -> provider=custom, model=model, suffix=https://example.com/v1
+    * ``openai:gpt-4o`` -> provider=openai, model=gpt-4o, suffix=None
+    * ``bge-m3`` -> provider=None, model=bge-m3, suffix=None
 
     :param raw: Model name with optional provider prefix
     :returns: Parsed model name components
@@ -65,15 +68,15 @@ def parse_model_name(raw: str) -> ParsedModelName:
 
     provider = parts[0].lower()
 
-    if provider == "huggingface" and len(parts) == 3:
-        return ParsedModelName(provider=provider, model_name=parts[1], suffix=parts[2])
+    if len(parts) == 2:
+        return ParsedModelName(provider=provider, model_name=parts[1], suffix=None)
 
-    if len(parts) == 3:
+    if provider == "ollama":
         return ParsedModelName(
             provider=provider, model_name=f"{parts[1]}:{parts[2]}", suffix=None
         )
 
-    return ParsedModelName(provider=provider, model_name=parts[1], suffix=None)
+    return ParsedModelName(provider=provider, model_name=parts[1], suffix=parts[2])
 
 
 def check_ollama_model(logger, model, exit=False):
@@ -107,7 +110,7 @@ def check_ollama_model(logger, model, exit=False):
 
 
 def parse_output_with_thought[TSchema: BaseModel](
-    message: AIMessage, schema: Type[TSchema]
+    message: AIMessage, schema: type[TSchema]
 ) -> tuple[TSchema, str]:
     """Parse AI message with thought to a dict based on given schema"""
     # Lazy: JsonOutputParser pulls in langchain parsers
@@ -128,7 +131,18 @@ def parse_output_with_thought[TSchema: BaseModel](
         parser.pydantic_object = schema()
         result = parser.parse(answer)
     else:
-        logger.warning(f"Unexpected message content: {message.content}")
+        message.content = content_to_str(message.content)
+        # Now a string -- re-run the string parsing above.
+        if "</think>" in message.content:
+            splits = message.content.split("</think>")
+            thought = splits[0].strip()
+            answer = splits[1].strip()
+        else:
+            answer = message.content
+
+        parser = JsonOutputParser()
+        parser.pydantic_object = schema()
+        result = parser.parse(answer)
 
     logger.debug(f"{thought = }")
     logger.debug(f"{answer = }")
@@ -201,16 +215,260 @@ def split_output_by_section(
     return delimited_text, other_text
 
 
+def content_to_str(
+    content: str | list[dict | str] | None,
+) -> str:
+    """Normalise an ``AIMessage.content`` value to a plain string.
+
+    AIMessage.content can be a plain string, a list of content blocks
+    (when the LLM returns tool calls or structured output), or ``None``.
+    This helper always returns a string suitable for downstream text
+    processing (regex, ``in`` checks, prompt interpolation, etc.).
+
+    :param content: The raw ``.content`` value from an AIMessage.
+    :returns: A plain string.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, list):
+        return "".join(
+            b.get("text", "") if isinstance(b, dict) else str(b) for b in content
+        )
+    return str(content)
+
+
+def prompt_value_to_messages(prompt: PromptValue) -> list[dict]:
+    """Convert a ``PromptValue`` to a clean list of message dicts.
+
+    Each dict has ``role`` and ``content`` keys, suitable for JSON
+    serialisation in the inspector debug panel.
+
+    :param prompt: The LangChain ``PromptValue`` (filled, variables
+        already substituted).
+    :returns: A list of ``{"role": "...", "content": "..."}`` dicts.
+    """
+    return [
+        {"role": msg.type, "content": content_to_str(msg.content)}
+        for msg in prompt.to_messages()
+    ]
+
+
+def extract_llm_output_content(output: AIMessage | dict) -> str:
+    """Extract plain-text content from an LLM output.
+
+    Handles both ``AIMessage`` (non-structured output) and
+    ``dict`` (structured output with ``raw`` / ``parsed`` keys):
+
+    * ``AIMessage`` -- returns ``content_to_str(message.content)``.
+    * ``dict`` -- extracts the ``raw`` ``AIMessage`` from a structured
+      output response and returns its content; falls back to
+      ``output["parsed"]`` and finally ``str(output)``.
+
+    :param output: The raw output from ``llm.invoke()``.
+    :returns: A plain-text string.
+    """
+    if isinstance(output, AIMessage):
+        return content_to_str(output.content)
+    if isinstance(output, dict):
+        raw = output.get("raw")
+        if isinstance(raw, AIMessage):
+            return content_to_str(raw.content)
+        parsed = output.get("parsed")
+        if parsed is not None:
+            return str(parsed)
+    return str(output)
+
+
+def is_output_truncated(output: AIMessage | dict[str, Any]) -> bool:
+    """Return True if an LLM output was truncated by the max-token limit.
+
+    Providers signal truncation via ``finish_reason == "length"`` on the
+    message metadata.  Handles both plain ``AIMessage`` outputs and
+    structured-output dicts (``{"raw": AIMessage, ...}``), and the
+    list-form ``finish_reason`` some providers return.
+
+    :param output: The raw output from ``llm.invoke()``.
+    :returns: True when the model stopped because it hit the output cap.
+    """
+    if isinstance(output, dict):
+        raw = output.get("raw")
+        if isinstance(raw, AIMessage):
+            output = raw
+    if not isinstance(output, AIMessage):
+        return False
+    metadata = output.response_metadata or {}
+    finish_reason = metadata.get("finish_reason")
+    if isinstance(finish_reason, list):
+        finish_reason = finish_reason[-1] if finish_reason else None
+    return str(finish_reason).lower() == "length"
+
+
+def get_token_limit_param(provider: str) -> str:
+    """Return the max-output token parameter name for a provider.
+
+    Providers disagree on the parameter name for the maximum number of
+    output tokens: Ollama uses ``num_predict``, while HuggingFace's
+    ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)
+    and other OpenAI-compatible providers all use ``max_tokens``.
+
+    :param provider: Klea provider id (``huggingface``, ``ollama``, ...)
+    :returns: The token parameter name to send in the invoke config.
+    """
+    if provider == "ollama":
+        return "num_predict"
+    return "max_tokens"
+
+
+#: Fallback max output tokens used when no node/role default provides a value.
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
+
+#: Built-in per-role max output token defaults.  Nodes may override these
+#: with the generic ``max_output_tokens`` key in ``model_defaults``, and
+#: admins may override them per provider via the ``providers`` config
+#: section.
+_ROLE_MAX_OUTPUT_TOKENS: dict[str, int] = {
+    "chat": 4096,
+    "plan": 4096,
+    "guard": 1024,
+}
+
+#: The three max-output token parameter names used across providers.
+_TOKEN_PARAMS = ("max_tokens", "max_new_tokens", "num_predict")
+
+
+def estimate_input_tokens(input_chars: int) -> int:
+    """Rough token estimate for a prompt's character count.
+
+    Used only to keep the reserved output window within a model's total
+    budget (input + output <= context).  ~4 characters per token is a
+    reasonable average for mixed English/code text; an exact count would
+    require provider-specific tokenizers.
+
+    :param input_chars: Number of characters in the prompt.
+    :returns: Estimated token count.
+    """
+    return input_chars // 4
+
+
+def resolve_output_token_limit(
+    overrides: dict[str, Any],
+    provider: str,
+    role: str | None = None,
+    input_chars: int | None = None,
+) -> None:
+    """Ensure a bounded max-output token param is set in *overrides*.
+
+    HuggingFace-style providers apply a *total budget*: the reserved
+    output window (``max_new_tokens``) is accounted against the model's
+    context window alongside the input, and an unset value makes them
+    reserve the entire remaining window (causing spurious usage limits
+    and rate limiting).  This helper guarantees a finite, clamped value.
+
+    Resolution precedence:
+
+    1. An explicit provider token param (``max_tokens`` /
+       ``max_new_tokens`` / ``num_predict``) already present in
+       ``overrides`` (user/node/role value).
+    2. The generic ``max_output_tokens`` key (provider-agnostic count).
+    3. The built-in per-role fallback for *role*.
+
+    The resolved value is clamped to ``min(value, catalog limit.output)``
+    and, when the catalog exposes a context window and *input_chars* is
+    given, to the remaining budget (``context - estimated input tokens``)
+    so HuggingFace's total-budget check is never exceeded.
+
+    :param overrides: The merged ``configurable`` dict to update in place.
+    :param provider: Klea provider id (``huggingface``, ``ollama``, ...).
+    :param role: Model role (e.g. ``"chat"``), used for the built-in
+        per-role fallback.
+    :param input_chars: Character count of the prompt, to bound the output
+        within the total budget.
+    """
+    token_param = get_token_limit_param(provider)
+
+    # Resolve the configured value, preferring an explicit provider-specific
+    # token param over the generic provider-agnostic key.
+    value: int | None = None
+    for param in _TOKEN_PARAMS:
+        if param in overrides:
+            value = overrides[param]
+            break
+    if value is None:
+        value = overrides.get("max_output_tokens")
+    if value is None:
+        value = _ROLE_MAX_OUTPUT_TOKENS.get(role or "", DEFAULT_MAX_OUTPUT_TOKENS)
+    value = int(value)
+
+    # Clamp to the model's catalog output limit and total budget, if known.
+    limits = get_model_limits(provider, overrides.get("model", ""))
+    if limits and limits.output:
+        value = min(value, limits.output)
+    if limits and limits.context and input_chars is not None:
+        headroom = limits.context - estimate_input_tokens(input_chars)
+        if headroom > 0:
+            value = min(value, headroom)
+
+    # Remove the generic and any stale token params; set the provider one.
+    overrides.pop("max_output_tokens", None)
+    for param in _TOKEN_PARAMS:
+        overrides.pop(param, None)
+    overrides[token_param] = value
+    logger.debug(
+        f"Resolved {token_param = } for {provider = } {role = }: "
+        f"{value = } (input_chars = {input_chars})"
+    )
+
+
 def check_model_works(model, timeout=30, retries=5):
     """Check if a model works since it is not tested when loaded"""
     assert timeout >= 0
 
+    # Pick the right token-limit param for the provider so we keep the health
+    # check cheap without triggering warnings about unknown kwargs.
+    llm_type = getattr(model, "_llm_type", "")
+    if "huggingface" in llm_type:
+        provider = "huggingface"
+    elif "ollama" in llm_type:
+        provider = "ollama"
+    else:
+        provider = "openai"
+    token_param = get_token_limit_param(provider)
+
+    configurable = {token_param: 5}
+
+    # One-shot probe for response_format/json_schema support.  A transient
+    # failure here is harmless  ---  we just fall back to prompt-based structured
+    # output (already in _get_system_prompt).  Every model will pass the plain
+    # ping retry loop below even if this probe fails.
+    try:
+        from pydantic import BaseModel
+
+        class _ProbeSchema(BaseModel):
+            answer: str
+
+        probe = model.with_structured_output(
+            _ProbeSchema, method="json_schema", include_raw=False
+        )
+        probe.invoke(
+            "ping",
+            config={"timeout": timeout, "configurable": configurable},
+        )
+        model._supports_structured_output = True
+        logger.info("Model supports structured output")
+    except Exception:
+        model._supports_structured_output = False
+
     for attempt in range(retries):
-        print(f"Checking model. Attempt #{attempt + 1}/{retries}")
+        logger.info(f"Checking model. Attempt #{attempt + 1}/{retries}")
         try:
-            # Use a very simple prompt with short max_tokens
-            result = model.invoke("Hello world", config={"timeout": timeout})
-            print(f"Model available (attempt {attempt + 1}/{retries}): {result}")
+            result = model.invoke(
+                "ping",
+                config={
+                    "timeout": timeout,
+                    "configurable": configurable,
+                },
+            )
+            logger.info(f"Model available (attempt {attempt + 1}/{retries}): {result}")
             return True, f"Model available (attempt {attempt + 1}/{retries})"
         except StopIteration as e:
             return (
@@ -219,25 +477,18 @@ def check_model_works(model, timeout=30, retries=5):
             )
         except Exception as e:
             error_msg = f"{e.__class__.__name__}: {e.__str__()}"
-            print(f"Attempt #{attempt + 1}/{retries}: model unavailable: {error_msg}")
+            logger.warning(
+                f"Attempt #{attempt + 1}/{retries}: model unavailable: {error_msg}"
+            )
             if attempt < retries - 1:
-                time.sleep(2**attempt)  # Exponential backoff
+                time.sleep(2**attempt)
             else:
-                print(f"Model unavailable after {retries} attempts: {error_msg}")
+                logger.error(f"Model unavailable after {retries} attempts: {error_msg}")
                 return (
                     False,
                     f"Model unavailable after {retries} attempts: {error_msg}",
                 )
-            error_msg = f"{e.__class__.__name__}: {e.__str__()}"
-            print(f"Attempt #{attempt}: model unavailable: {error_msg}")
-            if attempt < retries - 1:
-                time.sleep(2**attempt)  # Exponential backoff
-            else:
-                print(f"Model unavailable after {retries} attempts: {error_msg}")
-                return (
-                    False,
-                    f"Model unavailable after {retries} attempts: {error_msg}",
-                )
+
     return False, "Unknown error"
 
 
@@ -248,21 +499,43 @@ def setup_embedding(model_name_full, logger):
 
     parsed = parse_model_name(model_name_full)
 
-    if parsed.provider == "huggingface":
-        logger.debug(f"Using huggingface model: {parsed.model_name}")
-
-        from langchain_huggingface import HuggingFaceEndpointEmbeddings
-
-        hf_token = os.environ.get("HF_TOKEN", None)
-        assert hf_token
-
-        model_var = HuggingFaceEndpointEmbeddings(
-            model=parsed.model_name,
-            provider=parsed.suffix or "auto",
-            task="feature-extraction",
-            huggingfacehub_api_token=hf_token,
+    if parsed.provider == "custom":
+        logger.debug(
+            "Using openai-compatible embedding model %s at endpoint %s",
+            parsed.model_name,
+            parsed.suffix,
         )
+        model_var = init_embeddings(
+            parsed.model_name,
+            provider="openai",
+            base_url=parsed.suffix,
+        )
+    elif parsed.provider == "huggingface":
+        # "local" suffix -> HuggingFaceEmbeddings (local sentence-transformers).
+        # Any other suffix -> HuggingFaceEndpointEmbeddings (HF Inference API).
+        if parsed.suffix == "local":
+            logger.debug(
+                "Using huggingface local embedding model: %s",
+                parsed.model_name,
+            )
+            from langchain_huggingface import HuggingFaceEmbeddings
+
+            model_var = HuggingFaceEmbeddings(model_name=parsed.model_name)
+        else:
+            logger.debug(
+                "Using huggingface endpoint embedding model: %s (provider: %s)",
+                parsed.model_name,
+                parsed.suffix or "auto",
+            )
+            from langchain_huggingface import HuggingFaceEndpointEmbeddings
+
+            model_var = HuggingFaceEndpointEmbeddings(
+                model=parsed.model_name,
+                provider=parsed.suffix or "auto",
+                task="feature-extraction",
+            )
     else:
+        logger.debug("Using embedding model: %s", model_name_full)
         if parsed.provider == "ollama":
             check_ollama_model(logger, parsed.model_name)
         model_var = init_embeddings(model_name_full)
@@ -272,95 +545,348 @@ def setup_embedding(model_name_full, logger):
     return model_var
 
 
-def setup_llm(model_name_full: str, logger: logging.Logger):
-    """Set up a chat model"""
-    # Lazy: init_chat_model and huggingface classes pull in provider
-    # packages that may not be installed (langchain-ollama, langchain-huggingface, etc.)
+#: Tolerant patterns for "the prompt/context does not fit" errors.  Based on
+#: the error strings seen from OpenAI-compatible, HuggingFace, and vLLM
+#: providers (and informed by opencode's ``provider-error.ts``).  Patterns
+#: are matched case-insensitively over the whole exception message.
+_CONTEXT_OVERFLOW_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"context[ _-]*length[ _-]*exceed", re.IGNORECASE),
+    re.compile(r"context[ _-]*window[ _-]*exceed", re.IGNORECASE),
+    re.compile(r"context_length_exceeded", re.IGNORECASE),
+    re.compile(r"prompt is too long", re.IGNORECASE),
+    re.compile(r"input is too long", re.IGNORECASE),
+    re.compile(r"too many tokens", re.IGNORECASE),
+    re.compile(r"token limit exceeded", re.IGNORECASE),
+    re.compile(r"exceed[s]? the limit of \d+", re.IGNORECASE),
+    re.compile(r"maximum context length", re.IGNORECASE),
+    re.compile(r"maximum length is \d+", re.IGNORECASE),
+    re.compile(r"must be <= \d+ tokens", re.IGNORECASE),
+    re.compile(r"requested token count", re.IGNORECASE),
+]
+
+#: Tolerant patterns for rate-limit / quota errors.
+_RATE_LIMIT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b429\b", re.IGNORECASE),
+    re.compile(r"rate[ _-]*limit", re.IGNORECASE),
+    re.compile(r"rate_limit_exceeded", re.IGNORECASE),
+    re.compile(r"too many requests", re.IGNORECASE),
+    re.compile(r"quota", re.IGNORECASE),
+    re.compile(r"usage limit", re.IGNORECASE),
+]
+
+#: Tolerant patterns for authentication / authorisation failures.
+_AUTH_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b401\b", re.IGNORECASE),
+    re.compile(r"\b403\b", re.IGNORECASE),
+    re.compile(r"unauthori[sz]ed", re.IGNORECASE),
+    re.compile(r"invalid api key", re.IGNORECASE),
+    re.compile(r"incorrect api key", re.IGNORECASE),
+    re.compile(r"api key.*must be set", re.IGNORECASE),
+    re.compile(r"authentication", re.IGNORECASE),
+    re.compile(r"authorization", re.IGNORECASE),
+    re.compile(r"forbidden", re.IGNORECASE),
+]
+
+#: Tolerant patterns for "model does not exist" errors.
+_MODEL_NOT_FOUND_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"\b404\b", re.IGNORECASE),
+    re.compile(r"model[ _-]*not[ _-]*found", re.IGNORECASE),
+    re.compile(r"does not exist", re.IGNORECASE),
+    re.compile(r"model.*not found", re.IGNORECASE),
+    re.compile(r"not found", re.IGNORECASE),
+    re.compile(r"a valid model was not found", re.IGNORECASE),
+]
+
+#: Tolerant patterns for timeout errors.
+_TIMEOUT_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"timeout", re.IGNORECASE),
+    re.compile(r"timed out", re.IGNORECASE),
+]
+
+#: Tolerant patterns for providers rejecting the structured-output
+#: ``response_format`` / ``json_schema`` parameter.  Fall back to
+#: prompt-based structured output when these match.
+_STRUCTURED_OUTPUT_REJECTED_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"response_format", re.IGNORECASE),
+    re.compile(r"json_schema", re.IGNORECASE),
+    re.compile(r"structured output", re.IGNORECASE),
+    re.compile(r"\b400\b[^\n]*invalid_request_error", re.IGNORECASE),
+]
+
+
+def _flatten_exception_messages(exc: BaseException) -> list[str]:
+    """Collect the message from an exception and its cause chain.
+
+    LangChain and httpx wrap underlying provider errors, so a bare
+    ``str(exc)`` may miss the informative inner message.  This walks the
+    ``__cause__`` / ``__context__`` chain and returns all messages.
+
+    :param exc: The exception to flatten.
+    :returns: A list of message strings, outermost first.
+    """
+    messages: list[str] = []
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        messages.append(str(current))
+        current = current.__cause__ or current.__context__
+    return messages
+
+
+def _matches_any(patterns: list[re.Pattern[str]], text: str) -> bool:
+    """Return True if any pattern matches anywhere in *text*."""
+    return any(p.search(text) for p in patterns)
+
+
+def classify_llm_invocation_error(exc: BaseException) -> LLMInvocationErrorCategory:
+    """Classify an LLM invocation exception into a category.
+
+    Providers report failures inconsistently, so this uses tolerant regex
+    matching over the exception message and its cause chain.  Categories
+    are checked in order of specificity (context overflow first), so a
+    message matching several heuristics lands in the most actionable
+    bucket.
+
+    :param exc: The exception raised by an LLM invocation.
+    :returns: The best-effort :class:`klea_utils.errors.LLMInvocationErrorCategory`.
+    """
+    text = "\n".join(_flatten_exception_messages(exc))
+
+    if _matches_any(_CONTEXT_OVERFLOW_PATTERNS, text):
+        return LLMInvocationErrorCategory.CONTEXT_OVERFLOW
+    if _matches_any(_RATE_LIMIT_PATTERNS, text):
+        return LLMInvocationErrorCategory.RATE_LIMITED
+    if _matches_any(_AUTH_PATTERNS, text):
+        return LLMInvocationErrorCategory.AUTH_FAILED
+    if _matches_any(_MODEL_NOT_FOUND_PATTERNS, text):
+        return LLMInvocationErrorCategory.MODEL_NOT_FOUND
+    if _matches_any(_TIMEOUT_PATTERNS, text):
+        return LLMInvocationErrorCategory.TIMEOUT
+    if _matches_any(_STRUCTURED_OUTPUT_REJECTED_PATTERNS, text):
+        return LLMInvocationErrorCategory.STRUCTURED_OUTPUT_REJECTED
+    return LLMInvocationErrorCategory.UNKNOWN
+
+
+# Extra fields accepted by provider model constructors that are not part
+# of the Pydantic model class (e.g. kwargs passed to a factory method).
+_PROVIDER_EXTRA_FIELDS: dict[str, set[str]] = {
+    # ChatHuggingFace.from_model_id() accepts backend, provider, etc.
+    # which flow through to HuggingFaceEndpoint but are not fields on
+    # ChatHuggingFace itself.
+    "huggingface": {"backend", "provider"},
+}
+
+
+def get_provider_allowed_fields(provider: str) -> set[str]:
+    """Return the set of init-param names accepted by a given provider's model class.
+
+    Uses LangChain's internal provider registry to look up the Pydantic
+    model class and introspect its fields (including aliases so that
+    both ``api_key`` and ``openai_api_key`` pass through).
+
+    Falls back to an empty set if the provider is not registered in
+    LangChain's built-in providers.  Raises ``ImportError`` if the
+    provider's integration package is not installed  ---  callers should
+    handle this at configuration time, not silently fall through.
+
+    The caller should always include ``{"model", "model_provider"}`` on
+    top of the returned set since those are consumed by
+    ``_ConfigurableModel`` before reaching the model constructor.
+    """
+    from langchain.chat_models.base import _get_chat_model_creator
+
+    try:
+        creator = _get_chat_model_creator(provider)
+    except ValueError:
+        # Provider not in LangChain's built-in registry  ---  not an error,
+        # the caller will include model/model_provider which is sufficient.
+        return set()
+
+    cls = getattr(creator, "keywords", {}).get("cls")
+    if cls is None:
+        return set()
+
+    fields: set[str] = set()
+    for name, field in cls.model_fields.items():
+        fields.add(name)
+        if field.alias:
+            fields.add(field.alias)
+    return fields | _PROVIDER_EXTRA_FIELDS.get(provider, set())
+
+
+def create_configurable_model(logger: logging.Logger):
+    """Set up a configurable chat model.
+
+    Creates a ``_ConfigurableModel`` with no default model.  Model,
+    provider, and all other parameters (``base_url``, ``api_key``,
+    ``temperature``, etc.) are specified per-invoke via the
+    ``config["configurable"]`` dict passed to ``ainvoke()``.
+
+    This enables runtime model switching  ---  each ``ainvoke()`` call
+    creates a fresh underlying model instance for the given provider,
+    so there is no stale configuration leakage between calls.
+
+    The lookup function ``check_model_works`` is deliberately **not**
+    called here  ---  we prefer a "leap before you look" approach so that
+    startup is fast and model availability is checked only at query time.
+    """
     from langchain.chat_models import init_chat_model
 
-    parsed = parse_model_name(model_name_full)
-
-    if parsed.provider == "huggingface":
-        from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
-
-        model_name = parsed.model_name
-        provider = parsed.suffix or "auto"
-
-        logger.debug(f"Using huggingface model: {model_name}")
-
-        hf_token = os.environ.get("HF_TOKEN", None)
-        assert hf_token
-
-        logger.debug(f"Got HuggingFace Token: {hf_token[:2]}...{hf_token[-2:]}")
-
-        llm = HuggingFaceEndpoint(
-            repo_id=model_name,
-            provider=provider,
-            max_new_tokens=32768,
-            do_sample=False,
-            repetition_penalty=1.03,
-            task="conversational",
-            huggingfacehub_api_token=hf_token,
-        )
-
-        logger.debug(f"Using huggingface model: {model_name}")
-
-        hf_token = os.environ.get("HF_TOKEN", None)
-        assert hf_token
-
-        logger.debug(f"Got HuggingFace Token: {hf_token[:2]}...{hf_token[-2:]}")
-
-        llm = HuggingFaceEndpoint(
-            repo_id=f"{model_name}",
-            provider=provider,
-            max_new_tokens=32768,
-            do_sample=False,
-            repetition_penalty=1.03,
-            task="conversational",  # seems to be ignored, defaults to text-generation
-            huggingfacehub_api_token=hf_token,
-        )
-
-        model_var = ChatHuggingFace(llm=llm)
-
-        """
-
-        model_var = init_chat_model(
-            model_name,
-            model_provider="huggingface",
-            llm=llm,
-            configurable_fields=("temperature"),
-            backend="endpoint",
-        )
-        """
-        assert model_var
-
-        state, msg = check_model_works(model_var, timeout=10, retries=3)
-        if state:
-            logger.debug(f"Model works: {state}, {msg}")
-        else:
-            # handle special case where some models do not support "cheapest" on HF
-            if "Provider 'cheapest' not supported" in msg:
-                logger.error(f"Model does not work: {state}, {msg}")
-                logger.debug("Replacing 'cheapest' with 'auto' and retrying")
-                return setup_llm(model_name_full.replace(":cheapest", ":auto"), logger)
-
-            logger.error(f"Model does not work: {state}, {msg}")
-        assert state
-    else:
-        if parsed.provider == "ollama":
-            check_ollama_model(logger, parsed.model_name)
-
-        model_var = init_chat_model(
-            model_name_full, configurable_fields=("temperature")
-        )
-        assert model_var
-
-        state, msg = check_model_works(model_var, timeout=60)
-        assert state
-
-    logger.info(f"Using chat model: {model_name_full}")
+    model_var = init_chat_model(
+        model=None,
+        configurable_fields="any",
+    )
+    logger.info("Configurable chat model created (provider/model set per invoke)")
 
     return model_var
+
+
+class LLMModel(BaseModel):
+    """Container for a single LLM model instance and its runtime configuration.
+
+    ``instance`` holds the model object (typically a ``_ConfigurableModel``
+    returned by ``init_chat_model``).  ``role_defaults`` stores role-wide
+    default parameters (e.g. ``max_tokens``, ``temperature``) that apply to
+    every node sharing this role, unless overridden by node or user config.
+
+    ``build_config()`` performs a five-layer merge:
+
+    **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.
+    ``{"max_tokens": 4096}``).
+
+    **Layer 1**  ---  ``model_name``: the default model identifier from
+    the graph config.
+
+    **Layer 2**  ---  ``context_overrides``: per-request fields from the API
+    (``model``, ``api_key``, etc.).  Only applied when ``modifiable=True``,
+    and skipping any keys frozen by node defaults.
+
+    **Layer 3**  ---  ``node_defaults``: frozen per-node defaults (always win).
+
+    **Layer 4**  ---  ``provider_defaults``: per-provider defaults from the
+    graph config (e.g. HuggingFace role budgets), applied *after* the model
+    string is parsed so the resolved provider is known.  Applied with
+    ``setdefault`` so explicit role/context/node values always win.
+
+    ``modifiable`` controls whether the model can be changed at runtime
+    (both the API and web UI reject modifications to locked roles).
+    Set to ``False`` to lock a role (e.g. guard) against user overrides
+    in managed deployments.
+    """
+
+    model_name: str = ""
+    instance: Any
+    role_defaults: dict[str, Any] = {}
+    provider_defaults: dict[str, dict[str, Any]] = {}
+    modifiable: bool = True
+
+    def build_config(
+        self,
+        context_overrides: dict[str, Any] | None = None,
+        node_defaults: dict[str, Any] | None = None,
+    ) -> RunnableConfig:
+        """Merge up to five layers of model configuration into a ``RunnableConfig``.
+
+        Layer order (lowest -> highest priority):
+
+        0. ``self.role_defaults``   ---   role-wide parameters
+        1. ``self.model_name``      ---   role model from graph config
+        2. ``context_overrides``    ---   per-request user overrides
+        3. ``node_defaults``        ---   frozen per-node defaults
+        4. ``self.provider_defaults`` ---  per-provider defaults (``setdefault``)
+
+        :param context_overrides: Per-request fields from the API
+            (e.g. ``model``, ``api_key``).  Only applied when
+            ``self.modifiable is True``, and skipping any keys
+            present in ``node_defaults``.
+        :param node_defaults: Frozen per-node defaults (e.g.
+            ``{"temperature": 0.3}``).  Always win.
+        :returns: A ``RunnableConfig`` with the ``configurable`` key
+            populated.
+        """
+        logger.debug(
+            f"{self.modifiable = }\n"
+            f"{self.role_defaults = }\n"
+            f"{self.model_name = }\n"
+            f"{mask_sensitive(context_overrides or {}) = }\n"
+            f"{node_defaults = }"
+        )
+
+        # Layer 0: role-wide defaults from graph config
+        overrides: dict[str, Any] = dict(self.role_defaults)
+        logger.debug(f"Layer 0 (role defaults):\n{mask_sensitive(overrides) = }")
+
+        # Layer 1: role model identifier
+        overrides["model"] = self.model_name
+        logger.debug(f"Layer 1 (model):\n{mask_sensitive(overrides) = }")
+
+        # Layer 2: context overrides (only if modifiable).
+        # Skip any keys the node has frozen in model_defaults.
+        if self.modifiable and context_overrides:
+            for k, v in context_overrides.items():
+                if node_defaults and k in node_defaults:
+                    logger.debug(
+                        f"Skipping context override '{k}' (frozen by node defaults)"
+                    )
+                    continue
+                overrides[k] = v
+            logger.debug(f"Layer 2 (context):\n{mask_sensitive(overrides) = }")
+
+        # Layer 3: node defaults  ---  always win
+        if node_defaults:
+            overrides.update(node_defaults)
+            logger.debug(f"Layer 3 (node defaults):\n{mask_sensitive(overrides) = }")
+
+        # Parse the final model string into LangChain-compatible components.
+        # Klea stores full provider-prefixed model strings internally (e.g.
+        # "custom:gpt-4o:https://endpoint/v1"), but the _ConfigurableModel
+        # expects the bare model name plus separate model_provider and base_url.
+        # parse_model_name is defined in this module  ---  no lazy import needed.
+        parsed = parse_model_name(overrides["model"])
+        overrides["model"] = parsed.model_name
+        if parsed.provider == "custom":
+            overrides["model_provider"] = "openai"
+        elif parsed.provider:
+            overrides["model_provider"] = parsed.provider
+        if parsed.suffix:
+            overrides["base_url"] = parsed.suffix
+        logger.debug(f"After model string parse:\n{mask_sensitive(overrides) = }")
+
+        # Inject HuggingFace from_model_id kwargs derived from the model
+        # string suffix.  These are not fields on ChatHuggingFace itself
+        # (they flow through to HuggingFaceEndpoint) so they'd be filtered
+        # out later  ---  we set them here so they survive provider filtering.
+        if overrides.get("model_provider") == "huggingface" and parsed.suffix:
+            if parsed.suffix == "local":
+                overrides.setdefault("backend", "pipeline")
+            else:
+                overrides.setdefault("backend", "endpoint")
+                overrides.setdefault("provider", parsed.suffix)
+            logger.debug(
+                f"HuggingFace kwargs injected:\n{mask_sensitive(overrides) = }"
+            )
+
+        # Layer 4: per-provider defaults from graph config.  Only fills in
+        # keys not already set by role/context/node layers (setdefault), so
+        # explicit values always win.  The provider is resolved by now.
+        provider = overrides.get("model_provider") or "openai"
+        provider_defaults = self.provider_defaults.get(provider)
+        if provider_defaults:
+            for k, v in provider_defaults.items():
+                overrides.setdefault(k, v)
+            logger.debug(
+                f"Layer 4 (provider defaults):\n{mask_sensitive(overrides) = }"
+            )
+
+        # Map generic "api_key" to provider-specific token field names so a
+        # single user-facing field works across all providers.
+        if "api_key" in overrides:
+            overrides.setdefault("huggingfacehub_api_token", overrides["api_key"])
+            logger.debug(f"After api_key mapping:\n{mask_sensitive(overrides) = }")
+
+        # Wrap in the "configurable" key expected by _ConfigurableModel.
+        return cast(RunnableConfig, {"configurable": overrides})
 
 
 def get_last_n_conversations(

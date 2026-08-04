@@ -13,7 +13,7 @@ import logging
 from langchain_core.documents import Document
 
 from ..llm import setup_embedding
-from .config import VectorStoresConfig
+from .config import VectorStoreInfo, VectorStoresConfig
 from .utils import instantiate_vector_store
 
 
@@ -37,17 +37,29 @@ class VSRetriever:
         embedding_model: str,
         default_k: int = 5,
         k_max: int = 10,
+        k_inc: int = 1,
     ):
         """Initialise vector stores manager.
 
+        ``default_k``, ``k_max``, and ``k_inc`` are the graph-wide fallback
+        values used by stores that do not define their own per-store
+        settings in the config.
+
         :param logger: Logger instance (injected from orchestrator)
         :param embedding_model: Embedding model identifier for retrieval
-        :param default_k: Default number of documents to retrieve
-        :param k_max: Maximum number of documents to retrieve
+        :param default_k: Fallback number of documents to retrieve
+        :param k_max: Fallback maximum number of documents to retrieve
+        :param k_inc: Fallback amount to increase ``k`` by per ``inc_k``
         """
         self.default_k = default_k
         self.k_max = k_max
-        self.k = self.default_k
+        self.k_inc = k_inc
+        # Current retrieval depth (k) per store, keyed by (domain, store name).
+        # Seeded lazily from each store's default_k on first use; mutated by
+        # inc_k()/reset_k().  Keeping k per store lets each store be tuned
+        # independently even though retrieval is driven by a single graph-wide
+        # routing decision.
+        self._k: dict[tuple[str, str], int] = {}
         self.sim_thresh = 0.15
         self.embeddings = None
         self.embedding_model = embedding_model
@@ -61,22 +73,64 @@ class VSRetriever:
         self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert self.embeddings
 
-    def inc_k(self, inc: int = 1) -> bool:
-        """Increase k by inc.
+    def _default_k_for(self, store: VectorStoreInfo) -> int:
+        """Return the default k for a store, falling back to the global value."""
+        return store.default_k if store.default_k is not None else self.default_k
 
-        :param inc: Amount to increase k by
-        :returns: True if k was increased, False if already at max
+    def _k_max_for(self, store: VectorStoreInfo) -> int:
+        """Return the k cap for a store, falling back to the global value."""
+        return store.k_max if store.k_max is not None else self.k_max
+
+    def _k_inc_for(self, store: VectorStoreInfo) -> int:
+        """Return the k increment for a store, falling back to the global value."""
+        return store.k_inc if store.k_inc is not None else self.k_inc
+
+    def _current_k(self, domain_name: str, store: VectorStoreInfo) -> int:
+        """Return the current k for a store, seeding it from its default on first use."""
+        key = (domain_name, store.name)
+        if key not in self._k:
+            self._k[key] = self._default_k_for(store)
+        return self._k[key]
+
+    def _loaded_stores(self) -> list[tuple[str, VectorStoreInfo]]:
+        """Return ``(domain_name, store)`` pairs for stores that are loaded."""
+        loaded = []
+        for domain_name, domain in self.vs_config.domains.items():
+            for store in domain.vector_stores:
+                if store.loaded_object is not None:
+                    loaded.append((domain_name, store))
+        return loaded
+
+    def inc_k(self) -> bool:
+        """Increase k for all loaded stores by their per-store increment.
+
+        Each store's k is capped by its own ``k_max``, so stores with a
+        smaller cap stop being incremented sooner.  Stores that are not yet
+        loaded keep their default k until they are loaded.
+
+        :returns: True if at least one store's k was increased
         """
-        if (self.k + inc) <= self.k_max:
-            self.k += inc
-            self.logger.debug(f"k increased to {self.k =}")
-            return True
-        return False
+        incremented = False
+        for domain_name, store in self._loaded_stores():
+            current = self._current_k(domain_name, store)
+            new_k = current + self._k_inc_for(store)
+            if new_k <= self._k_max_for(store):
+                self._k[(domain_name, store.name)] = new_k
+                self.logger.debug(
+                    f"{store.name = }\n{self._k_inc_for(store) = }\n{new_k = }"
+                )
+                incremented = True
+        if not incremented:
+            self.logger.debug("k not increased for any store")
+        return incremented
 
     def reset_k(self) -> None:
-        """Reset k to default value."""
-        self.k = self.default_k
-        self.logger.debug(f"k reset to {self.k =}")
+        """Reset k for all loaded stores to their per-store default value."""
+        for domain_name, store in self._loaded_stores():
+            self._k[(domain_name, store.name)] = self._default_k_for(store)
+            self.logger.debug(
+                f"k reset to {self._default_k_for(store) = } for {store.name = }"
+            )
 
     def load_all_stores(self) -> None:
         """Load all vector stores for all domains."""
@@ -145,7 +199,9 @@ class VSRetriever:
         for store in stores:
             assert store.loaded_object
             data = store.loaded_object.similarity_search_with_relevance_scores(
-                query, k=self.k, score_threshold=self.sim_thresh
+                query,
+                k=self._current_k(domain_name, store),
+                score_threshold=self.sim_thresh,
             )
             self.logger.debug(f"{data =}")
             if len(data) == 0:

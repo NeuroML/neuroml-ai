@@ -5,7 +5,7 @@ Generic RAG (Retrieval Augmented Generation) implementation for NeuroML.
 ## Package Overview
 
 Package: `klea_rag`
-CLI entry: `nml-gen-rag`
+CLI entry: `klea-rag`, `klea-rag-serve`
 
 ## Development Commands
 
@@ -45,22 +45,35 @@ pytest -v
 ### Package Structure
 ```
 klea_rag/
-├── api/         # API endpoints
-├── config.py    # Configuration
-├── data/        # Data loading and processing
-├── nodes/       # LangGraph nodes
-├── prompts/     # Prompt templates
-├── rag.py       # Main RAG logic
-├── schemas.py   # Pydantic schemas
-├── stores.py    # Vector stores
-└── ui/          # CLI interface
+├── api/             # FastAPI server (thin wrappers around klea_utils routers)
+│   ├── main.py      # FastAPI app creation
+│   └── server.py    # Typer serve command
+├── config.py        # Configuration loading (env file + JSON)
+├── nodes/           # LangGraph nodes for RAG pipeline
+│   ├── answer_from_context.py
+│   ├── answer_user.py
+│   ├── classify_question.py
+│   ├── evaluator.py
+│   ├── generate_retrieval_query.py
+│   ├── init_rag.py
+│   ├── retrieve_info.py
+│   ├── route_evaluator.py
+│   ├── route_query.py
+│   ├── tools_caller.py
+│   └── tools_picker.py
+│   └── prompts/     # Prompt markdown templates per node
+├── rag.py           # Main RAG orchestrator (extends BaseLangGraph)
+├── schemas.py       # Pydantic schemas
+└── ui/
+    └── cli.py       # Typer CLI entry point (klea-rag, klea-rag-serve)
 ```
 
 ### Key Technologies
 - LangChain for RAG implementation
-- Chroma for vector storage
 - LangGraph for orchestration
+- Chroma / PGVector / Qdrant for vector store backends
 - HuggingFace embeddings
+- NiceGUI/Streamlit UI shared from klea_utils
 
 ## Code Style
 

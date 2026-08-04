@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import asyncio
+import logging
 from dataclasses import asdict
 from textwrap import dedent
 from typing import Any, Dict
@@ -16,7 +17,6 @@ from typing import Any, Dict
 import aiohttp
 from cachetools import TTLCache
 from fastmcp import Context
-from klea_utils.plogging import setup_logger
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -33,7 +33,7 @@ from .web_tools import _download_file_to_cache_by_content
 
 sbox = nml_mcp_sandbox
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 MAX_RESULTS = 20
@@ -95,7 +95,7 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
         return await r.json(content_type=None)
 
 
-@tool_meta(ToolInfo(tags={"testing", "neuroml"}))
+@tool_meta(ToolInfo(title="Echo text", tags={"testing", "neuroml"}))
 async def dummy_tool(astring: str) -> str:
     """Return the input string in a sentence (testing tool only).
 
@@ -117,7 +117,9 @@ async def dummy_tool(astring: str) -> str:
     return f"I got {astring}"
 
 
-@tool_meta(ToolInfo(tags={"testing", "neuroml"}))
+@tool_meta(
+    ToolInfo(title="Create a NeuroML model template", tags={"testing", "neuroml"})
+)
 def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
     """Create a new blank NeuroML model template.
 
@@ -181,7 +183,7 @@ def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
     return model_str
 
 
-@tool_meta(ToolInfo(tags={"testing", "neuroml"}))
+@tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"testing", "neuroml"}))
 async def run_lems_simulation(lems_file: str) -> Dict[str, Any]:
     """Execute a LEMS simulation using pynml and jLEMS simulator.
 
@@ -263,7 +265,12 @@ async def run_lems_simulation(lems_file: str) -> Dict[str, Any]:
     return asdict(result)
 
 
-@tool_meta(ToolInfo(tags={"testing", "neuroml", "neuroml-db"}))
+@tool_meta(
+    ToolInfo(
+        title="Find models on NeuroML-db",
+        tags={"testing", "neuroml", "neuroml-db"},
+    )
+)
 async def get_models_from_neuromldb_tool(
     ctx: Context, search_query: str, num: int = 3, download: bool = False
 ) -> dict[str, Any]:
@@ -298,6 +305,7 @@ async def get_models_from_neuromldb_tool(
         return {"Error": "NeuroML-DB session not initialized"}
 
     neuromldb_search_url = "http://neuroml-db.org/api/search"
+    neuromldb_model_url = "http://neuroml-db.org/model_info?model_id="
     neuromldb_model_xml_url = "https://neuroml-db.org/render_xml_file"
     models: dict[str, Any] = {}
 
@@ -318,13 +326,13 @@ async def get_models_from_neuromldb_tool(
     # Process up to num results
     for i, m in enumerate(res[:num]):
         mcopy = m.copy()
+        model_id = m.get("Model_ID", f"unknown_{i}")
+        mcopy["url"] = neuromldb_model_url + model_id
 
         if download:
             # Rate limit: sleep between requests (but not before the first)
             if i > 0:
                 await asyncio.sleep(1)
-
-            model_id = m.get("Model_ID", f"unknown_{i}")
 
             if model_id in NEUROMLDB_XML_CACHE:
                 logger.debug(f"Cache hit for XML: {model_id}")
@@ -349,12 +357,17 @@ async def get_models_from_neuromldb_tool(
                     mcopy["resource"] = None
         else:
             mcopy["resource"] = None
-        models[m.get("Model_ID", f"unknown_{i}")] = mcopy
+        models[model_id] = mcopy
 
     return models
 
 
-@tool_meta(ToolInfo(tags={"testing", "neuroml", "neuroml-db"}))
+@tool_meta(
+    ToolInfo(
+        title="Find repositories on Open Source Brain",
+        tags={"testing", "neuroml", "neuroml-db"},
+    )
+)
 async def get_repositories_from_open_source_brain_tool(
     ctx: Context,
     search_query: str,

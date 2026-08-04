@@ -9,6 +9,6 @@ generation, review, and workflow automation.
 - CLI and API interfaces
 - MCP tool integration
 - LangGraph-based agent orchestration
-- FastAPI server and Streamlit web UI
+- FastAPI server with NiceGUI and Streamlit web UIs
 
 Documentation: https://neuroklea.org

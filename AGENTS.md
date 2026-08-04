@@ -146,3 +146,32 @@ Git log has the step-by-step edits. Omit routine work.
   Otherwise `--help` forces eager import of the entire dependency chain.
 - Every deferred import must have a comment explaining *why* it is lazy, so the
   pattern is self-documenting for future maintainers.
+
+## Logging conventions
+
+- Use `f"{variable = }"` (Python 3.8+ f-string debug syntax) when logging
+  variable values, one variable per line:
+  ```python
+  self.logger.debug(
+      f"{current_chat = }\n"
+      f"{model_info = }"
+  )
+  ```
+- This avoids manual label strings and keeps the variable name in the log output.
+
+## DO NOT SPECULATE OR GUESS
+
+When the behavior of code is unclear, **do not propose speculative fixes or guess
+at root causes**. Instead:
+
+1. **Read the source** — look at the actual library code (LangGraph, LangChain,
+   etc.) to understand how it works.
+2. **Write a minimal test** — a 30-line script can confirm or rule out a
+   hypothesis in minutes. Do this before proposing multi-file changes.
+3. **Use debug logging** — add targeted log statements at key points instead of
+   guessing what data looks like.
+4. **Collect empirical evidence** — run the test, read the output, then reason
+   from evidence.
+
+Speculation wastes time. Every incorrect guess compounds into more guesswork.
+If you cannot determine the answer from the source or a test, say so and ask.

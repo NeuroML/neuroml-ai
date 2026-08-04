@@ -8,15 +8,15 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any, Dict, override
-
-from pydantic import BaseModel
+from typing import Any, override
 
 from klea_code.nodes.planner import Planner
 from klea_code.schemas import KleaCodeState, PlanSchema
+from pydantic import BaseModel
 
 
 class ExplorePlanner(Planner):
+    model_type = "plan"
     """Node that plans exploration steps for a codebase.
 
     Subclasses Planner with:
@@ -24,17 +24,14 @@ class ExplorePlanner(Planner):
     """
 
     @override
-    def __init__(self, logger, label: str, model, temperature: float = 0.01):
+    def __init__(self, logger, label: str, llm_models: dict[str, Any]):
         """Initialise the explore planner node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         """
-        super().__init__(
-            logger=logger, label=label, model=model, temperature=temperature
-        )
+        super().__init__(logger=logger, label=label, llm_models=llm_models)
         self.prompt_prefix = "ExplorePlanner"
 
     @override
@@ -52,7 +49,7 @@ class ExplorePlanner(Planner):
         }
 
     @override
-    def _update_state(self, result: PlanSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: PlanSchema, state: BaseModel) -> dict[str, Any]:
         """Update exploration_plan in state."""
         return {"plan": result}
 

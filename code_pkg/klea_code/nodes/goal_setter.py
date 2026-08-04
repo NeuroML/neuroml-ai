@@ -9,23 +9,24 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
-
-from klea_utils.nodes.base import BaseLLMNode
-from pydantic import BaseModel
+from typing import Any, override
 
 from klea_code.schemas import GoalSchema, KleaCodeState
+from klea_utils.nodes.base import BaseLLMNode
+from pydantic import BaseModel
 
 
 class GoalSetter(BaseLLMNode[GoalSchema]):
     """Goal setter node"""
 
+    model_type = "plan"
+    model_defaults = {"temperature": 0.01}
+
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        temperature: float,
+        llm_models: dict[str, Any],
         output_schema: type[GoalSchema],
         memory: bool = False,
     ):
@@ -33,16 +34,14 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=output_schema,
             memory=memory,
         )
@@ -55,7 +54,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         return variables
 
     @override
-    def _update_state(self, result: GoalSchema, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: GoalSchema, state: BaseModel) -> dict[str, Any]:
         """Update and return state dictionary"""
         state_update = {"goal": result, "message_for_user": result.goal}
         self.logger.debug(state_update)

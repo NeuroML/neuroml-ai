@@ -11,9 +11,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import override
 
-from klea_utils.nodes.abstract import AbstractRouterNode
-
 from klea_code.schemas import KleaCodeState
+from klea_utils.nodes.abstract import AbstractRouterNode
 
 
 class ToolsRouter(AbstractRouterNode[KleaCodeState]):

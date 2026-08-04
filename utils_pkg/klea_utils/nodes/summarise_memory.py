@@ -9,16 +9,18 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
-from ..llm import get_last_n_conversations, split_output_by_section
+from ..llm import content_to_str, get_last_n_conversations, split_output_by_section
 from .base import BaseLLMNode
 
 
 class SummariseMemoryNode(BaseLLMNode):
+    model_type = "chat"
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 4096}
     """Node that summarises conversation history into a context summary.
 
     Uses _pre_exec() to skip execution if there aren't enough recent messages.
@@ -36,8 +38,7 @@ class SummariseMemoryNode(BaseLLMNode):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        temperature: float = 0.3,
+        llm_models: dict[str, Any],
         summarisation_threshold: int = 10,
         memory: bool = False,
     ):
@@ -45,16 +46,14 @@ class SummariseMemoryNode(BaseLLMNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature for LLM calls
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param summarisation_threshold: Minimum number of messages before summarising
         :param memory: Whether to include conversation history in the prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=None,
             memory=memory,
         )
@@ -89,10 +88,11 @@ class SummariseMemoryNode(BaseLLMNode):
         }
 
     @override
-    def _update_state(self, result: Any, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: BaseModel) -> dict[str, Any]:
         """Extract summary from raw AIMessage output."""
         self.logger.debug(f"Current history summary is:\n{result.content}")
-        thought, answer = split_output_by_section(result.content, "<think>", "</think>")
+        content = content_to_str(result.content)
+        thought, answer = split_output_by_section(content, "<think>", "</think>")
         return {
             "context_summary": answer,
             "summarised_till": len(state.messages),  # type: ignore

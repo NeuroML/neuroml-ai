@@ -9,17 +9,15 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import List, Type, override
+from typing import override
 
 import pytest
-from langchain_core.messages import AnyMessage
-from pydantic import BaseModel, Field
-
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import LLMModel, create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
-from klea_utils.plogging import setup_logger
+from langchain_core.messages import AnyMessage
+from pydantic import BaseModel, Field
 
 
 class ToyState(BaseModel):
@@ -27,23 +25,25 @@ class ToyState(BaseModel):
 
     query: str = ""
     message_for_user: str = ""
-    messages: List[AnyMessage] = Field(default_factory=list)
+    messages: list[AnyMessage] = Field(default_factory=list)
     context_summary: str = ""
 
 
 class ToyGraph(BaseLangGraph):
     """Minimal graph: AnswerGeneral (LLM) -> FixedAnswer (non-LLM) -> END."""
 
-    env_class: Type[BaseModel] = BaseModel
-    config_class: Type[BaseModel] = BaseModel
+    env_class: type[BaseModel] = BaseModel
+    config_class: type[BaseModel] = BaseModel
     env_var: str = "TOY_ENV_FILE"
     env_file_default: str = "toy.env"
-    logger_name: str = "ToyGraph"
+    graph_name: str = "ToyGraph"
 
     def __init__(self):
-        super().__init__(logging_level=logging.WARNING, memory=False)
-        self.logger = setup_logger(self.logger_name, stderr_level=logging.INFO)
-        self.logger.propagate = False
+        super().__init__(logging_level=logging.INFO, checkpoint="none", log_file=False)
+        from platformdirs import PlatformDirs
+
+        self.paths = PlatformDirs(self.graph_name.lower())
+        self.logger = logging.getLogger(self.graph_name)
 
     @override
     def _load_env(self) -> None:
@@ -56,7 +56,13 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
-        self.c_model = setup_llm("ollama:qwen3:0.6b", self.logger)
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                model_name="ollama:qwen3:0.6b",
+            ),
+        }
 
     @override
     async def _create_graph(self) -> None:
@@ -67,8 +73,7 @@ class ToyGraph(BaseLangGraph):
         self._answer_node = AnswerGeneral(
             logger=self.logger,
             label="Saying hello",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=False,
         )
         workflow.add_node(self._answer_node.label, self._answer_node.execute)

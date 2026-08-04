@@ -15,12 +15,7 @@ from fastmcp.server.lifespan import lifespan
 
 from ..utils import cleanup_cache_dir, init_cache_dir
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 @lifespan

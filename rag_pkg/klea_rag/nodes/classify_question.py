@@ -8,10 +8,16 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import json
 import logging
 from textwrap import dedent
-from typing import Any, Dict, Type, override
+from typing import Any, override
 
+from klea_utils.llm import (
+    extract_llm_output_content,
+    prompt_value_to_messages,
+)
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel
@@ -21,6 +27,8 @@ from klea_rag.schemas import RAGState
 
 # Type is calculated at runtime in orchestrator
 class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
+    model_type = "chat"
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
     """Classify a user query into domain categories.
 
     Uses an LLM to determine which domains the query belongs to, based on
@@ -32,10 +40,9 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        domains: Dict[str, str],
-        output_schema: Type[TSchema],
-        temperature: float = 0.3,
+        llm_models: dict[str, Any],
+        domains: dict[str, str],
+        output_schema: type[TSchema],
         memory: bool = False,
         pre_prompt: str = "",
     ):
@@ -43,18 +50,16 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param domains: Domain name to description mapping
         :param output_schema: Pydantic schema for classification output
-        :param temperature: Sampling temperature for LLM calls
         :param memory: Whether to include conversation history in the prompt
         :param pre_prompt: Optional pre-prompt text for domain classification
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=output_schema,
             memory=memory,
         )
@@ -68,12 +73,13 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
         for d, desc in self.domains.items():
             if not desc or len(desc) == 0:
-                desc = f"if the question is about {d}"
-            else:
-                desc = f"if the question is about {desc}"
-            domain_str += f"\n- {d}: {desc}"
+                desc = f"If the question is about {d}"
 
-        domain_str += "\n- undefined: otherwise (if no other domain)"
+            domain_str += f"\n### {d}\n{desc}"
+
+        domain_str += (
+            "\n### undefined\nUse 'undefined' only if no other domain applies.\n\n"
+        )
         return domain_str
 
     @override
@@ -84,10 +90,6 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         # additional logic
         system_prompt += f"\n\n## Domains\n{self._build_domain_str()}\n\n"
 
-        if self.memory:
-            memory_addition = self._get_memory_addition(state)
-            system_prompt += memory_addition
-
         if self.output_schema:
             system_prompt += dedent(
                 f"""
@@ -95,9 +97,13 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
 
                 Respond in JSON following this schema:
 
-                {str(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
+                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
                 """
             )
+
+        if self.memory:
+            memory_addition = self._get_memory_addition(state)
+            system_prompt += memory_addition
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt
@@ -108,7 +114,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         return {"query": state.query}
 
     @override
-    def _update_state(self, result: Any, state: RAGState) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: RAGState) -> dict[str, Any]:
         """Extract classification result, append query to messages."""
         messages = list(state.messages)
         messages.append(HumanMessage(content=state.query))
@@ -134,6 +140,41 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
             "query_domains": valid_domains,
             "messages": messages,
         }
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return classification summary and details."""
+        assert self._last_state_updates is not None
+        classified = self._last_state_updates.get("query_domains", [])
+        available = list(self.domains.keys())
+        return NodeStreamData(
+            heading="Question Classification",
+            summary=f"Classified into: {', '.join(classified)} (from {len(available)} available domains)",
+            details={
+                "classified_domains": classified,
+                "available_domains": available,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + input prompt, raw output, and processed output."""
+        assert self._last_state is not None
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
+        info = self._get_info()
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
+                "processed_output": str(self._last_result),
+            }
+        )
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )
 
     # TODO: may need updating
     @override

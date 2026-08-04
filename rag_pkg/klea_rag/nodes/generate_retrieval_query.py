@@ -10,8 +10,14 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from textwrap import dedent
-from typing import Any, Dict, override
+from typing import Any, override
 
+from klea_utils.llm import (
+    content_to_str,
+    extract_llm_output_content,
+    prompt_value_to_messages,
+)
+from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.utils import Output
@@ -22,21 +28,25 @@ from klea_rag.schemas import RAGState
 class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     """Node that generates a concise retrieval query from the user's question."""
 
+    model_type = "chat"
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
+
     def __init__(
-        self, logger: logging.Logger, label: str, model: Any, temperature: float = 0.3
+        self,
+        logger: logging.Logger,
+        label: str,
+        llm_models: dict[str, Any],
     ):
         """Initialise the node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=None,
             memory=True,
         )
@@ -77,15 +87,9 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         }
 
     @override
-    def _update_state(self, result: Output, state: RAGState) -> Dict[str, Any]:
+    def _update_state(self, result: Output, state: RAGState) -> dict[str, Any]:
         """Update state with the generated retrieval query."""
-        content = result.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else str(block)
-                for block in content
-            )
-
+        content = content_to_str(result.content)
         thought, answer = (
             content.split("</think>", 1) if "</think>" in content else ("", content)
         )
@@ -105,3 +109,44 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     def _get_default_error_result(self) -> Any:
         """Return default result when processing fails."""
         return ""
+
+    @override
+    def _get_info(self) -> NodeStreamData:
+        """Return retrieval query and attempt number."""
+        assert self._last_state_updates is not None
+        query = self._last_state_updates.get("retrieval_query", "")
+        attempt = self._last_state_updates.get("retrieval_attempts", 1)
+        action = "Regenerated" if attempt > 1 else "Generated"
+        return NodeStreamData(
+            heading="Retrieval Query Generation",
+            summary=f"{action} retrieval query (attempt {attempt})",
+            details={
+                "retrieval_query": query,
+                "retrieval_attempts": attempt,
+            },
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData:
+        """Return info + input prompt, raw output, processed output, and evaluator feedback."""
+        assert self._last_state is not None
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        assert self._last_result is not None
+        info = self._get_info()
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
+                "processed_output": str(self._last_result),
+            }
+        )
+        # Add evaluator feedback if this is a retry
+        state: RAGState = self._last_state  # type: ignore[assignment]
+        if state.retrieval_attempts > 0 and state.text_response_eval:
+            details["evaluator_feedback"] = state.text_response_eval.summary
+            details["previous_query"] = state.retrieval_query
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )

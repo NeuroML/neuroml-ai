@@ -9,17 +9,12 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from fastmcp.client.client import CallToolResult
 from mcp.types import EmbeddedResource, TextContent
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def _textualize_content_block(block: Any) -> str:
@@ -38,7 +33,7 @@ def _textualize_content_block(block: Any) -> str:
 
 
 def textualize_tool_results(
-    tool_results: List[CallToolResult],
+    tool_results: list[CallToolResult],
 ) -> str:
     """Format tool call results as LLM-ready text for use in prompt context.
 

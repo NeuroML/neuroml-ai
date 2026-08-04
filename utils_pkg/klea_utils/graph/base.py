@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import contextvars
 import json
 import logging
 import os
@@ -16,19 +17,32 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, List, Literal, Type, final
+from typing import Any, Literal, final
 
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
+from platformdirs import PlatformDirs
 from pydantic import BaseModel, create_model
 
+from klea_utils.llm import LLMModel
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.paths import init_dir
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+
+# Per-request context variable carrying per-session model overrides (api_key,
+# model, provider, etc.).  Set by the API layer before graph.ainvoke() and
+# read by _invoke_llm() so that nodes don't need to thread overrides through
+# their signatures.  Falls back to an empty dict if not set.
+model_overrides_ctx: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
+    "model_overrides", default={}
+)
 
 
 class _CustomChannelEnabler(StreamTransformer):
@@ -71,11 +85,11 @@ class BaseLangGraph(ABC):
 
     #: Pydantic BaseSettings class for env loading.
     #: Subclasses must set this to their AppEnv class.
-    env_class: Type[BaseModel]
+    env_class: type[BaseModel]
 
     #: Pydantic BaseModel class for configuration loading.
     #: Subclasses must set this to their AppConfig class.
-    config_class: Type[BaseModel]
+    config_class: type[BaseModel]
 
     #: Name of the environment variable that controls the env file path.
     env_var: str = "ENV_FILE"
@@ -83,29 +97,44 @@ class BaseLangGraph(ABC):
     #: Default config file name if the environment variable is not set.
     env_file_default: str = "config.env"
 
-    #: Logger name for this orchestrator.
-    logger_name: str = "BaseLangGraph"
+    #: Logger name for this orchestrator, also used as the app name
+    #: for ``platformdirs`` data/cache directories.
+    graph_name: str = "BaseLangGraph"
 
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        checkpoint: str = "inmemory",
+        log_file: bool = True,
     ):
         """Initialise the base orchestrator.
 
         :param logging_level: Logging level for the orchestrator
-        :param memory: Whether to enable checkpoint-based session memory
+        :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),
+            ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
+            or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
+            that need conversation history receive ``memory=False``.
+        :param log_file: When ``True`` (default), configure the process-wide
+            root logger with a rotating file handler writing to
+            ``{self.paths.user_data_dir}/{self.graph_name}.log``, alongside
+            the checkpoints and session database.  Set to ``False`` in
+            short-lived processes (e.g. tests) to avoid writing log files.
         """
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
 
-        self.c_model = None
+        # Graph-level default models per role.  Per-request model
+        # overrides are merged at invoke time via ``model_overrides_ctx``
+        # and do NOT change this dict.
+        self.llm_models: dict[str, LLMModel] = {}
 
-        self.memory = memory
-
-        self.tools_description: dict[str, str] = {}
+        self.tools_info: dict[str, dict[str, ToolInfo]] = {}
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
-        self.checkpointer: InMemorySaver | None = InMemorySaver() if memory else None
+        self.checkpointer_mode = checkpoint
+        self.memory = checkpoint != "none"
+        self.checkpointer = None
+
+        self.paths = PlatformDirs(self.graph_name.lower())
 
         self.config_dict: dict[str, Any]
 
@@ -117,15 +146,23 @@ class BaseLangGraph(ABC):
 
         self.stores_config: VectorStoresConfig | None = None
         self.stores: VSRetriever | None = None
-        self.embedding_model: str | None = None
+        # Graph-wide fallback retrieval settings.  Individual vector stores
+        # may override these in the config with their own default_k / k_max /
+        # k_inc values.
         self.default_k: int = 5
         self.k_max: int = 10
+        self.k_inc: int = 1
 
-        self.QueryDomainSchema: Type[BaseModel] | None = None
+        self.QueryDomainSchema: type[BaseModel] | None = None
 
-        from klea_utils.plogging import setup_logger
+        from klea_utils.plogging import setup_root_logger
 
-        self.logger = setup_logger(self.logger_name, stderr_level=logging_level)
+        setup_root_logger(
+            self.graph_name,
+            stderr_level=logging_level,
+            log_dir=self.paths.user_data_dir if log_file else None,
+        )
+        self.logger = logging.getLogger(self.graph_name)
 
     def _load_env(self) -> None:
         """Load env file, and configuration
@@ -179,11 +216,11 @@ class BaseLangGraph(ABC):
             async with self.mcp_client:
                 self.mcp_tools = await self.mcp_client.list_tools()
             self.logger.debug(f"{self.mcp_tools =}")
-            self._build_tools_description()
+            self._build_tools_info()
 
-    def _build_tools_description(self) -> None:
-        """Build per-domain tool descriptions from fetched MCP tools."""
-        self.tools_description = {}
+    def _build_tools_info(self) -> None:
+        """Build per-domain tool metadata from fetched MCP tools."""
+        self.tools_info = {}
         if not self.mcp_tools or not self.domain_mcp_configs:
             return
 
@@ -196,8 +233,8 @@ class BaseLangGraph(ABC):
                 num_servers += len(list(config.mcpServers.keys()))
 
         for domain, server_names in domain_servers.items():
-            desc = ""
             ctr = 0
+            domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
                 if "dummy" in t.name:
                     continue
@@ -207,7 +244,7 @@ class BaseLangGraph(ABC):
                         continue
                 # otherwise, there's only one server
                 ctr += 1
-                desc += dedent(f"""
+                tool_description = dedent(f"""
                     ## {ctr}.  {t.name}
 
                     ### Description
@@ -216,23 +253,30 @@ class BaseLangGraph(ABC):
 
                     """)
                 if t.inputSchema:
-                    desc += dedent(f"""
+                    tool_description += dedent(f"""
                         ### Parameters
 
                         {t.inputSchema.get("properties")}
 
                         """)
-            self.tools_description[domain] = desc
+                domain_tools_info[t.name] = ToolInfo(
+                    title=t.title,
+                    description=tool_description,
+                    meta=t.meta,
+                )
+            self.tools_info[domain] = domain_tools_info
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
-        if self.stores_config and self.embedding_model:
+        emb = self.llm_models.get("embedding")
+        if self.stores_config and emb and emb.model_name:
             self.stores = VSRetriever(
                 vs_config=self.stores_config,
                 logger=self.logger,
-                embedding_model=self.embedding_model,
+                embedding_model=emb.model_name,
                 default_k=self.default_k,
                 k_max=self.k_max,
+                k_inc=self.k_inc,
             )
             self.stores.setup()
             self.logger.info(f"Vector stores loaded: {self.stores.domains}")
@@ -243,7 +287,7 @@ class BaseLangGraph(ABC):
 
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(List[Literal[tuple(all_domains)]], "undefined"),
+                query_domains=(list[Literal[tuple(all_domains)]], "undefined"),
             )
         else:
             self.logger.warning("No vector stores configured.")
@@ -282,10 +326,35 @@ class BaseLangGraph(ABC):
     def _setup_models(self) -> None:
         """Set up LLM model instances.
 
-        Subclasses should assign model instances to ``self.c_model`` (and
-        optionally ``self.r_model`` for reasoning models).
+        Subclasses should populate ``self.llm_models`` with ``LLMModel``
+        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
+        These are graph-wide defaults; per-request overrides are applied
+        at runtime via ``model_overrides_ctx``.
         """
         ...
+
+    def _provider_defaults_for_role(self, role: str) -> dict[str, dict[str, Any]]:
+        """Return per-provider default params for *role* from the config.
+
+        Reads the optional ``providers`` config section, e.g.::
+
+            {"huggingface": {"chat": {"max_output_tokens": 2048}}}
+
+        and returns just the entries relevant to *role*, so each
+        ``LLMModel`` carries the defaults for its own role.  Shared by all
+        graphs so ``_setup_models`` implementations do not repeat it.
+
+        :param role: Model role (``chat``, ``plan``, ``guard``, ...).
+        :returns: ``{provider: {param: value}}`` for *role*.
+        """
+        result: dict[str, dict[str, Any]] = {}
+        # ``app_config`` is the concrete ``config_class`` instance; access
+        # via getattr so this works for any subclass without extra typing.
+        providers = getattr(self.app_config, "providers", {})
+        for provider, role_configs in providers.items():
+            if role in role_configs:
+                result[provider] = dict(role_configs[role])
+        return result
 
     @abstractmethod
     async def _create_graph(self) -> None:
@@ -308,6 +377,24 @@ class BaseLangGraph(ABC):
         """
         pass
 
+    async def _setup_checkpointer(self) -> None:
+        """Set up the checkpointer.
+
+        ``setup()`` calls this hook before ``_load_env()``.
+        The checkpointer is ``None`` when ``checkpoint="none"``.
+        """
+        if self.checkpointer_mode == "sqlite":
+            import aiosqlite
+
+            db_path = init_dir(self.paths.user_data_dir) / "checkpoints.db"
+            self.logger.debug("Opening sqlite checkpointer at %s", db_path)
+            conn = await aiosqlite.connect(str(db_path))
+            self.checkpointer = AsyncSqliteSaver(conn)
+            self.logger.debug("Sqlite checkpointer ready")
+        elif self.checkpointer_mode == "inmemory":
+            self.checkpointer = InMemorySaver()
+            self.logger.debug("In-memory checkpointer ready")
+
     def _post_setup(self) -> None:
         """Hook called after the standard setup sequence.
 
@@ -324,7 +411,7 @@ class BaseLangGraph(ABC):
         """Hook called after MCP client setup but before graph compilation.
 
         Override to perform subclass-specific initialisation that depends
-        on config and MCP client but must happen before the LangGraph is built.
+        on config and MCP client but must happen         before the LangGraph is built.
         """
         pass
 
@@ -334,14 +421,16 @@ class BaseLangGraph(ABC):
 
         Calls hooks and template methods in this order:
         1. ``_pre_setup()``
-        2. ``_load_env()``
-        3. ``_setup_models()``
-        4. ``_create_mcp_client()``
-        5. ``_pre_graph()``
-        6. ``_create_graph()``
-        7. ``_post_setup()``
+        2. ``_setup_checkpointer()``
+        3. ``_load_env()``
+        4. ``_setup_models()``
+        5. ``_create_mcp_client()``
+        6. ``_pre_graph()``
+        7. ``_create_graph()``
+        8. ``_post_setup()``
         """
         self._pre_setup()
+        await self._setup_checkpointer()
         self._load_env()
         self._configure_resources()
         self._setup_models()
@@ -407,7 +496,7 @@ class BaseLangGraph(ABC):
 
         async for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
-                self.logger.debug(f"{node}: {repr(state)}")
+                self.logger.debug(f"{node}: {state!r}")
                 if message := state.get("message_for_user", None):
                     self.logger.info(f"User message: {message}")
                     yield message
@@ -435,8 +524,14 @@ class BaseLangGraph(ABC):
 
         ``{"type": "progress", "node": "<label>"}``
             When the graph enters a new node (via ``write_custom_stream``)
+        ``{"type": "info", "node": "<label>", "data": {...}}``
+            Structured summary data from a node after execution
+        ``{"type": "debug", "node": "<label>", "data": {...}}``
+            Full data dump from a node after execution
         ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
             LLM token chunk from the current node
+        ``{"type": "usage", "node": "<label>", "data": {...}}``
+            Per-node token usage (input / output / total tokens)
         ``{"type": "complete", "message_for_user": "<answer>"}``
             Final answer from the completed graph
 
@@ -473,11 +568,12 @@ class BaseLangGraph(ABC):
 
             if method == "custom":
                 data = event["params"]["data"]
-                if (
-                    isinstance(data, dict)
-                    and data.get("type") == "progress"
-                    and data.get("node")
-                ):
+                if not isinstance(data, dict) or not data.get("node"):
+                    continue
+
+                event_type = data.get("type")
+
+                if event_type == "progress":
                     node = data["node"]
                     if node != current_node:
                         now = time.monotonic()
@@ -491,6 +587,15 @@ class BaseLangGraph(ABC):
                         current_node = node
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
+
+                elif event_type in ("info", "debug", "state", "usage"):
+                    data_out = data.get("data", {}).copy()
+                    data_out["timing_seconds"] = round(time.monotonic() - node_start, 2)
+                    yield {
+                        "type": event_type,
+                        "node": data["node"],
+                        "data": data_out,
+                    }
 
             elif method == "messages":
                 data = event["params"]["data"]

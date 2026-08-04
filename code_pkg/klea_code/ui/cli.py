@@ -54,6 +54,7 @@ def cli(
                 title=title,
                 single_query=single_query or "",
                 app_prefix="klea",
+                app_name="klea-code-tui",
             )
         )
     except KeyboardInterrupt:
@@ -63,13 +64,24 @@ def cli(
 @code_app.command()
 def web(
     title: str = typer.Option(
-        "KLEA Code", "--title", "-t", help="Title for application"
+        "KLEA Code", "--title", "-t", help="Application title (shown in header)"
     ),
     subtitle: str = typer.Option(
-        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "",
         "--subtitle",
         "-b",
-        help="Sub title for application",
+        help="Subtitle shown next to title in header",
+    ),
+    disclaimer: str = typer.Option(
+        "Answers use LLM technology and may be incorrect. Please re-confirm.",
+        "--disclaimer",
+        "-c",
+        help="Disclaimer text shown below the chat area",
+    ),
+    footer_text: str = typer.Option(
+        'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
+        "--footer",
+        help="Footer HTML content",
     ),
     server_url: str = typer.Option(
         "http://127.0.0.1:8005",
@@ -78,12 +90,33 @@ def web(
         help="KLEA Code server URL:port",
         callback=_validate_url,
     ),
+    nicegui_url: str = typer.Option(
+        "0.0.0.0:7860",
+        "--nicegui-url",
+        help="Host:port to bind the NiceGUI web server to",
+    ),
+    storage_secret: str = typer.Option(
+        "klea-nicegui-secret-change-me",
+        "--storage-secret",
+        help="NiceGUI storage secret for session persistence",
+    ),
+    debug: bool = typer.Option(
+        False, "--debug", "-d", help="Enable auto-reload on file changes"
+    ),
 ):
-    """Klea Code Streamlit client"""
-    spec = importlib.util.find_spec("klea_utils.ui.web.streamlit.app")
-    assert spec and spec.origin, "Could not locate streamlit app entry point"
+    """Klea Code web client (NiceGUI)"""
+    spec = importlib.util.find_spec("klea_utils.ui.web.nicegui.app")
+    assert spec and spec.origin, "Could not locate nicegui app entry point"
     cwd = Path(spec.origin).parent
     with chdir(cwd):
         subprocess.run(
-            shlex.split(f"streamlit run app.py '{title}' '{subtitle}' '{server_url}'")
+            shlex.split(
+                f"python app.py '{title}' '{subtitle}' '{server_url}'"
+                + f" --disclaimer '{disclaimer}'"
+                + f" --footer '{footer_text}'"
+                + f" --nicegui-url '{nicegui_url}'"
+                + f" --storage-secret '{storage_secret}'"
+                + " --app-name 'klea-code-web'"
+                + (" --debug" if debug else "")
+            )
         )

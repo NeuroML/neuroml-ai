@@ -11,7 +11,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import pytest
 from fastmcp.client import Client
 from fastmcp.client.transports import FastMCPTransport
-
 from neuroml_mcp.server.main import create_server
 
 
@@ -27,3 +26,8 @@ async def test_list_tools(mcp_client: Client[FastMCPTransport]):
     all_tools = await mcp_client.list_tools()
     tool_names = [t.name for t in all_tools]
     assert "dummy_code_tool" in tool_names
+
+    tools_by_name = {tool.name: tool for tool in all_tools}
+    assert tools_by_name["get_models_from_neuromldb_tool"].title == (
+        "Find models on NeuroML-db"
+    )

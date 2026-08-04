@@ -1,6 +1,9 @@
 klea-code
 =========
 
+**WIP: coming soon** -- this CLI is under active development and not yet
+ready for general use.
+
 AI-assisted coding and workflow client.
 
 .. typer:: klea_code.ui.cli:code_app

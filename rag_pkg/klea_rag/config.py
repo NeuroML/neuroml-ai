@@ -19,14 +19,21 @@ class AppEnv(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="KLEA_RAG_")
 
     chat_model: str = "ollama:qwen2.5-coder:3b"
-    guard_model: str = "ollama:llama-guard3:1b"
+    guard_model: str = ""
     embedding_model: str = "ollama:bge-m3:latest"
     app_config_file: str = "klea_rag.json"
 
 
 class GeneralConfig(BaseModel):
+    """General configuration.
+
+    ``default_k``, ``k_max``, and ``k_inc`` are the graph-wide fallbacks
+    applied to vector stores that do not define their own per-store values.
+    """
+
     default_k: int = 5
     k_max: int = 10
+    k_inc: int = 1
     # TODO: unused---what is this for?
     pre_prompt: str = ""
     non_domain_chat: bool = True
@@ -45,4 +52,5 @@ class PerDomainConfig(BasePerDomainConfig):
 
 class AppConfig(BaseModel):
     general: GeneralConfig
+    providers: dict[str, dict[str, dict[str, Any]]] = Field(default_factory=dict)
     domains: dict[str, PerDomainConfig]

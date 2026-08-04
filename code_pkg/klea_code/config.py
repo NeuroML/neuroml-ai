@@ -27,3 +27,4 @@ class AppConfig(BaseModel):
     """Application configuration loaded from the JSON config file."""
 
     mcp_servers: dict[str, Any] = Field(default_factory=dict)
+    providers: dict[str, dict[str, dict[str, Any]]] = Field(default_factory=dict)

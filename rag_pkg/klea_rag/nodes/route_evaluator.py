@@ -10,7 +10,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
-from klea_utils.nodes.abstract import AbstractRouterNode
+from klea_utils.nodes.abstract import (
+    AbstractRouterNode,
+    NodeStreamData,
+    NodeStreamEvent,
+)
 from klea_utils.stores.retrieval import VSRetriever
 
 from klea_rag.schemas import RAGState
@@ -50,6 +54,8 @@ class RouteEvaluator(AbstractRouterNode):
         resp = state.text_response_eval
         next_step = resp.next_step
 
+        # Determine route
+        route = None
         if next_step == "continue" and (
             resp.coverage >= 0.5
             and resp.confidence >= 0.5
@@ -61,39 +67,38 @@ class RouteEvaluator(AbstractRouterNode):
             if self.stores:
                 self.stores.reset_k()
             self.logger.debug("returning: continue")
-            return "continue"
+            route = "continue"
         elif state.retrieval_attempts < self.max_retrieval_attempts and (
             next_step == "modify_query" or resp.coverage < 0.3
         ):
             self.logger.debug("returning: modify_query")
-            return "modify_query"
+            route = "modify_query"
         elif next_step == "retrieve_more_info" or (
             resp.coverage >= 0.5 and resp.confidence < 0.5
         ):
             # ther are no stores, and no more information to retrieve
             if not self.stores:
-                return "continue"
-
+                route = "continue"
             # limit what max k we can have, otherwise, we end up pulling the
             # whole store..
-            if self.stores.inc_k():
+            elif self.stores.inc_k():
                 self.logger.debug("returning: retrieve_more_info")
-                return "retrieve_more_info"
+                route = "retrieve_more_info"
             else:
                 # we are already at max context, so we need to modify the query
                 # to get a better result if possible
                 if state.retrieval_attempts < self.max_retrieval_attempts:
                     self.logger.debug("returning: modify_query")
-                    return "modify_query"
+                    route = "modify_query"
                 # if we've already modified query, fallback to training data if
                 # possible, otherwise ask for clarification
                 else:
                     if self.fallback_to_training_data:
                         self.logger.debug("returning: fallback")
-                        return "fallback"
+                        route = "fallback"
                     else:
                         self.logger.debug("returning: undefined")
-                        return "undefined"
+                        route = "undefined"
         elif state.rewrite_attempts < self.max_rewrite_attempts and (
             next_step == "rewrite_answer"
             or (
@@ -108,12 +113,41 @@ class RouteEvaluator(AbstractRouterNode):
             )
         ):
             self.logger.debug("returning: rewrite_answer")
-            return "rewrite_answer"
+            route = "rewrite_answer"
         # all other cases: fallback to training data if enabled, otherwise ask for clarification
         else:
             if self.fallback_to_training_data:
                 self.logger.debug("returning: fallback")
-                return "fallback"
+                route = "fallback"
             else:
                 self.logger.debug("returning: undefined")
-                return "undefined"
+                route = "undefined"
+
+        # Emit info event with routing decision
+        info_data = NodeStreamData(
+            heading="Route Evaluation",
+            summary=f"Routing decision: {route}",
+            details={
+                "route": route,
+                "next_step": next_step,
+                "retrieval_attempts": state.retrieval_attempts,
+                "rewrite_attempts": state.rewrite_attempts,
+            },
+        )
+        info_event = NodeStreamEvent(type="info", node=self.label, data=info_data)
+        self.write_custom_stream(info_event.model_dump())
+
+        # Emit debug event with routing context
+        debug_details = info_data.details.copy()
+        debug_details["thresholds"] = {
+            "max_retrieval_attempts": self.max_retrieval_attempts,
+            "max_rewrite_attempts": self.max_rewrite_attempts,
+            "fallback_to_training_data": self.fallback_to_training_data,
+        }
+        debug_data = NodeStreamData(
+            heading=info_data.heading, summary=info_data.summary, details=debug_details
+        )
+        debug_event = NodeStreamEvent(type="debug", node=self.label, data=debug_data)
+        self.write_custom_stream(debug_event.model_dump())
+
+        return route

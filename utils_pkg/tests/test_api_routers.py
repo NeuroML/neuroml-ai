@@ -24,14 +24,15 @@ from httpx import ASGITransport
 # ``client.stream()`` + ``aiter_lines()``.
 from klea_utils.api.chat import create_chat_router
 from klea_utils.api.health import create_health_router
+from klea_utils.api.sessions_db import SessionStore
 
 
 @pytest.fixture
-def app():
-    """Create a minimal FastAPI app with mock graph."""
+def app(tmp_path):
+    """Create a minimal FastAPI app with mock graph and real SessionStore."""
     _app = FastAPI()
     _app.state.is_ready = True
-    _app.state.sessions = {}
+    _app.state.chat_sessions = SessionStore(str(tmp_path / "sessions.db"))
 
     mock_graph = AsyncMock()
     mock_graph.run_graph_invoke.return_value = "mock answer"
@@ -45,7 +46,8 @@ def app():
     _app.state.graph = mock_graph
     _app.include_router(create_chat_router())
     _app.include_router(create_health_router())
-    return _app
+    yield _app
+    _app.state.chat_sessions.close()
 
 
 @pytest.fixture
@@ -98,24 +100,26 @@ class TestChat:
         self.logger.info("POST /query with valid payload")
         response = await client.post(
             "/query",
-            json={"query": "hello", "session_id": "test-session"},
+            json={"query": "hello", "chat_id": "test-chat", "user_id": "test-user"},
         )
         self.logger.info(f"Status: {response.status_code}, body: {response.json()}")
         assert response.status_code == 200
         assert response.json() == {"result": "mock answer"}
         app.state.graph.run_graph_invoke.assert_awaited_once_with(
-            "hello", "test-session"
+            "hello", "user_test-user:chat_test-chat"
         )
         self.logger.info("Verified run_graph_invoke was called with correct args")
 
     async def test_query_reuses_session(self, client, app):
-        """Same session_id does not raise."""
+        """Same chat_id/user_id does not raise."""
         self.logger.info("First request (creates session)")
-        await client.post("/query", json={"query": "first", "session_id": "s1"})
+        await client.post(
+            "/query", json={"query": "first", "chat_id": "s1", "user_id": "u1"}
+        )
 
-        self.logger.info("Second request with same session_id")
+        self.logger.info("Second request with same chat_id/user_id")
         resp2 = await client.post(
-            "/query", json={"query": "second", "session_id": "s1"}
+            "/query", json={"query": "second", "chat_id": "s1", "user_id": "u1"}
         )
         self.logger.info(f"Second request status: {resp2.status_code}")
         assert resp2.status_code == 200
@@ -128,7 +132,7 @@ class TestChat:
         self.logger.info("POST /query with broken graph")
         response = await client.post(
             "/query",
-            json={"query": "hello", "session_id": "test"},
+            json={"query": "hello", "chat_id": "test", "user_id": "test-user"},
         )
         self.logger.info(f"Status: {response.status_code}")
         assert response.status_code == 500
@@ -139,7 +143,7 @@ class TestChat:
         async with client.stream(
             "POST",
             "/query/stream",
-            json={"query": "hello", "session_id": "test-session"},
+            json={"query": "hello", "chat_id": "test-chat", "user_id": "test-user"},
         ) as response:
             assert response.status_code == 200
             content_type = response.headers["content-type"]
@@ -179,7 +183,7 @@ class TestChat:
         async with client.stream(
             "POST",
             "/query/stream",
-            json={"query": "hello", "session_id": "test"},
+            json={"query": "hello", "chat_id": "test", "user_id": "test-user"},
         ) as response:
             lines = []
             async for line in response.aiter_lines():

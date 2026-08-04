@@ -13,7 +13,7 @@ from typing import final, override
 
 from fastmcp.mcp_config import MCPConfig
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral, FallbackConfig
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
@@ -36,9 +36,6 @@ from .nodes.tools_caller import ToolsCaller
 from .nodes.tools_picker import ToolsPicker
 from .schemas import RAGState
 
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
-
 
 @final
 class RAG(BaseLangGraph):
@@ -48,7 +45,7 @@ class RAG(BaseLangGraph):
     env_var = "KLEA_RAG_ENV_FILE"
     env_file_default = "rag.env"
     config_class = AppConfig
-    logger_name = "RAG"
+    graph_name = "klea-rag"
 
     # type hints
     app_env: AppEnv
@@ -57,21 +54,44 @@ class RAG(BaseLangGraph):
     def __init__(
         self,
         logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        checkpoint: str = "inmemory",
     ):
         """Initialise"""
-        super().__init__(logging_level=logging_level, memory=memory)
-
-        self.g_model = None
+        super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
         # total number of reference documents
         self.num_refs_max = 10
 
     @override
     def _setup_models(self) -> None:
-        """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, self.logger)
+        """Set up the LLM chat model
+
+        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
+        ``model_name`` provides the default that
+        ``_invoke_llm`` uses when no override is active.  Developers who need
+        a fixed model for a particular role may assign a concrete instance
+        instead of the shared configurable one.
+        """
+        from klea_utils.llm import LLMModel
+
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                model_name=self.app_env.chat_model,
+                provider_defaults=self._provider_defaults_for_role("chat"),
+            ),
+            "guard": LLMModel(
+                instance=model,
+                model_name=self.app_env.guard_model,
+                modifiable=False,
+                provider_defaults=self._provider_defaults_for_role("guard"),
+            ),
+            "embedding": LLMModel(
+                instance=None,
+                model_name=self.app_env.embedding_model,
+            ),
+        }
 
     async def get_graph(self):
         """Setup and get compiled graph"""
@@ -110,9 +130,9 @@ class RAG(BaseLangGraph):
 
         # set up configs
         self.stores_config = VectorStoresConfig(domains=domain_vs)
-        self.embedding_model = self.app_env.embedding_model
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
+        self.k_inc = self.app_config.general.k_inc
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
 
         # store per-domain MCP configs for domain-aware tool descriptions
@@ -135,8 +155,7 @@ class RAG(BaseLangGraph):
         self._guard_node = GuardNode(
             logger=self.logger,
             label="Checking safety",
-            model=self.g_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=self.memory,
         )
         self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
@@ -164,9 +183,8 @@ class RAG(BaseLangGraph):
         self._classify_question_node = ClassifyQuestion(
             logger=self.logger,
             label="Classifying question",
-            model=self.c_model,
+            llm_models=self.llm_models,
             output_schema=self.QueryDomainSchema,
-            temperature=0.3,
             memory=self.memory,
             domains={
                 d: info.description for d, info in self.app_config.domains.items()
@@ -186,8 +204,7 @@ class RAG(BaseLangGraph):
         self._generate_retrieval_query_node = GenerateRetrievalQuery(
             logger=self.logger,
             label="Generating search",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
         )
         self.workflow.add_node(
             self._generate_retrieval_query_node.label,
@@ -196,9 +213,8 @@ class RAG(BaseLangGraph):
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
-            model=self.c_model,
-            temperature=0.01,
-            domain_tools_description=self.tools_description,
+            llm_models=self.llm_models,
+            domain_tools_info=self.tools_info,
         )
         self.workflow.add_node(
             self._tools_picker_node.label, self._tools_picker_node.execute
@@ -216,8 +232,7 @@ class RAG(BaseLangGraph):
         self._answer_general_node = AnswerGeneral(
             logger=self.logger,
             label="Answering generally",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=self.memory,
             fallback_config=FallbackConfig(
                 enabled=self.app_config.general.fallback_to_training_data,
@@ -250,8 +265,7 @@ class RAG(BaseLangGraph):
         self._generate_answer_from_context_node = AnswerFromContext(
             logger=self.logger,
             label="Generating answer",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=False,
         )
         self.workflow.add_node(
@@ -261,8 +275,7 @@ class RAG(BaseLangGraph):
         self._evaluate_answer_node = Evaluator(
             logger=self.logger,
             label="Evaluating answer",
-            model=self.c_model,
-            temperature=0.0,
+            llm_models=self.llm_models,
         )
         self.workflow.add_node(
             self._evaluate_answer_node.label, self._evaluate_answer_node.execute
@@ -299,8 +312,7 @@ class RAG(BaseLangGraph):
             self._summarise_history_node = SummariseMemoryNode(
                 logger=self.logger,
                 label="Summarizing history",
-                model=self.c_model,
-                temperature=0.3,
+                llm_models=self.llm_models,
                 summarisation_threshold=10,
             )
             self.workflow.add_node(

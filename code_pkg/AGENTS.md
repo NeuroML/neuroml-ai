@@ -45,19 +45,34 @@ pytest -v
 ### Package Structure
 ```
 klea_code/
-├── api/         # API endpoints
-├── nodes/       # LangGraph nodes
-├── prompts/     # Prompt templates
-├── schemas.py   # Pydantic schemas
-├── ui/          # CLI interface
-└── code_ai.py  # Main orchestration
+├── api/             # FastAPI server (thin wrappers around klea_utils routers)
+│   ├── main.py      # FastAPI app creation
+│   └── server.py    # Typer serve command
+├── config.py        # Configuration loading (env file + JSON)
+├── klea_code.py     # Main CodeAgent orchestrator (extends BaseLangGraph)
+├── nodes/           # LangGraph nodes for code generation workflows
+│   ├── answer_user.py
+│   ├── evaluator.py
+│   ├── explore_planner.py
+│   ├── goal_setter.py
+│   ├── init_graph.py
+│   ├── planner.py
+│   ├── tools_caller.py
+│   ├── tools_picker.py
+│   └── tools_router.py
+│   └── prompts/     # Prompt markdown templates per node
+├── schemas.py       # Pydantic schemas
+├── tools/           # Bundled MCP tools
+│   └── bundled.py
+└── ui/
+    └── cli.py       # Typer CLI entry point (klea-code, klea-code-serve)
 ```
 
 ### Key Technologies
 - LangChain/LangGraph for agent orchestration
-- FastMCP for MCP integration
+- FastMCP for MCP tool integration
 - Typer for CLI
-- Streamlit for UI
+- NiceGUI/Streamlit UI shared from klea_utils
 
 ## Code Style
 

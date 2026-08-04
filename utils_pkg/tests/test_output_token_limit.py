@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""
+Tests for bounded max-output token resolution (resolve_output_token_limit).
+
+File: tests/test_output_token_limit.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import unittest
+from unittest import mock
+
+from klea_utils.llm import (
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    resolve_output_token_limit,
+)
+from klea_utils.models_catalog import ModelLimits
+
+
+def _no_catalog(limits=None):
+    """Patch get_model_limits to return a fixed value (default: no info)."""
+    return mock.patch("klea_utils.llm.get_model_limits", return_value=limits)
+
+
+class TestResolveOutputTokenLimit(unittest.TestCase):
+    """Tests for resolve_output_token_limit."""
+
+    def _resolve(self, overrides, provider, **kwargs):
+        with _no_catalog():
+            resolve_output_token_limit(overrides, provider, **kwargs)
+        return overrides
+
+    # --- role fallback defaults ---
+
+    def test_chat_role_default(self):
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai"}, "openai", role="chat"
+        )
+        self.assertEqual(ov["max_tokens"], 4096)
+
+    def test_guard_role_default(self):
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai"}, "openai", role="guard"
+        )
+        self.assertEqual(ov["max_tokens"], 1024)
+
+    def test_unknown_role_default(self):
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai"},
+            "openai",
+            role="mystery",
+        )
+        self.assertEqual(ov["max_tokens"], DEFAULT_MAX_OUTPUT_TOKENS)
+
+    def test_no_role_default(self):
+        ov = self._resolve({"model": "gpt-4o", "model_provider": "openai"}, "openai")
+        self.assertEqual(ov["max_tokens"], DEFAULT_MAX_OUTPUT_TOKENS)
+
+    # --- explicit provider param wins ---
+
+    def test_explicit_param_wins(self):
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai", "max_tokens": 8192},
+            "openai",
+            role="chat",
+        )
+        self.assertEqual(ov["max_tokens"], 8192)
+
+    # --- generic key translation ---
+
+    def test_generic_key_translated_to_openai(self):
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai", "max_output_tokens": 2048},
+            "openai",
+            role="chat",
+        )
+        self.assertEqual(ov["max_tokens"], 2048)
+        self.assertNotIn("max_output_tokens", ov)
+
+    def test_generic_key_translated_to_ollama(self):
+        ov = self._resolve(
+            {
+                "model": "qwen3:0.6b",
+                "model_provider": "ollama",
+                "max_output_tokens": 2048,
+            },
+            "ollama",
+            role="chat",
+        )
+        self.assertEqual(ov["num_predict"], 2048)
+        self.assertNotIn("max_output_tokens", ov)
+
+    def test_stale_param_replaced(self):
+        """A param for the wrong provider is replaced by the correct one."""
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai", "max_new_tokens": 512},
+            "openai",
+            role="chat",
+        )
+        self.assertEqual(ov["max_tokens"], 512)
+        self.assertNotIn("max_new_tokens", ov)
+
+    # --- catalog clamps ---
+
+    def test_output_limit_clamp(self):
+        with _no_catalog(ModelLimits(context=128000, output=16384)):
+            ov = {"model": "gpt-4o", "model_provider": "openai", "max_tokens": 30000}
+            resolve_output_token_limit(ov, "openai", role="chat")
+        self.assertEqual(ov["max_tokens"], 16384)
+
+    def test_output_limit_clamp_not_applied_when_under(self):
+        with _no_catalog(ModelLimits(context=128000, output=16384)):
+            ov = {"model": "gpt-4o", "model_provider": "openai", "max_tokens": 2048}
+            resolve_output_token_limit(ov, "openai", role="chat")
+        self.assertEqual(ov["max_tokens"], 2048)
+
+    def test_total_budget_clamp(self):
+        """Output is bounded by context - estimated input tokens."""
+        # 40_000 chars ~= 10_000 tokens; context 32k -> headroom 22k.
+        # An explicit 30k budget is reduced to the available headroom.
+        with _no_catalog(ModelLimits(context=32768, output=65536)):
+            ov = {
+                "model": "org/model",
+                "model_provider": "huggingface",
+                "max_output_tokens": 30000,
+            }
+            resolve_output_token_limit(
+                ov, "huggingface", role="chat", input_chars=40000
+            )
+        self.assertEqual(ov["max_tokens"], 22768)
+
+    def test_total_budget_clamp_below_role_default(self):
+        """A tight context + large input shrinks even the role default."""
+        with _no_catalog(ModelLimits(context=8192, output=65536)):
+            ov = {"model": "org/model", "model_provider": "huggingface"}
+            resolve_output_token_limit(
+                ov, "huggingface", role="chat", input_chars=30000
+            )
+        # 30k chars ~= 7500 tokens; headroom = 8192 - 7500 = 692.
+        self.assertEqual(ov["max_tokens"], 692)
+
+    def test_no_total_budget_clamp_without_input_chars(self):
+        """Without input_chars only the output-limit clamp applies."""
+        with _no_catalog(ModelLimits(context=8192, output=65536)):
+            ov = {"model": "org/model", "model_provider": "huggingface"}
+            resolve_output_token_limit(ov, "huggingface", role="chat")
+        self.assertEqual(ov["max_tokens"], 4096)
+
+    def test_no_clamp_without_catalog(self):
+        """No catalog info means only the role default applies."""
+        ov = self._resolve(
+            {"model": "gpt-4o", "model_provider": "openai"}, "openai", role="chat"
+        )
+        self.assertEqual(ov["max_tokens"], 4096)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -54,11 +54,18 @@ pytest -m "not localonly"
 ### Package Structure
 ```
 neuroml_mcp/
-├── server/      # FastMCP server
-├── tools/       # Auto-discovered tools
-├── sandbox/     # Sandboxed code execution
-├── utils.py     # Utilities
-└── __init__.py
+├── server/        # FastMCP server
+│   ├── app_lifespan.py
+│   └── main.py
+├── tools/         # Auto-discovered tools
+│   ├── code_tools.py     # Code execution tools
+│   ├── neuroml_tools.py  # NeuroML model tools
+│   ├── web_tools.py      # Web search tools
+│   └── sandbox/           # Sandboxed code execution
+│       ├── docker.py     # Docker sandbox
+│       ├── local.py      # Local subprocess sandbox
+│       └── sandbox.py    # Abstract sandbox base
+└── utils.py
 ```
 
 ### Key Technologies
@@ -84,7 +91,7 @@ neuroml_mcp/
 
 ### File Organization
 - **Header**: All Python files must start with `#!/usr/bin/env python3` shebang
-- **Copyright**: Follow with copyright format: `# Copyright 2025 Ankur Sinha <ankursinha@fedoraproject.org>`
+- **Copyright**: Follow with copyright format: `# Copyright 2026 Ankur Sinha <ankursinha@fedoraproject.org>`
 - **Docstrings**: Use reStructuredText format with parameter and return type documentation
 - **Module structure**: `__init__.py` files should be minimal or empty
 

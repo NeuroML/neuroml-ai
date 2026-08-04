@@ -13,18 +13,12 @@ import logging
 import aiohttp
 import pytest
 import pytest_asyncio
-
 from neuroml_mcp.tools.neuroml_tools import (
     get_models_from_neuromldb_tool,
     get_repositories_from_open_source_brain_tool,
 )
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class MockContext(object):

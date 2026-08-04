@@ -9,9 +9,11 @@
 # changes and it's a pain to keep stashing them, each time pre-commit runs, for
 # example
 #
+#
+VECTOR_STORES_DIR="vector_stores"
 
 ignore () {
-    pushd vector-stores || exit 1
+    pushd "$VECTOR_STORES_DIR" || exit 1
         find . -type f -print -execdir git update-index --assume-unchanged '{}' \;
     popd || exit 1
     echo > "VECTOR_STORES_IGNORED"
@@ -19,7 +21,7 @@ ignore () {
 }
 
 unignore () {
-    pushd vector-stores || exit 1
+    pushd "$VECTOR_STORES_DIR" || exit 1
         find . -type f -print -execdir git update-index --no-assume-unchanged '{}' \;
     popd || exit 1
     rm -f "VECTOR_STORES_IGNORED"

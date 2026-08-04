@@ -9,12 +9,18 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
-from ..llm import split_output_by_section
+from ..llm import (
+    content_to_str,
+    extract_llm_output_content,
+    prompt_value_to_messages,
+    split_output_by_section,
+)
+from ..nodes.abstract import NodeStreamData
 from .base import BaseLLMNode
 
 
@@ -24,6 +30,8 @@ class FallbackConfig(BaseModel):
 
 
 class AnswerGeneral(BaseLLMNode):
+    model_type = "chat"
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
     """Answer general (non-domain) questions using the LLM's training data.
 
     Provides a conversational, user-friendly response. Optionally appends
@@ -34,8 +42,7 @@ class AnswerGeneral(BaseLLMNode):
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        temperature: float = 0.3,
+        llm_models: dict[str, Any],
         memory: bool = False,
         num_history_messages: int = 10,
         fallback_config: FallbackConfig | None = None,
@@ -44,8 +51,7 @@ class AnswerGeneral(BaseLLMNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature for LLM calls
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param memory: Whether to include conversation history in the prompt
         :param num_history_messages: Number of recent messages to include when memory is enabled
         :param fallback_config: Optional config for fallback warning text
@@ -53,8 +59,7 @@ class AnswerGeneral(BaseLLMNode):
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=None,
             memory=memory,
         )
@@ -68,7 +73,7 @@ class AnswerGeneral(BaseLLMNode):
         return {"query": state.query}  # type: ignore
 
     @override
-    def _update_state(self, result: Any, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: Any, state: BaseModel) -> dict[str, Any]:
         """Extract answer, append fallback warning if configured, update messages."""
         answer = ""
 
@@ -78,13 +83,7 @@ class AnswerGeneral(BaseLLMNode):
             if getattr(state, "query_domain", "undefined") != "undefined":
                 answer += f"\n\n{fallback.warning}\n\n"
 
-        content = result.content
-        if isinstance(content, list):
-            content = "".join(
-                block.get("text", "") if isinstance(block, dict) else str(block)
-                for block in content
-            )
-
+        content = content_to_str(result.content)
         thought, answer_text = split_output_by_section(content, "<think>", "</think>")
         answer += answer_text
 
@@ -94,8 +93,40 @@ class AnswerGeneral(BaseLLMNode):
 
         return {"messages": messages, "message_for_user": answer}
 
-    # TODO: may need updating
     @override
     def _get_default_error_result(self) -> AIMessage:
         """Return default result when processing fails."""
         return AIMessage(content="")
+
+    @override
+    def _get_info(self) -> NodeStreamData | None:
+        """Return answer summary."""
+        assert self._last_state_updates is not None
+        result = content_to_str(self._last_state_updates.get("message_for_user", ""))
+        char_count = len(result)
+        return NodeStreamData(
+            heading="General Answer",
+            summary=f"Generated answer ({char_count} characters)"
+            if char_count
+            else "No answer generated",
+            details={"character_count": char_count},
+        )
+
+    @override
+    def _get_debug(self) -> NodeStreamData | None:
+        """Return info + input/output triples."""
+        assert self._last_prompt is not None
+        assert self._last_output is not None
+        info = self._get_info()
+        if not info:
+            return None
+        details = info.details.copy()
+        details.update(
+            {
+                "input_prompt": prompt_value_to_messages(self._last_prompt),
+                "unprocessed_output": extract_llm_output_content(self._last_output),
+            }
+        )
+        return NodeStreamData(
+            heading=info.heading, summary=info.summary, details=details
+        )

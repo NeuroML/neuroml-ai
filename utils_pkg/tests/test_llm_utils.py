@@ -11,7 +11,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import unittest
 
 import pytest
-
 from klea_utils.llm import parse_model_name, split_output_by_section
 
 
