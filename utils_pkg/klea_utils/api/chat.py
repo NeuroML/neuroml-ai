@@ -55,15 +55,8 @@ def create_chat_router() -> APIRouter:
             store.add_message(payload.user_id, payload.chat_id, "user", payload.query)
             store.add_message(payload.user_id, payload.chat_id, "assistant", message)
         except Exception as e:
-            detail = f"{e}\n{traceback.format_exc()}"
-            logger.error(detail)
-            store.add_message(
-                payload.user_id,
-                payload.chat_id,
-                "assistant",
-                f"Error: {e}",
-            )
-            raise HTTPException(status_code=500, detail=detail)
+            logger.error(f"{e}\n{traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=str(e))
 
         return {"result": message}
 
@@ -82,7 +75,6 @@ def create_chat_router() -> APIRouter:
             query = payload.query
             user_id = payload.user_id
             chat_id = payload.chat_id
-            message_stored = False
             try:
                 async for event in graph.run_graph_astream_events(query, thread_id):
                     t = event.get("type")
@@ -94,27 +86,17 @@ def create_chat_router() -> APIRouter:
                             "assistant",
                             event.get("message_for_user", ""),
                         )
-                        message_stored = True
-                    elif t == "error":
-                        store.add_message(
-                            user_id,
-                            chat_id,
-                            "assistant",
-                            f"Error: {event.get('message', 'Unknown error')}",
-                        )
-                        message_stored = True
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as e:
-                detail = f"{e}\n{traceback.format_exc()}"
-                logger.error(detail)
-                if not message_stored:
-                    store.add_message(
-                        user_id,
-                        chat_id,
-                        "assistant",
-                        f"Unexpected error during streaming: {e}",
-                    )
-                error_event = json.dumps({"type": "error", "message": str(e)})
+                logger.error(f"{e}\n{traceback.format_exc()}")
+                error_event = json.dumps(
+                    {
+                        "type": "error",
+                        "message": str(e),
+                        "error_type": type(e).__name__,
+                        "node": "",
+                    }
+                )
                 yield f"data: {error_event}\n\n"
 
         return StreamingResponse(

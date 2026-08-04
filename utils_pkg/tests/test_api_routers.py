@@ -192,4 +192,9 @@ class TestChat:
         data_frames = [ln for ln in lines if ln.startswith("data: ")]
         events = [json.loads(f[6:]) for f in data_frames]
         self.logger.info(f"Got error event: {events[-1]}")
-        assert events[-1] == {"type": "error", "message": "stream broken"}
+        assert events[-1] == {
+            "type": "error",
+            "message": "stream broken",
+            "error_type": "RuntimeError",
+            "node": "",
+        }
