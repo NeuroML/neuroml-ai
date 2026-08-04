@@ -39,7 +39,7 @@ async def stream_events(
         token       {"type": "token", "content": "<chunk>", "node": "<label>"}
         usage       {"type": "usage", "node": "<label>", "data": {...}}
         complete    {"type": "complete", "message_for_user": "<text>"}
-        error       {"type": "error", "message": "<text>"}
+        error       {"type": "error", "message": "<text>", "error_type": "<class>", "node": "<label>"}
 
     This async generator is intended for NiceGUI and TUI frontends.
 
