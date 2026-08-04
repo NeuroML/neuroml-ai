@@ -302,16 +302,16 @@
 │ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Commands ─────────────────────────────────────────────────────────╮
-│ build   Full pipeline: chunk, embed, and write to a vector store.  │
-│ chunk   Chunk and cache documents without writing to a vector      │
-│         store.                                                     │
-│ store   Write cached document chunks to a vector store.            │
+│ build  Full pipeline: chunk, embed, and write to a vector store.   │
+│ chunk  Chunk and cache documents without writing to a vector       │
+│        store.                                                      │
+│ store  Write cached document chunks to a vector store.             │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-vs-create build [OPTIONS] {source_dir}                   
+ Usage: klea-vs-create build [OPTIONS] SOURCE_DIR                     
                                                                       
  Full pipeline: chunk, embed, and write to a vector store.            
                                                                       
@@ -342,34 +342,36 @@
      }                                                                
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      &lt;str&gt;  Directory containing source documents  │
-│                             [required]                             │
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection    -n      &lt;str&gt;  Collection name for the vector   │
-│                                   store                            │
-│                                   [required]                       │
-│ *  --store         -s      &lt;str&gt;  Vector store URI (e.g.           │
-│                                   chroma:/path/to/store)           │
-│                                   [required]                       │
-│    --model         -m      &lt;str&gt;  Embedding model identifier       │
-│                                   [default: ollama:bge-m3:latest]  │
-│    --max-tokens            &lt;int&gt;  Maximum tokens per chunk         │
-│                                   [default: 450]                   │
-│    --metadata-map  -M      &lt;str&gt;  JSON file keyed by source        │
-│                                   filename; each file entry maps   │
-│                                   heading chains to metadata dicts │
-│                                   (with per-file DEFAULT fallback) │
-│    --force         -f             Re-process all files even if     │
-│                                   unchanged                        │
-│    --help                         Show this message and exit.      │
+│ *  --collection    -n      TEXT     Collection name for the vector │
+│                                     store                          │
+│                                     [required]                     │
+│ *  --store         -s      TEXT     Vector store URI (e.g.         │
+│                                     chroma:/path/to/store)         │
+│                                     [required]                     │
+│    --model         -m      TEXT     Embedding model identifier     │
+│                                     [default:                      │
+│                                     ollama:bge-m3:latest]          │
+│    --max-tokens            INTEGER  Maximum tokens per chunk       │
+│                                     [default: 450]                 │
+│    --metadata-map  -M      TEXT     JSON file keyed by source      │
+│                                     filename; each file entry maps │
+│                                     heading chains to metadata     │
+│                                     dicts (with per-file DEFAULT   │
+│                                     fallback)                      │
+│    --force         -f               Re-process all files even if   │
+│                                     unchanged                      │
+│    --help                           Show this message and exit.    │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
 </div>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-vs-create chunk [OPTIONS] {source_dir}                   
+ Usage: klea-vs-create chunk [OPTIONS] SOURCE_DIR                     
                                                                       
  Chunk and cache documents without writing to a vector store.         
                                                                       
@@ -381,22 +383,22 @@
  ``klea-vs-create store --metadata-map``.                             
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      &lt;str&gt;  Directory containing source documents  │
-│                             [required]                             │
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ --max-tokens          &lt;int&gt;  Maximum tokens per chunk              │
-│                              [default: 450]                        │
-│ --force       -f             Re-process all files even if          │
-│                              unchanged                             │
-│ --help                       Show this message and exit.           │
+│ --max-tokens          INTEGER  Maximum tokens per chunk            │
+│                                [default: 450]                      │
+│ --force       -f               Re-process all files even if        │
+│                                unchanged                           │
+│ --help                         Show this message and exit.         │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
 </div>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-vs-create store [OPTIONS] {source_dir}                   
+ Usage: klea-vs-create store [OPTIONS] SOURCE_DIR                     
                                                                       
  Write cached document chunks to a vector store.                      
                                                                       
@@ -409,28 +411,30 @@
  generate a ``metadata-map.template.json``.                           
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      &lt;str&gt;  Directory containing source documents  │
-│                             [required]                             │
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection    -n      &lt;str&gt;  Collection name for the vector   │
-│                                   store                            │
-│                                   [required]                       │
-│ *  --store         -s      &lt;str&gt;  Vector store URI (e.g.           │
-│                                   chroma:/path/to/store)           │
-│                                   [required]                       │
-│    --model         -m      &lt;str&gt;  Embedding model identifier       │
-│                                   [default: ollama:bge-m3:latest]  │
-│    --max-tokens            &lt;int&gt;  Maximum tokens per chunk (for    │
-│                                   files not yet cached)            │
-│                                   [default: 450]                   │
-│    --metadata-map  -M      &lt;str&gt;  JSON file keyed by source        │
-│                                   filename; each file entry maps   │
-│                                   heading chains to metadata dicts │
-│                                   (with per-file DEFAULT fallback) │
-│    --force         -f             Re-process all files even if     │
-│                                   unchanged                        │
-│    --help                         Show this message and exit.      │
+│ *  --collection    -n      TEXT     Collection name for the vector │
+│                                     store                          │
+│                                     [required]                     │
+│ *  --store         -s      TEXT     Vector store URI (e.g.         │
+│                                     chroma:/path/to/store)         │
+│                                     [required]                     │
+│    --model         -m      TEXT     Embedding model identifier     │
+│                                     [default:                      │
+│                                     ollama:bge-m3:latest]          │
+│    --max-tokens            INTEGER  Maximum tokens per chunk (for  │
+│                                     files not yet cached)          │
+│                                     [default: 450]                 │
+│    --metadata-map  -M      TEXT     JSON file keyed by source      │
+│                                     filename; each file entry maps │
+│                                     heading chains to metadata     │
+│                                     dicts (with per-file DEFAULT   │
+│                                     fallback)                      │
+│    --force         -f               Re-process all files even if   │
+│                                     unchanged                      │
+│    --help                           Show this message and exit.    │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
