@@ -64,7 +64,7 @@ def test_get_status_uses_title_and_formats_arguments() -> None:
     status = picker._get_status()
 
     assert status.display == (
-        "**Get models from NeuroML-db**\n"
+        "**Get models from NeuroML-db**\n\n"
         "- `search_query`: `cortical`\n"
         "- `num`: `5`\n"
         "- `download`: `false`"
@@ -78,4 +78,4 @@ def test_get_status_falls_back_to_tool_name() -> None:
 
     status = picker._get_status()
 
-    assert status.display == "**unknown_tool**\n"
+    assert status.display == "**unknown_tool**\n\n"
