@@ -918,27 +918,21 @@ def setup_layout(
                             break
                         elif t == "error":
                             pg_row.delete()
-                            ensure_chat(user_id, chat_id)["messages"].append(
-                                (
-                                    f"Error: {event.get('message', 'Unknown error')}",
-                                    datetime.now().astimezone().strftime("%X"),
-                                    False,
-                                )
+                            ui.notification(
+                                f"Error: {event.get('message', 'Unknown error')}",
+                                type="negative",
+                                timeout=10000,
                             )
-                            _render_chat_area()
                             _is_streaming[0] = False
                             _status_pane.refresh()
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
-                    ensure_chat(user_id, chat_id)["messages"].append(
-                        (
-                            f"Connection error: {e}",
-                            datetime.now().astimezone().strftime("%X"),
-                            False,
-                        )
+                    ui.notification(
+                        f"Connection error: {e}",
+                        type="negative",
+                        timeout=10000,
                     )
-                    _render_chat_area()
                     _is_streaming[0] = False
                     _status_pane.refresh()
 
