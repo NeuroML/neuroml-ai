@@ -12,10 +12,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Annotated, Any
 
 from pydantic import Field
-from typing_extensions import Annotated
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
 
@@ -83,7 +82,7 @@ async def list_files_tool(
     max_results: Annotated[
         int, Field(description="Maximum number of entries to return", ge=1, le=10000)
     ] = 100,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """List files and directories with filtering and metadata.
     Use this tool to explore file system structure and find specific files.
 
@@ -92,8 +91,8 @@ async def list_files_tool(
     the_path = Path(path)
     truncated = "False"
     error = ""
-    files: List[Dict[str, Any]] = []
-    paths: List[Path] = []
+    files: list[dict[str, Any]] = []
+    paths: list[Path] = []
 
     if ".." in path:
         return {
@@ -149,7 +148,7 @@ async def run_python_code_tool(
             min_length=1,
         ),
     ],
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute Python code in a sandboxed environment.
 
     Use this tool to test code snippets, generate models, and perform calculations.

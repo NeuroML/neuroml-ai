@@ -12,7 +12,7 @@ import asyncio
 import logging
 from dataclasses import asdict
 from textwrap import dedent
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 from cachetools import TTLCache
@@ -184,7 +184,7 @@ def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
 
 
 @tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"testing", "neuroml"}))
-async def run_lems_simulation(lems_file: str) -> Dict[str, Any]:
+async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
     """Execute a LEMS simulation using pynml and jLEMS simulator.
 
     Use this tool to run NeuroML simulation files and generate results.
