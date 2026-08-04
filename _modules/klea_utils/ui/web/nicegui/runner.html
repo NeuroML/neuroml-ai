@@ -1200,27 +1200,21 @@
                             <span class="k">break</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
                             <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                            <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                                <span class="p">(</span>
-                                    <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                                    <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">),</span>
-                                    <span class="kc">False</span><span class="p">,</span>
-                                <span class="p">)</span>
+                            <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                                <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
                             <span class="p">)</span>
-                            <span class="n">_render_chat_area</span><span class="p">()</span>
                             <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                             <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                             <span class="k">break</span>
                 <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">RequestError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                    <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                            <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">),</span>
-                            <span class="kc">False</span><span class="p">,</span>
-                        <span class="p">)</span>
+                    <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                        <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
                     <span class="p">)</span>
-                    <span class="n">_render_chat_area</span><span class="p">()</span>
                     <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                     <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 

@@ -358,7 +358,8 @@
                     <span class="k">break</span>
 
         <span class="n">output</span> <span class="o">=</span> <span class="n">error_msg</span> <span class="ow">or</span> <span class="n">full_response</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> (AI) &gt;&gt;&gt; </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;(ERROR)&quot;</span> <span class="k">if</span> <span class="n">error_msg</span> <span class="k">else</span> <span class="s2">&quot;(AI)&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">40</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">single_query</span><span class="p">:</span>
