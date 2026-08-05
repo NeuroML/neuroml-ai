@@ -311,6 +311,18 @@ def get_token_limit_param(provider: str) -> str:
     ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)
     and other OpenAI-compatible providers all use ``max_tokens``.
 
+    .. note:: Known benign warning
+
+       When Klea resolves ``max_tokens`` for HuggingFace, the inner
+       ``HuggingFaceEndpoint`` constructed by ``ChatHuggingFace.from_model_id``
+       (which declares ``max_new_tokens``, not ``max_tokens``) logs
+       ``WARNING! max_tokens is not default parameter`` and shuffles it
+       into ``model_kwargs``.  This is a false positive: the limit is still
+       delivered correctly as ``max_tokens`` to ``InferenceClient.chat_completion``
+       via the outer ``ChatHuggingFace``, which is the parameter the
+       HuggingFace Inference API actually accepts.  Do not "fix" it by
+       switching to ``max_new_tokens`` here.
+
     :param provider: Klea provider id (``huggingface``, ``ollama``, ...)
     :returns: The token parameter name to send in the invoke config.
     """
