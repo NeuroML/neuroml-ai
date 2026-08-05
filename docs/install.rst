@@ -163,3 +163,39 @@ Model names are prefixed according to their provider:
 Guard models follow the same format.  The guard node is optional --
 set ``KLEA_RAG_GUARD_MODEL`` to an empty value to skip safety
 screening entirely.
+
+Logging
+-------
+
+Each Klea application writes its logs to a rotating file (1 MB per file,
+5 backups) inside its platform user-data directory:
+
+* Linux: ``~/.local/share/<app>/<app>.log``
+* macOS: ``~/Library/Application Support/<app>/<app>.log``
+* Windows: ``%LOCALAPPDATA%\<app>\<app>.log``
+
+The file captures DEBUG output for the Klea packages and third-party
+libraries, while the console shows INFO for Klea and INFO-or-above for
+third-party libraries.  Each CLI uses its own ``<app>`` name:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Application
+     - Log file name
+   * - ``klea-rag`` (RAG server / graph)
+     - ``klea-rag/klea-rag.log``
+   * - ``klea-rag`` TUI client
+     - ``klea-rag-tui/klea-rag-tui.log``
+   * - ``klea-rag`` web client
+     - ``klea-rag-web/klea-rag-web.log``
+   * - ``klea-code`` (Code server / graph)
+     - ``klea-code/klea-code.log``
+   * - ``klea-code`` TUI client
+     - ``klea-code-tui/klea-code-tui.log``
+   * - ``klea-code`` web client
+     - ``klea-code-web/klea-code-web.log``
+   * - ``nml-mcp`` (MCP server)
+     - ``nml_mcp/nml_mcp.log``
+
+``klea-vs-create`` logs to the console only.
