@@ -37,13 +37,15 @@ class StepSchema(BaseModel):
     description: str = ""
     suggested_tools: list[str] = Field(default_factory=list)
     depends_on: list[int] = []
-    status: Literal["pending", "done", "failed"] = Field(default="pending")
+    status: Literal["pending", "done", "failed"] = Field(
+        default="pending", validate_default=True
+    )
 
 
 class PlanSchema(BaseModel):
     step_list: list[StepSchema] = Field(default_factory=list)
     status: Literal["not_started", "in_progress", "completed", "failed", "aborted"] = (
-        Field(default="not_started")
+        Field(default="not_started", validate_default=True)
     )
     current_step_index: int = 0
 

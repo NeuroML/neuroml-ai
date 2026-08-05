@@ -27,7 +27,7 @@ from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
 from platformdirs import PlatformDirs
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
@@ -276,7 +276,10 @@ class BaseLangGraph(ABC):
 
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(list[Literal[tuple(all_domains)]], ["undefined"]),
+                query_domains=(
+                    list[Literal[tuple(all_domains)]],
+                    Field(default=["undefined"], validate_default=True),
+                ),
             )
         else:
             self.logger.warning("No vector stores configured.")
