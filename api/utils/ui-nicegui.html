@@ -226,6 +226,8 @@
 <li class="toctree-l3"><a class="reference internal" href="graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l3 current has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -285,9 +287,20 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-klea_utils.ui.web.nicegui.runner">
-<span id="ui-nicegui"></span><h1>UI — NiceGUI<a class="headerlink" href="#module-klea_utils.ui.web.nicegui.runner" title="Link to this heading">¶</a></h1>
-<p>NiceGUI runner for Klea web interfaces.</p>
+          <section id="module-klea_utils.ui.web.nicegui.app">
+<span id="ui-nicegui"></span><h1>UI — NiceGUI<a class="headerlink" href="#module-klea_utils.ui.web.nicegui.app" title="Link to this heading">¶</a></h1>
+<p>NiceGUI entry point for Klea web interfaces.</p>
+<p>This file is invoked directly to start the NiceGUI web interface.
+It reads title / subtitle / server URL from <code class="docutils literal notranslate"><span class="pre">sys.argv</span></code>
+and delegates to <a class="reference internal" href="#klea_utils.ui.web.nicegui.runner.run_nicegui_app" title="klea_utils.ui.web.nicegui.runner.run_nicegui_app"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.ui.web.nicegui.runner.run_nicegui_app()</span></code></a>.</p>
+<p>Usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">app</span><span class="o">.</span><span class="n">py</span> <span class="o">&lt;</span><span class="n">title</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">subtitle</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">server_url</span><span class="o">&gt;</span> <span class="p">[</span><span class="o">--</span><span class="n">debug</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>File: klea_utils/ui/web/nicegui/app.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<p id="module-klea_utils.ui.web.nicegui.runner">NiceGUI runner for Klea web interfaces.</p>
 <p>This module implements the main UI logic for the NiceGUI web interface,
 including the 3-column layout, chat functionality, and inspector panel.</p>
 <p>File: klea_utils/ui/web/nicegui/runner.py</p>

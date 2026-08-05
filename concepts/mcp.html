@@ -226,6 +226,8 @@
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -287,11 +289,27 @@
         <article role="main" id="furo-main-content">
           <section id="mcp-server-support">
 <h1>MCP Server Support<a class="headerlink" href="#mcp-server-support" title="Link to this heading">¶</a></h1>
-<p>Klea uses <a class="reference external" href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a> servers to give its LLMs access to
-external tools (validation, file handling, model lookup, code execution,
-etc.).  A domain in a RAG or code config can declare one or more MCP
-servers; the tools they expose are fetched at startup and made available
-to the graph’s tool picker.</p>
+<section id="what-is-mcp">
+<h2>What is MCP?<a class="headerlink" href="#what-is-mcp" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a> is an open standard that lets LLMs
+interact with external tools and data through a structured interface.  An
+<strong>MCP server</strong> exposes <em>tools</em>: named, schema-validated operations (e.g.
+“search the model database”, “validate a NeuroML file”, “run code”).  A
+<strong>tool call</strong> is what happens when the model decides to use one of those
+tools: the client asks the server to list its tools (<code class="docutils literal notranslate"><span class="pre">tools/list</span></code>), the
+model picks the right one and supplies arguments, the client invokes it
+(<code class="docutils literal notranslate"><span class="pre">tools/call</span></code>), and the tool result is returned to the model as context
+for the next step.</p>
+</section>
+<section id="how-klea-uses-mcp">
+<h2>How Klea uses MCP<a class="headerlink" href="#how-klea-uses-mcp" title="Link to this heading">¶</a></h2>
+<p>Klea acts as the MCP client: it uses MCP servers to give its LLMs access
+to external tools (validation, file handling, model lookup, code
+execution, etc.).  A domain in a RAG or code config can declare one or
+more MCP servers; the tools they expose are fetched at startup and made
+available to the graph’s tool picker, which decides which tools to call
+for a given query.</p>
+</section>
 <section id="configuring-mcp-servers">
 <h2>Configuring MCP servers<a class="headerlink" href="#configuring-mcp-servers" title="Link to this heading">¶</a></h2>
 <p>Each <a class="reference internal" href="rag.html"><span class="doc">domain</span></a> lists the MCP servers it can use under
@@ -521,6 +539,8 @@ those prefixes vary between deployments.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">MCP Server Support</a><ul>
+<li><a class="reference internal" href="#what-is-mcp">What is MCP?</a></li>
+<li><a class="reference internal" href="#how-klea-uses-mcp">How Klea uses MCP</a></li>
 <li><a class="reference internal" href="#configuring-mcp-servers">Configuring MCP servers</a></li>
 <li><a class="reference internal" href="#how-klea-uses-the-tools">How Klea uses the tools</a></li>
 <li><a class="reference internal" href="#writing-tools-for-klea">Writing tools for Klea</a></li>

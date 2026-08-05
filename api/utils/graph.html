@@ -226,6 +226,8 @@
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -459,6 +461,39 @@ flow through.</p>
 
 </dd></dl>
 
+<section id="module-klea_utils.graph.schemas">
+<span id="shared-state-schemas"></span><h2>Shared state schemas<a class="headerlink" href="#module-klea_utils.graph.schemas" title="Link to this heading">¶</a></h2>
+<p>Schemas shared by LangGraph orchestrators.</p>
+<p>File: klea_utils/graph/schemas.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="klea_utils.graph.schemas.TokenUsage">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.graph.schemas.</span></span><span class="sig-name descname"><span class="pre">TokenUsage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/graph/schemas.html#TokenUsage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.schemas.TokenUsage" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Token usage accumulated across the nodes in a graph run.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.graph.schemas.TokenUsage.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#klea_utils.graph.schemas.TokenUsage.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-klea_utils.graph.reducers">
+<span id="reducers"></span><h2>Reducers<a class="headerlink" href="#module-klea_utils.graph.reducers" title="Link to this heading">¶</a></h2>
+<p>Reducers shared by LangGraph orchestrators.</p>
+<p>File: klea_utils/graph/reducers.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.graph.reducers.add_token_usage">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.graph.reducers.</span></span><span class="sig-name descname"><span class="pre">add_token_usage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#klea_utils.graph.schemas.TokenUsage" title="klea_utils.graph.schemas.TokenUsage"><span class="pre">TokenUsage</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#klea_utils.graph.schemas.TokenUsage" title="klea_utils.graph.schemas.TokenUsage"><span class="pre">TokenUsage</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.graph.schemas.TokenUsage" title="klea_utils.graph.schemas.TokenUsage"><span class="pre">TokenUsage</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/graph/reducers.html#add_token_usage"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.reducers.add_token_usage" title="Link to this definition">¶</a></dt>
+<dd><p>Add token usage updates from sequential or concurrent graph nodes.</p>
+</dd></dl>
+
+</section>
 </section>
 
         </article>
@@ -528,6 +563,17 @@ flow through.</p>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_invoke_state()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_stream()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.setup"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.setup()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-klea_utils.graph.schemas">Shared state schemas</a><ul>
+<li><a class="reference internal" href="#klea_utils.graph.schemas.TokenUsage"><code class="docutils literal notranslate"><span class="pre">TokenUsage</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.graph.schemas.TokenUsage.model_config"><code class="docutils literal notranslate"><span class="pre">TokenUsage.model_config</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-klea_utils.graph.reducers">Reducers</a><ul>
+<li><a class="reference internal" href="#klea_utils.graph.reducers.add_token_usage"><code class="docutils literal notranslate"><span class="pre">add_token_usage()</span></code></a></li>
 </ul>
 </li>
 </ul>

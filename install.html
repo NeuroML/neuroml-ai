@@ -226,6 +226,8 @@
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -472,6 +474,52 @@ set <code class="docutils literal notranslate"><span class="pre">KLEA_RAG_GUARD_
 screening entirely.</p>
 </section>
 </section>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">¶</a></h2>
+<p>Each Klea application writes its logs to a rotating file (1 MB per file,
+5 backups) inside its platform user-data directory:</p>
+<ul class="simple">
+<li><p>Linux: <code class="docutils literal notranslate"><span class="pre">~/.local/share/&lt;app&gt;/&lt;app&gt;.log</span></code></p></li>
+<li><p>macOS: <code class="docutils literal notranslate"><span class="pre">~/Library/Application</span> <span class="pre">Support/&lt;app&gt;/&lt;app&gt;.log</span></code></p></li>
+<li><p>Windows: <code class="docutils literal notranslate"><span class="pre">%LOCALAPPDATA%\&lt;app&gt;\&lt;app&gt;.log</span></code></p></li>
+</ul>
+<p>The file captures DEBUG output for the Klea packages and third-party
+libraries, while the console shows INFO for Klea and INFO-or-above for
+third-party libraries.  Each CLI uses its own <code class="docutils literal notranslate"><span class="pre">&lt;app&gt;</span></code> name:</p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Application</p></th>
+<th class="head"><p>Log file name</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea-rag</span></code> (RAG server / graph)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-rag/klea-rag.log</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea-rag</span></code> TUI client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-rag-tui/klea-rag-tui.log</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea-rag</span></code> web client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-rag-web/klea-rag-web.log</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> (Code server / graph)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-code/klea-code.log</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> TUI client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-code-tui/klea-code-tui.log</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> web client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-code-web/klea-code-web.log</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nml-mcp</span></code> (MCP server)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">nml_mcp/nml_mcp.log</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">klea-vs-create</span></code> logs to the console only.</p>
+</section>
 </section>
 
         </article>
@@ -540,6 +588,7 @@ screening entirely.</p>
 <li><a class="reference internal" href="#choosing-models">Choosing models</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#logging">Logging</a></li>
 </ul>
 </li>
 </ul>
