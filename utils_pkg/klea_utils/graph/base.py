@@ -239,9 +239,10 @@ class BaseLangGraph(ABC):
                 if "dummy" in t.name:
                     continue
                 # tools will be prefixed with server names
-                if num_servers > 1:
-                    if not any(t.name.startswith(s + "_") for s in server_names):
-                        continue
+                if num_servers > 1 and not any(
+                    t.name.startswith(s + "_") for s in server_names
+                ):
+                    continue
                 # otherwise, there's only one server
                 ctr += 1
                 tool_description = dedent(f"""
@@ -265,6 +266,7 @@ class BaseLangGraph(ABC):
                     meta=t.meta,
                 )
             self.tools_info[domain] = domain_tools_info
+        self.logger.debug(f"{self.tools_info = }")
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
