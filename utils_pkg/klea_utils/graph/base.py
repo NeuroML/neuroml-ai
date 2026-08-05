@@ -276,7 +276,7 @@ class BaseLangGraph(ABC):
 
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(list[Literal[tuple(all_domains)]], "undefined"),
+                query_domains=(list[Literal[tuple(all_domains)]], ["undefined"]),
             )
         else:
             self.logger.warning("No vector stores configured.")
