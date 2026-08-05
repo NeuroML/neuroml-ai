@@ -719,10 +719,14 @@ def setup_layout(
                             )
                     ui.space()
                     with ui.element():
-                        ui.button(
-                            icon="settings", on_click=lambda: _model_config_dialog()
-                        ).props("flat dense round color=grey-9").classes("text-sm")
-                        ui.tooltip("Choose models")
+                        with (
+                            ui.button(
+                                icon="settings", on_click=lambda: _model_config_dialog()
+                            )
+                            .props("flat dense round color=grey-9")
+                            .classes("text-sm")
+                        ):
+                            ui.tooltip("Choose models")
                         has_entries = bool(current_chat.get("inspector_entries"))
                         btn = (
                             ui.button(
@@ -738,7 +742,8 @@ def setup_layout(
                         )
                         if _is_streaming[0] or not has_entries:
                             btn.props("disabled")
-                        ui.tooltip("Inspector available after query")
+                        with btn:
+                            ui.tooltip("Inspector available after query")
                 model_info = current_chat.get("model_info", {})
                 if model_info:
                     tooltip_parts: list[str] = []
