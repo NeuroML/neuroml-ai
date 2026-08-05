@@ -308,7 +308,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tool</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">create_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">create_model</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
@@ -559,7 +559,10 @@
 
             <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span> <span class="o">=</span> <span class="n">create_model</span><span class="p">(</span>
                 <span class="s2">&quot;QueryDomainSchema&quot;</span><span class="p">,</span>
-                <span class="n">query_domains</span><span class="o">=</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">all_domains</span><span class="p">)]],</span> <span class="s2">&quot;undefined&quot;</span><span class="p">),</span>
+                <span class="n">query_domains</span><span class="o">=</span><span class="p">(</span>
+                    <span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">all_domains</span><span class="p">)]],</span>
+                    <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;undefined&quot;</span><span class="p">],</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="p">),</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No vector stores configured.&quot;</span><span class="p">)</span>
