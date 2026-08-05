@@ -16,7 +16,6 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from textwrap import dedent
 from typing import Any, Literal, final
 
 from fastmcp import Client
@@ -35,6 +34,7 @@ from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
 from klea_utils.stores.config import VectorStoresConfig
 from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.tools import build_tool_description, clean_tool_meta
 
 # Per-request context variable carrying per-session model overrides (api_key,
 # model, provider, etc.).  Set by the API layer before graph.ainvoke() and
@@ -233,7 +233,6 @@ class BaseLangGraph(ABC):
                 num_servers += len(list(config.mcpServers.keys()))
 
         for domain, server_names in domain_servers.items():
-            ctr = 0
             domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
                 if "dummy" in t.name:
@@ -244,26 +243,14 @@ class BaseLangGraph(ABC):
                 ):
                     continue
                 # otherwise, there's only one server
-                ctr += 1
-                tool_description = dedent(f"""
-                    ## {ctr}.  {t.name}
-
-                    ### Description
-
-                    {t.description}
-
-                    """)
-                if t.inputSchema:
-                    tool_description += dedent(f"""
-                        ### Parameters
-
-                        {t.inputSchema.get("properties")}
-
-                        """)
+                # Klea expects MCP tools to follow the docstring-first
+                # convention (summary + Use when / Do not use for bullets +
+                # one example; params via Args:), see build_tool_description
+                # and docs/concepts/mcp.rst.
                 domain_tools_info[t.name] = ToolInfo(
                     title=t.title,
-                    description=tool_description,
-                    meta=t.meta,
+                    description=build_tool_description(t),
+                    meta=clean_tool_meta(t.meta),
                 )
             self.tools_info[domain] = domain_tools_info
         self.logger.debug(f"{self.tools_info = }")

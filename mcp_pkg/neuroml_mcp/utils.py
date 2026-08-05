@@ -45,7 +45,21 @@ def register_tools(mcp, modules: list):
 
                     kwargs: dict[str, Any] = {}
 
-                    kwargs["description"] = metadata.description or fn.__doc__
+                    # Only pass an explicit description when ToolInfo
+                    # provides one.  Otherwise let fastmcp derive the
+                    # LLM-facing description from the docstring's opening
+                    # text block (klea's docstring-first convention).
+                    # Passing the raw docstring here would dump the whole
+                    # Args/Returns prose into the tool description,
+                    # duplicating parameter text that the client also shows
+                    # from the schema.
+                    #
+                    # Docstring conventions (summary + Use when / Do not
+                    # use for bullets + one example, ~100-250 tokens) are
+                    # documented in docs/concepts/mcp.rst, "Tool
+                    # description length and style".
+                    if metadata.description is not None:
+                        kwargs["description"] = metadata.description
                     if metadata.title is not None:
                         kwargs["title"] = metadata.title
                     if metadata.tags is not None:
