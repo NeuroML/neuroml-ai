@@ -195,6 +195,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../concepts/rag.html">RAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/mcp.html">MCP Server Support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
@@ -619,6 +620,18 @@
 <span class="sd">    output tokens: Ollama uses ``num_predict``, while HuggingFace&#39;s</span>
 <span class="sd">    ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)</span>
 <span class="sd">    and other OpenAI-compatible providers all use ``max_tokens``.</span>
+
+<span class="sd">    .. note:: Known benign warning</span>
+
+<span class="sd">       When Klea resolves ``max_tokens`` for HuggingFace, the inner</span>
+<span class="sd">       ``HuggingFaceEndpoint`` constructed by ``ChatHuggingFace.from_model_id``</span>
+<span class="sd">       (which declares ``max_new_tokens``, not ``max_tokens``) logs</span>
+<span class="sd">       ``WARNING! max_tokens is not default parameter`` and shuffles it</span>
+<span class="sd">       into ``model_kwargs``.  This is a false positive: the limit is still</span>
+<span class="sd">       delivered correctly as ``max_tokens`` to ``InferenceClient.chat_completion``</span>
+<span class="sd">       via the outer ``ChatHuggingFace``, which is the parameter the</span>
+<span class="sd">       HuggingFace Inference API actually accepts.  Do not &quot;fix&quot; it by</span>
+<span class="sd">       switching to ``max_new_tokens`` here.</span>
 
 <span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...)</span>
 <span class="sd">    :returns: The token parameter name to send in the invoke config.</span>

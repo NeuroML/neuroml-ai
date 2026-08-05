@@ -196,6 +196,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../concepts/rag.html">RAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/mcp.html">MCP Server Support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
@@ -291,6 +292,38 @@
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.tools.build_tool_description">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.tools.</span></span><span class="sig-name descname"><span class="pre">build_tool_description</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">mcp.types.Tool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/tools.html#build_tool_description"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.tools.build_tool_description" title="Link to this definition">¶</a></dt>
+<dd><p>Build the compact LLM-facing description for an MCP tool.</p>
+<p>Used to populate <code class="xref py py-class docutils literal notranslate"><span class="pre">klea_utils.mcp.schemas.ToolInfo.description</span></code>
+so the tool picker’s prompt stays small as more tools are added.</p>
+<p>Klea expects MCP tool descriptions to follow the <em>docstring-first</em>
+convention (see <code class="docutils literal notranslate"><span class="pre">docs/concepts/mcp.rst</span></code>, “Tool description length and
+style”): the LLM-facing description is the opening text block of the
+function docstring, written as a one-sentence summary followed by
+“Use when:” / “Do not use for:” bullet sections and a single example
+line, bounded to roughly 100-250 tokens.  Anthropic recommends at
+least 3-4 sentences covering what a tool does and when it should (and
+should not) be used; opencode keeps its tool descriptions to roughly
+100-600 tokens with a one-line summary first.</p>
+<p>Parameter descriptions are given in a Google-style <code class="docutils literal notranslate"><span class="pre">Args:</span></code> section
+that fastmcp parses into the schema, so they must not be repeated in
+the description.  MCP servers must not set the tool description to the
+raw full docstring (see <code class="docutils literal notranslate"><span class="pre">neuroml_mcp.utils.register_tools</span></code>),
+otherwise the prompt carries duplicated <code class="docutils literal notranslate"><span class="pre">Args:</span></code>/<code class="docutils literal notranslate"><span class="pre">Returns:</span></code> prose
+in both the description and the compact parameter list built here.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.tools.clean_tool_meta">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.tools.</span></span><span class="sig-name descname"><span class="pre">clean_tool_meta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/tools.html#clean_tool_meta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.tools.clean_tool_meta" title="Link to this definition">¶</a></dt>
+<dd><p>Drop developer tags from tool metadata before storing it.</p>
+<p>FastMCP populates <code class="docutils literal notranslate"><span class="pre">meta</span></code> with <code class="docutils literal notranslate"><span class="pre">{&quot;fastmcp&quot;:</span> <span class="pre">{&quot;tags&quot;:</span> <span class="pre">[...]}}</span></code>; the
+tags are mostly developer labels (e.g. <code class="docutils literal notranslate"><span class="pre">testing</span></code>) that are not used
+by the tool picker, so they are stripped to keep stored metadata lean.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.tools.textualize_tool_results">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.tools.</span></span><span class="sig-name descname"><span class="pre">textualize_tool_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tool_results</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">fastmcp.client.client.CallToolResult</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/tools.html#textualize_tool_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.tools.textualize_tool_results" title="Link to this definition">¶</a></dt>
 <dd><p>Format tool call results as LLM-ready text for use in prompt context.</p>
@@ -364,6 +397,8 @@ separation from surrounding prompt text.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Tool formatting</a><ul>
+<li><a class="reference internal" href="#klea_utils.tools.build_tool_description"><code class="docutils literal notranslate"><span class="pre">build_tool_description()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.tools.clean_tool_meta"><code class="docutils literal notranslate"><span class="pre">clean_tool_meta()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.tools.textualize_tool_results"><code class="docutils literal notranslate"><span class="pre">textualize_tool_results()</span></code></a></li>
 </ul>
 </li>

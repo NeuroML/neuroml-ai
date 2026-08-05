@@ -195,6 +195,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../../../install.html">Installation</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../concepts/rag.html">RAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../concepts/mcp.html">MCP Server Support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../../glossary.html">Glossary</a></li>
@@ -1001,10 +1002,14 @@
                             <span class="p">)</span>
                     <span class="n">ui</span><span class="o">.</span><span class="n">space</span><span class="p">()</span>
                     <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">():</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
-                            <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">_model_config_dialog</span><span class="p">()</span>
-                        <span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Choose models&quot;</span><span class="p">)</span>
+                        <span class="k">with</span> <span class="p">(</span>
+                            <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
+                                <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">_model_config_dialog</span><span class="p">()</span>
+                            <span class="p">)</span>
+                            <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
+                            <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
+                        <span class="p">):</span>
+                            <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Choose models&quot;</span><span class="p">)</span>
                         <span class="n">has_entries</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">))</span>
                         <span class="n">btn</span> <span class="o">=</span> <span class="p">(</span>
                             <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
@@ -1020,7 +1025,8 @@
                         <span class="p">)</span>
                         <span class="k">if</span> <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">has_entries</span><span class="p">:</span>
                             <span class="n">btn</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;disabled&quot;</span><span class="p">)</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Inspector available after query&quot;</span><span class="p">)</span>
+                        <span class="k">with</span> <span class="n">btn</span><span class="p">:</span>
+                            <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Inspector available after query&quot;</span><span class="p">)</span>
                 <span class="n">model_info</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="p">{})</span>
                 <span class="k">if</span> <span class="n">model_info</span><span class="p">:</span>
                     <span class="n">tooltip_parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>

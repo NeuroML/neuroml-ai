@@ -196,6 +196,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../concepts/rag.html">RAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/mcp.html">MCP Server Support</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../../glossary.html">Glossary</a></li>
@@ -565,6 +566,19 @@ top of the returned set since those are consumed by
 output tokens: Ollama uses <code class="docutils literal notranslate"><span class="pre">num_predict</span></code>, while HuggingFace’s
 <code class="docutils literal notranslate"><span class="pre">ChatHuggingFace</span></code> (which internally maps it to <code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code>)
 and other OpenAI-compatible providers all use <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Known benign warning</p>
+<p>When Klea resolves <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code> for HuggingFace, the inner
+<code class="docutils literal notranslate"><span class="pre">HuggingFaceEndpoint</span></code> constructed by <code class="docutils literal notranslate"><span class="pre">ChatHuggingFace.from_model_id</span></code>
+(which declares <code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code>, not <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>) logs
+<code class="docutils literal notranslate"><span class="pre">WARNING!</span> <span class="pre">max_tokens</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">default</span> <span class="pre">parameter</span></code> and shuffles it
+into <code class="docutils literal notranslate"><span class="pre">model_kwargs</span></code>.  This is a false positive: the limit is still
+delivered correctly as <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code> to <code class="docutils literal notranslate"><span class="pre">InferenceClient.chat_completion</span></code>
+via the outer <code class="docutils literal notranslate"><span class="pre">ChatHuggingFace</span></code>, which is the parameter the
+HuggingFace Inference API actually accepts.  Do not “fix” it by
+switching to <code class="docutils literal notranslate"><span class="pre">max_new_tokens</span></code> here.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>provider</strong> – Klea provider id (<code class="docutils literal notranslate"><span class="pre">huggingface</span></code>, <code class="docutils literal notranslate"><span class="pre">ollama</span></code>, …)</p>
