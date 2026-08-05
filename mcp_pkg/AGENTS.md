@@ -77,8 +77,20 @@ neuroml_mcp/
 ### Tool Development
 - Tools must be functions ending with `_tool` suffix
 - Use `@context.require()` decorator for dependencies
-- Include comprehensive docstrings with parameter types and examples
 - Return structured data (dicts, Pydantic models) rather than raw strings
+- **Docstring-first convention (Klea's expectation):** the tool's LLM-facing
+  description is the docstring's *opening text block*, written as a
+  one-sentence summary, a "Use this tool to ..." sentence, "Use when:" /
+  "Do not use for:" bullet sections, and one example line (target ~100-250
+  tokens). Parameter descriptions go in a Google-style `Args:` section,
+  which fastmcp parses into the input schema. Do NOT include long prose
+  sections (template structure, next steps, error handling, etc.) or an
+  `Args:` dump in the description: Klea's tool picker shows the opening
+  block as the description and the `Args:`-derived schema as compact
+  parameter lines, so duplicated prose just wastes prompt tokens.
+  Rationale and sources (Anthropic, OpenAI, MCP spec, opencode) plus a
+  reusable template: `docs/concepts/mcp.rst` ("Tool description length and
+  style").
 
 ### Sandbox Implementation
 - Inherit from `AsyncSandbox` abstract base class
