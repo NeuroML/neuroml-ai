@@ -16,7 +16,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from klea_utils.cli.parser import make_parser
+from klea_utils.ui.web.nicegui.parser import make_parser
 from klea_utils.ui.web.nicegui.runner import run_nicegui_app
 
 # Use the multiprocessing-safe guard so that NiceGUI's file-watch reload

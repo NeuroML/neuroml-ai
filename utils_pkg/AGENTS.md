@@ -55,8 +55,6 @@ klea_utils/
 │   ├── sessions.py # chat session CRUD (list, rename, delete)
 │   ├── sse.py      # SSE streaming client (async gen for NiceGUI/TUI, sync for Streamlit)
 │   └── utils.py    # URL validation, API readiness check
-├── cli/            # Shared CLI infrastructure
-│   └── parser.py   # make_parser() -- standard argparse for all frontends
 ├── errors.py       # Custom exception classes
 ├── graph/          # LangGraph orchestrator base
 │   └── base.py     # BaseLangGraph abstract class (setup, run, compile template)
@@ -84,7 +82,8 @@ klea_utils/
 │   ├── tui/        # Textual/TUI chat client (repl.py)
 │   ├── vs_create.py # CLI for vector store creation (klea-vs-create)
 │   └── web/        # Web frontends
-│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config)
+│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config;
+│       │             #   parser.py -- argparse for the app.py entry point)
 │       └── streamlit/ # Streamlit web UI
 ```
 

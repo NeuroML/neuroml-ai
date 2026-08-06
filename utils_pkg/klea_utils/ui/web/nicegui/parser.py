@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """
-Shared CLI argument parser for Klea frontend entry points.
+Argparse parser for the Klea NiceGUI frontend entry point.
 
-Provides a standard :mod:`argparse` parser so that all frontends
-(nicegui, streamlit, textual, etc.) handle the same set of
-positional arguments and optional flags in the same way.  Each
-entry point simply calls :func:`make_parser().parse_args()` and
-picks only the arguments it needs; unrecognised options are
-silently ignored (they are never passed by the Typer CLI commands).
+Provides a standard :mod:`argparse` parser for the arguments passed by
+the Typer ``web`` command when it launches ``app.py``.  The entry point
+simply calls :func:`make_parser().parse_args()` and picks only the
+arguments it needs.
 
 Usage::
 
-    from klea_utils.cli.parser import make_parser
+    from klea_utils.ui.web.nicegui.parser import make_parser
 
     args = make_parser("My frontend").parse_args()
     run_app(
@@ -21,7 +19,7 @@ Usage::
         debug=args.debug,
     )
 
-File: klea_utils/cli/parser.py
+File: klea_utils/ui/web/nicegui/parser.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
