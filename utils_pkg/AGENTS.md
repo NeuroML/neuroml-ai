@@ -44,7 +44,6 @@ pytest -v
 ### Package Structure
 ```
 klea_utils/
-├── api.py          # Legacy API utilities (validate_url, check_api_is_ready)
 ├── api/            # FastAPI app factory and endpoint routers
 │   ├── app.py      # make_app() -- FastAPI factory with lifespan (graph + session store)
 │   ├── chat.py     # /query/stream SSE endpoint for streaming graph execution
