@@ -15,6 +15,7 @@ from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
     stop_after_attempt,
+    stop_after_delay,
     wait_random_exponential,
 )
 
@@ -28,15 +29,24 @@ def validate_url(value: str) -> str:
     return value
 
 
-def _make_retryer(attempts: int) -> AsyncRetrying:
+def _make_retryer(attempts: int | None = None, timeout: float = 180.0) -> AsyncRetrying:
     """Create an ``AsyncRetrying`` that retries transient API call errors.
 
-    :param attempts: Maximum number of probe attempts before giving up
+    :param attempts: If set, bound the number of probe attempts.  Takes
+        precedence over *timeout* (useful for fast single-shot probes).
+    :param timeout: Total wall-clock seconds to keep probing when
+        *attempts* is unset.  Generous by default so a server that is slow
+        to initialize (MCP servers, embedding model downloads) is not given
+        up on prematurely.
     :returns: A configured :class:`tenacity.AsyncRetrying` instance
     """
+    if attempts is not None:
+        stop = stop_after_attempt(attempts)
+    else:
+        stop = stop_after_delay(timeout)
     return AsyncRetrying(
         wait=wait_random_exponential(multiplier=1, max=10),
-        stop=stop_after_attempt(attempts),
+        stop=stop,
         retry=retry_if_exception_type(
             (
                 httpx.ConnectError,
@@ -57,11 +67,16 @@ async def _get_ready(url: str) -> dict:
         return response.json()
 
 
-async def check_api_is_ready(url: str, attempts: int = 10):
+async def check_api_is_ready(
+    url: str, attempts: int | None = None, timeout: float = 180.0
+):
     """Exponentially back off checking that the API is ready.
 
     :param url: Health check endpoint URL
-    :param attempts: Maximum number of probe attempts before giving up
+    :param attempts: If set, maximum number of probe attempts (overrides
+        *timeout*)
+    :param timeout: Total wall-clock seconds to keep probing when
+        *attempts* is unset
     """
-    retryer = _make_retryer(attempts)
+    retryer = _make_retryer(attempts, timeout)
     return await retryer(_get_ready, url)
