@@ -72,6 +72,15 @@ def split_server_url(url: str, default_port: int = 8005) -> tuple[str, int]:
     return host, port
 
 
+def is_loopback_host(host: str) -> bool:
+    """Return ``True`` when *host* refers to the local machine.
+
+    :param host: Hostname from a server URL (e.g. ``"127.0.0.1"``)
+    :returns: ``True`` for loopback addresses, ``False`` otherwise
+    """
+    return host.lower() in {"127.0.0.1", "localhost", "::1"}
+
+
 @contextmanager
 def spawn_server(
     app_module: str,
@@ -84,9 +93,11 @@ def spawn_server(
     If a healthy server is already listening at ``host:port`` (probed via
     ``/health/ready``), nothing is spawned and ``None`` is yielded, so the
     caller does not own the server's lifecycle.  Otherwise a uvicorn
-    subprocess is spawned (stderr inherited so startup errors are visible,
-    stdout discarded, access logs disabled), readiness is waited on, and the
-    subprocess is terminated when the ``with`` block exits.
+    subprocess is spawned (stdout and stderr inherited so startup errors and
+    app output are visible; access logs are disabled to keep the shared
+    terminal clean, with full logging preserved in the server's rotating log
+    file), readiness is waited on, and the subprocess is terminated when the
+    ``with`` block exits.
 
     :param app_module: Uvicorn module string (e.g. ``"klea_rag.api.main:app"``)
     :param host: Host to bind
@@ -127,7 +138,6 @@ def spawn_server(
             str(port),
             "--no-access-log",
         ],
-        stdout=subprocess.DEVNULL,
     )
 
     try:
