@@ -209,6 +209,12 @@ already loaded, so a store only grows once it has been queried once.
 Step 4: Start the RAG server
 -----------------------------
 
+For local single-user use this step is optional: the client commands in
+Step 5 start a server on the local machine automatically when none is
+already running.  Run ``klea-rag-serve serve`` instead when you want a
+persistent backend, for example to share one server between several
+clients or to run it in a separate terminal:
+
 .. code-block:: bash
 
    KLEA_RAG_ENV_FILE=my-rag.env klea-rag-serve serve
@@ -223,7 +229,13 @@ and compiles the LangGraph pipeline.  Once ready, check it is alive:
 A ``200 OK`` response means the system is ready to accept queries.
 
 Step 5: Query the RAG
-----------------------
+---------------------
+
+The client commands below use ``http://127.0.0.1:8005`` by default.
+If no server is running there, they start one on the local machine for
+the session and stop it when they exit; if a server is already running
+(for example from Step 4) they reuse it.  Pointing ``--server`` at a
+remote host connects without starting anything.
 
 Single-query mode is the quickest way to test:
 
@@ -248,8 +260,8 @@ For a graphical interface, launch the NiceGUI web UI:
 The web UI uses NiceGUI and requires the ``[nicegui]`` extra, while the
 CLI mode has no extra dependencies.
 
-Both methods connect to the running server at ``http://127.0.0.1:8005``
-by default.  Use ``--server`` to point at a different address.
+Both methods use the server at ``http://127.0.0.1:8005`` by default.
+Use ``--server`` to point at a different address.
 
 Going further
 --------------

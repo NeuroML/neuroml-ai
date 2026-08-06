@@ -149,6 +149,13 @@ is to fork the existing template and customise it.
    If you do not need NeuroML-specific tools, replace it with your own
    MCP server or remove the line entirely.
 
+   .. note::
+
+      ``klea-rag web`` (and ``klea-rag cli``) auto-start a server on the
+      local machine when none is running.  In this container the backend
+      is started explicitly with ``klea-rag-serve`` above, so the
+      frontend's readiness probe simply reuses it.
+
    The ``--title`` flag sets the heading shown in the browser tab and
    the NiceGUI page header.  Other flags such as ``--subtitle`` and
    ``--page-icon`` are available too --- see :doc:`../cli/klea-rag` for
