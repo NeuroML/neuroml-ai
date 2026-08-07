@@ -55,7 +55,9 @@ At a high level, a query flows through these stages:
 
 3. **Retrieval** -- the system generates one or more search queries,
    optionally calls MCP tools (for live data), and retrieves the most
-   relevant chunks from the matching domain's vector stores.
+   relevant chunks from the matching domain's stores (vector stores
+   and/or BM25 keyword stores).  Results from the different stores are
+   combined with Reciprocal Rank Fusion (see :ref:`hybrid-retrieval`).
 
 4. **Answer** -- the chat model generates an answer from the
    retrieved context, citing its sources.
@@ -79,15 +81,16 @@ orchestrator from ``klea_utils``.
 
    The RAG pipeline visualised as a LangGraph state machine.
 
-Domains and vector stores
--------------------------
+Domains and stores
+------------------
 
 Domains are the organising unit of Klea RAG:
 
 * A **domain** bundles related knowledge and configuration
   (e.g. "NeuroML documentation", "My project's internal docs").
-* Each domain has one or more **vector stores** containing the
-  embedded chunks.
+* Each domain has one or more **stores** containing the chunks:
+  **vector stores** (dense embedding similarity) and/or **BM25 keyword
+  stores** (classic lexical search).
 * The classifier uses the domain's *description* to decide where a
   query should go.
 * Domains can also have **MCP servers** attached, giving the LLM
@@ -97,6 +100,33 @@ Domains are the organising unit of Klea RAG:
 This means one RAG server can simultaneously serve completely
 different knowledge areas -- the classifier routes queries to the
 right domain automatically.
+
+.. _hybrid-retrieval:
+
+Hybrid retrieval (vector + BM25)
+--------------------------------
+
+Each domain can configure ``vector_stores``, ``bm25_stores``, both, or
+neither.  BM25 provides a classic keyword search that complements
+dense embedding similarity: exact names, symbols, and terminology that
+a semantic search might miss are surfaced by the lexical match.
+
+When a domain configures both, every query runs against all of the
+domain's stores and the results are combined with **Reciprocal Rank
+Fusion** (RRF): a document is scored by its rank within each store's
+result list (``1 / (60 + rank)``), so results from the different stores
+are merged without comparing their raw scores (cosine similarity and
+BM25 scores are not on the same scale).  Duplicate chunks are removed
+and the top ``k`` references are kept.
+
+The original per-source scores are preserved in each document's
+``_source_scores`` metadata, so the answer LLM sees e.g. both the
+vector-store similarity and the BM25 score, labelled by source.
+
+To create a BM25 store alongside a vector store, pass
+``--bm25-store`` to ``klea-stores-create`` (see
+:doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``
+entry to the domain config pointing at the written corpus file.
 
 .. seealso::
 

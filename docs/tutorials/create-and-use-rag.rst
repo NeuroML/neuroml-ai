@@ -72,7 +72,8 @@ Step 2: Create a vector store
 
    klea-stores-create build <folder-of-files> \\
        --collection my-docs \\
-       --store chroma:/path/to/my-store.db
+       --store chroma:/path/to/my-store.db \\
+       --bm25-store /path/to/my-bm25-corpus.pkl
 
 The ``build`` command runs the full pipeline:
 
@@ -92,6 +93,9 @@ Flags explained:
   (e.g. ``my-docs``).
 * ``--store`` / ``-s`` -- the vector store URI; ``chroma:/path`` creates a
   persistent Chroma database at that location.
+* ``--bm25-store`` -- optional path to write the combined chunked
+  documents to a single pickle file that can be used as a BM25 keyword
+  store alongside the vector store.
 * ``--model`` / ``-m`` -- embedding model (default ``ollama:bge-m3:latest``).
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
@@ -141,6 +145,12 @@ vector store to a domain:
                        "name": "my-docs",
                        "path": "chroma:/path/to/my-store.db"
                    }
+               ],
+               "bm25_stores": [
+                   {
+                       "name": "my-docs-bm25",
+                       "path": "/path/to/my-bm25-corpus.pkl"
+                   }
                ]
            }
        }
@@ -161,6 +171,14 @@ The ``general`` section controls retrieval behaviour:
 Each entry under ``domains`` defines a knowledge area with one or more
 vector stores.  The ``description`` helps the classifier route queries
 to the right domain.
+
+A domain can also list ``bm25_stores``.  Each ``bm25_stores`` entry's
+``path`` points to a combined corpus pickle written by
+``klea-stores-create --bm25-store`` (or ``klea-stores-create store
+--bm25-store``).  When both are configured, retrieval queries the
+vector stores and the BM25 stores and combines the results with
+Reciprocal Rank Fusion -- exact name/symbol matches from BM25 complement
+the semantic matches from the vector stores.
 
 Vector stores can override the retrieval settings independently.  Stores
 that set their own ``default_k``, ``k_max``, and ``k_inc`` use those
@@ -292,6 +310,14 @@ Once the basic pipeline works, here are natural next steps:
    Use ``klea-stores-create chunk`` to convert and cache without writing
    to a store, then ``klea-stores-create store`` later.  This lets you
    inspect the chunks and edit the metadata map before embedding.
+
+**Hybrid keyword retrieval**
+   Add a BM25 store alongside a vector store: run
+   ``klea-stores-create store --bm25-store /path/to/corpus.pkl`` and add a
+   ``bm25_stores`` entry to the domain config.  Retrieval then fuses
+   semantic and lexical matches with Reciprocal Rank Fusion, which helps
+   with exact names, symbols, and terminology.  See :doc:`../concepts/rag`
+   for details.
 
 Troubleshooting
 ---------------

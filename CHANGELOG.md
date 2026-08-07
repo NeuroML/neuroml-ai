@@ -66,6 +66,26 @@
 - Node progress shown as compact `st.caption()` in Streamlit, `yaspin`
   spinner with node labels in CLI
 
+### Hybrid BM25 keyword retrieval
+
+- New `BM25RetrieverManager` (``klea_utils/stores/retrieval/bm25.py``)
+  providing classic keyword search over a pickled chunk corpus
+- New shared `BaseKleaRetriever` base class for retriever managers
+  (per-store ``k`` tracking, lazy loading); `VSRetriever` refactored
+  onto it; retrieval split into a subpackage
+  (``retrieval/{base,vs,bm25}.py``)
+- Domains can now configure `bm25_stores` in addition to `vector_stores`
+  (either/both/neither)
+- `klea-stores-create build|store --bm25-store <path>` writes the
+  combined chunked corpus for BM25 retrieval (replaces `VSBuilder` /
+  `klea-vs-create` naming)
+- Retrieval fuses vector-store and BM25 results with Reciprocal Rank
+  Fusion; original per-source scores preserved in `_source_scores`
+  metadata and shown to the answer LLM (`serialize_vs_retrieval`)
+- New `rrf_merge` / `format_source_scores` helpers in
+  `klea_utils/stores/utils.py`
+- New deps: `langchain-community`, `rank_bm25`
+
 ### Bug fixes
 
 - `run_graph_stream`: sync ``for`` on async generator → ``async for``
