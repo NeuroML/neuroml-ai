@@ -165,6 +165,10 @@ def setup_layout(
     toggle_icon_ref: list = [None]
     _is_streaming: list = [False]
 
+    # ``user_id`` (a setup_layout parameter) is captured by reference in
+    # every handler below.  Handlers therefore see a rebind made elsewhere
+    # in this scope -- _confirm_delete_all uses ``nonlocal user_id`` to
+    # switch the whole page session to a fresh identity after a delete.
     _expanded: set[int] = set()
 
     # ------------------------------------------------------------------
@@ -657,32 +661,61 @@ def setup_layout(
         """DELETE all server data, reset in-memory state, and generate a new user ID."""
         import httpx
 
-        logger.debug("confirming delete of user session for user_id=%s", user_id)
+        # ``user_id`` is setup_layout's parameter; every handler (send,
+        # _new_chat, _switch_chat, status pane, ...) closes over that same
+        # name.  Declaring it nonlocal here lets us rebind it below so the
+        # whole page session switches to the fresh identity immediately,
+        # instead of only after a page reload.  Without this, a new chat
+        # created after deleting the session would be stored under the OLD
+        # user id and become orphaned from the frontend's view.
+        nonlocal user_id
+        old_id = user_id
+        logger.debug("confirming delete of user session for user_id=%s", old_id)
         try:
             async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.delete(f"{server_url}/chat/{user_id}")
+                resp = await client.delete(f"{server_url}/chat/{old_id}")
                 if resp.status_code == 200:
-                    logger.debug(
-                        "delete_user_session succeeded for user_id=%s", user_id
+                    logger.debug("delete_user_session succeeded for user_id=%s", old_id)
+                else:
+                    logger.warning(
+                        "delete_user_session failed: HTTP %s for user_id=%s",
+                        resp.status_code,
+                        old_id,
                     )
+                    ui.notification(
+                        f"Failed to delete session (HTTP {resp.status_code}). "
+                        "No data was cleared.",
+                        type="negative",
+                        timeout=10000,
+                    )
+                    dialog.close()
+                    return
         except Exception as e:
             logger.warning("Failed to delete user session: %s", e)
+            ui.notification(
+                f"Failed to delete session: {e}",
+                type="negative",
+                timeout=10000,
+            )
             dialog.close()
             return
 
-        logger.debug("clearing in-memory chats for user_id=%s", user_id)
-        chat_key_prefix = f"{user_id}:"
+        logger.debug("clearing in-memory chats for user_id=%s", old_id)
+        chat_key_prefix = f"{old_id}:"
         for key in list(chats.keys()):
             if key.startswith(chat_key_prefix):
                 chats.pop(key, None)
 
         _current_chat_id[0] = ""
         app.storage.user["chat_id"] = ""
-        old_id = user_id
-        app.storage.user["user_id"] = str(uuid.uuid4())
+        new_id = str(uuid.uuid4())
+        app.storage.user["user_id"] = new_id
+        # Rebind the closure so every handler (new chat, send, status pane,
+        # etc.) uses the fresh identity for the rest of this page session.
+        user_id = new_id
         logger.debug(
             "reset local state: new user_id=%s (was %s)",
-            app.storage.user["user_id"],
+            user_id,
             old_id,
         )
         _render_chat_area()
@@ -1130,6 +1163,20 @@ def run_nicegui_app(
         works after the client has connected, so we await
         ``ui.context.client.connected()`` first.
         """
+        # Establish the per-browser user identity at the very top of the
+        # page builder, before any await. `app.storage.user` is only
+        # guaranteed valid in the request context of the initial page
+        # build; after awaiting client.connected() / check_api_is_ready()
+        # the task may run outside that context and NiceGUI raises
+        # "user storage for ... should be created before accessing it".
+        if "user_id" not in app.storage.user:
+            app.storage.user["user_id"] = str(uuid.uuid4())
+            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
+        else:
+            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
+
+        user_id = app.storage.user["user_id"]
+
         await ui.context.client.connected()
 
         # The page builder runs exactly once -- build the appropriate page
@@ -1147,14 +1194,6 @@ def run_nicegui_app(
                     "text-grey-5"
                 )
             return
-
-        if "user_id" not in app.storage.user:
-            app.storage.user["user_id"] = str(uuid.uuid4())
-            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
-        else:
-            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
-
-        user_id = app.storage.user["user_id"]
 
         chat_id = ""
 
