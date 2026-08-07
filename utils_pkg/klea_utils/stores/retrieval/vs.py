@@ -16,7 +16,7 @@ from langchain_core.documents import Document
 from klea_utils.llm import setup_embedding
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 
-from ..config import PerDomainConfig, VectorStoresConfig
+from ..config import PerDomainConfig, RetrieverConfig
 from ..utils import instantiate_vector_store
 
 
@@ -35,7 +35,7 @@ class VSRetriever(BaseKleaRetriever):
 
     def __init__(
         self,
-        vs_config: VectorStoresConfig,
+        config: RetrieverConfig,
         logger: logging.Logger,
         embedding_model: str,
         default_k: int = 5,
@@ -48,7 +48,7 @@ class VSRetriever(BaseKleaRetriever):
         values used by stores that do not define their own per-store
         settings in the config.
 
-        :param vs_config: Vector store configuration for all domains
+        :param config: Retriever configuration for all domains
         :param logger: Logger instance (injected from orchestrator)
         :param embedding_model: Embedding model identifier for retrieval
         :param default_k: Fallback number of documents to retrieve
@@ -56,7 +56,7 @@ class VSRetriever(BaseKleaRetriever):
         :param k_inc: Fallback amount to increase ``k`` by per ``inc_k``
         """
         super().__init__(
-            vs_config=vs_config,
+            config=config,
             logger=logger,
             default_k=default_k,
             k_max=k_max,

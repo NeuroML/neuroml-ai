@@ -19,8 +19,8 @@ import unittest
 import pytest
 from klea_utils.stores.config import (
     PerDomainConfig,
+    RetrieverConfig,
     VectorStoreInfo,
-    VectorStoresConfig,
 )
 from klea_utils.stores.retrieval.vs import VSRetriever
 from ollama import ResponseError
@@ -42,7 +42,7 @@ class TestStores(unittest.TestCase):
 
     def _make_retriever(self) -> VSRetriever:
         """Build a retriever with a per-store configured and a fallback store."""
-        vs_config = VectorStoresConfig(
+        config = RetrieverConfig(
             domains={
                 "NeuroML": PerDomainConfig(
                     vector_stores=[
@@ -59,7 +59,7 @@ class TestStores(unittest.TestCase):
             }
         )
         retriever = VSRetriever(
-            vs_config=vs_config,
+            config=config,
             logger=logging.getLogger("test_stores"),
             embedding_model="dummy",
             default_k=5,
@@ -72,7 +72,7 @@ class TestStores(unittest.TestCase):
     def test_per_store_resolution(self):
         """Per-store k settings resolve with a fall back to the global values."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
 
         # "big" has its own per-store settings
         self.assertEqual(retriever._default_k_for(big), 2)
@@ -87,7 +87,7 @@ class TestStores(unittest.TestCase):
     def test_retrieve_uses_per_store_k(self):
         """retrieve() passes each store its own current k."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
         big_fake = FakeStore()
         small_fake = FakeStore()
         big.loaded_object = big_fake
@@ -102,7 +102,7 @@ class TestStores(unittest.TestCase):
     def test_inc_k_loaded_only_and_capped(self):
         """inc_k() only touches loaded stores, capped per-store at k_max."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
 
         # only load "big"; "small" stays unloaded
         big.loaded_object = FakeStore()
@@ -126,7 +126,7 @@ class TestStores(unittest.TestCase):
     def test_reset_k(self):
         """reset_k() restores loaded stores to their per-store defaults."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
         big.loaded_object = FakeStore()
         small.loaded_object = FakeStore()
 
@@ -147,11 +147,11 @@ class TestStores(unittest.TestCase):
             with open(vs_config_file, "r") as f:
                 config = json.load(f)
             print(config)
-            vs_config = VectorStoresConfig(**config)
+            retriever_config = RetrieverConfig(**config)
 
             logger = logging.getLogger("test_stores")
             stores = VSRetriever(
-                vs_config=vs_config,
+                config=retriever_config,
                 logger=logger,
                 embedding_model="ollama:bge-m3:latest",
             )

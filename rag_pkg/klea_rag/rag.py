@@ -19,7 +19,7 @@ from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
-from klea_utils.stores.config import VectorStoresConfig
+from klea_utils.stores.config import RetrieverConfig
 from langgraph.graph import END, START, StateGraph
 
 from .config import AppConfig, AppEnv
@@ -129,7 +129,7 @@ class RAG(BaseLangGraph):
         self.logger.debug(f"{domain_ms = }")
 
         # set up configs
-        self.stores_config = VectorStoresConfig(domains=domain_vs)
+        self.retriever_config = RetrieverConfig(domains=domain_vs)
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
         self.k_inc = self.app_config.general.k_inc

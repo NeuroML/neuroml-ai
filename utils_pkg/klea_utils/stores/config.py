@@ -36,7 +36,11 @@ class PerDomainConfig(BaseModel):
     vector_stores: list[VectorStoreInfo]
 
 
-class VectorStoresConfig(BaseModel):
-    """Top-level vector stores configuration."""
+class RetrieverConfig(BaseModel):
+    """Top-level retriever configuration.
+
+    Holds the per-domain store configuration for all retriever managers
+    (vector stores and BM25 stores).
+    """
 
     domains: dict[str, PerDomainConfig]

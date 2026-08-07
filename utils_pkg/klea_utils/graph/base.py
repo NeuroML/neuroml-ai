@@ -32,7 +32,7 @@ from pydantic import BaseModel, Field, create_model
 from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
-from klea_utils.stores.config import VectorStoresConfig
+from klea_utils.stores.config import RetrieverConfig
 from klea_utils.stores.retrieval.vs import VSRetriever
 from klea_utils.tools import build_tool_description, clean_tool_meta
 
@@ -144,7 +144,7 @@ class BaseLangGraph(ABC):
         self.mcp_client: Client | None = None
         self.mcp_tools: list[Tool] | None = None
 
-        self.stores_config: VectorStoresConfig | None = None
+        self.retriever_config: RetrieverConfig | None = None
         self.stores: VSRetriever | None = None
         # Graph-wide fallback retrieval settings.  Individual vector stores
         # may override these in the config with their own default_k / k_max /
@@ -258,9 +258,9 @@ class BaseLangGraph(ABC):
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
         emb = self.llm_models.get("embedding")
-        if self.stores_config and emb and emb.model_name:
+        if self.retriever_config and emb and emb.model_name:
             self.stores = VSRetriever(
-                vs_config=self.stores_config,
+                config=self.retriever_config,
                 logger=self.logger,
                 embedding_model=emb.model_name,
                 default_k=self.default_k,
@@ -308,7 +308,7 @@ class BaseLangGraph(ABC):
     def _configure_resources(self) -> None:
         """Configure vector stores and MCP servers
 
-        Subclasses should implement this to populate ``self.stores_config``,
+        Subclasses should implement this to populate ``self.retriever_config``,
         ``self.mcp_config``, and ``self.domain_mcp_configs``, which will be used
         to create the vector store class, mcp client, and per-domain tool descriptions.
         """

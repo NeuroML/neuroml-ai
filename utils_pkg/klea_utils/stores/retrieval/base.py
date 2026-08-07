@@ -14,7 +14,7 @@ from typing import Any
 
 from langchain_core.documents import Document
 
-from ..config import PerDomainConfig, VectorStoresConfig
+from ..config import PerDomainConfig, RetrieverConfig
 
 
 class BaseKleaRetriever(ABC):
@@ -34,7 +34,7 @@ class BaseKleaRetriever(ABC):
 
     def __init__(
         self,
-        vs_config: VectorStoresConfig,
+        config: RetrieverConfig,
         logger: logging.Logger,
         default_k: int = 5,
         k_max: int = 10,
@@ -46,7 +46,7 @@ class BaseKleaRetriever(ABC):
         values used by stores that do not define their own per-store
         settings in the config.
 
-        :param vs_config: Store configuration for all domains
+        :param config: Store configuration for all domains
         :param logger: Logger instance (injected from orchestrator)
         :param default_k: Fallback number of documents to retrieve
         :param k_max: Fallback maximum number of documents to retrieve
@@ -61,7 +61,7 @@ class BaseKleaRetriever(ABC):
         # independently even though retrieval is driven by a single graph-wide
         # routing decision.
         self._k: dict[tuple[str, str], int] = {}
-        self.vs_config: VectorStoresConfig = vs_config
+        self.config: RetrieverConfig = config
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
 
     def setup(self) -> None:
@@ -102,7 +102,7 @@ class BaseKleaRetriever(ABC):
     def _loaded_stores(self) -> list[tuple[str, Any]]:
         """Return ``(domain_name, store)`` pairs for stores that are loaded."""
         loaded = []
-        for domain_name, domain in self.vs_config.domains.items():
+        for domain_name, domain in self.config.domains.items():
             for store in self._stores_of(domain):
                 if store.loaded_object is not None:
                     loaded.append((domain_name, store))
@@ -147,7 +147,7 @@ class BaseKleaRetriever(ABC):
     @property
     def domains(self) -> list[str]:
         """Get a list of all configured domains."""
-        return list(self.vs_config.domains.keys())
+        return list(self.config.domains.keys())
 
     def load(self, domain_name: str) -> None:
         """Load stores for a domain (lazy loading).
@@ -156,7 +156,7 @@ class BaseKleaRetriever(ABC):
         """
         self._assert_ready()
 
-        domain = self.vs_config.domains.get(domain_name, None)
+        domain = self.config.domains.get(domain_name, None)
         assert domain
 
         self.logger.debug(f"Got domain information: {domain}")
@@ -186,7 +186,7 @@ class BaseKleaRetriever(ABC):
         """
         self.load(domain_name)
 
-        domain = self.vs_config.domains.get(domain_name, None)
+        domain = self.config.domains.get(domain_name, None)
         assert domain
 
         res = []
