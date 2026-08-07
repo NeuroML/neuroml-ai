@@ -33,7 +33,7 @@ from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
 from klea_utils.stores.config import VectorStoresConfig
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.stores.retrieval.vs import VSRetriever
 from klea_utils.tools import build_tool_description, clean_tool_meta
 
 # Per-request context variable carrying per-session model overrides (api_key,

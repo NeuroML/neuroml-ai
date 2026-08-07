@@ -22,7 +22,7 @@ from klea_utils.stores.config import (
     VectorStoreInfo,
     VectorStoresConfig,
 )
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.stores.retrieval.vs import VSRetriever
 from ollama import ResponseError
 
 

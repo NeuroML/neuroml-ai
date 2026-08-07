@@ -1,52 +1,53 @@
 #!/usr/bin/env python3
 """
-Vector stores retrieval manager
+Base class for retriever managers
 
-File: klea_utils/stores/retrieval.py
+File: klea_utils/stores/retrieval/base.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
 
 from langchain_core.documents import Document
 
-from ..llm import setup_embedding
-from .config import VectorStoreInfo, VectorStoresConfig
-from .utils import instantiate_vector_store
+from ..config import PerDomainConfig, VectorStoresConfig
 
 
-class VSRetriever:
-    """Manages domain-specific vector stores.
+class BaseKleaRetriever(ABC):
+    """Base class for domain-aware retriever managers.
 
-    Loads vector stores on demand per domain and provides similarity search
-    retrieval across multiple stores within a domain.
+    Holds the machinery common to all retrievers: lazy per-domain store
+    loading, per-store retrieval depth (``k``) tracking with graph-wide
+    fallbacks, and the retrieval contract
+    ``retrieve(domain, query) -> list[tuple[Document, float]]``.
 
-    Store paths use a URI-style scheme prefix to identify the backend:
-
-    - ``chroma:/path/to/dir``  ---  ChromaDB (persistent, local disk)
-    - ``qdrant:http://host:port``  ---  Qdrant (remote HTTP)
-    - ``pgvector:postgresql://host/db``  ---  PGVector (PostgreSQL)
+    Subclasses must implement:
+    - :meth:`_stores_of`: the list of stores configured for a domain
+    - :meth:`_instantiate_store`: build the underlying retriever object
+      for a store
+    - :meth:`_retrieve_from_store`: run a single store against a query
     """
 
     def __init__(
         self,
         vs_config: VectorStoresConfig,
         logger: logging.Logger,
-        embedding_model: str,
         default_k: int = 5,
         k_max: int = 10,
         k_inc: int = 1,
     ):
-        """Initialise vector stores manager.
+        """Initialise the retriever manager.
 
-        ``default_k``, ``k_max``, and ``k_inc`` are the graph-wide fallback
+        ``default_k``, ``k_max``, and ``k_inc`` are the manager-wide fallback
         values used by stores that do not define their own per-store
         settings in the config.
 
+        :param vs_config: Store configuration for all domains
         :param logger: Logger instance (injected from orchestrator)
-        :param embedding_model: Embedding model identifier for retrieval
         :param default_k: Fallback number of documents to retrieve
         :param k_max: Fallback maximum number of documents to retrieve
         :param k_inc: Fallback amount to increase ``k`` by per ``inc_k``
@@ -60,43 +61,49 @@ class VSRetriever:
         # independently even though retrieval is driven by a single graph-wide
         # routing decision.
         self._k: dict[tuple[str, str], int] = {}
-        self.sim_thresh = 0.15
-        self.embeddings = None
-        self.embedding_model = embedding_model
         self.vs_config: VectorStoresConfig = vs_config
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
 
     def setup(self) -> None:
-        """Initialise embedding model."""
-        assert self.embedding_model
+        """Hook for subclasses to initialise shared resources.
 
-        self.embeddings = setup_embedding(self.embedding_model, self.logger)
-        assert self.embeddings
+        Called once by the orchestrator before retrieval.  Subclasses that
+        need no shared setup leave this as a no-op.
+        """
+        pass
 
-    def _default_k_for(self, store: VectorStoreInfo) -> int:
+    def _assert_ready(self) -> None:
+        """Hook called at the start of :meth:`load`.
+
+        Subclasses can assert that their required resources (e.g. an
+        embedding model) are available before stores are loaded.
+        """
+        pass
+
+    def _default_k_for(self, store: Any) -> int:
         """Return the default k for a store, falling back to the global value."""
         return store.default_k if store.default_k is not None else self.default_k
 
-    def _k_max_for(self, store: VectorStoreInfo) -> int:
+    def _k_max_for(self, store: Any) -> int:
         """Return the k cap for a store, falling back to the global value."""
         return store.k_max if store.k_max is not None else self.k_max
 
-    def _k_inc_for(self, store: VectorStoreInfo) -> int:
+    def _k_inc_for(self, store: Any) -> int:
         """Return the k increment for a store, falling back to the global value."""
         return store.k_inc if store.k_inc is not None else self.k_inc
 
-    def _current_k(self, domain_name: str, store: VectorStoreInfo) -> int:
+    def _current_k(self, domain_name: str, store: Any) -> int:
         """Return the current k for a store, seeding it from its default on first use."""
         key = (domain_name, store.name)
         if key not in self._k:
             self._k[key] = self._default_k_for(store)
         return self._k[key]
 
-    def _loaded_stores(self) -> list[tuple[str, VectorStoreInfo]]:
+    def _loaded_stores(self) -> list[tuple[str, Any]]:
         """Return ``(domain_name, store)`` pairs for stores that are loaded."""
         loaded = []
         for domain_name, domain in self.vs_config.domains.items():
-            for store in domain.vector_stores:
+            for store in self._stores_of(domain):
                 if store.loaded_object is not None:
                     loaded.append((domain_name, store))
         return loaded
@@ -133,7 +140,7 @@ class VSRetriever:
             )
 
     def load_all_stores(self) -> None:
-        """Load all vector stores for all domains."""
+        """Load all stores for all domains."""
         for domain_name in self.domains:
             self.load(domain_name)
 
@@ -143,20 +150,18 @@ class VSRetriever:
         return list(self.vs_config.domains.keys())
 
     def load(self, domain_name: str) -> None:
-        """Load vector stores for a domain (lazy loading).
+        """Load stores for a domain (lazy loading).
 
         :param domain_name: Name of the domain to load stores for
         """
-        assert self.embeddings
+        self._assert_ready()
 
         domain = self.vs_config.domains.get(domain_name, None)
         assert domain
 
         self.logger.debug(f"Got domain information: {domain}")
 
-        stores = domain.vector_stores
-
-        for store in stores:
+        for store in self._stores_of(domain):
             if store.loaded_object is not None:
                 self.logger.debug(f"Store '{store.name}' already loaded, skipping")
                 continue
@@ -169,20 +174,11 @@ class VSRetriever:
             store.loaded_object = self._instantiate_store(store.path, store_name)
 
             self.logger.debug(
-                f"Finished loading vector store '{store_name}' from {store.path}"
+                f"Finished loading store '{store_name}' from {store.path}"
             )
 
-    def _instantiate_store(self, path: str, name: str):
-        """Instantiate a vector store based on the URI scheme in path.
-
-        :param path: URI-style string with scheme prefix
-        :param name: Collection name for the vector store
-        :returns: Instantiated LangChain VectorStore
-        """
-        return instantiate_vector_store(path, name, self.embeddings, self.logger)
-
     def retrieve(self, domain_name: str, query: str) -> list[tuple[Document, float]]:
-        """Retrieve documents from vector stores for a query.
+        """Retrieve documents from all stores for a domain.
 
         :param domain_name: Name of the domain to search in
         :param query: User query string
@@ -192,23 +188,45 @@ class VSRetriever:
 
         domain = self.vs_config.domains.get(domain_name, None)
         assert domain
-        stores = domain.vector_stores
 
         res = []
-
-        for store in stores:
+        for store in self._stores_of(domain):
             assert store.loaded_object
-            data = store.loaded_object.similarity_search_with_relevance_scores(
-                query,
-                k=self._current_k(domain_name, store),
-                score_threshold=self.sim_thresh,
+            data = self._retrieve_from_store(
+                store, query, self._current_k(domain_name, store)
             )
-            self.logger.debug(f"{data =}")
-            if len(data) == 0:
-                self.logger.warning(
-                    f"No data retrieved. Check VS is correctly populated and that "
-                    f"the collection name is correct ({store.name})"
-                )
             res.extend(data)
 
         return res
+
+    # ------------------------------------------------------------------
+    # Abstract hooks -- subclasses must implement these
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def _stores_of(self, domain: PerDomainConfig) -> list[Any]:
+        """Return the list of stores configured for *domain*."""
+        ...
+
+    @abstractmethod
+    def _instantiate_store(self, path: str, name: str) -> Any:
+        """Instantiate the underlying retriever object for a store.
+
+        :param path: Store path from the configuration
+        :param name: Store name from the configuration
+        :returns: Instantiated retriever object
+        """
+        ...
+
+    @abstractmethod
+    def _retrieve_from_store(
+        self, store: Any, query: str, k: int
+    ) -> list[tuple[Document, float]]:
+        """Retrieve from a single store, returning (document, score) tuples.
+
+        :param store: Loaded store object to query
+        :param query: User query string
+        :param k: Number of documents to retrieve from this store
+        :returns: List of (document, relevance_score) tuples
+        """
+        ...

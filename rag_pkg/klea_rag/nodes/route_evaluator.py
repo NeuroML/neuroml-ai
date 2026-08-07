@@ -15,7 +15,7 @@ from klea_utils.nodes.abstract import (
     NodeStreamData,
     NodeStreamEvent,
 )
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.stores.retrieval.vs import VSRetriever
 
 from klea_rag.schemas import RAGState
 

@@ -75,7 +75,9 @@ klea_utils/
 ├── stores/         # Vector store management
 │   ├── config.py   # Pydantic models for store configuration
 │   ├── ingestion.py # Document ingestion pipeline (chunking, embedding, storage)
-│   ├── retrieval.py # Retrieval from configured backends
+│   ├── retrieval/  # Retriever managers
+│   │   ├── base.py # BaseKleaRetriever -- shared k-tracking and store loading
+│   │   └── vs.py   # VSRetriever -- vector store retrieval
 │   └── utils.py    # Shared store helpers
 ├── tools.py        # MCP CallToolResult helpers (textualize content blocks)
 ├── ui/             # User interface frontends

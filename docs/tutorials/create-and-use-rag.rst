@@ -321,5 +321,5 @@ Troubleshooting
    * :doc:`../cli/klea-rag` -- client CLI reference
    * :class:`~klea_utils.stores.ingestion.VSBuilder` -- Python API for
      ingestion
-   * :class:`~klea_utils.stores.retrieval.VSRetriever` -- Python API for
-     retrieval
+   * :class:`~klea_utils.stores.retrieval.vs.VSRetriever` -- Python API for
+      retrieval

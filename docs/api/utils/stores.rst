@@ -18,7 +18,7 @@ Ingestion
 Retrieval
 ---------
 
-.. autoclass:: klea_utils.stores.retrieval.VSRetriever
+.. autoclass:: klea_utils.stores.retrieval.vs.VSRetriever
    :members:
    :show-inheritance:
 
