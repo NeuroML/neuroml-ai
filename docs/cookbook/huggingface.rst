@@ -57,7 +57,7 @@ is to fork the existing template and customise it.
 
    Remove the example stores under ``vector-stores/`` and add your own
    ChromaDB databases.  See :doc:`../tutorials/create-and-use-rag` for a
-   step-by-step guide on creating vector stores with ``klea-vs-create``.
+   step-by-step guide on creating vector stores with ``klea-stores-create``.
 
    .. note::
 

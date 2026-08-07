@@ -11,7 +11,7 @@ Configuration
 Ingestion
 ---------
 
-.. autoclass:: klea_utils.stores.ingestion.VSBuilder
+.. autoclass:: klea_utils.stores.ingestion.StoresBuilder
    :members:
    :show-inheritance:
 

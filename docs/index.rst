@@ -21,7 +21,7 @@ The project is organised as a monorepo with four installable packages:
      - Purpose
    * - ``utils_pkg``
      - ``klea_utils``
-     - ``klea-vs-create``
+     - ``klea-stores-create``
      - Shared utilities, vector store management, base graph classes
    * - ``rag_pkg``
      - ``klea_rag``

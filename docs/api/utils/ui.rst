@@ -7,4 +7,4 @@ UI
    ui-nicegui
    ui-tui
    ui-cli
-   ui-vs-create
+   ui-stores-create

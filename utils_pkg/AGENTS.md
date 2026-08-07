@@ -82,7 +82,7 @@ klea_utils/
 ├── tools.py        # MCP CallToolResult helpers (textualize content blocks)
 ├── ui/             # User interface frontends
 │   ├── tui/        # Textual/TUI chat client (repl.py)
-│   ├── vs_create.py # CLI for vector store creation (klea-vs-create)
+│   ├── stores_create.py # CLI for store creation (klea-stores-create)
 │   └── web/        # Web frontends
 │       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config;
 │       │             #   parser.py -- argparse for the app.py entry point)

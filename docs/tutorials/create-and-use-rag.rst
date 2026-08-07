@@ -70,7 +70,7 @@ Step 2: Create a vector store
 
 .. code-block:: bash
 
-   klea-vs-create build <folder-of-files> \\
+   klea-stores-create build <folder-of-files> \\
        --collection my-docs \\
        --store chroma:/path/to/my-store.db
 
@@ -96,7 +96,7 @@ Flags explained:
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
 
-Re-running ``klea-vs-create build`` on the same directory is safe --
+Re-running ``klea-stores-create build`` on the same directory is safe --
 it skips files whose content has not changed and skips chunks whose
 hashes already exist in the store (idempotent).  Adding new files to
 the source directory and re-running adds only the new content
@@ -270,9 +270,9 @@ Once the basic pipeline works, here are natural next steps:
 
 **Metadata enrichment**
    Add source URLs or other metadata to retrieved chunks.  First run
-   ``klea-vs-create chunk`` to generate a ``metadata-map.template.json``,
-   fill in the values, then ``klea-vs-create store --metadata-map <file>``.
-   See ``klea-vs-create --help`` for examples.
+   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``,
+   fill in the values, then ``klea-stores-create store --metadata-map <file>``.
+   See ``klea-stores-create --help`` for examples.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model
@@ -289,8 +289,8 @@ Once the basic pipeline works, here are natural next steps:
    in ``rag_pkg/example-configs/klea_rag.json``.
 
 **Separate chunk-and-store workflow**
-   Use ``klea-vs-create chunk`` to convert and cache without writing
-   to a store, then ``klea-vs-create store`` later.  This lets you
+   Use ``klea-stores-create chunk`` to convert and cache without writing
+   to a store, then ``klea-stores-create store`` later.  This lets you
    inspect the chunks and edit the metadata map before embedding.
 
 Troubleshooting
@@ -315,11 +315,11 @@ Troubleshooting
 
 .. seealso::
 
-   * :doc:`../cli/klea-vs-create` -- full CLI reference for vector store
+   * :doc:`../cli/klea-stores-create` -- full CLI reference for vector store
      creation
    * :doc:`../cli/klea-rag-serve` -- server CLI reference
    * :doc:`../cli/klea-rag` -- client CLI reference
-   * :class:`~klea_utils.stores.ingestion.VSBuilder` -- Python API for
+   * :class:`~klea_utils.stores.ingestion.StoresBuilder` -- Python API for
      ingestion
    * :class:`~klea_utils.stores.retrieval.vs.VSRetriever` -- Python API for
       retrieval

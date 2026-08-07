@@ -1,7 +1,7 @@
-UI — vector store creation CLI
-==============================
+UI — store creation CLI
+========================
 
-.. automodule:: klea_utils.ui.vs_create
+.. automodule:: klea_utils.ui.stores_create
    :members:
    :exclude-members: app
    :show-inheritance:

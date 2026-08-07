@@ -198,7 +198,7 @@ third-party libraries.  Each CLI uses its own ``<app>`` name:
    * - ``nml-mcp`` (MCP server)
      - ``nml_mcp/nml_mcp.log``
 
-``klea-vs-create`` logs to the console only.
+``klea-stores-create`` logs to the console only.
 
 Web client user storage
 -----------------------
