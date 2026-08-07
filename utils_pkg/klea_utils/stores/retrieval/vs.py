@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any
+from typing import Any, override
 
 from langchain_core.documents import Document
 
@@ -66,6 +66,7 @@ class VSRetriever(BaseKleaRetriever):
         self.embeddings = None
         self.embedding_model = embedding_model
 
+    @override
     def setup(self) -> None:
         """Initialise embedding model."""
         assert self.embedding_model
@@ -73,14 +74,17 @@ class VSRetriever(BaseKleaRetriever):
         self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert self.embeddings
 
+    @override
     def _assert_ready(self) -> None:
         """Stores can only be loaded once the embedding model is ready."""
         assert self.embeddings
 
+    @override
     def _stores_of(self, domain: PerDomainConfig) -> list[Any]:
         """Return the vector stores configured for *domain*."""
         return domain.vector_stores
 
+    @override
     def _instantiate_store(self, path: str, name: str):
         """Instantiate a vector store based on the URI scheme in path.
 
@@ -90,6 +94,7 @@ class VSRetriever(BaseKleaRetriever):
         """
         return instantiate_vector_store(path, name, self.embeddings, self.logger)
 
+    @override
     def _retrieve_from_store(
         self, store: Any, query: str, k: int
     ) -> list[tuple[Document, float]]:

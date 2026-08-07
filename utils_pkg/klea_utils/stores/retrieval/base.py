@@ -191,7 +191,8 @@ class BaseKleaRetriever(ABC):
 
         res = []
         for store in self._stores_of(domain):
-            assert store.loaded_object
+            if store.loaded_object is None:
+                continue
             data = self._retrieve_from_store(
                 store, query, self._current_k(domain_name, store)
             )
