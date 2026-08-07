@@ -67,7 +67,7 @@ def build(
     heading chain match wins; a ``DEFAULT`` entry provides fallback for
     any heading not listed.
 
-    Example metadata-map.json:
+    Example metadata-map.json::
 
         {
             "PrimerOnCElegans.md": {

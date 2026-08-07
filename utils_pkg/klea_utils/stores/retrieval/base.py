@@ -26,6 +26,7 @@ class BaseKleaRetriever(ABC):
     ``retrieve(domain, query) -> list[tuple[Document, float]]``.
 
     Subclasses must implement:
+
     - :meth:`_stores_of`: the list of stores configured for a domain
     - :meth:`_instantiate_store`: build the underlying retriever object
       for a store
