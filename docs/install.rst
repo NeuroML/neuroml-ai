@@ -199,3 +199,27 @@ third-party libraries.  Each CLI uses its own ``<app>`` name:
      - ``nml_mcp/nml_mcp.log``
 
 ``klea-vs-create`` logs to the console only.
+
+Web client user storage
+-----------------------
+
+The NiceGUI web clients (``klea-rag web``, ``klea-code web``) keep a small
+per-browser-session identity file so that a returning browser is linked
+back to the same user.  The files are written to a ``.nicegui/`` directory
+relative to the working directory the web client is launched from (not the
+platform user-data directory) and are named
+``storage-user-<session-id>.json``.
+
+Each file stores only a pointer to server-side state::
+
+    {"user_id": "...", "dark_mode": false, "chat_id": "..."}
+
+The chat history itself lives in the server's session store
+(``~/.local/share/<app>/sessions.db``) and is not duplicated here.
+
+These files are **never deleted automatically**.  NiceGUI prunes stale
+sessions from its in-memory store but leaves the JSON files on disk, so
+they accumulate over time and survive server restarts.  Deleting the
+``.nicegui/`` directory while no web client is running is safe: the next
+page load simply mints a fresh ``user_id`` (existing chats under the old
+id are then not shown in that browser).
