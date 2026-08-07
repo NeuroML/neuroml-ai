@@ -51,11 +51,16 @@ uv pip install -r requirements-dev.txt
 bash scripts/run_tests.sh        # pytest -v -n auto in each *_pkg/tests
 
 # Single package test
+# NOTE: pytest must be run from within a package directory, never from the
+# repo root. Each package's pyproject.toml sets asyncio_mode="auto" (and
+# mcp_pkg adds -n 1); a root-level run skips that config, so async tests and
+# fixtures error out. Only bash scripts/run_tests.sh is meant to be run from
+# the repo root.
 cd mcp_pkg && pytest -v          # uses -n 1 (mcp tools are asyncio)
 cd utils_pkg && pytest -v
 
-# Run only tests that do NOT need an LLM
-pytest -m "not localonly"
+# Run only tests that do NOT need an LLM (from within a package)
+cd utils_pkg && pytest -m "not localonly"
 
 # Lint + format
 ruff check . --fix
@@ -89,7 +94,7 @@ cross-package imports.
 ## Testing quirks
 
 - Tests marked `localonly` require an LLM -- skipped in CI.
-- `utils_pkg/tests/test_stores.py` reads `VS_TEST_CONFIG` env var (default `vector-stores-tests.json`).
+- `utils_pkg/tests/test_stores_retrieval.py` reads `VS_TEST_CONFIG` env var (default `vector-stores-tests.json`).
 - MCP tests are asyncio + single-process; do **not** run with `-n auto` (uses `addopts = -n 1` in `pyproject.toml`).
 - All packages ignore `F403` and `F405` in ruff.
 
