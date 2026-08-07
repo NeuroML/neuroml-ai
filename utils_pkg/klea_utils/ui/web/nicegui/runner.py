@@ -266,16 +266,33 @@ def setup_layout(
         current["model_info"] = active
         _status_pane.refresh()
 
-    def _model_config_dialog() -> None:
+    async def _model_config_dialog() -> None:
         """Open a dialog to view and change per-role model overrides."""
         chat_id = _current_chat_id[0]
         if not chat_id:
+            logger.debug("model config dialog: no active chat (user=%s)", user_id)
             return
         current_chat = ensure_chat(user_id, chat_id)
         current_info = current_chat.get("model_info", {})
         roles = list(current_info.keys())
         if not roles:
-            return
+            # No model info yet (e.g. a chat created by typing the first
+            # message). Fetch it on demand so the dialog has roles to render.
+            logger.debug(
+                "model config dialog: no roles cached, fetching model info for chat=%s",
+                chat_id,
+            )
+            await _fetch_model_info()
+            current_chat = ensure_chat(user_id, chat_id)
+            current_info = current_chat.get("model_info", {})
+            roles = list(current_info.keys())
+            if not roles:
+                logger.debug(
+                    "model config dialog: still no roles after fetch for chat=%s",
+                    chat_id,
+                )
+                return
+        logger.debug("model config dialog: chat=%s roles=%s", chat_id, roles)
 
         dialog = ui.dialog()
 
@@ -721,7 +738,8 @@ def setup_layout(
                     with ui.element():
                         with (
                             ui.button(
-                                icon="settings", on_click=lambda: _model_config_dialog()
+                                icon="settings",
+                                on_click=_model_config_dialog,
                             )
                             .props("flat dense round color=grey-9")
                             .classes("text-sm")
@@ -923,21 +941,23 @@ def setup_layout(
                             break
                         elif t == "error":
                             pg_row.delete()
-                            ui.notification(
-                                f"Error: {event.get('message', 'Unknown error')}",
-                                type="negative",
-                                timeout=10000,
-                            )
+                            with _stream_container:
+                                ui.notification(
+                                    f"Error: {event.get('message', 'Unknown error')}",
+                                    type="negative",
+                                    timeout=10000,
+                                )
                             _is_streaming[0] = False
                             _status_pane.refresh()
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
-                    ui.notification(
-                        f"Connection error: {e}",
-                        type="negative",
-                        timeout=10000,
-                    )
+                    with _stream_container:
+                        ui.notification(
+                            f"Connection error: {e}",
+                            type="negative",
+                            timeout=10000,
+                        )
                     _is_streaming[0] = False
                     _status_pane.refresh()
 
@@ -959,6 +979,11 @@ def setup_layout(
                     background_tasks.create(
                         create_chat_on_server(server_url, user_id, current)
                     )
+                    # Populate model_info for the newly created chat so the
+                    # "Choose models" dialog has roles to render. Without this
+                    # the status pane stays empty and the dialog silently
+                    # no-ops for chats started by typing the first message.
+                    background_tasks.create(_fetch_model_info())
                     _render_chat_list.refresh()
 
                 ensure_chat(user_id, current)["messages"].append((query, stamp, True))
