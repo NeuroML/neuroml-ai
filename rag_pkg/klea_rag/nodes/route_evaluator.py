@@ -20,6 +20,20 @@ from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from klea_rag.schemas import RAGState
 
 
+def _increment_k(retrievers: list[BaseKleaRetriever]) -> bool:
+    """Increment k on every retriever, returning True if any could increase.
+
+    Unlike ``any(retriever.inc_k() for retriever in retrievers)``, this does
+    not short-circuit, so every retriever's k is bumped consistently when
+    more information is requested.
+
+    :param retrievers: Retrievers to increment
+    :returns: True if at least one retriever's k was increased
+    """
+    results = [retriever.inc_k() for retriever in retrievers]
+    return any(results)
+
+
 class RouteEvaluator(AbstractRouterNode):
     """Route based on Evaluator node results"""
 
@@ -83,7 +97,7 @@ class RouteEvaluator(AbstractRouterNode):
                 route = "continue"
             # limit what max k we can have, otherwise, we end up pulling the
             # whole store..
-            elif any(retriever.inc_k() for retriever in self.retrievers):
+            elif _increment_k(self.retrievers):
                 self.logger.debug("returning: retrieve_more_info")
                 route = "retrieve_more_info"
             else:

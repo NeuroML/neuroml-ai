@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""
+Tests for the RAG retrieve information node.
+
+File: rag_pkg/tests/test_retrieve_info.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import logging
+
+from klea_rag.nodes.retrieve_info import RetrieveInfoNode
+from klea_rag.schemas import EvaluateAnswerSchema, RAGState
+from langchain_core.documents import Document
+
+logger = logging.getLogger(__name__)
+
+
+class FakeRetriever:
+    """Minimal retriever returning canned results and recording k calls."""
+
+    def __init__(self, results, name="fake"):
+        self.results = results
+        self.source_label = name
+        self.inc_count = 0
+        self.reset_count = 0
+
+    def retrieve(self, domain_name, query):
+        return self.results
+
+    def inc_k(self):
+        self.inc_count += 1
+        return True
+
+    def reset_k(self):
+        self.reset_count += 1
+
+
+def _make_node(retrievers) -> RetrieveInfoNode:
+    node = object.__new__(RetrieveInfoNode)
+    node.logger = logging.getLogger("test_retrieve_info")
+    node.label = "Retrieving information"
+    node.retrievers = retrievers
+    node.num_refs_max = 10
+    node.write_custom_stream = lambda event: None
+    logger.info(
+        f"configured retrievers: "
+        f"{[(r.source_label, len(r.results)) for r in retrievers]}"
+    )
+    return node
+
+
+def _doc(content: str) -> Document:
+    return Document(page_content=content, metadata={"file_name": "test.md"})
+
+
+async def test_execute_merges_retrievers_with_rrf():
+    """execute() fuses results from all retrievers with RRF."""
+    d1 = _doc("NeuroML standard")
+    d2 = _doc("Hodgkin-Huxley action potential")
+    r1 = FakeRetriever([(d1, 0.9), (d2, 0.8)], name="vector store")
+    r2 = FakeRetriever([(d2, 4.1)], name="BM25")
+    node = _make_node([r1, r2])
+
+    state = RAGState(
+        query="action potential",
+        query_domains=["NeuroML"],
+        retrieval_query="action potential",
+    )
+    result = await node.execute(state)
+
+    refs = result["reference_material"]["NeuroML"]
+    logger.info(
+        f"merged order: {[d.page_content for d, _ in refs]}"
+        f"\nsource scores: {[d.metadata.get('_source_scores') for d, _ in refs]}"
+    )
+
+    assert [doc.page_content for doc, _ in refs][:2] == [
+        d2.page_content,
+        d1.page_content,
+    ]
+    # d2 was seen by both sources, so it carries both original scores
+    assert refs[0][0].metadata["_source_scores"] == {
+        "vector store": 0.8,
+        "BM25": 4.1,
+    }
+
+
+async def test_execute_inc_k_on_all_retrievers_for_more_info():
+    """inc_k() is called on every retriever when more info is requested."""
+    r1 = FakeRetriever([], name="vector store")
+    r2 = FakeRetriever([], name="BM25")
+    node = _make_node([r1, r2])
+
+    state = RAGState(
+        query="q",
+        query_domains=["NeuroML"],
+        retrieval_query="q",
+        text_response_eval=EvaluateAnswerSchema(next_step="retrieve_more_info"),
+    )
+    await node.execute(state)
+    logger.info(f"inc counts: r1={r1.inc_count}, r2={r2.inc_count}")
+
+    assert r1.inc_count == 1
+    assert r2.inc_count == 1
+
+
+async def test_execute_no_retrievers_skips():
+    """execute() returns no updates when no retrievers are configured."""
+    node = _make_node([])
+
+    result = await node.execute(RAGState(query="q", query_domains=["NeuroML"]))
+    logger.info(f"result with no retrievers: {result}")
+
+    assert result == {}
+
+
+async def test_execute_skips_undefined_domain():
+    """The 'undefined' domain is skipped and yields no references."""
+    node = _make_node([FakeRetriever([(_doc("content"), 1.0)])])
+
+    state = RAGState(query="q", query_domains=["undefined"], retrieval_query="q")
+    result = await node.execute(state)
+    logger.info(f"result with undefined domain: {result}")
+
+    assert "reference_material" in result
+    assert result["reference_material"] == {}
