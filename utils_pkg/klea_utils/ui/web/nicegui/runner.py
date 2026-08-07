@@ -258,12 +258,22 @@ def setup_layout(
         """Fetch active model config for the current chat and update the status pane."""
         chat_id = _current_chat_id[0]
         if not chat_id:
+            logger.debug("fetch model info: no active chat (user=%s)", user_id)
             return
+        logger.debug("fetch model info: fetching for chat=%s", chat_id)
         active = await fetch_active_models(server_url, user_id, chat_id)
         if not active:
+            logger.debug(
+                "fetch model info: server returned no roles for chat=%s", chat_id
+            )
             return
         current = ensure_chat(user_id, chat_id)
         current["model_info"] = active
+        logger.debug(
+            "fetch model info: cached %d role(s) for chat=%s",
+            len(active),
+            chat_id,
+        )
         _status_pane.refresh()
 
     async def _model_config_dialog() -> None:
@@ -300,13 +310,32 @@ def setup_layout(
             payload = {"model": model_inp.value}
             if api_key_inp.value.strip():
                 payload["api_key"] = api_key_inp.value.strip()
+            logger.debug(
+                "model config dialog: saving role=%s model=%s chat=%s",
+                role,
+                payload["model"],
+                chat_id,
+            )
             ok = await set_model_override(server_url, user_id, chat_id, role, payload)
+            logger.debug(
+                "model config dialog: save role=%s ok=%s chat=%s",
+                role,
+                ok,
+                chat_id,
+            )
             if ok:
                 dialog.close()
                 await _fetch_model_info()
 
         async def _clear_role(role: str):
+            logger.debug("model config dialog: clearing role=%s chat=%s", role, chat_id)
             ok = await clear_model_override(server_url, user_id, chat_id, role)
+            logger.debug(
+                "model config dialog: clear role=%s ok=%s chat=%s",
+                role,
+                ok,
+                chat_id,
+            )
             if ok:
                 dialog.close()
                 await _fetch_model_info()
@@ -420,6 +449,9 @@ def setup_layout(
         """Flip the pinned flag for a chat and refresh the list."""
         current_chat = ensure_chat(user_id, chat_id)
         current_chat["pinned"] = not current_chat["pinned"]
+        logger.debug(
+            "toggled pin for chat=%s pinned=%s", chat_id, current_chat["pinned"]
+        )
         _render_chat_list.refresh()
 
     def _toggle_left_drawer():
@@ -432,6 +464,7 @@ def setup_layout(
         """
         nonlocal mini_state
         mini_state = not mini_state
+        logger.debug("toggling left drawer: mini_state=%s", mini_state)
         if mini_state:
             left_drawer.props("mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_right"
@@ -443,6 +476,10 @@ def setup_layout(
         """Open a modal dialog with inspector/debug entries for the active chat."""
         current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
         if not current_chat or not current_chat.get("inspector_entries"):
+            logger.debug(
+                "inspector dialog: no entries for chat=%s",
+                _current_chat_id[0],
+            )
             return
 
         logger.debug(
@@ -525,11 +562,13 @@ def setup_layout(
     def _rename_chat(chat_id: str) -> None:
         """Open a dialog to rename a chat and persist on server."""
         chat = ensure_chat(user_id, chat_id)
+        logger.debug("opening rename dialog for chat=%s", chat_id)
         dialog = ui.dialog()
 
         async def _save():
             chat["name"] = inp.value
             dialog.close()
+            logger.debug("renaming chat=%s to %r", chat_id, inp.value)
             await rename_chat_on_server(server_url, user_id, chat_id, inp.value)
             _render_chat_list.refresh()
             _status_pane.refresh()
@@ -618,6 +657,7 @@ def setup_layout(
         """DELETE all server data, reset in-memory state, and generate a new user ID."""
         import httpx
 
+        logger.debug("confirming delete of user session for user_id=%s", user_id)
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.delete(f"{server_url}/chat/{user_id}")
@@ -660,6 +700,7 @@ def setup_layout(
         def _toggle_dark():
             """Flip the dark-mode flag in ``app.storage.user``."""
             dark.value = not dark.value
+            logger.debug("toggled dark mode: value=%s", dark.value)
 
         ui.button(icon="dark_mode", on_click=_toggle_dark).props(
             "flat color=white round"
@@ -746,15 +787,19 @@ def setup_layout(
                         ):
                             ui.tooltip("Choose models")
                         has_entries = bool(current_chat.get("inspector_entries"))
-                        btn = (
-                            ui.button(
-                                icon="info",
-                                on_click=lambda: (
-                                    _show_inspection_dialog()
-                                    if not _is_streaming[0]
-                                    else None
-                                ),
+
+                        def _open_inspector():
+                            """Log and open the inspector dialog if not streaming."""
+                            logger.debug(
+                                "inspector button clicked for chat=%s (streaming=%s)",
+                                _current_chat_id[0],
+                                _is_streaming[0],
                             )
+                            if not _is_streaming[0]:
+                                _show_inspection_dialog()
+
+                        btn = (
+                            ui.button(icon="info", on_click=_open_inspector)
                             .props("flat dense round color=grey-9")
                             .classes("text-sm")
                         )
@@ -878,6 +923,7 @@ def setup_layout(
                         query, chat_id, server_url, user_id=user_id
                     ):
                         t = event.get("type", "?")
+                        logger.debug("chat=%s stream event type=%s", chat_id, t)
                         if t == "progress":
                             pg_label.set_text(f"{event.get('node', '')}")
                         elif t == "debug":
@@ -941,6 +987,11 @@ def setup_layout(
                             break
                         elif t == "error":
                             pg_row.delete()
+                            logger.debug(
+                                "chat=%s stream error: %s",
+                                chat_id,
+                                event.get("message", "Unknown error"),
+                            )
                             with _stream_container:
                                 ui.notification(
                                     f"Error: {event.get('message', 'Unknown error')}",
@@ -952,6 +1003,7 @@ def setup_layout(
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
+                    logger.debug("chat=%s request error: %s", chat_id, e)
                     with _stream_container:
                         ui.notification(
                             f"Connection error: {e}",
