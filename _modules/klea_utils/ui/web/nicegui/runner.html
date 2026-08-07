@@ -208,7 +208,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -227,11 +227,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../../api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../../api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../../../api/utils/nodes.html">Nodes</a></li>
@@ -450,6 +451,10 @@
     <span class="n">toggle_icon_ref</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
     <span class="n">_is_streaming</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
 
+    <span class="c1"># ``user_id`` (a setup_layout parameter) is captured by reference in</span>
+    <span class="c1"># every handler below.  Handlers therefore see a rebind made elsewhere</span>
+    <span class="c1"># in this scope -- _confirm_delete_all uses ``nonlocal user_id`` to</span>
+    <span class="c1"># switch the whole page session to a fresh identity after a delete.</span>
     <span class="n">_expanded</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -543,24 +548,51 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch active model config for the current chat and update the status pane.&quot;&quot;&quot;</span>
         <span class="n">chat_id</span> <span class="o">=</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">chat_id</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;fetch model info: no active chat (user=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
             <span class="k">return</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;fetch model info: fetching for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">active</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_active_models</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">active</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;fetch model info: server returned no roles for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span>
+            <span class="p">)</span>
             <span class="k">return</span>
         <span class="n">current</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">current</span><span class="p">[</span><span class="s2">&quot;model_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">active</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;fetch model info: cached </span><span class="si">%d</span><span class="s2"> role(s) for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">active</span><span class="p">),</span>
+            <span class="n">chat_id</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_model_config_dialog</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_model_config_dialog</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a dialog to view and change per-role model overrides.&quot;&quot;&quot;</span>
         <span class="n">chat_id</span> <span class="o">=</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">chat_id</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;model config dialog: no active chat (user=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
             <span class="k">return</span>
         <span class="n">current_chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">current_info</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="p">{})</span>
         <span class="n">roles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_info</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">roles</span><span class="p">:</span>
-            <span class="k">return</span>
+            <span class="c1"># No model info yet (e.g. a chat created by typing the first</span>
+            <span class="c1"># message). Fetch it on demand so the dialog has roles to render.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;model config dialog: no roles cached, fetching model info for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">chat_id</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">await</span> <span class="n">_fetch_model_info</span><span class="p">()</span>
+            <span class="n">current_chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+            <span class="n">current_info</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">roles</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_info</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">roles</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;model config dialog: still no roles after fetch for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">chat_id</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">return</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;model config dialog: chat=</span><span class="si">%s</span><span class="s2"> roles=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">roles</span><span class="p">)</span>
 
         <span class="n">dialog</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">dialog</span><span class="p">()</span>
 
@@ -568,13 +600,32 @@
             <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model_inp</span><span class="o">.</span><span class="n">value</span><span class="p">}</span>
             <span class="k">if</span> <span class="n">api_key_inp</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
                 <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">api_key_inp</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;model config dialog: saving role=</span><span class="si">%s</span><span class="s2"> model=</span><span class="si">%s</span><span class="s2"> chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">role</span><span class="p">,</span>
+                <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">],</span>
+                <span class="n">chat_id</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">ok</span> <span class="o">=</span> <span class="k">await</span> <span class="n">set_model_override</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;model config dialog: save role=</span><span class="si">%s</span><span class="s2"> ok=</span><span class="si">%s</span><span class="s2"> chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">role</span><span class="p">,</span>
+                <span class="n">ok</span><span class="p">,</span>
+                <span class="n">chat_id</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="k">if</span> <span class="n">ok</span><span class="p">:</span>
                 <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                 <span class="k">await</span> <span class="n">_fetch_model_info</span><span class="p">()</span>
 
         <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_clear_role</span><span class="p">(</span><span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;model config dialog: clearing role=</span><span class="si">%s</span><span class="s2"> chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
             <span class="n">ok</span> <span class="o">=</span> <span class="k">await</span> <span class="n">clear_model_override</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;model config dialog: clear role=</span><span class="si">%s</span><span class="s2"> ok=</span><span class="si">%s</span><span class="s2"> chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">role</span><span class="p">,</span>
+                <span class="n">ok</span><span class="p">,</span>
+                <span class="n">chat_id</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="k">if</span> <span class="n">ok</span><span class="p">:</span>
                 <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                 <span class="k">await</span> <span class="n">_fetch_model_info</span><span class="p">()</span>
@@ -688,6 +739,9 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Flip the pinned flag for a chat and refresh the list.&quot;&quot;&quot;</span>
         <span class="n">current_chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;pinned&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;pinned&quot;</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;toggled pin for chat=</span><span class="si">%s</span><span class="s2"> pinned=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;pinned&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
         <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_toggle_left_drawer</span><span class="p">():</span>
@@ -700,6 +754,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">nonlocal</span> <span class="n">mini_state</span>
         <span class="n">mini_state</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">mini_state</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;toggling left drawer: mini_state=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">mini_state</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">mini_state</span><span class="p">:</span>
             <span class="n">left_drawer</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;mini&quot;</span><span class="p">)</span>
             <span class="n">toggle_icon_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;keyboard_double_arrow_right&quot;</span>
@@ -711,6 +766,10 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a modal dialog with inspector/debug entries for the active chat.&quot;&quot;&quot;</span>
         <span class="n">current_chat</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">current_chat</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;inspector dialog: no entries for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="p">)</span>
             <span class="k">return</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
@@ -793,11 +852,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_rename_chat</span><span class="p">(</span><span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a dialog to rename a chat and persist on server.&quot;&quot;&quot;</span>
         <span class="n">chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;opening rename dialog for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">dialog</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">dialog</span><span class="p">()</span>
 
         <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_save</span><span class="p">():</span>
             <span class="n">chat</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span><span class="o">.</span><span class="n">value</span>
             <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;renaming chat=</span><span class="si">%s</span><span class="s2"> to </span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">inp</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
             <span class="k">await</span> <span class="n">rename_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">inp</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
             <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
             <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
@@ -886,31 +947,61 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;DELETE all server data, reset in-memory state, and generate a new user ID.&quot;&quot;&quot;</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
+        <span class="c1"># ``user_id`` is setup_layout&#39;s parameter; every handler (send,</span>
+        <span class="c1"># _new_chat, _switch_chat, status pane, ...) closes over that same</span>
+        <span class="c1"># name.  Declaring it nonlocal here lets us rebind it below so the</span>
+        <span class="c1"># whole page session switches to the fresh identity immediately,</span>
+        <span class="c1"># instead of only after a page reload.  Without this, a new chat</span>
+        <span class="c1"># created after deleting the session would be stored under the OLD</span>
+        <span class="c1"># user id and become orphaned from the frontend&#39;s view.</span>
+        <span class="k">nonlocal</span> <span class="n">user_id</span>
+        <span class="n">old_id</span> <span class="o">=</span> <span class="n">user_id</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;confirming delete of user session for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">old_id</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-                <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">old_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                        <span class="s2">&quot;delete_user_session succeeded for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;delete_user_session succeeded for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">old_id</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">&quot;delete_user_session failed: HTTP </span><span class="si">%s</span><span class="s2"> for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+                        <span class="n">old_id</span><span class="p">,</span>
                     <span class="p">)</span>
+                    <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Failed to delete session (HTTP </span><span class="si">{</span><span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">). &quot;</span>
+                        <span class="s2">&quot;No data was cleared.&quot;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                        <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="k">return</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to delete user session: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+            <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to delete session: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span>
 
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;clearing in-memory chats for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
-        <span class="n">chat_key_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;clearing in-memory chats for user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">old_id</span><span class="p">)</span>
+        <span class="n">chat_key_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">old_id</span><span class="si">}</span><span class="s2">:&quot;</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">chats</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
             <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">chat_key_prefix</span><span class="p">):</span>
                 <span class="n">chats</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;chat_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-        <span class="n">old_id</span> <span class="o">=</span> <span class="n">user_id</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="n">new_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_id</span>
+        <span class="c1"># Rebind the closure so every handler (new chat, send, status pane,</span>
+        <span class="c1"># etc.) uses the fresh identity for the rest of this page session.</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">new_id</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
             <span class="s2">&quot;reset local state: new user_id=</span><span class="si">%s</span><span class="s2"> (was </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
-            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">],</span>
+            <span class="n">user_id</span><span class="p">,</span>
             <span class="n">old_id</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">_render_chat_area</span><span class="p">()</span>
@@ -928,6 +1019,7 @@
         <span class="k">def</span><span class="w"> </span><span class="nf">_toggle_dark</span><span class="p">():</span>
 <span class="w">            </span><span class="sd">&quot;&quot;&quot;Flip the dark-mode flag in ``app.storage.user``.&quot;&quot;&quot;</span>
             <span class="n">dark</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">dark</span><span class="o">.</span><span class="n">value</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;toggled dark mode: value=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dark</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
 
         <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;dark_mode&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">_toggle_dark</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span>
             <span class="s2">&quot;flat color=white round&quot;</span>
@@ -1006,22 +1098,27 @@
                     <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">():</span>
                         <span class="k">with</span> <span class="p">(</span>
                             <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
-                                <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">_model_config_dialog</span><span class="p">()</span>
+                                <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span>
+                                <span class="n">on_click</span><span class="o">=</span><span class="n">_model_config_dialog</span><span class="p">,</span>
                             <span class="p">)</span>
                             <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
                             <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
                         <span class="p">):</span>
                             <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Choose models&quot;</span><span class="p">)</span>
                         <span class="n">has_entries</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">))</span>
-                        <span class="n">btn</span> <span class="o">=</span> <span class="p">(</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
-                                <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
-                                <span class="n">on_click</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">(</span>
-                                    <span class="n">_show_inspection_dialog</span><span class="p">()</span>
-                                    <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                                    <span class="k">else</span> <span class="kc">None</span>
-                                <span class="p">),</span>
+
+                        <span class="k">def</span><span class="w"> </span><span class="nf">_open_inspector</span><span class="p">():</span>
+<span class="w">                            </span><span class="sd">&quot;&quot;&quot;Log and open the inspector dialog if not streaming.&quot;&quot;&quot;</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                <span class="s2">&quot;inspector button clicked for chat=</span><span class="si">%s</span><span class="s2"> (streaming=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+                                <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                             <span class="p">)</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                                <span class="n">_show_inspection_dialog</span><span class="p">()</span>
+
+                        <span class="n">btn</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">_open_inspector</span><span class="p">)</span>
                             <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
                             <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
                         <span class="p">)</span>
@@ -1145,6 +1242,7 @@
                         <span class="n">query</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
                     <span class="p">):</span>
                         <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;?&quot;</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream event type=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
                         <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
                             <span class="n">pg_label</span><span class="o">.</span><span class="n">set_text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;debug&quot;</span><span class="p">:</span>
@@ -1208,21 +1306,29 @@
                             <span class="k">break</span>
                         <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
                             <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
-                                <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
-                                <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                <span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                                <span class="n">chat_id</span><span class="p">,</span>
+                                <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown error&quot;</span><span class="p">),</span>
                             <span class="p">)</span>
+                            <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
+                                <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                                    <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                                    <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                                <span class="p">)</span>
                             <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                             <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                             <span class="k">break</span>
                 <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">RequestError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                    <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
-                        <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
-                    <span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> request error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+                    <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                            <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                        <span class="p">)</span>
                     <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                     <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
@@ -1244,6 +1350,11 @@
                     <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
                         <span class="n">create_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
                     <span class="p">)</span>
+                    <span class="c1"># Populate model_info for the newly created chat so the</span>
+                    <span class="c1"># &quot;Choose models&quot; dialog has roles to render. Without this</span>
+                    <span class="c1"># the status pane stays empty and the dialog silently</span>
+                    <span class="c1"># no-ops for chats started by typing the first message.</span>
+                    <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_fetch_model_info</span><span class="p">())</span>
                     <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
                 <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">query</span><span class="p">,</span> <span class="n">stamp</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
@@ -1341,6 +1452,20 @@
 <span class="sd">        works after the client has connected, so we await</span>
 <span class="sd">        ``ui.context.client.connected()`` first.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Establish the per-browser user identity at the very top of the</span>
+        <span class="c1"># page builder, before any await. `app.storage.user` is only</span>
+        <span class="c1"># guaranteed valid in the request context of the initial page</span>
+        <span class="c1"># build; after awaiting client.connected() / check_api_is_ready()</span>
+        <span class="c1"># the task may run outside that context and NiceGUI raises</span>
+        <span class="c1"># &quot;user storage for ... should be created before accessing it&quot;.</span>
+        <span class="k">if</span> <span class="s2">&quot;user_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">:</span>
+            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;NEW user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;EXISTING user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">])</span>
+
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span>
+
         <span class="k">await</span> <span class="n">ui</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">connected</span><span class="p">()</span>
 
         <span class="c1"># The page builder runs exactly once -- build the appropriate page</span>
@@ -1358,14 +1483,6 @@
                     <span class="s2">&quot;text-grey-5&quot;</span>
                 <span class="p">)</span>
             <span class="k">return</span>
-
-        <span class="k">if</span> <span class="s2">&quot;user_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">:</span>
-            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;NEW user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;EXISTING user_id=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">])</span>
-
-        <span class="n">user_id</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span>
 
         <span class="n">chat_id</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 

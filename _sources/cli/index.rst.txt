@@ -7,7 +7,7 @@ Vector store management
 .. toctree::
    :maxdepth: 1
 
-   klea-vs-create
+   klea-stores-create
 
 RAG
 ---

@@ -209,7 +209,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/nml-mcp.html">nml-mcp</a></li>
@@ -228,11 +228,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/nodes.html">Nodes</a></li>
@@ -349,9 +350,10 @@ for the full list).</p>
 </section>
 <section id="step-2-create-a-vector-store">
 <h2>Step 2: Create a vector store<a class="headerlink" href="#step-2-create-a-vector-store" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-vs-create<span class="w"> </span>build<span class="w"> </span>&lt;folder-of-files&gt;<span class="w"> </span><span class="se">\\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-stores-create<span class="w"> </span>build<span class="w"> </span>&lt;folder-of-files&gt;<span class="w"> </span><span class="se">\\</span>
 <span class="w">    </span>--collection<span class="w"> </span>my-docs<span class="w"> </span><span class="se">\\</span>
-<span class="w">    </span>--store<span class="w"> </span>chroma:/path/to/my-store.db
+<span class="w">    </span>--store<span class="w"> </span>chroma:/path/to/my-store.db<span class="w"> </span><span class="se">\\</span>
+<span class="w">    </span>--bm25-store<span class="w"> </span>/path/to/my-bm25-corpus.pkl
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">build</span></code> command runs the full pipeline:</p>
@@ -372,11 +374,14 @@ at the path you specify.</p></li>
 (e.g. <code class="docutils literal notranslate"><span class="pre">my-docs</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--store</span></code> / <code class="docutils literal notranslate"><span class="pre">-s</span></code> – the vector store URI; <code class="docutils literal notranslate"><span class="pre">chroma:/path</span></code> creates a
 persistent Chroma database at that location.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> – optional path to write the combined chunked
+documents to a single pickle file that can be used as a BM25 keyword
+store alongside the vector store.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--model</span></code> / <code class="docutils literal notranslate"><span class="pre">-m</span></code> – embedding model (default <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--max-tokens</span></code> – maximum tokens per chunk (default 450).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--force</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code> – re-process all files even if previously cached.</p></li>
 </ul>
-<p>Re-running <code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">build</span></code> on the same directory is safe –
+<p>Re-running <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">build</span></code> on the same directory is safe –
 it skips files whose content has not changed and skips chunks whose
 hashes already exist in the store (idempotent).  Adding new files to
 the source directory and re-running adds only the new content
@@ -413,6 +418,12 @@ vector store to a domain:</p>
 <span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-docs&quot;</span><span class="p">,</span>
 <span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/my-store.db&quot;</span>
 <span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;bm25_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-docs-bm25&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/path/to/my-bm25-corpus.pkl&quot;</span>
+<span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">]</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
@@ -434,6 +445,13 @@ own knowledge when retrieval returns nothing useful.</p></li>
 <p>Each entry under <code class="docutils literal notranslate"><span class="pre">domains</span></code> defines a knowledge area with one or more
 vector stores.  The <code class="docutils literal notranslate"><span class="pre">description</span></code> helps the classifier route queries
 to the right domain.</p>
+<p>A domain can also list <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>.  Each <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry’s
+<code class="docutils literal notranslate"><span class="pre">path</span></code> points to a combined corpus pickle written by
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--bm25-store</span></code> (or <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span>
+<span class="pre">--bm25-store</span></code>).  When both are configured, retrieval queries the
+vector stores and the BM25 stores and combines the results with
+Reciprocal Rank Fusion – exact name/symbol matches from BM25 complement
+the semantic matches from the vector stores.</p>
 <p>Vector stores can override the retrieval settings independently.  Stores
 that set their own <code class="docutils literal notranslate"><span class="pre">default_k</span></code>, <code class="docutils literal notranslate"><span class="pre">k_max</span></code>, and <code class="docutils literal notranslate"><span class="pre">k_inc</span></code> use those
 values instead of the <code class="docutils literal notranslate"><span class="pre">general</span></code> fallbacks, which is useful when stores
@@ -478,6 +496,11 @@ provider model naming conventions.</p>
 </section>
 <section id="step-4-start-the-rag-server">
 <h2>Step 4: Start the RAG server<a class="headerlink" href="#step-4-start-the-rag-server" title="Link to this heading">¶</a></h2>
+<p>For local single-user use this step is optional: the client commands in
+Step 5 start a server on the local machine automatically when none is
+already running.  Run <code class="docutils literal notranslate"><span class="pre">klea-rag-serve</span> <span class="pre">serve</span></code> instead when you want a
+persistent backend, for example to share one server between several
+clients or to run it in a separate terminal:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">KLEA_RAG_ENV_FILE</span><span class="o">=</span>my-rag.env<span class="w"> </span>klea-rag-serve<span class="w"> </span>serve
 </pre></div>
 </div>
@@ -490,6 +513,11 @@ and compiles the LangGraph pipeline.  Once ready, check it is alive:</p>
 </section>
 <section id="step-5-query-the-rag">
 <h2>Step 5: Query the RAG<a class="headerlink" href="#step-5-query-the-rag" title="Link to this heading">¶</a></h2>
+<p>The client commands below use <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code> by default.
+If no server is running there, they start one on the local machine for
+the session and stop it when they exit; if a server is already running
+(for example from Step 4) they reuse it.  Pointing <code class="docutils literal notranslate"><span class="pre">--server</span></code> at a
+remote host connects without starting anything.</p>
 <p>Single-query mode is the quickest way to test:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-rag<span class="w"> </span>cli<span class="w"> </span>--single-query<span class="w"> </span><span class="s2">&quot;What does my collection of documents cover?&quot;</span>
 </pre></div>
@@ -505,17 +533,17 @@ and compiles the LangGraph pipeline.  Once ready, check it is alive:</p>
 </div>
 <p>The web UI uses NiceGUI and requires the <code class="docutils literal notranslate"><span class="pre">[nicegui]</span></code> extra, while the
 CLI mode has no extra dependencies.</p>
-<p>Both methods connect to the running server at <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code>
-by default.  Use <code class="docutils literal notranslate"><span class="pre">--server</span></code> to point at a different address.</p>
+<p>Both methods use the server at <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code> by default.
+Use <code class="docutils literal notranslate"><span class="pre">--server</span></code> to point at a different address.</p>
 </section>
 <section id="going-further">
 <h2>Going further<a class="headerlink" href="#going-further" title="Link to this heading">¶</a></h2>
 <p>Once the basic pipeline works, here are natural next steps:</p>
 <dl class="simple">
 <dt><strong>Metadata enrichment</strong></dt><dd><p>Add source URLs or other metadata to retrieved chunks.  First run
-<code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>,
-fill in the values, then <code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.
-See <code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">--help</span></code> for examples.</p>
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>,
+fill in the values, then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.
+See <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for examples.</p>
 </dd>
 <dt><strong>Different embedding models</strong></dt><dd><p>Swap <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code> for a HuggingFace embedding model
 (see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for model naming conventions).</p>
@@ -528,9 +556,16 @@ automatically.</p>
 external tools (e.g. a NeuroML validation server).  See the example
 in <code class="docutils literal notranslate"><span class="pre">rag_pkg/example-configs/klea_rag.json</span></code>.</p>
 </dd>
-<dt><strong>Separate chunk-and-store workflow</strong></dt><dd><p>Use <code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">chunk</span></code> to convert and cache without writing
-to a store, then <code class="docutils literal notranslate"><span class="pre">klea-vs-create</span> <span class="pre">store</span></code> later.  This lets you
+<dt><strong>Separate chunk-and-store workflow</strong></dt><dd><p>Use <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to convert and cache without writing
+to a store, then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span></code> later.  This lets you
 inspect the chunks and edit the metadata map before embedding.</p>
+</dd>
+<dt><strong>Hybrid keyword retrieval</strong></dt><dd><p>Add a BM25 store alongside a vector store: run
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--bm25-store</span> <span class="pre">/path/to/corpus.pkl</span></code> and add a
+<code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry to the domain config.  Retrieval then fuses
+semantic and lexical matches with Reciprocal Rank Fusion, which helps
+with exact names, symbols, and terminology.  See <a class="reference internal" href="../concepts/rag.html"><span class="doc">RAG</span></a>
+for details.</p>
 </dd>
 </dl>
 </section>
@@ -554,14 +589,17 @@ a format Docling supports.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="../cli/klea-vs-create.html"><span class="doc">klea-vs-create</span></a> – full CLI reference for vector store
+<li><p><a class="reference internal" href="../cli/klea-stores-create.html"><span class="doc">klea-stores-create</span></a> – full CLI reference for vector store
 creation</p></li>
 <li><p><a class="reference internal" href="../cli/klea-rag-serve.html"><span class="doc">klea-rag-serve</span></a> – server CLI reference</p></li>
 <li><p><a class="reference internal" href="../cli/klea-rag.html"><span class="doc">klea-rag</span></a> – client CLI reference</p></li>
-<li><p><a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder" title="klea_utils.stores.ingestion.VSBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">VSBuilder</span></code></a> – Python API for
+<li><p><a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder" title="klea_utils.stores.ingestion.StoresBuilder"><code class="xref py py-class docutils literal notranslate"><span class="pre">StoresBuilder</span></code></a> – Python API for
 ingestion</p></li>
-<li><p><a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever" title="klea_utils.stores.retrieval.VSRetriever"><code class="xref py py-class docutils literal notranslate"><span class="pre">VSRetriever</span></code></a> – Python API for
-retrieval</p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.retrieval.vs.VSRetriever" title="klea_utils.stores.retrieval.vs.VSRetriever"><code class="xref py py-class docutils literal notranslate"><span class="pre">VSRetriever</span></code></a> – Python API for</dt><dd><p>retrieval</p>
+</dd>
+</dl>
+</li>
 </ul>
 </div>
 </section>

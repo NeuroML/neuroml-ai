@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="API" href="api.html"><link rel="prev" title="Model catalog" href="models_catalog.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Nodes" href="nodes.html"><link rel="prev" title="UI — client CLI" href="ui-cli.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>CLI - Klea</title>
+        <title>UI — store creation CLI - Klea</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -209,7 +209,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -228,11 +228,12 @@
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3 current has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4 current current-page"><a class="current reference internal" href="#">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="nodes.html">Nodes</a></li>
@@ -269,7 +270,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../../_sources/api/utils/cli.rst.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/api/utils/ui-stores-create.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -287,39 +288,68 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="module-klea_utils.cli.parser">
-<span id="cli"></span><h1>CLI<a class="headerlink" href="#module-klea_utils.cli.parser" title="Link to this heading">¶</a></h1>
-<p>Shared CLI argument parser for Klea frontend entry points.</p>
-<p>Provides a standard <a class="reference external" href="https://docs.python.org/3/library/argparse.html#module-argparse" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">argparse</span></code></a> parser so that all frontends
-(nicegui, streamlit, textual, etc.) handle the same set of
-positional arguments and optional flags in the same way.  Each
-entry point simply calls <code class="xref py py-func docutils literal notranslate"><span class="pre">make_parser().parse_args()</span></code> and
-picks only the arguments it needs; unrecognised options are
-silently ignored (they are never passed by the Typer CLI commands).</p>
-<p>Usage:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.cli.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_parser</span>
-
-<span class="n">args</span> <span class="o">=</span> <span class="n">make_parser</span><span class="p">(</span><span class="s2">&quot;My frontend&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-<span class="n">run_app</span><span class="p">(</span>
-    <span class="n">args</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
-    <span class="n">subtitle</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">subtitle</span><span class="p">,</span>
-    <span class="n">disclaimer</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">disclaimer</span><span class="p">,</span>
-    <span class="n">debug</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">debug</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-<p>File: klea_utils/cli/parser.py</p>
+          <section id="module-klea_utils.ui.stores_create">
+<span id="ui-store-creation-cli"></span><h1>UI — store creation CLI<a class="headerlink" href="#module-klea_utils.ui.stores_create" title="Link to this heading">¶</a></h1>
+<p>CLI for creating stores from documents</p>
+<p>File: klea_utils/ui/stores_create.py</p>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.cli.parser.make_parser">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.cli.parser.</span></span><span class="sig-name descname"><span class="pre">make_parser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Klea</span> <span class="pre">web</span> <span class="pre">interface'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.14)"><span class="pre">ArgumentParser</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/cli/parser.html#make_parser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.cli.parser.make_parser" title="Link to this definition">¶</a></dt>
-<dd><p>Return a preconfigured <a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">argparse.ArgumentParser</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>description</strong> – Description shown in <code class="docutils literal notranslate"><span class="pre">--help</span></code>.</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="klea_utils.ui.stores_create.build">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.stores_create.</span></span><span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.ArgumentInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_map_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bm25_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/ui/stores_create.html#build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.stores_create.build" title="Link to this definition">¶</a></dt>
+<dd><p>Full pipeline: chunk, embed, and write to a vector store.</p>
+<p>Processes all files in SOURCE_DIR: converts them with Docling,
+chunks them, embeds them, and writes to the vector store.
+Processed chunks are cached in <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code> so
+subsequent runs (e.g. with <code class="docutils literal notranslate"><span class="pre">--metadata-map</span></code>) skip conversion.</p>
+<p>The optional <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> flag writes the combined chunked
+documents to a single pickle file that can be used as a BM25 store.</p>
+<p>The optional <code class="docutils literal notranslate"><span class="pre">--metadata-map</span></code> / <code class="docutils literal notranslate"><span class="pre">-M</span></code> flag accepts a JSON file
+organised by source file.  Within each file entry, the most specific
+heading chain match wins; a <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry provides fallback for
+any heading not listed.</p>
+<p>Example metadata-map.json:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;PrimerOnCElegans.md&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="s2">&quot;C. elegans tissue morphology&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://example.com/worm&quot;</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;c302-paper.pdf&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://example.com/c302&quot;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.stores_create.chunk">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.stores_create.</span></span><span class="sig-name descname"><span class="pre">chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.ArgumentInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/ui/stores_create.html#chunk"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.stores_create.chunk" title="Link to this definition">¶</a></dt>
+<dd><p>Chunk and cache documents without writing to a vector store.</p>
+<p>Converts all files in SOURCE_DIR with Docling, chunks them, and
+caches the result in <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code>.  Also writes a
+<code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> file organised by source file, with
+empty <code class="docutils literal notranslate"><span class="pre">{}</span></code> placeholders for each heading chain.  Fill in the
+metadata values and pass the file to
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.stores_create.store">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.stores_create.</span></span><span class="sig-name descname"><span class="pre">store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.ArgumentInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata_map_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bm25_store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;typer.models.OptionInfo</span> <span class="pre">object&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/ui/stores_create.html#store"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.stores_create.store" title="Link to this definition">¶</a></dt>
+<dd><p>Write cached document chunks to a vector store.</p>
+<p>Reads previously cached chunks from <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code>,
+optionally applies a metadata map (per-file format), and writes
+them to the vector store.  Unseen files are converted and chunked
+on the fly.</p>
+<p>The optional <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> flag writes the combined chunked
+documents to a single pickle file that can be used as a BM25 store.</p>
+<p>Run <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> first to populate the cache and
+generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>.</p>
 </dd></dl>
 
 </section>
@@ -329,23 +359,23 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="api.html">
+          <a class="next-page" href="nodes.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">API</div>
+                <div class="title">Nodes</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="models_catalog.html">
+          <a class="prev-page" href="ui-cli.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Model catalog</div>
+                <div class="title">UI — client CLI</div>
                 
               </div>
             </a>
@@ -378,8 +408,10 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">CLI</a><ul>
-<li><a class="reference internal" href="#klea_utils.cli.parser.make_parser"><code class="docutils literal notranslate"><span class="pre">make_parser()</span></code></a></li>
+<li><a class="reference internal" href="#">UI — store creation CLI</a><ul>
+<li><a class="reference internal" href="#klea_utils.ui.stores_create.build"><code class="docutils literal notranslate"><span class="pre">build()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.ui.stores_create.chunk"><code class="docutils literal notranslate"><span class="pre">chunk()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.ui.stores_create.store"><code class="docutils literal notranslate"><span class="pre">store()</span></code></a></li>
 </ul>
 </li>
 </ul>

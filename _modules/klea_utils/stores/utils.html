@@ -208,7 +208,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -227,11 +227,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/nodes.html">Nodes</a></li>
@@ -296,7 +297,97 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
-<span class="n">_INTERNAL_META_KEYS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;file_name&quot;</span><span class="p">,</span> <span class="s2">&quot;source_path&quot;</span><span class="p">,</span> <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span> <span class="s2">&quot;headings&quot;</span><span class="p">}</span>
+<span class="c1">#: Metadata key holding each document&#39;s original per-source scores (e.g.</span>
+<span class="c1">#: ``{&quot;vector store&quot;: 0.87, &quot;BM25&quot;: 3.21}``), set by :func:`rrf_merge`.</span>
+<span class="n">SOURCE_SCORES_KEY</span> <span class="o">=</span> <span class="s2">&quot;_source_scores&quot;</span>
+
+<span class="c1">#: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a</span>
+<span class="c1">#: source&#39;s result list contributes ``1 / (RRF_K + r)`` to its fused score.</span>
+<span class="n">RRF_K</span> <span class="o">=</span> <span class="mi">60</span>
+
+<span class="n">_INTERNAL_META_KEYS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;file_name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;source_path&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;headings&quot;</span><span class="p">,</span>
+    <span class="n">SOURCE_SCORES_KEY</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="rrf_merge">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.rrf_merge">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rrf_merge</span><span class="p">(</span>
+    <span class="n">result_sets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]],</span>
+    <span class="n">num_refs_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fuse per-source retrieval results with Reciprocal Rank Fusion.</span>
+
+<span class="sd">    Scores from different retrievers (e.g. cosine similarity vs BM25) are not</span>
+<span class="sd">    comparable, so each document is scored purely by its rank within each</span>
+<span class="sd">    source&#39;s result list.  The original per-source scores are preserved in</span>
+<span class="sd">    each document&#39;s :data:`SOURCE_SCORES_KEY` metadata for display.</span>
+
+<span class="sd">    :param result_sets: List of ``(source_label, results)`` pairs, where each</span>
+<span class="sd">        *results* is a list of ``(document, score)`` tuples already ranked by</span>
+<span class="sd">        its source</span>
+<span class="sd">    :param num_refs_max: Maximum number of documents to return</span>
+<span class="sd">    :returns: Documents ordered by RRF score, deduplicated by content, capped</span>
+<span class="sd">        at *num_refs_max*</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rrf_scores</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">doc_by_key</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Document</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">source_label</span><span class="p">,</span> <span class="n">results</span> <span class="ow">in</span> <span class="n">result_sets</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">rank</span><span class="p">,</span> <span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
+            <span class="n">rrf_scores</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">rrf_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">RRF_K</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doc_by_key</span><span class="p">:</span>
+                <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">][</span><span class="n">source_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">score</span>
+
+    <span class="n">merged</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="p">((</span><span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">rrf</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">rrf</span> <span class="ow">in</span> <span class="n">rrf_scores</span><span class="o">.</span><span class="n">items</span><span class="p">()),</span>
+        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">merged</span><span class="p">[:</span><span class="n">num_refs_max</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="format_source_scores">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.format_source_scores">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">precision</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format a document&#39;s original per-source scores for display.</span>
+
+<span class="sd">    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata</span>
+<span class="sd">    :param precision: Number of decimal places per score</span>
+<span class="sd">    :returns: Joined string like ``&quot;vector store 0.87, BM25 3.21&quot;``, or</span>
+<span class="sd">        ``None`` if the document has no per-source scores</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source_scores</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">source_scores</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">source_scores</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">score</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format a document&#39;s relevance scores for prompt context.</span>
+
+<span class="sd">    Shows the original per-source scores (e.g. ``vector store 0.8723,</span>
+<span class="sd">    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM</span>
+<span class="sd">    can interpret scores from different retrievers.  Falls back to the</span>
+<span class="sd">    single relevance score for documents without per-source info.</span>
+
+<span class="sd">    :param doc: Document to format</span>
+<span class="sd">    :param score: Relevance score for *doc*</span>
+<span class="sd">    :returns: Score string to append to a document heading</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source_scores</span> <span class="o">=</span> <span class="n">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">source_scores</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; (relevance: </span><span class="si">{</span><span class="n">source_scores</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)&quot;</span>
 
 
 <div class="viewcode-block" id="serialize_vs_retrieval">
@@ -312,6 +403,7 @@
 <span class="sd">    - ``headings``: list of heading hierarchy (most specific last)</span>
 <span class="sd">    - ``file_name``: source filename</span>
 <span class="sd">    - ``source_path``: full path to source file</span>
+<span class="sd">    - ``_source_scores``: optional per-retriever scores (from the RRF merge)</span>
 <span class="sd">    - Optional custom keys from the ``--metadata-map`` (e.g., ``url``)</span>
 
 <span class="sd">    :param reference_material: Dict mapping query/domain to list of (doc, score) tuples</span>
@@ -328,7 +420,7 @@
             <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
                 <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}</span><span class="s2">&quot;</span>
 
-            <span class="n">score_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
             <span class="n">serialized</span> <span class="o">+=</span> <span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">### Document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sorted_refs</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
             <span class="p">)</span>

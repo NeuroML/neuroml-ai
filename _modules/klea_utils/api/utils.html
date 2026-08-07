@@ -208,7 +208,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -227,11 +227,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/nodes.html">Nodes</a></li>
@@ -295,9 +296,10 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnyUrl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">PydanticValidationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tenacity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">retry</span><span class="p">,</span>
+    <span class="n">AsyncRetrying</span><span class="p">,</span>
     <span class="n">retry_if_exception_type</span><span class="p">,</span>
     <span class="n">stop_after_attempt</span><span class="p">,</span>
+    <span class="n">stop_after_delay</span><span class="p">,</span>
     <span class="n">wait_random_exponential</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -314,25 +316,59 @@
 
 
 
-<div class="viewcode-block" id="check_api_is_ready">
-<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.utils.check_api_is_ready">[docs]</a>
-<span class="nd">@retry</span><span class="p">(</span>
-    <span class="n">wait</span><span class="o">=</span><span class="n">wait_random_exponential</span><span class="p">(</span><span class="n">multiplier</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
-    <span class="n">stop</span><span class="o">=</span><span class="n">stop_after_attempt</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
-    <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception_type</span><span class="p">(</span>
-        <span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">ConnectError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPStatusError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">ReadError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">)</span>
-    <span class="p">),</span>
-    <span class="n">reraise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">check_api_is_ready</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exponentially back off checking that the API is ready.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_retryer</span><span class="p">(</span><span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncRetrying</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an ``AsyncRetrying`` that retries transient API call errors.</span>
 
-<span class="sd">    :param url: Health check endpoint URL</span>
+<span class="sd">    :param attempts: If set, bound the number of probe attempts.  Takes</span>
+<span class="sd">        precedence over *timeout* (useful for fast single-shot probes).</span>
+<span class="sd">    :param timeout: Total wall-clock seconds to keep probing when</span>
+<span class="sd">        *attempts* is unset.  Generous by default so a server that is slow</span>
+<span class="sd">        to initialize (MCP servers, embedding model downloads) is not given</span>
+<span class="sd">        up on prematurely.</span>
+<span class="sd">    :returns: A configured :class:`tenacity.AsyncRetrying` instance</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">attempts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">stop_after_attempt</span><span class="p">(</span><span class="n">attempts</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">stop_after_delay</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">AsyncRetrying</span><span class="p">(</span>
+        <span class="n">wait</span><span class="o">=</span><span class="n">wait_random_exponential</span><span class="p">(</span><span class="n">multiplier</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+        <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span>
+        <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception_type</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">httpx</span><span class="o">.</span><span class="n">ConnectError</span><span class="p">,</span>
+                <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPStatusError</span><span class="p">,</span>
+                <span class="n">httpx</span><span class="o">.</span><span class="n">ReadError</span><span class="p">,</span>
+                <span class="n">httpx</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">),</span>
+        <span class="n">reraise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_ready</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GET the health endpoint and return its JSON, raising on non-2xx.&quot;&quot;&quot;</span>
     <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
         <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span></div>
+        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="check_api_is_ready">
+<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.utils.check_api_is_ready">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">check_api_is_ready</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exponentially back off checking that the API is ready.</span>
+
+<span class="sd">    :param url: Health check endpoint URL</span>
+<span class="sd">    :param attempts: If set, maximum number of probe attempts (overrides</span>
+<span class="sd">        *timeout*)</span>
+<span class="sd">    :param timeout: Total wall-clock seconds to keep probing when</span>
+<span class="sd">        *attempts* is unset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">retryer</span> <span class="o">=</span> <span class="n">_make_retryer</span><span class="p">(</span><span class="n">attempts</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">retryer</span><span class="p">(</span><span class="n">_get_ready</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span></div>
 
 </pre></div>
         </article>

@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="UI" href="ui.html"><link rel="prev" title="CLI" href="cli.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="UI" href="ui.html"><link rel="prev" title="Model catalog" href="models_catalog.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>API - Klea</title>
@@ -209,7 +209,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -228,11 +228,12 @@
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="nodes.html">Nodes</a></li>
@@ -328,6 +329,20 @@ graph’s checkpoints.</p></li>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.server.is_loopback_host">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.server.</span></span><span class="sig-name descname"><span class="pre">is_loopback_host</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/api/server.html#is_loopback_host"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.server.is_loopback_host" title="Link to this definition">¶</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> when <em>host</em> refers to the local machine.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>host</strong> – Hostname from a server URL (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;127.0.0.1&quot;</span></code>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> for loopback addresses, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.api.server.make_serve_app">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.api.server.</span></span><span class="sig-name descname"><span class="pre">make_serve_app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_module</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8005</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Typer</span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/server.html#make_serve_app"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.server.make_serve_app" title="Link to this definition">¶</a></dt>
 <dd><p>Create a Typer app that runs uvicorn on the given <em>app_module</em>.</p>
@@ -342,6 +357,53 @@ instance, e.g. <code class="docutils literal notranslate"><span class="pre">&quo
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">typer.Typer</span></code> app for use as a CLI entry point</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.server.spawn_server">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.server.</span></span><span class="sig-name descname"><span class="pre">spawn_server</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">app_module</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'127.0.0.1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterator" title="(in Python v3.14)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/subprocess.html#subprocess.Popen" title="(in Python v3.14)"><span class="pre">Popen</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/server.html#spawn_server"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.server.spawn_server" title="Link to this definition">¶</a></dt>
+<dd><p>Context manager that runs an API server in a subprocess.</p>
+<p>If a healthy server is already listening at <code class="docutils literal notranslate"><span class="pre">host:port</span></code> (probed via
+<code class="docutils literal notranslate"><span class="pre">/health/ready</span></code>), nothing is spawned and <code class="docutils literal notranslate"><span class="pre">None</span></code> is yielded, so the
+caller does not own the server’s lifecycle.  Otherwise a uvicorn
+subprocess is spawned (stdout and stderr inherited so startup errors and
+app output are visible; access logs are disabled to keep the shared
+terminal clean, with full logging preserved in the server’s rotating log
+file), readiness is waited on, and the subprocess is terminated when the
+<code class="docutils literal notranslate"><span class="pre">with</span></code> block exits.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>app_module</strong> – Uvicorn module string (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;klea_rag.api.main:app&quot;</span></code>)</p></li>
+<li><p><strong>host</strong> – Host to bind</p></li>
+<li><p><strong>port</strong> – Port to bind</p></li>
+<li><p><strong>timeout</strong> – Total seconds to wait for readiness after spawning</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The spawned <a class="reference external" href="https://docs.python.org/3/library/subprocess.html#subprocess.Popen" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">subprocess.Popen</span></code></a> (or <code class="docutils literal notranslate"><span class="pre">None</span></code> if an
+existing server was reused)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.api.server.split_server_url">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.api.server.</span></span><span class="sig-name descname"><span class="pre">split_server_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8005</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/api/server.html#split_server_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.server.split_server_url" title="Link to this definition">¶</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">(host,</span> <span class="pre">port)</span></code> parsed from <em>url</em>.</p>
+<p>Falls back to <code class="docutils literal notranslate"><span class="pre">127.0.0.1</span></code> and <em>default_port</em> when the URL does not
+carry a hostname or port.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> – Server URL (e.g. <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8005</span></code>)</p></li>
+<li><p><strong>default_port</strong> – Port to use when the URL omits one</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(host,</span> <span class="pre">port)</span></code> suitable for binding a local server</p>
 </dd>
 </dl>
 </dd></dl>
@@ -730,11 +792,17 @@ merged default + override config dict.</p>
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.api.utils.check_api_is_ready">
-<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.api.utils.</span></span><span class="sig-name descname"><span class="pre">check_api_is_ready</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/api/utils.html#check_api_is_ready"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.utils.check_api_is_ready" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.api.utils.</span></span><span class="sig-name descname"><span class="pre">check_api_is_ready</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">attempts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">180.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/api/utils.html#check_api_is_ready"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.api.utils.check_api_is_ready" title="Link to this definition">¶</a></dt>
 <dd><p>Exponentially back off checking that the API is ready.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>url</strong> – Health check endpoint URL</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> – Health check endpoint URL</p></li>
+<li><p><strong>attempts</strong> – If set, maximum number of probe attempts (overrides
+<em>timeout</em>)</p></li>
+<li><p><strong>timeout</strong> – Total wall-clock seconds to keep probing when
+<em>attempts</em> is unset</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -762,14 +830,14 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="cli.html">
+          <a class="prev-page" href="models_catalog.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">CLI</div>
+                <div class="title">Model catalog</div>
                 
               </div>
             </a>
@@ -805,7 +873,10 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <li><a class="reference internal" href="#">API</a><ul>
 <li><a class="reference internal" href="#module-klea_utils.api.app">Core app &amp; server</a><ul>
 <li><a class="reference internal" href="#klea_utils.api.app.make_app"><code class="docutils literal notranslate"><span class="pre">make_app()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.server.is_loopback_host"><code class="docutils literal notranslate"><span class="pre">is_loopback_host()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.api.server.make_serve_app"><code class="docutils literal notranslate"><span class="pre">make_serve_app()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.server.spawn_server"><code class="docutils literal notranslate"><span class="pre">spawn_server()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.api.server.split_server_url"><code class="docutils literal notranslate"><span class="pre">split_server_url()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-klea_utils.api.chat">Chat endpoints</a><ul>

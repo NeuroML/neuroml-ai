@@ -207,7 +207,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/nml-mcp.html">nml-mcp</a></li>
@@ -226,11 +226,12 @@
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/nodes.html">Nodes</a></li>
@@ -314,14 +315,24 @@
   <h2>B</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever">BaseKleaRetriever (class in klea_utils.stores.retrieval.base)</a>
+</li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph">BaseLangGraph (class in klea_utils.graph.base)</a>
 </li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.base.BaseLLMNode">BaseLLMNode (class in klea_utils.nodes.base)</a>
 </li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.bm25.BM25RetrieverManager">BM25RetrieverManager (class in klea_utils.stores.retrieval.bm25)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder.build">build() (klea_utils.stores.ingestion.VSBuilder method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.BM25StoreInfo">BM25StoreInfo (class in klea_utils.stores.config)</a>
 </li>
+        <li><a href="api/utils/ui-stores-create.html#klea_utils.ui.stores_create.build">build() (in module klea_utils.ui.stores_create)</a>
+
+        <ul>
+          <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.build">(klea_utils.stores.ingestion.StoresBuilder method)</a>
+</li>
+        </ul></li>
         <li><a href="api/utils/llm.html#klea_utils.llm.LLMModel.build_config">build_config() (klea_utils.llm.LLMModel method)</a>
 </li>
         <li><a href="api/utils/tools.html#klea_utils.tools.build_tool_description">build_tool_description() (in module klea_utils.tools)</a>
@@ -350,7 +361,9 @@
 </li>
         <li><a href="glossary.html#term-Chunk"><strong>Chunk</strong></a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder.chunk_all">chunk_all() (klea_utils.stores.ingestion.VSBuilder method)</a>
+        <li><a href="api/utils/ui-stores-create.html#klea_utils.ui.stores_create.chunk">chunk() (in module klea_utils.ui.stores_create)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.chunk_all">chunk_all() (klea_utils.stores.ingestion.StoresBuilder method)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.classify_llm_invocation_error">classify_llm_invocation_error() (in module klea_utils.llm)</a>
 </li>
@@ -420,7 +433,7 @@
 </li>
         <li><a href="glossary.html#term-Domain"><strong>Domain</strong></a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.domains">domains (klea_utils.stores.retrieval.VSRetriever property)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.domains">domains (klea_utils.stores.retrieval.base.BaseKleaRetriever property)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -488,6 +501,8 @@
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.sse.format_model_info">format_model_info() (in module klea_utils.api.sse)</a>
 </li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.format_source_scores">format_source_scores() (in module klea_utils.stores.utils)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -552,15 +567,17 @@
   <h2>I</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.inc_k">inc_k() (klea_utils.stores.retrieval.VSRetriever method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k">inc_k() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
         <li><a href="api/utils/paths.html#klea_utils.paths.init_dir">init_dir() (in module klea_utils.paths)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.ModelLimits.input">input (klea_utils.models_catalog.ModelLimits attribute)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.instantiate_vector_store">instantiate_vector_store() (in module klea_utils.stores.utils)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.server.is_loopback_host">is_loopback_host() (in module klea_utils.api.server)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.is_output_truncated">is_output_truncated() (in module klea_utils.llm)</a>
 </li>
@@ -645,13 +662,6 @@
 </li>
         </ul></li>
         <li>
-    klea_utils.cli.parser
-
-        <ul>
-          <li><a href="api/utils/cli.html#module-klea_utils.cli.parser">module</a>
-</li>
-        </ul></li>
-        <li>
     klea_utils.errors
 
         <ul>
@@ -693,8 +703,6 @@
           <li><a href="api/utils/models_catalog.html#module-klea_utils.models_catalog">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.nodes.abstract
 
@@ -709,6 +717,8 @@
           <li><a href="api/utils/nodes.html#module-klea_utils.nodes.answer_general">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.nodes.base
 
@@ -780,6 +790,20 @@
 </li>
         </ul></li>
         <li>
+    klea_utils.ui.cli
+
+        <ul>
+          <li><a href="api/utils/ui-cli.html#module-klea_utils.ui.cli">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.ui.stores_create
+
+        <ul>
+          <li><a href="api/utils/ui-stores-create.html#module-klea_utils.ui.stores_create">module</a>
+</li>
+        </ul></li>
+        <li>
     klea_utils.ui.tui.repl
 
         <ul>
@@ -798,6 +822,13 @@
 
         <ul>
           <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.client">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.ui.web.nicegui.parser
+
+        <ul>
+          <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.parser">module</a>
 </li>
         </ul></li>
         <li>
@@ -839,9 +870,9 @@
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.load">load() (klea_utils.stores.retrieval.VSRetriever method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.load">load() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.load_all_stores">load_all_stores() (klea_utils.stores.retrieval.VSRetriever method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.load_all_stores">load_all_stores() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.load_prompt">load_prompt() (in module klea_utils.llm)</a>
 </li>
@@ -859,7 +890,9 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/api.html#klea_utils.api.app.make_app">make_app() (in module klea_utils.api.app)</a>
 </li>
-        <li><a href="api/utils/cli.html#klea_utils.cli.parser.make_parser">make_parser() (in module klea_utils.cli.parser)</a>
+        <li><a href="api/utils/ui-cli.html#klea_utils.ui.cli.make_client_app">make_client_app() (in module klea_utils.ui.cli)</a>
+</li>
+        <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.parser.make_parser">make_parser() (in module klea_utils.ui.web.nicegui.parser)</a>
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.server.make_serve_app">make_serve_app() (in module klea_utils.api.server)</a>
 </li>
@@ -894,11 +927,15 @@
 </li>
           <li><a href="api/utils/nodes.html#klea_utils.nodes.answer_general.FallbackConfig.model_config">(klea_utils.nodes.answer_general.FallbackConfig attribute)</a>
 </li>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.BM25StoreInfo.model_config">(klea_utils.stores.config.BM25StoreInfo attribute)</a>
+</li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig.model_config">(klea_utils.stores.config.PerDomainConfig attribute)</a>
 </li>
-          <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo.model_config">(klea_utils.stores.config.VectorStoreInfo attribute)</a>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.RetrieverConfig.model_config">(klea_utils.stores.config.RetrieverConfig attribute)</a>
 </li>
-          <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoresConfig.model_config">(klea_utils.stores.config.VectorStoresConfig attribute)</a>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.StoreInfo.model_config">(klea_utils.stores.config.StoreInfo attribute)</a>
+</li>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo.model_config">(klea_utils.stores.config.VectorStoreInfo attribute)</a>
 </li>
         </ul></li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLLMNode.model_defaults">model_defaults (klea_utils.nodes.abstract.AbstractLLMNode attribute)</a>
@@ -949,8 +986,6 @@
 </li>
           <li><a href="api/utils/api.html#module-klea_utils.api.utils">klea_utils.api.utils</a>
 </li>
-          <li><a href="api/utils/cli.html#module-klea_utils.cli.parser">klea_utils.cli.parser</a>
-</li>
           <li><a href="api/utils/errors.html#module-klea_utils.errors">klea_utils.errors</a>
 </li>
           <li><a href="api/utils/graph.html#module-klea_utils.graph.reducers">klea_utils.graph.reducers</a>
@@ -987,11 +1022,17 @@
 </li>
           <li><a href="api/utils/tools.html#module-klea_utils.tools">klea_utils.tools</a>
 </li>
+          <li><a href="api/utils/ui-cli.html#module-klea_utils.ui.cli">klea_utils.ui.cli</a>
+</li>
+          <li><a href="api/utils/ui-stores-create.html#module-klea_utils.ui.stores_create">klea_utils.ui.stores_create</a>
+</li>
           <li><a href="api/utils/ui-tui.html#module-klea_utils.ui.tui.repl">klea_utils.ui.tui.repl</a>
 </li>
           <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.app">klea_utils.ui.web.nicegui.app</a>
 </li>
           <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.client">klea_utils.ui.web.nicegui.client</a>
+</li>
+          <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.parser">klea_utils.ui.web.nicegui.parser</a>
 </li>
           <li><a href="api/utils/ui-nicegui.html#module-klea_utils.ui.web.nicegui.runner">klea_utils.ui.web.nicegui.runner</a>
 </li>
@@ -1070,14 +1111,20 @@
 </li>
         <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.client.rename_chat_on_server">rename_chat_on_server() (in module klea_utils.ui.web.nicegui.client)</a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.reset_k">reset_k() (klea_utils.stores.retrieval.VSRetriever method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.reset_k">reset_k() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.resolve_output_token_limit">resolve_output_token_limit() (in module klea_utils.llm)</a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.retrieve">retrieve() (klea_utils.stores.retrieval.VSRetriever method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.retrieve">retrieve() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.RetrieverConfig">RetrieverConfig (class in klea_utils.stores.config)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.RRF_K">RRF_K (in module klea_utils.stores.utils)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.rrf_merge">rrf_merge() (in module klea_utils.stores.utils)</a>
+</li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">run_graph_astream_events() (klea_utils.graph.base.BaseLangGraph method)</a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_invoke">run_graph_invoke() (klea_utils.graph.base.BaseLangGraph method)</a>
@@ -1109,18 +1156,40 @@
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.setup">setup() (klea_utils.graph.base.BaseLangGraph method)</a>
 
         <ul>
-          <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever.setup">(klea_utils.stores.retrieval.VSRetriever method)</a>
+          <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.setup">(klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
+</li>
+          <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.vs.VSRetriever.setup">(klea_utils.stores.retrieval.vs.VSRetriever method)</a>
 </li>
         </ul></li>
         <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.runner.setup_layout">setup_layout() (in module klea_utils.ui.web.nicegui.runner)</a>
 </li>
+        <li><a href="api/utils/plogging.html#klea_utils.plogging.setup_root_logger">setup_root_logger() (in module klea_utils.plogging)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.source_label">source_label (klea_utils.stores.retrieval.base.BaseKleaRetriever attribute)</a>
+
+        <ul>
+          <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.bm25.BM25RetrieverManager.source_label">(klea_utils.stores.retrieval.bm25.BM25RetrieverManager attribute)</a>
+</li>
+          <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.vs.VSRetriever.source_label">(klea_utils.stores.retrieval.vs.VSRetriever attribute)</a>
+</li>
+        </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/plogging.html#klea_utils.plogging.setup_root_logger">setup_root_logger() (in module klea_utils.plogging)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.SOURCE_SCORES_KEY">SOURCE_SCORES_KEY (in module klea_utils.stores.utils)</a>
+</li>
+        <li><a href="api/utils/api.html#klea_utils.api.server.spawn_server">spawn_server() (in module klea_utils.api.server)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.split_output_by_section">split_output_by_section() (in module klea_utils.llm)</a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder.store_all">store_all() (klea_utils.stores.ingestion.VSBuilder method)</a>
+        <li><a href="api/utils/api.html#klea_utils.api.server.split_server_url">split_server_url() (in module klea_utils.api.server)</a>
+</li>
+        <li><a href="api/utils/ui-stores-create.html#klea_utils.ui.stores_create.store">store() (in module klea_utils.ui.stores_create)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.store_all">store_all() (klea_utils.stores.ingestion.StoresBuilder method)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.StoreInfo">StoreInfo (class in klea_utils.stores.config)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder">StoresBuilder (class in klea_utils.stores.ingestion)</a>
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.sse.stream_events">stream_events() (in module klea_utils.api.sse)</a>
 </li>
@@ -1170,15 +1239,11 @@
 </li>
         <li><a href="glossary.html#term-Vector-store"><strong>Vector store</strong></a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo">VectorStoreInfo (class in klea_utils.stores.config)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoresConfig">VectorStoresConfig (class in klea_utils.stores.config)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.VectorStoreInfo">VectorStoreInfo (class in klea_utils.stores.config)</a>
 </li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder">VSBuilder (class in klea_utils.stores.ingestion)</a>
-</li>
-        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.VSRetriever">VSRetriever (class in klea_utils.stores.retrieval)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.vs.VSRetriever">VSRetriever (class in klea_utils.stores.retrieval.vs)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -1188,11 +1253,13 @@
   <h2>W</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.write_custom_stream">write_custom_stream() (klea_utils.nodes.abstract.AbstractLangGraphNode method)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.write_bm25_store">write_bm25_store() (klea_utils.stores.ingestion.StoresBuilder method)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.VSBuilder.write_heading_template">write_heading_template() (klea_utils.stores.ingestion.VSBuilder method)</a>
+        <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.write_custom_stream">write_custom_stream() (klea_utils.nodes.abstract.AbstractLangGraphNode method)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.write_heading_template">write_heading_template() (klea_utils.stores.ingestion.StoresBuilder method)</a>
 </li>
     </ul></td>
   </tr></table>

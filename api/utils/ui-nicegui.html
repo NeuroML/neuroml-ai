@@ -209,7 +209,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -228,11 +228,12 @@
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l3 current has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l4 current current-page"><a class="current reference internal" href="#">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="nodes.html">Nodes</a></li>
@@ -478,6 +479,37 @@ token_usage         Numeric token totals accumulated for this in-memory
 (same NiceGUI process) each user only sees their own chats.</p>
 </dd></dl>
 
+<p id="module-klea_utils.ui.web.nicegui.parser">Argparse parser for the Klea NiceGUI frontend entry point.</p>
+<p>Provides a standard <a class="reference external" href="https://docs.python.org/3/library/argparse.html#module-argparse" title="(in Python v3.14)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">argparse</span></code></a> parser for the arguments passed by
+the Typer <code class="docutils literal notranslate"><span class="pre">web</span></code> command when it launches <code class="docutils literal notranslate"><span class="pre">app.py</span></code>.  The entry point
+simply calls <code class="xref py py-func docutils literal notranslate"><span class="pre">make_parser().parse_args()</span></code> and picks only the
+arguments it needs.</p>
+<p>Usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.ui.web.nicegui.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_parser</span>
+
+<span class="n">args</span> <span class="o">=</span> <span class="n">make_parser</span><span class="p">(</span><span class="s2">&quot;My frontend&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="n">run_app</span><span class="p">(</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
+    <span class="n">subtitle</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">subtitle</span><span class="p">,</span>
+    <span class="n">disclaimer</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">disclaimer</span><span class="p">,</span>
+    <span class="n">debug</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">debug</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>File: klea_utils/ui/web/nicegui/parser.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.web.nicegui.parser.make_parser">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.web.nicegui.parser.</span></span><span class="sig-name descname"><span class="pre">make_parser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Klea</span> <span class="pre">web</span> <span class="pre">interface'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.14)"><span class="pre">ArgumentParser</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/ui/web/nicegui/parser.html#make_parser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.web.nicegui.parser.make_parser" title="Link to this definition">¶</a></dt>
+<dd><p>Return a preconfigured <a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">argparse.ArgumentParser</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>description</strong> – Description shown in <code class="docutils literal notranslate"><span class="pre">--help</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
         </article>
@@ -546,6 +578,7 @@ token_usage         Numeric token totals accumulated for this in-memory
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.client.set_model_override"><code class="docutils literal notranslate"><span class="pre">set_model_override()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.state.ensure_chat"><code class="docutils literal notranslate"><span class="pre">ensure_chat()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.state.get_chats_sorted"><code class="docutils literal notranslate"><span class="pre">get_chats_sorted()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.ui.web.nicegui.parser.make_parser"><code class="docutils literal notranslate"><span class="pre">make_parser()</span></code></a></li>
 </ul>
 </li>
 </ul>

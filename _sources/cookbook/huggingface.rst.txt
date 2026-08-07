@@ -57,7 +57,7 @@ is to fork the existing template and customise it.
 
    Remove the example stores under ``vector-stores/`` and add your own
    ChromaDB databases.  See :doc:`../tutorials/create-and-use-rag` for a
-   step-by-step guide on creating vector stores with ``klea-vs-create``.
+   step-by-step guide on creating vector stores with ``klea-stores-create``.
 
    .. note::
 
@@ -148,6 +148,13 @@ is to fork the existing template and customise it.
    The template uses ``nml-mcp`` (the NeuroML MCP server) by default.
    If you do not need NeuroML-specific tools, replace it with your own
    MCP server or remove the line entirely.
+
+   .. note::
+
+      ``klea-rag web`` (and ``klea-rag cli``) auto-start a server on the
+      local machine when none is running.  In this container the backend
+      is started explicitly with ``klea-rag-serve`` above, so the
+      frontend's readiness probe simply reuses it.
 
    The ``--title`` flag sets the heading shown in the browser tab and
    the NiceGUI page header.  Other flags such as ``--subtitle`` and

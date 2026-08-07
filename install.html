@@ -209,7 +209,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/nml-mcp.html">nml-mcp</a></li>
@@ -228,11 +228,12 @@
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/nodes.html">Nodes</a></li>
@@ -518,7 +519,28 @@ third-party libraries.  Each CLI uses its own <code class="docutils literal notr
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">klea-vs-create</span></code> logs to the console only.</p>
+<p><code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> logs to the console only.</p>
+</section>
+<section id="web-client-user-storage">
+<h2>Web client user storage<a class="headerlink" href="#web-client-user-storage" title="Link to this heading">¶</a></h2>
+<p>The NiceGUI web clients (<code class="docutils literal notranslate"><span class="pre">klea-rag</span> <span class="pre">web</span></code>, <code class="docutils literal notranslate"><span class="pre">klea-code</span> <span class="pre">web</span></code>) keep a small
+per-browser-session identity file so that a returning browser is linked
+back to the same user.  The files are written to a <code class="docutils literal notranslate"><span class="pre">.nicegui/</span></code> directory
+relative to the working directory the web client is launched from (not the
+platform user-data directory) and are named
+<code class="docutils literal notranslate"><span class="pre">storage-user-&lt;session-id&gt;.json</span></code>.</p>
+<p>Each file stores only a pointer to server-side state:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="s2">&quot;dark_mode&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>The chat history itself lives in the server’s session store
+(<code class="docutils literal notranslate"><span class="pre">~/.local/share/&lt;app&gt;/sessions.db</span></code>) and is not duplicated here.</p>
+<p>These files are <strong>never deleted automatically</strong>.  NiceGUI prunes stale
+sessions from its in-memory store but leaves the JSON files on disk, so
+they accumulate over time and survive server restarts.  Deleting the
+<code class="docutils literal notranslate"><span class="pre">.nicegui/</span></code> directory while no web client is running is safe: the next
+page load simply mints a fresh <code class="docutils literal notranslate"><span class="pre">user_id</span></code> (existing chats under the old
+id are then not shown in that browser).</p>
 </section>
 </section>
 
@@ -589,6 +611,7 @@ third-party libraries.  Each CLI uses its own <code class="docutils literal notr
 </ul>
 </li>
 <li><a class="reference internal" href="#logging">Logging</a></li>
+<li><a class="reference internal" href="#web-client-user-storage">Web client user storage</a></li>
 </ul>
 </li>
 </ul>

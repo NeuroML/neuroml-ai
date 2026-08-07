@@ -208,7 +208,7 @@
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../cli/index.html">CLI Reference</a><input aria-label="Toggle navigation of CLI Reference" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-vs-create.html">klea-vs-create</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-stores-create.html">klea-stores-create</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/nml-mcp.html">nml-mcp</a></li>
@@ -227,11 +227,12 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/models_catalog.html">Model catalog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/cli.html">CLI</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-nicegui.html">UI — NiceGUI</a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-tui.html">UI — TUI / REPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-cli.html">UI — client CLI</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/utils/ui-stores-create.html">UI — store creation CLI</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/nodes.html">Nodes</a></li>
@@ -291,6 +292,14 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">subprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">Popen</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlsplit</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">typer</span>
 
 
@@ -328,6 +337,138 @@
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">serve_app</span></div>
+
+
+
+<div class="viewcode-block" id="split_server_url">
+<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.split_server_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">split_server_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``(host, port)`` parsed from *url*.</span>
+
+<span class="sd">    Falls back to ``127.0.0.1`` and *default_port* when the URL does not</span>
+<span class="sd">    carry a hostname or port.</span>
+
+<span class="sd">    :param url: Server URL (e.g. ``http://127.0.0.1:8005``)</span>
+<span class="sd">    :param default_port: Port to use when the URL omits one</span>
+<span class="sd">    :returns: ``(host, port)`` suitable for binding a local server</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">port</span> <span class="ow">or</span> <span class="n">default_port</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">default_port</span>
+    <span class="k">return</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span></div>
+
+
+
+<div class="viewcode-block" id="is_loopback_host">
+<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.is_loopback_host">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_loopback_host</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``True`` when *host* refers to the local machine.</span>
+
+<span class="sd">    :param host: Hostname from a server URL (e.g. ``&quot;127.0.0.1&quot;``)</span>
+<span class="sd">    :returns: ``True`` for loopback addresses, ``False`` otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">host</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="s2">&quot;::1&quot;</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="spawn_server">
+<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.spawn_server">[docs]</a>
+<span class="nd">@contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">spawn_server</span><span class="p">(</span>
+    <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+    <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Popen</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Context manager that runs an API server in a subprocess.</span>
+
+<span class="sd">    If a healthy server is already listening at ``host:port`` (probed via</span>
+<span class="sd">    ``/health/ready``), nothing is spawned and ``None`` is yielded, so the</span>
+<span class="sd">    caller does not own the server&#39;s lifecycle.  Otherwise a uvicorn</span>
+<span class="sd">    subprocess is spawned (stdout and stderr inherited so startup errors and</span>
+<span class="sd">    app output are visible; access logs are disabled to keep the shared</span>
+<span class="sd">    terminal clean, with full logging preserved in the server&#39;s rotating log</span>
+<span class="sd">    file), readiness is waited on, and the subprocess is terminated when the</span>
+<span class="sd">    ``with`` block exits.</span>
+
+<span class="sd">    :param app_module: Uvicorn module string (e.g. ``&quot;klea_rag.api.main:app&quot;``)</span>
+<span class="sd">    :param host: Host to bind</span>
+<span class="sd">    :param port: Port to bind</span>
+<span class="sd">    :param timeout: Total seconds to wait for readiness after spawning</span>
+<span class="sd">    :returns: The spawned :class:`subprocess.Popen` (or ``None`` if an</span>
+<span class="sd">        existing server was reused)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Lazy: asyncio/httpx and the api utils pull in heavy deps; keep --help fast.</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+
+    <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_api_is_ready</span>
+
+    <span class="n">health_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">/health/ready&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_probe_once</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check_api_is_ready</span><span class="p">(</span><span class="n">health_url</span><span class="p">,</span> <span class="n">attempts</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">_probe_once</span><span class="p">():</span>
+        <span class="k">yield</span> <span class="kc">None</span>
+        <span class="k">return</span>
+
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+            <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;uvicorn&quot;</span><span class="p">,</span>
+            <span class="n">app_module</span><span class="p">,</span>
+            <span class="s2">&quot;--host&quot;</span><span class="p">,</span>
+            <span class="n">host</span><span class="p">,</span>
+            <span class="s2">&quot;--port&quot;</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">port</span><span class="p">),</span>
+            <span class="s2">&quot;--no-access-log&quot;</span><span class="p">,</span>
+        <span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># A short fast-fail window catches an instantly-crashed server</span>
+        <span class="c1"># (bad module path, port already in use) so the error surfaces</span>
+        <span class="c1"># immediately instead of after the full retry timeout.</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Server process exited immediately (code </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">). &quot;</span>
+                    <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
+                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-code-serve serve&#39; &quot;</span>
+                    <span class="s2">&quot;to see the error.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">_probe_once</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check_api_is_ready</span><span class="p">(</span><span class="n">health_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">))</span>
+            <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Server at </span><span class="si">{</span><span class="n">health_url</span><span class="si">}</span><span class="s2"> did not become ready within </span><span class="si">{</span><span class="n">timeout</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">s. &quot;</span>
+                    <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
+                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-code-serve serve&#39; &quot;</span>
+                    <span class="s2">&quot;to see the error.&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+        <span class="k">yield</span> <span class="n">proc</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+                <span class="n">proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span></div>
 
 </pre></div>
         </article>
