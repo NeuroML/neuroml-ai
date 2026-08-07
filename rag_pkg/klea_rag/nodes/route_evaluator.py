@@ -15,7 +15,7 @@ from klea_utils.nodes.abstract import (
     NodeStreamData,
     NodeStreamEvent,
 )
-from klea_utils.stores.retrieval.vs import VSRetriever
+from klea_utils.stores.retrieval.base import BaseKleaRetriever
 
 from klea_rag.schemas import RAGState
 
@@ -27,7 +27,7 @@ class RouteEvaluator(AbstractRouterNode):
         self,
         logger: logging.Logger,
         label: str,
-        stores: VSRetriever | None,
+        retrievers: list[BaseKleaRetriever] | None = None,
         max_retrieval_attempts: int = 2,
         max_rewrite_attempts: int = 1,
         fallback_to_training_data: bool = False,
@@ -36,13 +36,14 @@ class RouteEvaluator(AbstractRouterNode):
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param stores: Vector Stores
+        :param retrievers: Retrievers whose k is incremented/reset when
+            routing between retrieval attempts
         :param max_retrieval_attempts: Max retrieval query modifications
         :param max_rewrite_attempts: Max answer rewrites
         :param fallback_to_training_data: Whether to fall back to LLM training data
         """
         super().__init__(logger, label)
-        self.stores = stores
+        self.retrievers = retrievers or []
         self.max_retrieval_attempts = max_retrieval_attempts
         self.max_rewrite_attempts = max_rewrite_attempts
         self.fallback_to_training_data = fallback_to_training_data
@@ -64,8 +65,9 @@ class RouteEvaluator(AbstractRouterNode):
             and resp.coherence >= 0.5
             and resp.conciseness >= 0.5
         ):
-            if self.stores:
-                self.stores.reset_k()
+            if self.retrievers:
+                for retriever in self.retrievers:
+                    retriever.reset_k()
             self.logger.debug("returning: continue")
             route = "continue"
         elif state.retrieval_attempts < self.max_retrieval_attempts and (
@@ -76,12 +78,12 @@ class RouteEvaluator(AbstractRouterNode):
         elif next_step == "retrieve_more_info" or (
             resp.coverage >= 0.5 and resp.confidence < 0.5
         ):
-            # ther are no stores, and no more information to retrieve
-            if not self.stores:
+            # there are no retrievers, and no more information to retrieve
+            if not self.retrievers:
                 route = "continue"
             # limit what max k we can have, otherwise, we end up pulling the
             # whole store..
-            elif self.stores.inc_k():
+            elif any(retriever.inc_k() for retriever in self.retrievers):
                 self.logger.debug("returning: retrieve_more_info")
                 route = "retrieve_more_info"
             else:

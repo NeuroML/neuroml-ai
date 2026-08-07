@@ -33,6 +33,7 @@ from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
 from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
 from klea_utils.stores.retrieval.vs import VSRetriever
 from klea_utils.tools import build_tool_description, clean_tool_meta
 
@@ -146,6 +147,7 @@ class BaseLangGraph(ABC):
 
         self.retriever_config: RetrieverConfig | None = None
         self.stores: VSRetriever | None = None
+        self.bm25_stores: BM25RetrieverManager | None = None
         # Graph-wide fallback retrieval settings.  Individual vector stores
         # may override these in the config with their own default_k / k_max /
         # k_inc values.
@@ -283,6 +285,20 @@ class BaseLangGraph(ABC):
             )
         else:
             self.logger.warning("No vector stores configured.")
+
+        # BM25 keyword stores need no embedding model, so build them whenever
+        # any domain configures bm25_stores.
+        if self.retriever_config and any(
+            domain.bm25_stores for domain in self.retriever_config.domains.values()
+        ):
+            self.bm25_stores = BM25RetrieverManager(
+                config=self.retriever_config,
+                logger=self.logger,
+                default_k=self.default_k,
+                k_max=self.k_max,
+                k_inc=self.k_inc,
+            )
+            self.logger.info(f"BM25 stores loaded: {self.bm25_stores.domains}")
 
     def _export_graph_png(self, filename: str) -> None:
         """Export the LangGraph as a Mermaid PNG diagram.

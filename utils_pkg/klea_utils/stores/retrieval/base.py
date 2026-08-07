@@ -30,7 +30,14 @@ class BaseKleaRetriever(ABC):
     - :meth:`_instantiate_store`: build the underlying retriever object
       for a store
     - :meth:`_retrieve_from_store`: run a single store against a query
+
+    Subclasses should set :attr:`source_label` to a human-readable name
+    for the retriever type (e.g. ``"vector store"``, ``"BM25"``), used to
+    label the original per-source scores preserved during fusion.
     """
+
+    #: Human-readable name for this retriever type, used to label scores.
+    source_label: str = "retriever"
 
     def __init__(
         self,

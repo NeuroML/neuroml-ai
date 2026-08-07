@@ -20,6 +20,7 @@ from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
 from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
 
 from .config import AppConfig, AppEnv
@@ -255,10 +256,15 @@ class RAG(BaseLangGraph):
             self._refuse_answer_node.label, self._refuse_answer_node.execute
         )
 
+        # All configured retrievers (vector stores and/or BM25 stores)
+        retrievers: list[BaseKleaRetriever] = [
+            r for r in (self.stores, self.bm25_stores) if r is not None
+        ]
+
         self._retrieve_info_node = RetrieveInfoNode(
             logger=self.logger,
             label="Retrieving information",
-            stores=self.stores,
+            retrievers=retrievers,
             num_refs_max=self.num_refs_max,
         )
         self.workflow.add_node(
@@ -286,7 +292,7 @@ class RAG(BaseLangGraph):
         self._route_evaluator_node = RouteEvaluator(
             logger=self.logger,
             label="Routing evaluation",
-            stores=self.stores,
+            retrievers=retrievers,
             max_retrieval_attempts=self.app_config.general.max_retrieval_attempts,
             max_rewrite_attempts=self.app_config.general.max_rewrite_attempts,
             fallback_to_training_data=self.app_config.general.fallback_to_training_data,

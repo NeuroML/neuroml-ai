@@ -43,6 +43,8 @@ class BM25RetrieverManager(BaseKleaRetriever):
     full-text search) instead.
     """
 
+    source_label = "BM25"
+
     def __init__(
         self,
         config: RetrieverConfig,

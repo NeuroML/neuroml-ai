@@ -17,43 +17,61 @@ from klea_utils.nodes.abstract import (
     NodeStreamData,
     NodeStreamEvent,
 )
-from klea_utils.stores.retrieval.vs import VSRetriever
+from klea_utils.stores.retrieval.base import BaseKleaRetriever
+from klea_utils.stores.utils import format_source_scores, rrf_merge
 
 from klea_rag.schemas import RAGState
 
 
-class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
-    """Retrieve reference material from vector stores.
+def _format_scores(doc: Any, score: float, precision: int = 2) -> str:
+    """Format a document's scores for the reference material display.
 
-    Queries the vector stores for all domains in the query_domains list using
-    the same retrieval query, ranks results by relevance score, and keeps the
-    top N references for each domain. Optionally increments k when asked to
-    retrieve more info.
+    Shows the original per-source scores when present (from the RRF merge),
+    otherwise falls back to the single relevance score.
+
+    :param doc: Document to format
+    :param score: Relevance score for *doc*
+    :param precision: Number of decimal places
+    :returns: Display string, e.g. ``[vector store 0.87, BM25 3.21]``
+    """
+    source_scores = format_source_scores(doc, precision)
+    if source_scores:
+        return f"[{source_scores}]"
+    return f"[{score:.{precision}f}]"
+
+
+class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
+    """Retrieve reference material from the configured retrievers.
+
+    Queries all retrievers (vector stores, BM25 stores) for the domains in
+    the ``query_domains`` list using the same retrieval query, fuses the
+    results with Reciprocal Rank Fusion, and keeps the top N references for
+    each domain.  Optionally increments k when asked to retrieve more info.
     """
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        stores: VSRetriever | None,
+        retrievers: list[BaseKleaRetriever] | None = None,
         num_refs_max: int = 10,
     ):
         """Initialise the retrieval node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param stores: VSRetriever instance for retrieval (None skips retrieval)
+        :param retrievers: Retrievers to query (empty list skips retrieval)
         :param num_refs_max: Maximum number of references to keep per domain
         """
         super().__init__(logger, label)
-        self.stores = stores
+        self.retrievers = retrievers or []
         self.num_refs_max = num_refs_max
 
     @override
     async def execute(self, state: RAGState) -> dict[str, Any]:
         """Retrieve and rank reference material."""
-        if self.stores is None:
-            self.logger.debug("No vector stores configured, skipping retrieval")
+        if not self.retrievers:
+            self.logger.debug("No retrievers configured, skipping retrieval")
             return {}
 
         self.write_custom_stream({"type": "progress", "node": self.label})
@@ -65,21 +83,24 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
         # Check if evaluator requested more info
         if state.text_response_eval.next_step == "retrieve_more_info":
-            self.stores.inc_k()
+            for retriever in self.retrievers:
+                retriever.inc_k()
 
-        # Retrieve from vector stores for all domains
+        # Retrieve from all retrievers for all domains
         for domain_name in state.query_domains:
             # Skip undefined domain
             if domain_name == "undefined":
                 continue
 
-            res = self.stores.retrieve(domain_name=domain_name, query=cleaned_query)
-
-            # Rank by relevance score, keep top N
-            sorted_res = sorted(res, key=lambda tup: tup[1], reverse=True)
-            new_ref = {domain_name: sorted_res[: self.num_refs_max]}
-
-            reference_material.update(new_ref)
+            result_sets = [
+                (
+                    retriever.source_label,
+                    retriever.retrieve(domain_name=domain_name, query=cleaned_query),
+                )
+                for retriever in self.retrievers
+            ]
+            merged = rrf_merge(result_sets, num_refs_max=self.num_refs_max)
+            reference_material[domain_name] = merged
 
         self.logger.debug(f"{reference_material =}")
 
@@ -120,7 +141,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
             md_lines.append(f"### {domain}\n")
 
-            seen: dict[Hashable, tuple[float, list[str]]] = {}
+            seen: dict[Hashable, tuple[Any, float, list[str]]] = {}
             for doc, score in sorted(docs, key=lambda x: x[1], reverse=True):
                 url_values = [v for k, v in doc.metadata.items() if k.startswith("url")]
                 file_name = doc.metadata.get("file_name", "") or ""
@@ -133,12 +154,13 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 else:
                     self.logger.warning(f"No metadata to show for {doc}")
                     continue
-                if key not in seen or score > seen[key][0]:
-                    seen[key] = (score, display_values)
+                if key not in seen or score > seen[key][1]:
+                    seen[key] = (doc, score, display_values)
             ref_lines = [
-                f"1.  [{score:.2f}]\n" + "\n".join(f"    - {v}" for v in values)
-                for score, values in sorted(
-                    seen.values(), key=lambda x: x[0], reverse=True
+                f"1.  {_format_scores(doc, score)}\n"
+                + "\n".join(f"    - {v}" for v in values)
+                for doc, score, values in sorted(
+                    seen.values(), key=lambda x: x[1], reverse=True
                 )
             ]
             md_lines += "\n".join(ref_lines)

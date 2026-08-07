@@ -33,6 +33,8 @@ class VSRetriever(BaseKleaRetriever):
     - ``pgvector:postgresql://host/db``  ---  PGVector (PostgreSQL)
     """
 
+    source_label = "vector store"
+
     def __init__(
         self,
         config: RetrieverConfig,

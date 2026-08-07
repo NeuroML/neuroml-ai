@@ -13,7 +13,91 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
-_INTERNAL_META_KEYS = {"file_name", "source_path", "file_hash", "headings"}
+#: Metadata key holding each document's original per-source scores (e.g.
+#: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.
+SOURCE_SCORES_KEY = "_source_scores"
+
+#: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a
+#: source's result list contributes ``1 / (RRF_K + r)`` to its fused score.
+RRF_K = 60
+
+_INTERNAL_META_KEYS = {
+    "file_name",
+    "source_path",
+    "file_hash",
+    "headings",
+    SOURCE_SCORES_KEY,
+}
+
+
+def rrf_merge(
+    result_sets: list[tuple[str, list[tuple[Document, float]]]],
+    num_refs_max: int,
+) -> list[tuple[Document, float]]:
+    """Fuse per-source retrieval results with Reciprocal Rank Fusion.
+
+    Scores from different retrievers (e.g. cosine similarity vs BM25) are not
+    comparable, so each document is scored purely by its rank within each
+    source's result list.  The original per-source scores are preserved in
+    each document's :data:`SOURCE_SCORES_KEY` metadata for display.
+
+    :param result_sets: List of ``(source_label, results)`` pairs, where each
+        *results* is a list of ``(document, score)`` tuples already ranked by
+        its source
+    :param num_refs_max: Maximum number of documents to return
+    :returns: Documents ordered by RRF score, deduplicated by content, capped
+        at *num_refs_max*
+    """
+    rrf_scores: dict[str, float] = {}
+    doc_by_key: dict[str, Document] = {}
+
+    for source_label, results in result_sets:
+        for rank, (doc, score) in enumerate(results, start=1):
+            key = doc.page_content
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (RRF_K + rank)
+            if key not in doc_by_key:
+                doc_by_key[key] = doc
+                doc.metadata[SOURCE_SCORES_KEY] = {}
+            doc_by_key[key].metadata[SOURCE_SCORES_KEY][source_label] = score
+
+    merged = sorted(
+        ((doc_by_key[key], rrf) for key, rrf in rrf_scores.items()),
+        key=lambda tup: tup[1],
+        reverse=True,
+    )
+    return merged[:num_refs_max]
+
+
+def format_source_scores(doc: Document, precision: int = 2) -> str | None:
+    """Format a document's original per-source scores for display.
+
+    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata
+    :param precision: Number of decimal places per score
+    :returns: Joined string like ``"vector store 0.87, BM25 3.21"``, or
+        ``None`` if the document has no per-source scores
+    """
+    source_scores = doc.metadata.get(SOURCE_SCORES_KEY)
+    if not source_scores:
+        return None
+    return ", ".join(f"{k} {v:.{precision}f}" for k, v in source_scores.items())
+
+
+def _format_score_str(doc: Document, score: float) -> str:
+    """Format a document's relevance scores for prompt context.
+
+    Shows the original per-source scores (e.g. ``vector store 0.8723,
+    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM
+    can interpret scores from different retrievers.  Falls back to the
+    single relevance score for documents without per-source info.
+
+    :param doc: Document to format
+    :param score: Relevance score for *doc*
+    :returns: Score string to append to a document heading
+    """
+    source_scores = format_source_scores(doc, precision=4)
+    if source_scores:
+        return f" (relevance: {source_scores})"
+    return f" (relevance score: {score:.4f})"
 
 
 def serialize_vs_retrieval(
@@ -27,6 +111,7 @@ def serialize_vs_retrieval(
     - ``headings``: list of heading hierarchy (most specific last)
     - ``file_name``: source filename
     - ``source_path``: full path to source file
+    - ``_source_scores``: optional per-retriever scores (from the RRF merge)
     - Optional custom keys from the ``--metadata-map`` (e.g., ``url``)
 
     :param reference_material: Dict mapping query/domain to list of (doc, score) tuples
@@ -43,7 +128,7 @@ def serialize_vs_retrieval(
             if file_name:
                 heading_str = f"[{file_name}] {heading_str}"
 
-            score_str = f" (relevance score: {score:.4f})"
+            score_str = _format_score_str(r, score)
             serialized += (
                 f"\n### Document {ctr}/{len(sorted_refs)}: {heading_str}{score_str}\n"
             )
