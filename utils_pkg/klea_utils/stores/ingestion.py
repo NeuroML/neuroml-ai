@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vector store ingestion -- convert documents, chunk, embed, and write to store
+Store ingestion -- convert documents, chunk, embed, and write to stores
 
 File: klea_utils/stores/ingestion.py
 
@@ -24,11 +24,12 @@ CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
 
 
-class VSBuilder:
-    """Build vector stores from a directory of source documents.
+class StoresBuilder:
+    """Build stores from a directory of source documents.
 
     Uses Docling for document conversion and token-aware chunking, then
-    embeds chunks and writes them to a vector store backend.
+    embeds chunks and writes them to a vector store backend.  Optionally
+    also writes the combined chunked corpus for BM25 retrieval.
     """
 
     DEFAULT_MAX_TOKENS = 450
@@ -66,7 +67,7 @@ class VSBuilder:
         self._chunker = None
 
         self.logger.info(
-            f"VSBuilder initialised (max_tokens={max_tokens}, "
+            f"StoresBuilder initialised (max_tokens={max_tokens}, "
             f"merge_peers={merge_peers}, tokenizer={tokenizer_model})"
         )
 
@@ -77,6 +78,7 @@ class VSBuilder:
         collection_name: str,
         force: bool = False,
         metadata_map_path: str | None = None,
+        bm25_path: str | None = None,
     ) -> None:
         """Full pipeline: chunk documents and write them to a vector store.
 
@@ -87,6 +89,7 @@ class VSBuilder:
         :param collection_name: Collection name for the store
         :param force: Re-process all files even if unchanged
         :param metadata_map_path: Optional path to a metadata map JSON file
+        :param bm25_path: Optional path to write the combined BM25 corpus to
         """
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
@@ -102,7 +105,7 @@ class VSBuilder:
             metadata_map = self._load_metadata_map(metadata_map_path)
 
         results, _ = self.chunk_all(source_path, metadata_map, force)
-        self.store_all(results, store_uri, collection_name, force)
+        self.store_all(results, store_uri, collection_name, force, bm25_path)
         self.logger.info(f"Ingestion complete for collection '{collection_name}'")
 
     def chunk_all(
@@ -193,18 +196,21 @@ class VSBuilder:
         store_uri: str,
         collection_name: str,
         force: bool = False,
+        bm25_path: str | None = None,
     ) -> None:
         """Write chunked documents to a vector store.
 
         Initialises the embedding model on first call if not already
         done.  Skips files whose hash is already present in the store
-        (unless ``force`` is ``True``).
+        (unless ``force`` is ``True``).  Optionally also writes the
+        combined document corpus for BM25 retrieval.
 
         :param results: List of ``(file_hash, docs, file_path)`` tuples
             from :meth:`chunk_all`
         :param store_uri: Vector store URI
         :param collection_name: Collection name for the store
         :param force: Re-store all files even if already indexed
+        :param bm25_path: Optional path to write the combined BM25 corpus to
         """
         if self.embeddings is None:
             self.logger.info(f"Initialising embedding model ({self.embedding_model})")
@@ -235,6 +241,42 @@ class VSBuilder:
             self.logger.info(
                 f"Added {len(docs)} chunks from {file_path.name} ({ctr}/{total})"
             )
+
+        if bm25_path:
+            self.write_bm25_store(results, bm25_path)
+
+    def write_bm25_store(
+        self,
+        results: list[tuple[str, list[Document], Path]],
+        bm25_path: str,
+    ) -> None:
+        """Write the combined chunked documents to a BM25 corpus.
+
+        Flattens the per-file chunked documents from :meth:`chunk_all`
+        into a single list and pickles it to *bm25_path*.  This file is
+        the BM25 store: a :class:`BM25RetrieverManager` loads it at
+        runtime to build its keyword index.  It is independent of the
+        per-file ``.klea-cache``, so the cache can be removed once the
+        corpus has been written.
+
+        The corpus holds the same chunk units (and metadata) that are
+        stored in the vector store, so BM25 and vector retrieval return
+        consistent results.
+
+        :param results: List of ``(file_hash, docs, file_path)`` tuples
+            from :meth:`chunk_all`
+        :param bm25_path: Path to write the combined corpus pickle to
+        """
+        all_docs = [doc for _, docs, _ in results for doc in docs]
+        if not all_docs:
+            self.logger.warning("No documents to write to BM25 store, skipping")
+            return
+
+        path = Path(bm25_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(all_docs, f)
+        self.logger.info(f"Wrote BM25 store with {len(all_docs)} chunks to {path}")
 
     def write_heading_template(
         self, file_headings: dict[str, dict[str, Any]], source_dir: Path

@@ -9,12 +9,14 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import pickle
 import tempfile
 from pathlib import Path
 
 import pytest
-from klea_utils.stores.ingestion import VSBuilder
+from klea_utils.stores.ingestion import StoresBuilder
 from klea_utils.stores.utils import instantiate_vector_store
+from langchain_core.documents import Document
 from ollama import ResponseError
 
 TEST_MD_CONTENT = """# Test Document
@@ -59,7 +61,7 @@ class TestIngestion:
         self.logger.info(f"Store URI: {store_uri}, collection: {collection_name}")
 
         try:
-            builder = VSBuilder(
+            builder = StoresBuilder(
                 embedding_model="ollama:bge-m3:latest",
                 logger=self.logger,
             )
@@ -106,7 +108,7 @@ class TestIngestion:
         collection_name = "test_idempotent"
 
         try:
-            builder = VSBuilder(
+            builder = StoresBuilder(
                 embedding_model="ollama:bge-m3:latest",
                 logger=self.logger,
             )
@@ -160,7 +162,7 @@ class TestIngestion:
         collection_name = "test_incremental"
 
         try:
-            builder = VSBuilder(
+            builder = StoresBuilder(
                 embedding_model="ollama:bge-m3:latest",
                 logger=self.logger,
             )
@@ -205,6 +207,34 @@ class TestIngestion:
             pytest.skip(str(e))
         except ConnectionError as e:
             pytest.skip(str(e))
+
+    def test_write_bm25_store(self):
+        """write_bm25_store pickles the combined chunked documents."""
+        doc = Document(
+            page_content="Some content for the BM25 corpus.",
+            metadata={"file_name": "test.md", "headings": ["Section 1"]},
+        )
+        results = [("xxh64:abc", [doc], Path("test.md"))]
+        out_path = self.tmpdir_path / "bm25_corpus.pkl"
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.write_bm25_store(results, str(out_path))
+
+        assert out_path.is_file()
+        with open(out_path, "rb") as f:
+            loaded = pickle.load(f)
+        assert len(loaded) == 1
+        assert loaded[0].page_content == doc.page_content
+        assert loaded[0].metadata == doc.metadata
+
+    def test_write_bm25_store_empty(self):
+        """write_bm25_store skips without creating a file for empty results."""
+        out_path = self.tmpdir_path / "empty_bm25_corpus.pkl"
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.write_bm25_store([], str(out_path))
+
+        assert not out_path.exists()
 
 
 if __name__ == "__main__":

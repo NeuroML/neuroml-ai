@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-CLI for creating vector stores from documents
+CLI for creating stores from documents
 
-File: klea_utils/ui/vs_create.py
+File: klea_utils/ui/stores_create.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -14,7 +14,7 @@ import typer
 
 from ..plogging import setup_root_logger
 
-app = typer.Typer(help="Create vector stores from documents")
+app = typer.Typer(help="Create stores from documents")
 
 
 @app.command()
@@ -42,6 +42,12 @@ def build(
         help="JSON file keyed by source filename; each file entry maps "
         "heading chains to metadata dicts (with per-file DEFAULT fallback)",
     ),
+    bm25_store: str = typer.Option(
+        None,
+        "--bm25-store",
+        help="Write the combined document corpus to this path for BM25 "
+        "retrieval (a pickle of all chunked documents)",
+    ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
@@ -52,6 +58,9 @@ def build(
     chunks them, embeds them, and writes to the vector store.
     Processed chunks are cached in ``<source_dir>/.klea-cache/`` so
     subsequent runs (e.g. with ``--metadata-map``) skip conversion.
+
+    The optional ``--bm25-store`` flag writes the combined chunked
+    documents to a single pickle file that can be used as a BM25 store.
 
     The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file
     organised by source file.  Within each file entry, the most specific
@@ -74,8 +83,8 @@ def build(
             }
         }
     """
-    setup_root_logger("klea-vs-create")
-    logger = logging.getLogger("klea-vs-create")
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
 
     logger.info(
         f"Building vector store '{collection_name}' at {store_path}"
@@ -86,13 +95,13 @@ def build(
     )
 
     try:
-        # Lazy: importing VSBuilder pulls in ingestion.py -> llm.py ->
+        # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
         # langchain_huggingface/langchain_ollama, stores/utils.py ->
         # chromadb/qdrant etc.  Deferring to function body keeps
         # --help fast (Python only needs the function signature).
-        from klea_utils.stores.ingestion import VSBuilder
+        from klea_utils.stores.ingestion import StoresBuilder
 
-        builder = VSBuilder(
+        builder = StoresBuilder(
             embedding_model=embedding_model,
             logger=logger,
             max_tokens=max_tokens,
@@ -103,6 +112,7 @@ def build(
             collection_name=collection_name,
             force=force,
             metadata_map_path=metadata_map_path,
+            bm25_path=bm25_store,
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
     except Exception as e:
@@ -127,23 +137,23 @@ def chunk(
     ``metadata-map.template.json`` file organised by source file, with
     empty ``{}`` placeholders for each heading chain.  Fill in the
     metadata values and pass the file to
-    ``klea-vs-create store --metadata-map``.
+    ``klea-stores-create store --metadata-map``.
     """
-    setup_root_logger("klea-vs-create")
-    logger = logging.getLogger("klea-vs-create")
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
 
     logger.info(f"Chunking documents in {source_dir}\n  Max tokens: {max_tokens}")
 
     try:
-        # Lazy: importing VSBuilder pulls in ingestion.py -> llm.py ->
+        # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
         # langchain_huggingface/langchain_ollama, stores/utils.py ->
         # chromadb/qdrant etc.  Deferring to function body keeps
         # --help fast (Python only needs the function signature).
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import VSBuilder
+        from klea_utils.stores.ingestion import StoresBuilder
 
-        builder = VSBuilder(
+        builder = StoresBuilder(
             embedding_model="",  # not needed for chunking only
             logger=logger,
             max_tokens=max_tokens,
@@ -185,6 +195,12 @@ def store(
         help="JSON file keyed by source filename; each file entry maps "
         "heading chains to metadata dicts (with per-file DEFAULT fallback)",
     ),
+    bm25_store: str = typer.Option(
+        None,
+        "--bm25-store",
+        help="Write the combined document corpus to this path for BM25 "
+        "retrieval (a pickle of all chunked documents)",
+    ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
@@ -196,11 +212,14 @@ def store(
     them to the vector store.  Unseen files are converted and chunked
     on the fly.
 
-    Run ``klea-vs-create chunk`` first to populate the cache and
+    The optional ``--bm25-store`` flag writes the combined chunked
+    documents to a single pickle file that can be used as a BM25 store.
+
+    Run ``klea-stores-create chunk`` first to populate the cache and
     generate a ``metadata-map.template.json``.
     """
-    setup_root_logger("klea-vs-create")
-    logger = logging.getLogger("klea-vs-create")
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
 
     logger.info(
         f"Storing cached chunks to '{collection_name}' at {store_path}"
@@ -212,9 +231,9 @@ def store(
     try:
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import VSBuilder
+        from klea_utils.stores.ingestion import StoresBuilder
 
-        builder = VSBuilder(
+        builder = StoresBuilder(
             embedding_model=embedding_model,
             logger=logger,
             max_tokens=max_tokens,
@@ -230,7 +249,9 @@ def store(
         results, _ = builder.chunk_all(
             source_path, metadata_map=metadata_map, force=force
         )
-        builder.store_all(results, store_path, collection_name, force=force)
+        builder.store_all(
+            results, store_path, collection_name, force=force, bm25_path=bm25_store
+        )
         logger.info(f"Done -- collection '{collection_name}' is ready")
     except Exception as e:
         logger.error(f"Failed: {e}")
