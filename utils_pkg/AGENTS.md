@@ -77,7 +77,8 @@ klea_utils/
 │   ├── ingestion.py # Document ingestion pipeline (chunking, embedding, storage)
 │   ├── retrieval/  # Retriever managers
 │   │   ├── base.py # BaseKleaRetriever -- shared k-tracking and store loading
-│   │   └── vs.py   # VSRetriever -- vector store retrieval
+│   │   ├── vs.py   # VSRetriever -- vector store retrieval
+│   │   └── bm25.py # BM25RetrieverManager -- BM25 keyword retrieval
 │   └── utils.py    # Shared store helpers
 ├── tools.py        # MCP CallToolResult helpers (textualize content blocks)
 ├── ui/             # User interface frontends
