@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vector store configuration models
+Retriever store configuration models
 
 File: klea_utils/stores/config.py
 
@@ -13,13 +13,16 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class VectorStoreInfo(BaseModel):
-    """Information about a single vector store.
+class StoreInfo(BaseModel):
+    """Information about a single store used by a retriever manager.
 
     ``default_k``, ``k_max``, and ``k_inc`` configure retrieval depth per
     store.  When left ``None`` they fall back to the global values set on
-    the ``VSRetriever``, so stores that do not need tuning inherit the
+    the retriever manager, so stores that do not need tuning inherit the
     graph-wide defaults.
+
+    ``loaded_object`` holds the lazily-instantiated retriever object for
+    the store (e.g. a LangChain VectorStore or BM25Retriever).
     """
 
     name: str
@@ -30,10 +33,23 @@ class VectorStoreInfo(BaseModel):
     loaded_object: Any | None = None
 
 
+class VectorStoreInfo(StoreInfo):
+    """Information about a single vector store."""
+
+
+class BM25StoreInfo(StoreInfo):
+    """Information about a single BM25 store.
+
+    ``path`` points to the pickled document corpus that the
+    ``BM25RetrieverManager`` loads to build its keyword index.
+    """
+
+
 class PerDomainConfig(BaseModel):
     """Configuration for a single domain."""
 
-    vector_stores: list[VectorStoreInfo]
+    vector_stores: list[VectorStoreInfo] = []
+    bm25_stores: list[BM25StoreInfo] = []
 
 
 class RetrieverConfig(BaseModel):

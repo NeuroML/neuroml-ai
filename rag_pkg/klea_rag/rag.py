@@ -120,7 +120,9 @@ class RAG(BaseLangGraph):
         domain_vs = {}
         domain_ms = {}
         for d, inf in domains.items():
-            domain_vs[d] = inf.model_dump(include={"vector_stores", "description"})
+            domain_vs[d] = inf.model_dump(
+                include={"vector_stores", "bm25_stores", "description"}
+            )
 
             # flat config for mcp client initialization
             domain_ms.update(inf.model_dump(include={"mcp_servers"})["mcp_servers"])

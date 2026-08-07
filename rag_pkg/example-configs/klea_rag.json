@@ -28,6 +28,7 @@
                     "path": "chroma:../../deployments/huggingface/vector-stores/nml-schema-docs_bge-m3.db"
                 }
             ],
+            "bm25_stores": [],
             "mcp_servers": {
                 "NeuroML":
                 {
@@ -38,6 +39,7 @@
         "OpenSourceBrain": {
             "description": "The Open Source Brain web platform for neuroscience provides an index of data and models. These are from well known community archives such as DANDI, FigShare, ModelDB, and also GitHub. These data and models are generally standardised in NeuroML or NeuroData Without Borders (NWB). The models are neuroscience models often implemented in NeuroML, Neuron, NetPyNE, Arbor, Brian, and other similar simulators.",
             "vector_stores": [],
+            "bm25_stores": [],
             "mcp_servers": {
                 "OpenSourceBrain":
                 {
