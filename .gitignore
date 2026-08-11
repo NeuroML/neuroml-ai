@@ -66,3 +66,5 @@ target/
 data/scripts/nml-docs
 
 .nicegui/
+
+tmp/
