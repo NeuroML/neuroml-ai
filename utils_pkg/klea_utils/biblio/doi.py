@@ -213,12 +213,14 @@ class DoiResolver:
         if not normalized or not DOI_RE.fullmatch(normalized):
             self.logger.warning(f"Ignoring invalid DOI: {doi!r}")
             return None
+        self.logger.debug(f"normalised {doi = } -> {normalized = }")
 
         if normalized in self._cache:
             self.logger.debug(f"DOI cache hit: {normalized}")
             return BiblioRecord.model_validate(self._cache[normalized])
 
         for service in self._service_order():
+            self.logger.debug(f"trying DOI service '{service}' for {normalized}")
             record = self._query(service, normalized)
             if record:
                 self._cache[normalized] = record.model_dump()
@@ -254,6 +256,7 @@ class DoiResolver:
         except httpx.HTTPError as e:
             self.logger.warning(f"Request to {url} failed: {e}")
             return None
+        self.logger.debug(f"GET {url} -> {response.status_code}")
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After")
             self.logger.warning(

@@ -99,30 +99,44 @@ def extract_metadata(
     metadata: dict = {}
     sources: list[str] = []
 
+    logger.debug(f"extracting metadata for {file_path = }\n{pdf_path = }")
+
     # Tier 0 -- join the document's text items for the regex tiers.
     full_text = _document_text(dl_doc)
 
     # Tier 1 -- PDF Info dict.
     pdf_info = extract_pdf_info(pdf_path) if pdf_path else {}
     pdf_fields = _normalize_pdf_info(pdf_info)
+    logger.debug(f"pdf-info tier: {pdf_fields}")
 
     # Tier 2 -- Docling structured signals.
     docling_info = extract_docling_structured(dl_doc, file_path)
+    logger.debug(f"docling tier: {docling_info}")
 
     # Tier 3 -- focused first-page header text.
     layout_text = extract_layout_region(dl_doc)
     layout_regex = extract_regex_metadata(layout_text) if layout_text else {}
+    logger.debug(f"layout-regex tier: {layout_regex}")
 
     # Tier 4 -- broader front-matter text.
     front_regex = extract_regex_metadata(full_text) if full_text else {}
+    logger.debug(f"front-regex tier: {front_regex}")
 
     # Tier 5 -- DOI discovery: the first tier to find one wins.
     doi = _discover_doi(pdf_fields, layout_regex, front_regex)
+    logger.debug(f"discovered {doi = }")
 
     # Tier 6 -- authoritative record from the DOI services.
     record: BiblioRecord | None = None
     if doi and resolver is not None:
         record = resolver.resolve(doi)
+    if record is not None:
+        logger.info(
+            f"resolved DOI {doi} via DOI services\n"
+            f"{record.title = }\n"
+            f"{record.authors = }\n"
+            f"{record.year = }"
+        )
 
     # Merge, most-authoritative first; each tier only fills gaps.
     if record is not None:
@@ -142,6 +156,13 @@ def extract_metadata(
         )
     metadata["_metadata_complete"] = complete
     metadata["_sources"] = sources
+
+    logger.debug(
+        f"metadata extraction done for {file_path = }\n"
+        f"{metadata = }\n"
+        f"{sources = }\n"
+        f"{complete = }"
+    )
 
     return metadata
 

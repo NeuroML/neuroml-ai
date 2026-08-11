@@ -82,6 +82,7 @@ def extract_pdf_info(path: str) -> dict[str, str]:
         result["doi"] = doi
     if url:
         result["url"] = url
+    logger.debug(f"extracted PDF Info dict for {pdf_path.name}: {result}")
     return result
 
 

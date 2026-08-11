@@ -52,6 +52,7 @@ def extract_docling_structured(dl_doc, file_path: str) -> dict:
     if urls:
         result["urls"] = urls
 
+    logger.debug(f"docling structured signals: {result}")
     return result
 
 
@@ -87,7 +88,12 @@ def extract_layout_region(dl_doc, page: int = 1, frac: float = 0.35) -> str | No
 
     if not region_texts:
         return None
-    return "\n".join(region_texts)
+    region_text = "\n".join(region_texts)
+    logger.debug(
+        f"layout region (page {page}, top {frac:.0%}): "
+        f"{len(region_text)} characters from {len(region_texts)} items"
+    )
+    return region_text
 
 
 def _first_title_text(dl_doc) -> str | None:

@@ -8,8 +8,11 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
 import re
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 #: Loose DOI pattern: a DOI begins with "10." followed by a 4-9 digit
 #: registrant prefix and a slash.
@@ -68,6 +71,7 @@ def extract_regex_metadata(
     url = _scan_url(scan_text)
     if url:
         result["url"] = url
+    logger.debug(f"regex extraction over {len(scan_text)} characters: {result}")
     return result
 
 
