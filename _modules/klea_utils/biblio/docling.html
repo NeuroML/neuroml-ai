@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>klea_utils.nodes.answer_general - Klea</title>
+        <title>klea_utils.biblio.docling - Klea</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -282,145 +282,138 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <h1>Source code for klea_utils.nodes.answer_general</h1><div class="highlight"><pre>
+          <h1>Source code for klea_utils.biblio.docling</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">Answer general question node</span>
+<span class="sd">Docling-based bibliographic metadata extraction</span>
 
-<span class="sd">File: klea_utils/nodes/answer_general.py</span>
+<span class="sd">File: klea_utils/biblio/docling.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">override</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">content_to_str</span><span class="p">,</span>
-    <span class="n">extract_llm_output_content</span><span class="p">,</span>
-    <span class="n">prompt_value_to_messages</span><span class="p">,</span>
-    <span class="n">split_output_by_section</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">..nodes.abstract</span><span class="w"> </span><span class="kn">import</span> <span class="n">NodeStreamData</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLLMNode</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="FallbackConfig">
-<a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.answer_general.FallbackConfig">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">FallbackConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">warning</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></div>
+<div class="viewcode-block" id="extract_docling_structured">
+<a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.docling.extract_docling_structured">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_docling_structured</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract the free, reliably-structured bibliographic signals from a</span>
+<span class="sd">    Docling document.</span>
 
+<span class="sd">    These come straight from Docling&#39;s layout model and document origin,</span>
+<span class="sd">    so they do not depend on regex heuristics:</span>
 
+<span class="sd">    - ``title`` -- the first ``TitleItem``&#39;s text, falling back to the</span>
+<span class="sd">      source file&#39;s stem</span>
+<span class="sd">    - ``source_type`` -- the document&#39;s ``origin.mimetype``</span>
+<span class="sd">    - ``source_url`` -- the ``origin.uri`` when it is an ``http(s)`` URL</span>
+<span class="sd">      (web-sourced inputs only)</span>
+<span class="sd">    - ``urls`` -- deduplicated ``http(s)`` hyperlink URLs found on any</span>
+<span class="sd">      text item (from markdown/HTML links)</span>
 
-<div class="viewcode-block" id="AnswerGeneral">
-<a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.answer_general.AnswerGeneral">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">AnswerGeneral</span><span class="p">(</span><span class="n">BaseLLMNode</span><span class="p">):</span>
-    <span class="n">model_type</span> <span class="o">=</span> <span class="s2">&quot;chat&quot;</span>
-    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;max_output_tokens&quot;</span><span class="p">:</span> <span class="mi">2048</span><span class="p">}</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Answer general (non-domain) questions using the LLM&#39;s training data.</span>
-
-<span class="sd">    Provides a conversational, user-friendly response. Optionally appends</span>
-<span class="sd">    conversation history for context and a fallback warning when configured.</span>
+<span class="sd">    :param dl_doc: A Docling ``DoclingDocument``</span>
+<span class="sd">    :param file_path: Path of the source file (for the title fallback)</span>
+<span class="sd">    :returns: Dict with any of ``title``, ``source_type``,</span>
+<span class="sd">        ``source_url``, ``urls``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_first_title_text</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span>
-        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-        <span class="n">memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">num_history_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
-        <span class="n">fallback_config</span><span class="p">:</span> <span class="n">FallbackConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the general answer node.</span>
+    <span class="n">origin</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">,</span> <span class="s2">&quot;origin&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">origin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mimetype</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;mimetype&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mimetype</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;source_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mimetype</span>
+        <span class="n">uri</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;uri&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">uri</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">uri_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">uri_str</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="s2">&quot;https://&quot;</span><span class="p">)):</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">&quot;source_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">uri_str</span>
 
-<span class="sd">        :param logger: Logger instance</span>
-<span class="sd">        :param label: Human-readable label for UI progress display</span>
-<span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
-<span class="sd">        :param memory: Whether to include conversation history in the prompt</span>
-<span class="sd">        :param num_history_messages: Number of recent messages to include when memory is enabled</span>
-<span class="sd">        :param fallback_config: Optional config for fallback warning text</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-            <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-            <span class="n">llm_models</span><span class="o">=</span><span class="n">llm_models</span><span class="p">,</span>
-            <span class="n">output_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">memory</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span>
-        <span class="p">)</span>
+    <span class="n">urls</span> <span class="o">=</span> <span class="n">_hyperlink_urls</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">urls</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;urls&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">urls</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_history_messages</span> <span class="o">=</span> <span class="n">num_history_messages</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fallback_config</span> <span class="o">=</span> <span class="n">fallback_config</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docling structured signals: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
 
-    <span class="nd">@override</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_prompt_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format prompt with the user&#39;s query.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">query</span><span class="p">}</span>  <span class="c1"># type: ignore</span>
 
-    <span class="nd">@override</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract answer, append fallback warning if configured, update messages.&quot;&quot;&quot;</span>
-        <span class="n">answer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
-        <span class="c1"># Add fallback warning if configured and query was domain-related</span>
-        <span class="n">fallback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fallback_config</span>
-        <span class="k">if</span> <span class="n">fallback</span> <span class="ow">and</span> <span class="n">fallback</span><span class="o">.</span><span class="n">enabled</span> <span class="ow">and</span> <span class="n">fallback</span><span class="o">.</span><span class="n">warning</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;query_domain&quot;</span><span class="p">,</span> <span class="s2">&quot;undefined&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;undefined&quot;</span><span class="p">:</span>
-                <span class="n">answer</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="si">{</span><span class="n">fallback</span><span class="o">.</span><span class="n">warning</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+<div class="viewcode-block" id="extract_layout_region">
+<a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.docling.extract_layout_region">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_layout_region</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">,</span> <span class="n">page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">frac</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.35</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the text of the top *frac* of *page* as a single string.</span>
 
-        <span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-        <span class="n">thought</span><span class="p">,</span> <span class="n">answer_text</span> <span class="o">=</span> <span class="n">split_output_by_section</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s2">&quot;&lt;think&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;/think&gt;&quot;</span><span class="p">)</span>
-        <span class="n">answer</span> <span class="o">+=</span> <span class="n">answer_text</span>
+<span class="sd">    Filters the document&#39;s text items to those whose bounding box starts</span>
+<span class="sd">    within the top *frac* of *page* (TOPLEFT origin) and joins their</span>
+<span class="sd">    text.  The first-page header is where authors, keywords and the DOI</span>
+<span class="sd">    live, so this gives the regex tier a focused region to scan rather</span>
+<span class="sd">    than the whole document.</span>
 
-        <span class="n">messages</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">answer</span>
-        <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<span class="sd">    :param dl_doc: A Docling ``DoclingDocument``</span>
+<span class="sd">    :param page: Page number to inspect</span>
+<span class="sd">    :param frac: Fraction of the page height that counts as the header</span>
+<span class="sd">    :returns: Joined region text, or ``None`` when there is nothing in</span>
+<span class="sd">        the region</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">page_item</span> <span class="o">=</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">pages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">page_item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">page_item</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">height</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="n">messages</span><span class="p">,</span> <span class="s2">&quot;message_for_user&quot;</span><span class="p">:</span> <span class="n">answer</span><span class="p">}</span>
+    <span class="n">region_texts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">texts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span><span class="o">.</span><span class="n">prov</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">prov</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">prov</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">prov</span><span class="o">.</span><span class="n">page_no</span> <span class="o">!=</span> <span class="n">page</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">prov</span><span class="o">.</span><span class="n">bbox</span><span class="o">.</span><span class="n">t</span> <span class="o">&lt;=</span> <span class="n">frac</span> <span class="o">*</span> <span class="n">height</span><span class="p">:</span>
+            <span class="n">region_texts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
 
-    <span class="nd">@override</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_error_result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AIMessage</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return default result when processing fails.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">AIMessage</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">region_texts</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">region_text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">region_texts</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;layout region (page </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s2">, top </span><span class="si">{</span><span class="n">frac</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">): &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">region_text</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters from </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">region_texts</span><span class="p">)</span><span class="si">}</span><span class="s2"> items&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">region_text</span></div>
 
-    <span class="nd">@override</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return answer summary.&quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
-        <span class="n">char_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span>
-            <span class="n">heading</span><span class="o">=</span><span class="s2">&quot;General Answer&quot;</span><span class="p">,</span>
-            <span class="n">summary</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Generated answer (</span><span class="si">{</span><span class="n">char_count</span><span class="si">}</span><span class="s2"> characters)&quot;</span>
-            <span class="k">if</span> <span class="n">char_count</span>
-            <span class="k">else</span> <span class="s2">&quot;No answer generated&quot;</span><span class="p">,</span>
-            <span class="n">details</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;character_count&quot;</span><span class="p">:</span> <span class="n">char_count</span><span class="p">},</span>
-        <span class="p">)</span>
 
-    <span class="nd">@override</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return info + input/output triples.&quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_info</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">details</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">details</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;input_prompt&quot;</span><span class="p">:</span> <span class="n">prompt_value_to_messages</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="p">),</span>
-                <span class="s2">&quot;unprocessed_output&quot;</span><span class="p">:</span> <span class="n">extract_llm_output_content</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">),</span>
-            <span class="p">}</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span>
-            <span class="n">heading</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">heading</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">summary</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="n">details</span>
-        <span class="p">)</span></div>
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_first_title_text</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the first title item&#39;s text, or ``None`` if there is none.&quot;&quot;&quot;</span>
+    <span class="c1"># Lazy: importing docling_core pulls in the pydantic document models.</span>
+    <span class="c1"># Only needed when a Docling document is being inspected.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">docling_core.types.doc.document</span><span class="w"> </span><span class="kn">import</span> <span class="n">DocItemLabel</span>
+
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">texts</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="n">DocItemLabel</span><span class="o">.</span><span class="n">TITLE</span> <span class="ow">and</span> <span class="n">item</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">item</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hyperlink_urls</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return deduplicated ``http(s)`` hyperlink URLs from text items.&quot;&quot;&quot;</span>
+    <span class="n">urls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">texts</span><span class="p">:</span>
+        <span class="n">hyperlink</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;hyperlink&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hyperlink</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">hyperlink</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="s2">&quot;https://&quot;</span><span class="p">)):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">urls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">urls</span>
 </pre></div>
         </article>
       </div>

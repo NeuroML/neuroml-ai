@@ -223,6 +223,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/stores.html">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/models_catalog.html">Model catalog</a></li>
@@ -321,6 +322,8 @@
 </li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.base.BaseLLMNode">BaseLLMNode (class in klea_utils.nodes.base)</a>
 </li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.BiblioRecord">BiblioRecord (class in klea_utils.biblio.doi)</a>
+</li>
         <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.bm25.BM25RetrieverManager">BM25RetrieverManager (class in klea_utils.stores.retrieval.bm25)</a>
 </li>
     </ul></td>
@@ -380,7 +383,11 @@
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.clear_overrides">clear_overrides() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.close">close() (klea_utils.api.sessions_db.SessionStore method)</a>
+
+        <ul>
+          <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.DoiResolver.close">(klea_utils.biblio.doi.DoiResolver method)</a>
 </li>
+        </ul></li>
         <li><a href="glossary.html#term-Collection"><strong>Collection</strong></a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.config_class">config_class (klea_utils.graph.base.BaseLangGraph attribute)</a>
@@ -419,17 +426,23 @@
 </li>
         <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.DEFAULT_MODELS_DEV_URL">DEFAULT_MODELS_DEV_URL (in module klea_utils.models_catalog)</a>
 </li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.regex.DEFAULT_SCAN_LIMIT">DEFAULT_SCAN_LIMIT (in module klea_utils.biblio.regex)</a>
+</li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.delete_chat">delete_chat() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
         <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.client.delete_chat_on_server">delete_chat_on_server() (in module klea_utils.ui.web.nicegui.client)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.delete_user_chats">delete_user_chats() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.DISK_CACHE_FILE">DISK_CACHE_FILE (in module klea_utils.models_catalog)</a>
 </li>
         <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.DISK_CACHE_TTL_SECONDS">DISK_CACHE_TTL_SECONDS (in module klea_utils.models_catalog)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.regex.DOI_RE">DOI_RE (in module klea_utils.biblio.regex)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.DoiResolver">DoiResolver (class in klea_utils.biblio.doi)</a>
 </li>
         <li><a href="glossary.html#term-Domain"><strong>Domain</strong></a>
 </li>
@@ -455,8 +468,6 @@
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.estimate_input_tokens">estimate_input_tokens() (in module klea_utils.llm)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="glossary.html#term-Evaluator"><strong>Evaluator</strong></a>
 </li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.execute">execute() (klea_utils.nodes.abstract.AbstractLangGraphNode method)</a>
@@ -471,7 +482,21 @@
           <li><a href="api/utils/nodes.html#klea_utils.nodes.guard_router.GuardRouterNode.execute">(klea_utils.nodes.guard_router.GuardRouterNode method)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.docling.extract_docling_structured">extract_docling_structured() (in module klea_utils.biblio.docling)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.docling.extract_layout_region">extract_layout_region() (in module klea_utils.biblio.docling)</a>
+</li>
         <li><a href="api/utils/llm.html#klea_utils.llm.extract_llm_output_content">extract_llm_output_content() (in module klea_utils.llm)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.extract.extract_metadata">extract_metadata() (in module klea_utils.biblio.extract)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.extract.extract_metadata_from_text">extract_metadata_from_text() (in module klea_utils.biblio.extract)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.pdf.extract_pdf_info">extract_pdf_info() (in module klea_utils.biblio.pdf)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.regex.extract_regex_metadata">extract_regex_metadata() (in module klea_utils.biblio.regex)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -662,6 +687,41 @@
 </li>
         </ul></li>
         <li>
+    klea_utils.biblio.docling
+
+        <ul>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.docling">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.biblio.doi
+
+        <ul>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.doi">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.biblio.extract
+
+        <ul>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.extract">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.biblio.pdf
+
+        <ul>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.pdf">module</a>
+</li>
+        </ul></li>
+        <li>
+    klea_utils.biblio.regex
+
+        <ul>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.regex">module</a>
+</li>
+        </ul></li>
+        <li>
     klea_utils.errors
 
         <ul>
@@ -703,6 +763,8 @@
           <li><a href="api/utils/models_catalog.html#module-klea_utils.models_catalog">module</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.nodes.abstract
 
@@ -717,8 +779,6 @@
           <li><a href="api/utils/nodes.html#module-klea_utils.nodes.answer_general">module</a>
 </li>
         </ul></li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li>
     klea_utils.nodes.base
 
@@ -915,6 +975,8 @@
 </li>
           <li><a href="api/utils/api.html#klea_utils.api.sessions.UpdateChatPayload.model_config">(klea_utils.api.sessions.UpdateChatPayload attribute)</a>
 </li>
+          <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.BiblioRecord.model_config">(klea_utils.biblio.doi.BiblioRecord attribute)</a>
+</li>
           <li><a href="api/utils/graph.html#klea_utils.graph.schemas.TokenUsage.model_config">(klea_utils.graph.schemas.TokenUsage attribute)</a>
 </li>
           <li><a href="api/utils/llm.html#klea_utils.llm.LLMModel.model_config">(klea_utils.llm.LLMModel attribute)</a>
@@ -986,6 +1048,16 @@
 </li>
           <li><a href="api/utils/api.html#module-klea_utils.api.utils">klea_utils.api.utils</a>
 </li>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.docling">klea_utils.biblio.docling</a>
+</li>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.doi">klea_utils.biblio.doi</a>
+</li>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.extract">klea_utils.biblio.extract</a>
+</li>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.pdf">klea_utils.biblio.pdf</a>
+</li>
+          <li><a href="api/utils/biblio.html#module-klea_utils.biblio.regex">klea_utils.biblio.regex</a>
+</li>
           <li><a href="api/utils/errors.html#module-klea_utils.errors">klea_utils.errors</a>
 </li>
           <li><a href="api/utils/graph.html#module-klea_utils.graph.reducers">klea_utils.graph.reducers</a>
@@ -1055,6 +1127,8 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.NodeStreamEvent">NodeStreamEvent (class in klea_utils.nodes.abstract)</a>
 </li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.normalize_doi">normalize_doi() (in module klea_utils.biblio.doi)</a>
+</li>
     </ul></td>
   </tr></table>
 </section>
@@ -1113,16 +1187,24 @@
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.reset_k">reset_k() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.DoiResolver.resolve">resolve() (klea_utils.biblio.doi.DoiResolver method)</a>
+
+        <ul>
+          <li><a href="api/utils/biblio.html#klea_utils.biblio.extract.Resolver.resolve">(klea_utils.biblio.extract.Resolver method)</a>
+</li>
+        </ul></li>
         <li><a href="api/utils/llm.html#klea_utils.llm.resolve_output_token_limit">resolve_output_token_limit() (in module klea_utils.llm)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.extract.Resolver">Resolver (class in klea_utils.biblio.extract)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.retrieve">retrieve() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/stores.html#klea_utils.stores.config.RetrieverConfig">RetrieverConfig (class in klea_utils.stores.config)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.RRF_K">RRF_K (in module klea_utils.stores.utils)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.rrf_merge">rrf_merge() (in module klea_utils.stores.utils)</a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">run_graph_astream_events() (klea_utils.graph.base.BaseLangGraph method)</a>
@@ -1146,6 +1228,8 @@
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.serialize_vs_retrieval">serialize_vs_retrieval() (in module klea_utils.stores.utils)</a>
+</li>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.DoiResolver.SERVICE_ORDER">SERVICE_ORDER (klea_utils.biblio.doi.DoiResolver attribute)</a>
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore">SessionStore (class in klea_utils.api.sessions_db)</a>
 </li>
@@ -1226,6 +1310,10 @@
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/api.html#klea_utils.api.sessions.UpdateChatPayload">UpdateChatPayload (class in klea_utils.api.sessions)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/biblio.html#klea_utils.biblio.regex.URL_RE">URL_RE (in module klea_utils.biblio.regex)</a>
 </li>
     </ul></td>
   </tr></table>

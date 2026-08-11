@@ -225,6 +225,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
@@ -388,6 +389,11 @@ to <code class="docutils literal notranslate"><span class="pre">&lt;collection&g
 can move the file afterwards and point the config at its new location.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--model</span></code> / <code class="docutils literal notranslate"><span class="pre">-m</span></code> – embedding model (default <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--max-tokens</span></code> – maximum tokens per chunk (default 450).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--ocr</span></code> / <code class="docutils literal notranslate"><span class="pre">--no-ocr</span></code> – whether to perform optical character
+recognition (OCR, see <a class="reference external" href="https://en.wikipedia.org/wiki/Optical_character_recognition">Wikipedia</a>)
+during PDF conversion (default: on).  Keep it on for scanned/
+image-based PDFs; pass <code class="docutils literal notranslate"><span class="pre">--no-ocr</span></code> for text-based PDFs to speed up
+conversion considerably.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--force</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code> – re-process all files even if previously cached.</p></li>
 </ul>
 <p>Re-running <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">build</span></code> on the same directory is safe –
@@ -559,9 +565,14 @@ Use <code class="docutils literal notranslate"><span class="pre">--server</span>
 <p>Once the basic pipeline works, here are natural next steps:</p>
 <dl class="simple">
 <dt><strong>Metadata enrichment</strong></dt><dd><p>Add source URLs or other metadata to retrieved chunks.  First run
-<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>,
-fill in the values, then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.
-See <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for examples.</p>
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>.
+Each file’s <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry is pre-filled automatically with
+bibliographic metadata (title, authors, keywords, DOI, URL) where it
+could be extracted – see <a class="reference internal" href="../concepts/rag.html"><span class="doc">RAG</span></a> for the extraction
+cascade.  Review and correct the values (check the
+<code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> flag), then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span>
+<span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.  See <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for
+examples.</p>
 </dd>
 <dt><strong>Different embedding models</strong></dt><dd><p>Swap <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code> for a HuggingFace embedding model
 (see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for model naming conventions).</p>

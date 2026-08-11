@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="LLM utilities" href="llm.html"><link rel="prev" title="Orchestrator framework" href="graph.html">
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="Bibliographic metadata extraction (klea\_utils.biblio)" href="biblio.html"><link rel="prev" title="Orchestrator framework" href="graph.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Vector stores - Klea</title>
@@ -225,6 +225,7 @@
 <li class="toctree-l2 current has-children"><a class="reference internal" href="../klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
@@ -376,7 +377,7 @@ the store (e.g. a LangChain VectorStore or BM25Retriever).</p>
 <h2>Ingestion<a class="headerlink" href="#ingestion" title="Link to this heading">¶</a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.stores.ingestion.StoresBuilder">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.ingestion.</span></span><span class="sig-name descname"><span class="pre">StoresBuilder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">450</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_peers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'BAAI/bge-m3'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/ingestion.html#StoresBuilder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.ingestion.StoresBuilder" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.ingestion.</span></span><span class="sig-name descname"><span class="pre">StoresBuilder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embedding_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.14)"><span class="pre">Logger</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">450</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">merge_peers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tokenizer_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'BAAI/bge-m3'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_ocr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/ingestion.html#StoresBuilder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.ingestion.StoresBuilder" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Build stores from a directory of source documents.</p>
 <p>Uses Docling for document conversion and token-aware chunking, then
@@ -407,7 +408,10 @@ also writes the combined chunked corpus for BM25 retrieval.</p>
 <dd><p>Convert, chunk, cache, and enrich metadata for all files.</p>
 <p>Skips converting files whose cache entry exists (unless
 <code class="docutils literal notranslate"><span class="pre">force</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>).  Always caches newly-converted chunks.
-Heading chains are collected per file for template generation.</p>
+Heading chains are collected per file for template generation.
+The per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> template entry is pre-filled with the
+automatically-extracted bibliographic metadata (see
+<a class="reference internal" href="biblio.html#klea_utils.biblio.extract.extract_metadata" title="klea_utils.biblio.extract.extract_metadata"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_metadata()</span></code></a>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -420,8 +424,8 @@ or <code class="docutils literal notranslate"><span class="pre">None</span></cod
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(results,</span> <span class="pre">file_headings)</span></code> where <em>results</em> is a
 list of <code class="docutils literal notranslate"><span class="pre">(file_hash,</span> <span class="pre">docs,</span> <span class="pre">file_path)</span></code> tuples and
-<em>file_headings</em> is a <code class="docutils literal notranslate"><span class="pre">{file_name:</span> <span class="pre">{&quot;DEFAULT&quot;:</span> <span class="pre">{},</span>
-<span class="pre">&quot;heading</span> <span class="pre">&gt;</span> <span class="pre">heading&quot;:</span> <span class="pre">{},</span> <span class="pre">...}}</span></code> dict</p>
+<em>file_headings</em> is a <code class="docutils literal notranslate"><span class="pre">{file_name:</span> <span class="pre">{&quot;DEFAULT&quot;:</span> <span class="pre">{extracted</span>
+<span class="pre">metadata},</span> <span class="pre">&quot;heading</span> <span class="pre">&gt;</span> <span class="pre">heading&quot;:</span> <span class="pre">{},</span> <span class="pre">...}}</span></code> dict</p>
 </dd>
 </dl>
 </dd></dl>
@@ -784,12 +788,12 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="llm.html">
+          <a class="next-page" href="biblio.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">LLM utilities</div>
+                <div class="title">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>

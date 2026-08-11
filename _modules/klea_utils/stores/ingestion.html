@@ -224,6 +224,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/stores.html">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/models_catalog.html">Model catalog</a></li>
@@ -301,6 +302,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">xxhash</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">..biblio.extract</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resolver</span><span class="p">,</span> <span class="n">extract_metadata</span><span class="p">,</span> <span class="n">extract_metadata_from_text</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_embedding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span>
 
@@ -329,6 +331,7 @@
         <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_TOKENS</span><span class="p">,</span>
         <span class="n">merge_peers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">DEFAULT_MERGE_PEERS</span><span class="p">,</span>
         <span class="n">tokenizer_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_TOKENIZER_MODEL</span><span class="p">,</span>
+        <span class="n">do_ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the builder.</span>
 
@@ -341,12 +344,17 @@
 <span class="sd">            elements (e.g. consecutive paragraphs)</span>
 <span class="sd">        :param tokenizer_model: HuggingFace tokenizer model used for</span>
 <span class="sd">            token-aware chunking</span>
+<span class="sd">        :param do_ocr: Whether Docling should OCR pages during PDF</span>
+<span class="sd">            conversion.  Keep enabled for scanned/image-based PDFs;</span>
+<span class="sd">            disabling it speeds up conversion of text-based PDFs</span>
+<span class="sd">            significantly.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span> <span class="o">=</span> <span class="n">embedding_model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_tokens</span> <span class="o">=</span> <span class="n">max_tokens</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">merge_peers</span> <span class="o">=</span> <span class="n">merge_peers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer_model</span> <span class="o">=</span> <span class="n">tokenizer_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">do_ocr</span> <span class="o">=</span> <span class="n">do_ocr</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="kc">None</span>
@@ -354,7 +362,8 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;StoresBuilder initialised (max_tokens=</span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">, &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;merge_peers=</span><span class="si">{</span><span class="n">merge_peers</span><span class="si">}</span><span class="s2">, tokenizer=</span><span class="si">{</span><span class="n">tokenizer_model</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;merge_peers=</span><span class="si">{</span><span class="n">merge_peers</span><span class="si">}</span><span class="s2">, tokenizer=</span><span class="si">{</span><span class="n">tokenizer_model</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;do_ocr=</span><span class="si">{</span><span class="n">do_ocr</span><span class="si">}</span><span class="s2">)&quot;</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="StoresBuilder.build">
@@ -410,6 +419,9 @@
 <span class="sd">        Skips converting files whose cache entry exists (unless</span>
 <span class="sd">        ``force`` is ``True``).  Always caches newly-converted chunks.</span>
 <span class="sd">        Heading chains are collected per file for template generation.</span>
+<span class="sd">        The per-file ``DEFAULT`` template entry is pre-filled with the</span>
+<span class="sd">        automatically-extracted bibliographic metadata (see</span>
+<span class="sd">        :func:`~klea_utils.biblio.extract.extract_metadata`).</span>
 
 <span class="sd">        :param source_path: Resolved source directory path</span>
 <span class="sd">        :param metadata_map: Metadata map for heading-based enrichment,</span>
@@ -417,13 +429,15 @@
 <span class="sd">        :param force: Re-process all files even if cached</span>
 <span class="sd">        :returns: ``(results, file_headings)`` where *results* is a</span>
 <span class="sd">            list of ``(file_hash, docs, file_path)`` tuples and</span>
-<span class="sd">            *file_headings* is a ``{file_name: {&quot;DEFAULT&quot;: {},</span>
-<span class="sd">            &quot;heading &gt; heading&quot;: {}, ...}}`` dict</span>
+<span class="sd">            *file_headings* is a ``{file_name: {&quot;DEFAULT&quot;: {extracted</span>
+<span class="sd">            metadata}, &quot;heading &gt; heading&quot;: {}, ...}}`` dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_tokenizer</span><span class="p">()</span>
 
         <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_files</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> ingestible files in </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">resolver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_resolver</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
 
         <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">file_headings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -433,14 +447,17 @@
             <span class="n">file_hash</span> <span class="o">=</span> <span class="n">_hash_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
             <span class="n">docs</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
-                <span class="n">docs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
+                <span class="n">cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="n">cached</span>
 
             <span class="k">if</span> <span class="n">docs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">docs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_and_chunk</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_to_cache</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
+                    <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_and_chunk</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">resolver</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_to_cache</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span><span class="p">,</span> <span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to process </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="k">continue</span>
@@ -448,6 +465,34 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
                 <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">extracted</span><span class="p">:</span>
+                    <span class="c1"># No persisted extraction (e.g. a legacy cache entry</span>
+                    <span class="c1"># written before the biblio cascade existed), so run</span>
+                    <span class="c1"># the text-only extraction over the cached chunks:</span>
+                    <span class="c1"># regex + pdf-info (for PDFs) + DOI resolution.</span>
+                    <span class="n">cached_text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span> <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
+                    <span class="p">)</span>
+                    <span class="n">extracted</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">extract_metadata_from_text</span><span class="p">(</span>
+                            <span class="n">cached_text</span><span class="p">,</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+                            <span class="n">pdf_path</span><span class="o">=</span><span class="p">(</span>
+                                <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.pdf&quot;</span>
+                                <span class="k">else</span> <span class="kc">None</span>
+                            <span class="p">),</span>
+                            <span class="n">resolver</span><span class="o">=</span><span class="n">resolver</span><span class="p">,</span>
+                        <span class="p">)</span>
+                        <span class="k">if</span> <span class="n">cached_text</span>
+                        <span class="k">else</span> <span class="p">{}</span>
+                    <span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No cached metadata extraction for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;falling back to text-only extraction &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span><span class="si">}</span><span class="s2"> fields); re-run with --force to &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;regenerate the full extraction&quot;</span>
+                    <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
@@ -468,7 +513,7 @@
                     <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
                         <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 
-            <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="p">{}}</span>
+            <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="n">extracted</span><span class="p">}</span>
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])</span>
                 <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
@@ -479,6 +524,8 @@
 
             <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
 
+        <span class="c1"># The resolver&#39;s HTTP client is left for the process to clean up;</span>
+        <span class="c1"># ingestion is a one-shot CLI run.</span>
         <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">file_headings</span></div>
 
 
@@ -626,13 +673,22 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">safe_hash</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_to_cache</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span>
+        <span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">file_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pickle *docs* to the cache directory.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pickle *docs* and their extracted metadata to the cache directory.</span>
 
-<span class="sd">        Creates the cache directory if it does not exist.</span>
+<span class="sd">        Creates the cache directory if it does not exist.  The cache</span>
+<span class="sd">        entry is a ``(docs, extracted)`` tuple so that cache hits can</span>
+<span class="sd">        restore the full-cascade bibliographic extraction instead of</span>
+<span class="sd">        degrading to a weaker regex-only pass.  (Legacy cache entries</span>
+<span class="sd">        hold a plain list of docs; :meth:`_load_from_cache` handles both.)</span>
 
 <span class="sd">        :param docs: List of chunked documents to cache</span>
+<span class="sd">        :param extracted: Bibliographic metadata extracted for the file</span>
 <span class="sd">        :param source_dir: Resolved source directory path</span>
 <span class="sd">        :param file_hash: xxhash digest of the source file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -640,33 +696,41 @@
         <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_from_cache</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load pickled chunks from the cache.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load pickled chunks and their extracted metadata from the cache.</span>
 
 <span class="sd">        To inspect cached chunks from a Python shell::</span>
 
 <span class="sd">            import pickle</span>
 <span class="sd">            from pathlib import Path</span>
 <span class="sd">            for p in Path(&quot;&lt;source_dir&gt;/.klea-cache/&quot;).glob(&quot;*.pkl&quot;):</span>
-<span class="sd">                docs = pickle.load(open(p, &quot;rb&quot;))</span>
-<span class="sd">                print(p.stem, docs[0].metadata.get(&quot;headings&quot;))</span>
+<span class="sd">                data = pickle.load(open(p, &quot;rb&quot;))</span>
+<span class="sd">                docs, extracted = data if isinstance(data, tuple) else (data, {})</span>
+<span class="sd">                print(p.stem, docs[0].metadata.get(&quot;headings&quot;), extracted)</span>
+
+<span class="sd">        Handles legacy cache entries (a plain list of documents) by</span>
+<span class="sd">        returning an empty extracted dict for them.</span>
 
 <span class="sd">        :param source_dir: Resolved source directory path</span>
 <span class="sd">        :param file_hash: xxhash digest of the source file</span>
-<span class="sd">        :returns: List of :class:`~langchain_core.documents.Document`, or</span>
-<span class="sd">            ``None`` if the cache file does not exist</span>
+<span class="sd">        :returns: ``(docs, extracted)``, or ``None`` if the cache file</span>
+<span class="sd">            does not exist</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cache hit: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">return</span> <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="p">{}</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Metadata map helpers</span>
@@ -790,14 +854,38 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Lazily initialise and return the Docling</span>
 <span class="sd">        :class:`~docling.document_converter.DocumentConverter` singleton.</span>
 
+<span class="sd">        When :attr:`do_ocr` is ``False``, the PDF pipeline is configured</span>
+<span class="sd">        with OCR disabled, which speeds up conversion of text-based PDFs</span>
+<span class="sd">        significantly (scanned/image-based PDFs then lose their</span>
+<span class="sd">        embedded text).</span>
+
 <span class="sd">        :returns: Shared :class:`~docling.document_converter.DocumentConverter`</span>
 <span class="sd">            instance</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Initialising Docling DocumentConverter&quot;</span><span class="p">)</span>
-            <span class="kn">from</span><span class="w"> </span><span class="nn">docling.document_converter</span><span class="w"> </span><span class="kn">import</span> <span class="n">DocumentConverter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Initialising Docling DocumentConverter (do_ocr=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">do_ocr</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">docling.document_converter</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                <span class="n">DocumentConverter</span><span class="p">,</span>
+                <span class="n">PdfFormatOption</span><span class="p">,</span>
+            <span class="p">)</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="n">DocumentConverter</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">do_ocr</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="n">DocumentConverter</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Lazy: the pipeline-options imports pull in docling&#39;s</span>
+                <span class="c1"># pipeline machinery; only needed when OCR is disabled.</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">docling.datamodel.base_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">InputFormat</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">docling.datamodel.pipeline_options</span><span class="w"> </span><span class="kn">import</span> <span class="n">PdfPipelineOptions</span>
+
+                <span class="n">options</span> <span class="o">=</span> <span class="n">PdfPipelineOptions</span><span class="p">()</span>
+                <span class="n">options</span><span class="o">.</span><span class="n">do_ocr</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="n">DocumentConverter</span><span class="p">(</span>
+                    <span class="n">format_options</span><span class="o">=</span><span class="p">{</span>
+                        <span class="n">InputFormat</span><span class="o">.</span><span class="n">PDF</span><span class="p">:</span> <span class="n">PdfFormatOption</span><span class="p">(</span><span class="n">pipeline_options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_chunker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -827,17 +915,27 @@
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chunker</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_convert_and_chunk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_convert_and_chunk</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert ``file_path`` with Docling, chunk with the</span>
 <span class="sd">        :class:`~docling.chunking.HybridChunker`,</span>
-<span class="sd">        and return :class:`~langchain_core.documents.Document` objects.</span>
+<span class="sd">        and return :class:`~langchain_core.documents.Document` objects</span>
+<span class="sd">        alongside the automatically-extracted bibliographic metadata.</span>
 
 <span class="sd">        Each document&#39;s metadata includes a ``headings`` list (the heading</span>
-<span class="sd">        hierarchy for the chunk).</span>
+<span class="sd">        hierarchy for the chunk).  The extracted metadata (see</span>
+<span class="sd">        :func:`~klea_utils.biblio.extract.extract_metadata`) is used to</span>
+<span class="sd">        pre-fill the per-file template ``DEFAULT`` entry; it is not</span>
+<span class="sd">        attached to the chunks themselves.</span>
 
 <span class="sd">        :param file_path: Path to the source document file</span>
-<span class="sd">        :returns: List of chunked :class:`~langchain_core.documents.Document`</span>
-<span class="sd">            objects ready for embedding</span>
+<span class="sd">        :param resolver: DOI resolver for the extraction cascade, or</span>
+<span class="sd">            ``None`` to skip DOI resolution</span>
+<span class="sd">        :returns: ``(docs, extracted)`` where *docs* is the list of</span>
+<span class="sd">            chunked :class:`~langchain_core.documents.Document` objects</span>
+<span class="sd">            ready for embedding and *extracted* is the flat</span>
+<span class="sd">            bibliographic metadata dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">converter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_converter</span><span class="p">()</span>
         <span class="n">chunker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_chunker</span><span class="p">()</span>
@@ -857,7 +955,31 @@
             <span class="p">)</span>
             <span class="n">docs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">docs</span></div>
+        <span class="n">extracted</span> <span class="o">=</span> <span class="n">extract_metadata</span><span class="p">(</span>
+            <span class="n">dl_doc</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+            <span class="n">pdf_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.pdf&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">resolver</span><span class="o">=</span><span class="n">resolver</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_make_resolver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Resolver</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a DOI resolver for a source directory.</span>
+
+<span class="sd">        The resolver caches resolved DOIs under the source directory&#39;s</span>
+<span class="sd">        ``.klea-cache/`` and picks up the ``KLEA_INGEST_MAILTO``</span>
+<span class="sd">        polite-pool address from the environment.</span>
+
+<span class="sd">        :param source_path: Resolved source directory path</span>
+<span class="sd">        :returns: A configured</span>
+<span class="sd">            :class:`~klea_utils.biblio.doi.DoiResolver`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Lazy: importing the DOI resolver pulls in httpx; it is only</span>
+        <span class="c1"># needed when documents are being converted.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">..biblio.doi</span><span class="w"> </span><span class="kn">import</span> <span class="n">DoiResolver</span>
+
+        <span class="k">return</span> <span class="n">DoiResolver</span><span class="p">(</span><span class="n">cache_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_path</span><span class="p">))</span></div>
 
 
 

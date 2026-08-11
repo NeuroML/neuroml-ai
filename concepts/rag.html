@@ -225,6 +225,7 @@
 <li class="toctree-l2 has-children"><a class="reference internal" href="../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/graph.html">Orchestrator framework</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
@@ -356,11 +357,11 @@ the system can refer to earlier exchanges.</p></li>
 <p>The pipeline is implemented as a <a class="reference external" href="https://langchain-ai.github.io/langgraph/">LangGraph</a> state machine, using
 the shared <a class="reference internal" href="../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a>
 orchestrator from <code class="docutils literal notranslate"><span class="pre">klea_utils</span></code>.</p>
-<figure class="align-center" id="id2">
+<figure class="align-center" id="id3">
 <a class="reference internal image-reference" href="../_images/rag-lang-graph.png"><img alt="RAG LangGraph pipeline" src="../_images/rag-lang-graph.png" style="width: 80%;" />
 </a>
 <figcaption>
-<p><span class="caption-text">The RAG pipeline visualised as a LangGraph state machine.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+<p><span class="caption-text">The RAG pipeline visualised as a LangGraph state machine.</span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
@@ -411,6 +412,54 @@ vector-store similarity and the BM25 score, labelled by source.</p>
 <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> (see
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>), then add a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
 entry to the domain config pointing at the written corpus file.</p>
+</section>
+<section id="bibliographic-metadata-extraction">
+<span id="metadata-extraction"></span><h2>Bibliographic metadata extraction<a class="headerlink" href="#bibliographic-metadata-extraction" title="Link to this heading">¶</a></h2>
+<p>When documents are chunked, Klea automatically tries to populate the
+per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry of <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> with
+bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
+pre-population aid: the researcher reviews and corrects the values
+before storing, rather than filling the metadata map in from scratch.</p>
+<p>The extraction runs a tiered cascade, most authoritative first; each
+tier only fills fields the tiers above it have not already set:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">doi-service</span></code> – a DOI discovered anywhere in the document is
+resolved via Crossref, OpenAlex and Semantic Scholar.  The three APIs
+are queried in round-robin order to spread load, falling back to the
+others when one is rate-limited, and results are cached to disk so
+re-ingests never re-query.  The resolved record’s title, authors,
+year, venue and DOI override everything below.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pdf-info</span></code> – the PDF Info dict (title, authors, keywords), read
+with pypdfium2.  Often empty: many publishers ship no bibliographic
+fields in the PDF.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docling</span></code> – the free structured signals from Docling’s layout
+model: the title item, the origin mimetype/URI, and the hyperlinks on
+text items.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">layout-regex</span></code> – regex over the focused first-page header region
+(the top fraction of page one, selected via the layout bounding
+boxes).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regex</span></code> – regex over the first ~3000 characters of the document.</p></li>
+</ul>
+<p>Two internal keys are added to each file’s <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> – <code class="docutils literal notranslate"><span class="pre">True</span></code> only when a full DOI record (title
++ authors + year) or a full PDF Info dict (title + author + keywords)
+was obtained; <code class="docutils literal notranslate"><span class="pre">False</span></code> means the researcher should review the entry.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_sources</span></code> – the tiers that contributed at least one field, in
+precedence order (e.g. <code class="docutils literal notranslate"><span class="pre">[&quot;doi-service&quot;,</span> <span class="pre">&quot;regex&quot;]</span></code>).</p></li>
+</ul>
+<p>These keys are internal: they guide the researcher reviewing the
+template, and are never shown to the answer LLM.</p>
+<p>DOI resolution uses the APIs’ polite pool when <code class="docutils literal notranslate"><span class="pre">KLEA_INGEST_MAILTO</span></code>
+is set to an email address (higher rate limits).  It is skipped
+entirely when no DOI is found in the document.  Optical character
+recognition (OCR), which slows the conversion of text-based PDFs
+considerably, can be disabled with <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--no-ocr</span></code> (see
+<a class="reference external" href="https://en.wikipedia.org/wiki/Optical_character_recognition">Wikipedia</a>
+for details).</p>
+<p>See <a class="reference internal" href="../api/utils/biblio.html"><span class="doc">Bibliographic metadata extraction (klea\_utils.biblio)</span></a> for the Python API and
+<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for the <code class="docutils literal notranslate"><span class="pre">chunk</span></code> / <code class="docutils literal notranslate"><span class="pre">store</span></code>
+workflow.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <ul class="simple">
@@ -484,6 +533,7 @@ RAG system end to end</p></li>
 <li><a class="reference internal" href="#klea-s-architecture">Klea’s architecture</a></li>
 <li><a class="reference internal" href="#domains-and-stores">Domains and stores</a></li>
 <li><a class="reference internal" href="#hybrid-retrieval-vector-bm25">Hybrid retrieval (vector + BM25)</a></li>
+<li><a class="reference internal" href="#bibliographic-metadata-extraction">Bibliographic metadata extraction</a></li>
 </ul>
 </li>
 </ul>
