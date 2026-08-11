@@ -9,19 +9,15 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-import re
 from pathlib import Path
+
+from .regex import DOI_RE, URL_RE
 
 logger = logging.getLogger(__name__)
 
 #: PDF Info-dict fields with bibliographic value, in preference order.
 #: Date and tooling fields (Creator, Producer) are omitted.
 _BIBLIO_FIELDS = ("Title", "Author", "Keywords", "Subject")
-
-#: Loose DOI pattern, shared with the regex extraction tier.
-_DOI_RE = re.compile(r"\b10\.\d{4,9}/[^\s,;]+")
-#: Loose URL pattern.
-_URL_RE = re.compile(r"https?://[^\s,;]+")
 
 #: Standard Info-dict keys that pypdfium2 returns, scanned in this order
 #: for an embedded DOI/URL.  pdfium only exposes these standard keys --
@@ -109,11 +105,11 @@ def _find_doi_url(metadata: dict) -> tuple[str | None, str | None]:
             continue
         value_str = str(value)
         if doi is None:
-            match = _DOI_RE.search(value_str)
+            match = DOI_RE.search(value_str)
             if match:
                 doi = _rstrip_punct(match.group(0))
         if url is None:
-            match = _URL_RE.search(value_str)
+            match = URL_RE.search(value_str)
             if match:
                 url = _rstrip_punct(match.group(0))
         if doi is not None and url is not None:
