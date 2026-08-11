@@ -2,6 +2,23 @@
 
 ## v0.4.0 (wip)
 
+### Automatic metadata extraction
+
+- New `klea_utils.biblio` package: tiered bibliographic metadata extraction
+  that pre-fills the per-file `DEFAULT` entries of
+  `metadata-map.template.json` during chunking
+- Tiers, most authoritative first: DOI resolution via Crossref/OpenAlex/
+  Semantic Scholar (round-robin across calls, fallback on rate limits,
+  disk-cached), PDF Info dict via pypdfium2, Docling structured signals,
+  layout-region regex, document front-matter regex
+- Internal `_metadata_complete` / `_sources` keys flag whether automation
+  fully populated the metadata and which tiers contributed; they are never
+  shown to the answer LLM
+- `KLEA_INGEST_MAILTO` env var opts into the DOI APIs' polite pool for
+  higher rate limits
+- PDF OCR can be disabled with `klea-stores-create --no-ocr`, speeding up
+  conversion of text-based PDFs significantly
+
 ### Configurable model system
 
 - Replaced `setup_llm()` with `create_configurable_model()` using LangChain's

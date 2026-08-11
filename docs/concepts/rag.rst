@@ -137,6 +137,60 @@ To create a BM25 store alongside a vector store, pass
 :doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``
 entry to the domain config pointing at the written corpus file.
 
+.. _metadata-extraction:
+
+Bibliographic metadata extraction
+---------------------------------
+
+When documents are chunked, Klea automatically tries to populate the
+per-file ``DEFAULT`` entry of ``metadata-map.template.json`` with
+bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
+pre-population aid: the researcher reviews and corrects the values
+before storing, rather than filling the metadata map in from scratch.
+
+The extraction runs a tiered cascade, most authoritative first; each
+tier only fills fields the tiers above it have not already set:
+
+* ``doi-service`` -- a DOI discovered anywhere in the document is
+  resolved via Crossref, OpenAlex and Semantic Scholar.  The three APIs
+  are queried in round-robin order to spread load, falling back to the
+  others when one is rate-limited, and results are cached to disk so
+  re-ingests never re-query.  The resolved record's title, authors,
+  year, venue and DOI override everything below.
+* ``pdf-info`` -- the PDF Info dict (title, authors, keywords), read
+  with pypdfium2.  Often empty: many publishers ship no bibliographic
+  fields in the PDF.
+* ``docling`` -- the free structured signals from Docling's layout
+  model: the title item, the origin mimetype/URI, and the hyperlinks on
+  text items.
+* ``layout-regex`` -- regex over the focused first-page header region
+  (the top fraction of page one, selected via the layout bounding
+  boxes).
+* ``regex`` -- regex over the first ~3000 characters of the document.
+
+Two internal keys are added to each file's ``DEFAULT`` entry:
+
+* ``_metadata_complete`` -- ``True`` only when a full DOI record (title
+  + authors + year) or a full PDF Info dict (title + author + keywords)
+  was obtained; ``False`` means the researcher should review the entry.
+* ``_sources`` -- the tiers that contributed at least one field, in
+  precedence order (e.g. ``["doi-service", "regex"]``).
+
+These keys are internal: they guide the researcher reviewing the
+template, and are never shown to the answer LLM.
+
+DOI resolution uses the APIs' polite pool when ``KLEA_INGEST_MAILTO``
+is set to an email address (higher rate limits).  It is skipped
+entirely when no DOI is found in the document.  Optical character
+recognition (OCR), which slows the conversion of text-based PDFs
+considerably, can be disabled with ``klea-stores-create --no-ocr`` (see
+`Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_
+for details).
+
+See :doc:`../api/utils/biblio` for the Python API and
+:doc:`../tutorials/create-and-use-rag` for the ``chunk`` / ``store``
+workflow.
+
 .. seealso::
 
    * :doc:`../glossary` -- definitions of key terms

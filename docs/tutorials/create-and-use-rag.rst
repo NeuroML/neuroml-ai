@@ -107,9 +107,12 @@ Flags explained:
   can move the file afterwards and point the config at its new location.
 * ``--model`` / ``-m`` -- embedding model (default ``ollama:bge-m3:latest``).
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
-* ``--ocr`` / ``--no-ocr`` -- whether to OCR pages during PDF conversion
-  (default: on).  Keep it on for scanned/image-based PDFs; pass
-  ``--no-ocr`` for text-based PDFs to speed up conversion considerably.
+* ``--ocr`` / ``--no-ocr`` -- whether to perform optical character
+  recognition (OCR, see `Wikipedia
+  <https://en.wikipedia.org/wiki/Optical_character_recognition>`_)
+  during PDF conversion (default: on).  Keep it on for scanned/
+  image-based PDFs; pass ``--no-ocr`` for text-based PDFs to speed up
+  conversion considerably.
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
 
 Re-running ``klea-stores-create build`` on the same directory is safe --
@@ -310,9 +313,14 @@ Once the basic pipeline works, here are natural next steps:
 
 **Metadata enrichment**
    Add source URLs or other metadata to retrieved chunks.  First run
-   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``,
-   fill in the values, then ``klea-stores-create store --metadata-map <file>``.
-   See ``klea-stores-create --help`` for examples.
+   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``.
+   Each file's ``DEFAULT`` entry is pre-filled automatically with
+   bibliographic metadata (title, authors, keywords, DOI, URL) where it
+   could be extracted -- see :doc:`../concepts/rag` for the extraction
+   cascade.  Review and correct the values (check the
+   ``_metadata_complete`` flag), then ``klea-stores-create store
+   --metadata-map <file>``.  See ``klea-stores-create --help`` for
+   examples.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model

@@ -49,9 +49,10 @@ def build(
     ocr: bool = typer.Option(
         True,
         "--ocr/--no-ocr",
-        help="Whether to OCR pages during PDF conversion (default: on). "
-        "Keep for scanned/image PDFs; disable for text-based PDFs to "
-        "speed up conversion significantly",
+        help="Whether to perform optical character recognition (OCR) "
+        "during PDF conversion (default: on). Keep for scanned/image "
+        "PDFs; disable for text-based PDFs to speed up conversion "
+        "significantly",
     ),
     metadata_map_path: str = typer.Option(
         None,
@@ -158,9 +159,10 @@ def chunk(
     ocr: bool = typer.Option(
         True,
         "--ocr/--no-ocr",
-        help="Whether to OCR pages during PDF conversion (default: on). "
-        "Keep for scanned/image PDFs; disable for text-based PDFs to "
-        "speed up conversion significantly",
+        help="Whether to perform optical character recognition (OCR) "
+        "during PDF conversion (default: on). Keep for scanned/image "
+        "PDFs; disable for text-based PDFs to speed up conversion "
+        "significantly",
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
@@ -239,9 +241,10 @@ def store(
     ocr: bool = typer.Option(
         True,
         "--ocr/--no-ocr",
-        help="Whether to OCR pages during PDF conversion (default: on). "
-        "Keep for scanned/image PDFs; disable for text-based PDFs to "
-        "speed up conversion significantly",
+        help="Whether to perform optical character recognition (OCR) "
+        "during PDF conversion (default: on). Keep for scanned/image "
+        "PDFs; disable for text-based PDFs to speed up conversion "
+        "significantly",
     ),
     metadata_map_path: str = typer.Option(
         None,
