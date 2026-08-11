@@ -27,6 +27,11 @@ _INTERNAL_META_KEYS = {
     "file_hash",
     "headings",
     SOURCE_SCORES_KEY,
+    # Bibliographic extraction provenance (see klea_utils/biblio).  These
+    # guide the researcher reviewing metadata-map.template.json but carry
+    # no meaning for the answer LLM, so they are never serialized to it.
+    "_metadata_complete",
+    "_sources",
 }
 
 
