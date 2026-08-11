@@ -307,10 +307,21 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
     <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing source documents&quot;</span><span class="p">),</span>
     <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--collection&quot;</span><span class="p">,</span> <span class="s2">&quot;-n&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store&quot;</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">&quot;--collection&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-n&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store. Must match the &quot;</span>
+        <span class="s2">&quot;&#39;name&#39; of the corresponding vector_stores/bm25_stores entry in &quot;</span>
+        <span class="s2">&quot;the RAG config file (e.g. klea.json); a different name on an &quot;</span>
+        <span class="s2">&quot;existing store file creates a new collection&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--store&quot;</span><span class="p">,</span> <span class="s2">&quot;-s&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store)&quot;</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">&quot;--store&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-s&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store). For local &quot;</span>
+        <span class="s2">&quot;Chroma stores, point at the store folder: the database file &quot;</span>
+        <span class="s2">&quot;inside it is always named chroma.sqlite3&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="s2">&quot;ollama:bge-m3:latest&quot;</span><span class="p">,</span>
@@ -332,7 +343,10 @@
         <span class="kc">None</span><span class="p">,</span>
         <span class="s2">&quot;--bm25-store&quot;</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write the combined document corpus to this path for BM25 &quot;</span>
-        <span class="s2">&quot;retrieval (a pickle of all chunked documents)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;retrieval (a pickle of all chunked documents). Defaults to &quot;</span>
+        <span class="s2">&quot;&lt;collection&gt;.pkl in the current directory; the file can be &quot;</span>
+        <span class="s2">&quot;moved after creation&quot;</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="s2">&quot;&lt;collection&gt;.pkl&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-process all files even if unchanged&quot;</span>
@@ -345,8 +359,9 @@
 <span class="sd">    Processed chunks are cached in ``&lt;source_dir&gt;/.klea-cache/`` so</span>
 <span class="sd">    subsequent runs (e.g. with ``--metadata-map``) skip conversion.</span>
 
-<span class="sd">    The optional ``--bm25-store`` flag writes the combined chunked</span>
-<span class="sd">    documents to a single pickle file that can be used as a BM25 store.</span>
+<span class="sd">    The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the</span>
+<span class="sd">    current directory) writes the combined chunked documents to a single</span>
+<span class="sd">    pickle file that can be used as a BM25 store.</span>
 
 <span class="sd">    The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file</span>
 <span class="sd">    organised by source file.  Within each file entry, the most specific</span>
@@ -379,6 +394,12 @@
         <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;(none)&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
+
+    <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
+    <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
+    <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># Lazy: importing StoresBuilder pulls in ingestion.py -&gt; llm.py -&gt;</span>
@@ -466,10 +487,21 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">store</span><span class="p">(</span>
     <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing source documents&quot;</span><span class="p">),</span>
     <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--collection&quot;</span><span class="p">,</span> <span class="s2">&quot;-n&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store&quot;</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">&quot;--collection&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-n&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store. Must match the &quot;</span>
+        <span class="s2">&quot;&#39;name&#39; of the corresponding vector_stores/bm25_stores entry in &quot;</span>
+        <span class="s2">&quot;the RAG config file (e.g. klea.json); a different name on an &quot;</span>
+        <span class="s2">&quot;existing store file creates a new collection&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span> <span class="s2">&quot;--store&quot;</span><span class="p">,</span> <span class="s2">&quot;-s&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store)&quot;</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">&quot;--store&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-s&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store). For local &quot;</span>
+        <span class="s2">&quot;Chroma stores, point at the store folder: the database file &quot;</span>
+        <span class="s2">&quot;inside it is always named chroma.sqlite3&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="s2">&quot;ollama:bge-m3:latest&quot;</span><span class="p">,</span>
@@ -491,7 +523,10 @@
         <span class="kc">None</span><span class="p">,</span>
         <span class="s2">&quot;--bm25-store&quot;</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write the combined document corpus to this path for BM25 &quot;</span>
-        <span class="s2">&quot;retrieval (a pickle of all chunked documents)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;retrieval (a pickle of all chunked documents). Defaults to &quot;</span>
+        <span class="s2">&quot;&lt;collection&gt;.pkl in the current directory; the file can be &quot;</span>
+        <span class="s2">&quot;moved after creation&quot;</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="s2">&quot;&lt;collection&gt;.pkl&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-process all files even if unchanged&quot;</span>
@@ -504,8 +539,9 @@
 <span class="sd">    them to the vector store.  Unseen files are converted and chunked</span>
 <span class="sd">    on the fly.</span>
 
-<span class="sd">    The optional ``--bm25-store`` flag writes the combined chunked</span>
-<span class="sd">    documents to a single pickle file that can be used as a BM25 store.</span>
+<span class="sd">    The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the</span>
+<span class="sd">    current directory) writes the combined chunked documents to a single</span>
+<span class="sd">    pickle file that can be used as a BM25 store.</span>
 
 <span class="sd">    Run ``klea-stores-create chunk`` first to populate the cache and</span>
 <span class="sd">    generate a ``metadata-map.template.json``.</span>
@@ -519,6 +555,12 @@
         <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;(none)&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
+
+    <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
+    <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
+    <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>

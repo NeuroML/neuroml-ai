@@ -455,8 +455,18 @@
 <span class="sd">    Qdrant and PGVector the flag is a no-op --- collections are created</span>
 <span class="sd">    on first write.</span>
 
+<span class="sd">    For ChromaDB, ``location`` must point at the store folder.  Chroma</span>
+<span class="sd">    always stores its database as ``&lt;folder&gt;/chroma.sqlite3`` and the</span>
+<span class="sd">    filename is not configurable, so a path pointing at an existing file</span>
+<span class="sd">    (even the ``chroma.sqlite3`` itself) is rejected.  The collection</span>
+<span class="sd">    ``name`` selects which collection within the store file is</span>
+<span class="sd">    addressed: a single ChromaDB store file can hold multiple</span>
+<span class="sd">    collections, so reusing an existing folder with a new collection</span>
+<span class="sd">    name creates a new collection in it.</span>
+
 <span class="sd">    :param path: URI-style string with scheme prefix</span>
-<span class="sd">        (e.g. ``&quot;chroma:/path/to/dir&quot;``, ``&quot;qdrant:http://localhost:6333&quot;``,</span>
+<span class="sd">        (e.g. ``&quot;chroma:/path/to/dir&quot;``,</span>
+<span class="sd">        ``&quot;qdrant:http://localhost:6333&quot;``,</span>
 <span class="sd">        ``&quot;pgvector:postgresql://localhost/db&quot;``)</span>
 <span class="sd">    :param name: Collection name for the vector store</span>
 <span class="sd">    :param embeddings: Embedding function to use</span>
@@ -489,6 +499,16 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
                 <span class="n">store_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="n">store_dir</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Store path made absolute relative to cwd: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Chroma always stores its database in &lt;folder&gt;/chroma.sqlite3</span>
+            <span class="c1"># (the filename is not configurable), so a store is addressed</span>
+            <span class="c1"># by its folder, never by the database file.</span>
+            <span class="k">if</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&#39; is a file, not a folder. Chroma stores &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;its database in a folder as &#39;chroma.sqlite3&#39;; pass the &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;folder path instead (e.g. &#39;chroma:</span><span class="si">{</span><span class="n">store_dir</span><span class="o">.</span><span class="n">parent</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+                <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">create</span><span class="p">:</span>
                 <span class="n">store_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

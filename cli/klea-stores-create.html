@@ -293,7 +293,23 @@
 <p>Create stores from documents (vector stores and BM25 stores).</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">store</span></code> commands accept <code class="docutils literal notranslate"><span class="pre">--bm25-store</span> <span class="pre">&lt;path&gt;</span></code>,
 which writes the combined chunked documents to a single pickle that can
-be configured as a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry in the RAG config.</p>
+be configured as a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry in the RAG config.  When
+<code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> is omitted, the corpus is written to
+<code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the current directory.</p>
+<p>Three options deserve special attention:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--collection</span></code> – the collection name inside the store.  It must
+match the <code class="docutils literal notranslate"><span class="pre">name</span></code> of the store’s <code class="docutils literal notranslate"><span class="pre">vector_stores</span></code> / <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
+entry in the RAG config file (e.g. <code class="docutils literal notranslate"><span class="pre">klea.json</span></code>); retrieval looks
+stores up by name, so a mismatch silently returns no results.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--store</span></code> – for local Chroma stores this points at the store
+folder; the database file inside it is always named
+<code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> (the filename is not configurable), so passing the
+path of an existing file is rejected.  A folder that does not exist
+yet is created.  One Chroma store file can hold several collections,
+so <code class="docutils literal notranslate"><span class="pre">--collection</span></code> selects which collection within the file is used.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> – path to the combined corpus pickle (see above).</p></li>
+</ul>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
  Usage: klea-stores-create [OPTIONS] COMMAND [ARGS]...                
@@ -327,8 +343,9 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
  Processed chunks are cached in ``&lt;source_dir&gt;/.klea-cache/`` so      
  subsequent runs (e.g. with ``--metadata-map``) skip conversion.      
                                                                       
- The optional ``--bm25-store`` flag writes the combined chunked       
- documents to a single pickle file that can be used as a BM25 store.  
+ The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
+ current directory) writes the combined chunked documents to a single 
+ pickle file that can be used as a BM25 store.                        
                                                                       
  The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file    
  organised by source file.  Within each file entry, the most specific 
@@ -357,10 +374,20 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
 │ *  --collection    -n      TEXT     Collection name for the vector │
-│                                     store                          │
+│                                     store. Must match the &#39;name&#39;   │
+│                                     of the corresponding           │
+│                                     vector_stores/bm25_stores      │
+│                                     entry in the RAG config file   │
+│                                     (e.g. klea.json); a different  │
+│                                     name on an existing store file │
+│                                     creates a new collection       │
 │                                     [required]                     │
 │ *  --store         -s      TEXT     Vector store URI (e.g.         │
-│                                     chroma:/path/to/store)         │
+│                                     chroma:/path/to/store). For    │
+│                                     local Chroma stores, point at  │
+│                                     the store folder: the database │
+│                                     file inside it is always named │
+│                                     chroma.sqlite3                 │
 │                                     [required]                     │
 │    --model         -m      TEXT     Embedding model identifier     │
 │                                     [default:                      │
@@ -375,7 +402,11 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
 │    --bm25-store            TEXT     Write the combined document    │
 │                                     corpus to this path for BM25   │
 │                                     retrieval (a pickle of all     │
-│                                     chunked documents)             │
+│                                     chunked documents). Defaults   │
+│                                     to &lt;collection&gt;.pkl in the     │
+│                                     current directory; the file    │
+│                                     can be moved after creation    │
+│                                     [default: (&lt;collection&gt;.pkl)]  │
 │    --force         -f               Re-process all files even if   │
 │                                     unchanged                      │
 │    --help                           Show this message and exit.    │
@@ -421,8 +452,9 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
  them to the vector store.  Unseen files are converted and chunked    
  on the fly.                                                          
                                                                       
- The optional ``--bm25-store`` flag writes the combined chunked       
- documents to a single pickle file that can be used as a BM25 store.  
+ The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
+ current directory) writes the combined chunked documents to a single 
+ pickle file that can be used as a BM25 store.                        
                                                                       
  Run ``klea-stores-create chunk`` first to populate the cache and     
  generate a ``metadata-map.template.json``.                           
@@ -433,10 +465,20 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
 │ *  --collection    -n      TEXT     Collection name for the vector │
-│                                     store                          │
+│                                     store. Must match the &#39;name&#39;   │
+│                                     of the corresponding           │
+│                                     vector_stores/bm25_stores      │
+│                                     entry in the RAG config file   │
+│                                     (e.g. klea.json); a different  │
+│                                     name on an existing store file │
+│                                     creates a new collection       │
 │                                     [required]                     │
 │ *  --store         -s      TEXT     Vector store URI (e.g.         │
-│                                     chroma:/path/to/store)         │
+│                                     chroma:/path/to/store). For    │
+│                                     local Chroma stores, point at  │
+│                                     the store folder: the database │
+│                                     file inside it is always named │
+│                                     chroma.sqlite3                 │
 │                                     [required]                     │
 │    --model         -m      TEXT     Embedding model identifier     │
 │                                     [default:                      │
@@ -452,7 +494,11 @@ be configured as a <code class="docutils literal notranslate"><span class="pre">
 │    --bm25-store            TEXT     Write the combined document    │
 │                                     corpus to this path for BM25   │
 │                                     retrieval (a pickle of all     │
-│                                     chunked documents)             │
+│                                     chunked documents). Defaults   │
+│                                     to &lt;collection&gt;.pkl in the     │
+│                                     current directory; the file    │
+│                                     can be moved after creation    │
+│                                     [default: (&lt;collection&gt;.pkl)]  │
 │    --force         -f               Re-process all files even if   │
 │                                     unchanged                      │
 │    --help                           Show this message and exit.    │

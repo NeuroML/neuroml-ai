@@ -302,8 +302,9 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 chunks them, embeds them, and writes to the vector store.
 Processed chunks are cached in <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code> so
 subsequent runs (e.g. with <code class="docutils literal notranslate"><span class="pre">--metadata-map</span></code>) skip conversion.</p>
-<p>The optional <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> flag writes the combined chunked
-documents to a single pickle file that can be used as a BM25 store.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> option (default <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the
+current directory) writes the combined chunked documents to a single
+pickle file that can be used as a BM25 store.</p>
 <p>The optional <code class="docutils literal notranslate"><span class="pre">--metadata-map</span></code> / <code class="docutils literal notranslate"><span class="pre">-M</span></code> flag accepts a JSON file
 organised by source file.  Within each file entry, the most specific
 heading chain match wins; a <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry provides fallback for
@@ -346,8 +347,9 @@ metadata values and pass the file to
 optionally applies a metadata map (per-file format), and writes
 them to the vector store.  Unseen files are converted and chunked
 on the fly.</p>
-<p>The optional <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> flag writes the combined chunked
-documents to a single pickle file that can be used as a BM25 store.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> option (default <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the
+current directory) writes the combined chunked documents to a single
+pickle file that can be used as a BM25 store.</p>
 <p>Run <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> first to populate the cache and
 generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>.</p>
 </dd></dl>

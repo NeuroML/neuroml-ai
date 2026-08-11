@@ -379,6 +379,14 @@ query should go.</p></li>
 access to live tools (e.g. a validation server, a database query
 tool).</p></li>
 </ul>
+<p>Each store’s <code class="docutils literal notranslate"><span class="pre">name</span></code> in the config must exactly match the
+<code class="docutils literal notranslate"><span class="pre">--collection</span></code> name used when the store was created with
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code>, and its <code class="docutils literal notranslate"><span class="pre">path</span></code> must match the location the
+chunks were written to.  Retrieval looks stores up by name, so a
+mismatch silently returns no results.  For local Chroma stores the
+<code class="docutils literal notranslate"><span class="pre">path</span></code> points at the store folder; the database file inside it is
+always named <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> (see
+<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>).</p>
 <p>This means one RAG server can simultaneously serve completely
 different knowledge areas – the classifier routes queries to the
 right domain automatically.</p>

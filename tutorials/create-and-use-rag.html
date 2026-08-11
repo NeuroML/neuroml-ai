@@ -352,7 +352,7 @@ for the full list).</p>
 <h2>Step 2: Create a vector store<a class="headerlink" href="#step-2-create-a-vector-store" title="Link to this heading">¶</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-stores-create<span class="w"> </span>build<span class="w"> </span>&lt;folder-of-files&gt;<span class="w"> </span><span class="se">\\</span>
 <span class="w">    </span>--collection<span class="w"> </span>my-docs<span class="w"> </span><span class="se">\\</span>
-<span class="w">    </span>--store<span class="w"> </span>chroma:/path/to/my-store.db<span class="w"> </span><span class="se">\\</span>
+<span class="w">    </span>--store<span class="w"> </span>chroma:/path/to/my-store<span class="w"> </span><span class="se">\\</span>
 <span class="w">    </span>--bm25-store<span class="w"> </span>/path/to/my-bm25-corpus.pkl
 </pre></div>
 </div>
@@ -371,12 +371,21 @@ at the path you specify.</p></li>
 <p>Flags explained:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--collection</span></code> / <code class="docutils literal notranslate"><span class="pre">-n</span></code> – the collection name inside the store
-(e.g. <code class="docutils literal notranslate"><span class="pre">my-docs</span></code>).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--store</span></code> / <code class="docutils literal notranslate"><span class="pre">-s</span></code> – the vector store URI; <code class="docutils literal notranslate"><span class="pre">chroma:/path</span></code> creates a
-persistent Chroma database at that location.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> – optional path to write the combined chunked
-documents to a single pickle file that can be used as a BM25 keyword
-store alongside the vector store.</p></li>
+(e.g. <code class="docutils literal notranslate"><span class="pre">my-docs</span></code>).  This must match the <code class="docutils literal notranslate"><span class="pre">name</span></code> of the store’s
+<code class="docutils literal notranslate"><span class="pre">vector_stores</span></code> / <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry in the RAG config file
+(e.g. <code class="docutils literal notranslate"><span class="pre">klea.json</span></code>) – retrieval looks stores up by name, so a
+mismatch silently returns no results.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--store</span></code> / <code class="docutils literal notranslate"><span class="pre">-s</span></code> – the vector store URI (e.g. <code class="docutils literal notranslate"><span class="pre">chroma:/path</span></code>).
+For Chroma, point at the store <em>folder</em>; the database file inside it
+is always named <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> (the filename is not
+configurable).  A folder that does not exist yet is created.  Because
+one Chroma store file can hold several collections, the
+<code class="docutils literal notranslate"><span class="pre">--collection</span></code> name selects which collection within that file is
+used.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> – path to write the combined chunked documents to a
+single pickle file that can be used as a BM25 keyword store.  Defaults
+to <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the current directory (always written); you
+can move the file afterwards and point the config at its new location.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--model</span></code> / <code class="docutils literal notranslate"><span class="pre">-m</span></code> – embedding model (default <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--max-tokens</span></code> – maximum tokens per chunk (default 450).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--force</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code> – re-process all files even if previously cached.</p></li>
@@ -389,8 +398,9 @@ the source directory and re-running adds only the new content
 <p>The source directory will contain a <code class="docutils literal notranslate"><span class="pre">.klea-cache/</span></code> folder after the
 first run.  This caches converted chunks so subsequent runs skip the
 expensive Docling conversion.</p>
-<p>The vector store directory (the path you passed to <code class="docutils literal notranslate"><span class="pre">--store</span></code>) will
-also have been created with the <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> database inside it.</p>
+<p>The vector store folder will also have been created, with the
+<code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> database inside it.  Later runs point <code class="docutils literal notranslate"><span class="pre">--store</span></code> at
+the same folder; the file is always named <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code>.</p>
 </section>
 <section id="step-3-configure-the-rag-system">
 <h2>Step 3: Configure the RAG system<a class="headerlink" href="#step-3-configure-the-rag-system" title="Link to this heading">¶</a></h2>
@@ -416,7 +426,7 @@ vector store to a domain:</p>
 <span class="w">            </span><span class="nt">&quot;vector_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
 <span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-docs&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/my-store.db&quot;</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/my-store&quot;</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">],</span>
 <span class="w">            </span><span class="nt">&quot;bm25_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
@@ -445,13 +455,21 @@ own knowledge when retrieval returns nothing useful.</p></li>
 <p>Each entry under <code class="docutils literal notranslate"><span class="pre">domains</span></code> defines a knowledge area with one or more
 vector stores.  The <code class="docutils literal notranslate"><span class="pre">description</span></code> helps the classifier route queries
 to the right domain.</p>
+<p>A store’s <code class="docutils literal notranslate"><span class="pre">name</span></code> must exactly match the <code class="docutils literal notranslate"><span class="pre">--collection</span></code> name passed
+to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code>, and its <code class="docutils literal notranslate"><span class="pre">path</span></code> must match what was passed
+to <code class="docutils literal notranslate"><span class="pre">--store</span></code> (for a vector store) or the location of the written BM25
+corpus pickle.  Retrieval looks stores up by name, so a mismatch means
+the store is never queried.</p>
 <p>A domain can also list <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>.  Each <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry’s
 <code class="docutils literal notranslate"><span class="pre">path</span></code> points to a combined corpus pickle written by
 <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--bm25-store</span></code> (or <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span>
-<span class="pre">--bm25-store</span></code>).  When both are configured, retrieval queries the
-vector stores and the BM25 stores and combines the results with
-Reciprocal Rank Fusion – exact name/symbol matches from BM25 complement
-the semantic matches from the vector stores.</p>
+<span class="pre">--bm25-store</span></code>).  If you did not pass <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code>, the corpus was
+written to <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the directory you ran the command
+from; it can be moved anywhere before it is referenced here.  When both
+are configured, retrieval queries the vector stores and the BM25 stores
+and combines the results with Reciprocal Rank Fusion – exact
+name/symbol matches from BM25 complement the semantic matches from the
+vector stores.</p>
 <p>Vector stores can override the retrieval settings independently.  Stores
 that set their own <code class="docutils literal notranslate"><span class="pre">default_k</span></code>, <code class="docutils literal notranslate"><span class="pre">k_max</span></code>, and <code class="docutils literal notranslate"><span class="pre">k_inc</span></code> use those
 values instead of the <code class="docutils literal notranslate"><span class="pre">general</span></code> fallbacks, which is useful when stores
@@ -468,14 +486,14 @@ cover corpora of very different sizes:</p>
 <span class="w">            </span><span class="nt">&quot;vector_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
 <span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;large-corpus&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/large-store.db&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/large-store&quot;</span><span class="p">,</span>
 <span class="w">                    </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
 <span class="w">                    </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span>
 <span class="w">                    </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="w">                </span><span class="p">},</span>
 <span class="w">                </span><span class="p">{</span>
 <span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;small-corpus&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/small-store.db&quot;</span>
+<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/small-store&quot;</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">]</span>
 <span class="w">        </span><span class="p">}</span>

@@ -695,11 +695,20 @@ source’s result list contributes <code class="docutils literal notranslate"><s
 (relevant for ChromaDB which requires a local directory).  For
 Qdrant and PGVector the flag is a no-op — collections are created
 on first write.</p>
+<p>For ChromaDB, <code class="docutils literal notranslate"><span class="pre">location</span></code> must point at the store folder.  Chroma
+always stores its database as <code class="docutils literal notranslate"><span class="pre">&lt;folder&gt;/chroma.sqlite3</span></code> and the
+filename is not configurable, so a path pointing at an existing file
+(even the <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> itself) is rejected.  The collection
+<code class="docutils literal notranslate"><span class="pre">name</span></code> selects which collection within the store file is
+addressed: a single ChromaDB store file can hold multiple
+collections, so reusing an existing folder with a new collection
+name creates a new collection in it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>path</strong> – URI-style string with scheme prefix
-(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;chroma:/path/to/dir&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;qdrant:http://localhost:6333&quot;</span></code>,
+(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;chroma:/path/to/dir&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;qdrant:http://localhost:6333&quot;</span></code>,
 <code class="docutils literal notranslate"><span class="pre">&quot;pgvector:postgresql://localhost/db&quot;</span></code>)</p></li>
 <li><p><strong>name</strong> – Collection name for the vector store</p></li>
 <li><p><strong>embeddings</strong> – Embedding function to use</p></li>
