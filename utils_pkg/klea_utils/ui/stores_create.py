@@ -46,6 +46,13 @@ def build(
     max_tokens: int = typer.Option(
         450, "--max-tokens", help="Maximum tokens per chunk"
     ),
+    ocr: bool = typer.Option(
+        True,
+        "--ocr/--no-ocr",
+        help="Whether to OCR pages during PDF conversion (default: on). "
+        "Keep for scanned/image PDFs; disable for text-based PDFs to "
+        "speed up conversion significantly",
+    ),
     metadata_map_path: str = typer.Option(
         None,
         "--metadata-map",
@@ -126,6 +133,7 @@ def build(
             embedding_model=embedding_model,
             logger=logger,
             max_tokens=max_tokens,
+            do_ocr=ocr,
         )
         builder.build(
             source_dir=source_dir,
@@ -146,6 +154,13 @@ def chunk(
     source_dir: str = typer.Argument(help="Directory containing source documents"),
     max_tokens: int = typer.Option(
         450, "--max-tokens", help="Maximum tokens per chunk"
+    ),
+    ocr: bool = typer.Option(
+        True,
+        "--ocr/--no-ocr",
+        help="Whether to OCR pages during PDF conversion (default: on). "
+        "Keep for scanned/image PDFs; disable for text-based PDFs to "
+        "speed up conversion significantly",
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
@@ -178,6 +193,7 @@ def chunk(
             embedding_model="",  # not needed for chunking only
             logger=logger,
             max_tokens=max_tokens,
+            do_ocr=ocr,
         )
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
@@ -219,6 +235,13 @@ def store(
     ),
     max_tokens: int = typer.Option(
         450, "--max-tokens", help="Maximum tokens per chunk (for files not yet cached)"
+    ),
+    ocr: bool = typer.Option(
+        True,
+        "--ocr/--no-ocr",
+        help="Whether to OCR pages during PDF conversion (default: on). "
+        "Keep for scanned/image PDFs; disable for text-based PDFs to "
+        "speed up conversion significantly",
     ),
     metadata_map_path: str = typer.Option(
         None,
@@ -279,6 +302,7 @@ def store(
             embedding_model=embedding_model,
             logger=logger,
             max_tokens=max_tokens,
+            do_ocr=ocr,
         )
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
