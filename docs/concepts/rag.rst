@@ -97,6 +97,15 @@ Domains are the organising unit of Klea RAG:
   access to live tools (e.g. a validation server, a database query
   tool).
 
+Each store's ``name`` in the config must exactly match the
+``--collection`` name used when the store was created with
+``klea-stores-create``, and its ``path`` must match the location the
+chunks were written to.  Retrieval looks stores up by name, so a
+mismatch silently returns no results.  For local Chroma stores the
+``path`` points at the store folder; the database file inside it is
+always named ``chroma.sqlite3`` (see
+:doc:`../tutorials/create-and-use-rag`).
+
 This means one RAG server can simultaneously serve completely
 different knowledge areas -- the classifier routes queries to the
 right domain automatically.

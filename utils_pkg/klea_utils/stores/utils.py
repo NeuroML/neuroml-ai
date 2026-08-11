@@ -160,8 +160,18 @@ def instantiate_vector_store(
     Qdrant and PGVector the flag is a no-op --- collections are created
     on first write.
 
+    For ChromaDB, ``location`` must point at the store folder.  Chroma
+    always stores its database as ``<folder>/chroma.sqlite3`` and the
+    filename is not configurable, so a path pointing at an existing file
+    (even the ``chroma.sqlite3`` itself) is rejected.  The collection
+    ``name`` selects which collection within the store file is
+    addressed: a single ChromaDB store file can hold multiple
+    collections, so reusing an existing folder with a new collection
+    name creates a new collection in it.
+
     :param path: URI-style string with scheme prefix
-        (e.g. ``"chroma:/path/to/dir"``, ``"qdrant:http://localhost:6333"``,
+        (e.g. ``"chroma:/path/to/dir"``,
+        ``"qdrant:http://localhost:6333"``,
         ``"pgvector:postgresql://localhost/db"``)
     :param name: Collection name for the vector store
     :param embeddings: Embedding function to use
@@ -194,6 +204,16 @@ def instantiate_vector_store(
             if not store_dir.is_absolute():
                 store_dir = Path.cwd() / store_dir
                 logger.debug(f"Store path made absolute relative to cwd: {store_dir}")
+
+            # Chroma always stores its database in <folder>/chroma.sqlite3
+            # (the filename is not configurable), so a store is addressed
+            # by its folder, never by the database file.
+            if store_dir.is_file():
+                raise FileNotFoundError(
+                    f"'{store_dir}' is a file, not a folder. Chroma stores "
+                    f"its database in a folder as 'chroma.sqlite3'; pass the "
+                    f"folder path instead (e.g. 'chroma:{store_dir.parent}')"
+                )
 
             if create:
                 store_dir.mkdir(parents=True, exist_ok=True)

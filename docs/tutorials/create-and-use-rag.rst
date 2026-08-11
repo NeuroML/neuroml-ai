@@ -72,7 +72,7 @@ Step 2: Create a vector store
 
    klea-stores-create build <folder-of-files> \\
        --collection my-docs \\
-       --store chroma:/path/to/my-store.db \\
+       --store chroma:/path/to/my-store \\
        --bm25-store /path/to/my-bm25-corpus.pkl
 
 The ``build`` command runs the full pipeline:
@@ -90,12 +90,21 @@ The ``build`` command runs the full pipeline:
 Flags explained:
 
 * ``--collection`` / ``-n`` -- the collection name inside the store
-  (e.g. ``my-docs``).
-* ``--store`` / ``-s`` -- the vector store URI; ``chroma:/path`` creates a
-  persistent Chroma database at that location.
-* ``--bm25-store`` -- optional path to write the combined chunked
-  documents to a single pickle file that can be used as a BM25 keyword
-  store alongside the vector store.
+  (e.g. ``my-docs``).  This must match the ``name`` of the store's
+  ``vector_stores`` / ``bm25_stores`` entry in the RAG config file
+  (e.g. ``klea.json``) -- retrieval looks stores up by name, so a
+  mismatch silently returns no results.
+* ``--store`` / ``-s`` -- the vector store URI (e.g. ``chroma:/path``).
+  For Chroma, point at the store *folder*; the database file inside it
+  is always named ``chroma.sqlite3`` (the filename is not
+  configurable).  A folder that does not exist yet is created.  Because
+  one Chroma store file can hold several collections, the
+  ``--collection`` name selects which collection within that file is
+  used.
+* ``--bm25-store`` -- path to write the combined chunked documents to a
+  single pickle file that can be used as a BM25 keyword store.  Defaults
+  to ``<collection>.pkl`` in the current directory (always written); you
+  can move the file afterwards and point the config at its new location.
 * ``--model`` / ``-m`` -- embedding model (default ``ollama:bge-m3:latest``).
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
@@ -110,8 +119,9 @@ The source directory will contain a ``.klea-cache/`` folder after the
 first run.  This caches converted chunks so subsequent runs skip the
 expensive Docling conversion.
 
-The vector store directory (the path you passed to ``--store``) will
-also have been created with the ``chroma.sqlite3`` database inside it.
+The vector store folder will also have been created, with the
+``chroma.sqlite3`` database inside it.  Later runs point ``--store`` at
+the same folder; the file is always named ``chroma.sqlite3``.
 
 Step 3: Configure the RAG system
 ---------------------------------
@@ -143,7 +153,7 @@ vector store to a domain:
                "vector_stores": [
                    {
                        "name": "my-docs",
-                       "path": "chroma:/path/to/my-store.db"
+                       "path": "chroma:/path/to/my-store"
                    }
                ],
                "bm25_stores": [
@@ -172,13 +182,22 @@ Each entry under ``domains`` defines a knowledge area with one or more
 vector stores.  The ``description`` helps the classifier route queries
 to the right domain.
 
+A store's ``name`` must exactly match the ``--collection`` name passed
+to ``klea-stores-create``, and its ``path`` must match what was passed
+to ``--store`` (for a vector store) or the location of the written BM25
+corpus pickle.  Retrieval looks stores up by name, so a mismatch means
+the store is never queried.
+
 A domain can also list ``bm25_stores``.  Each ``bm25_stores`` entry's
 ``path`` points to a combined corpus pickle written by
 ``klea-stores-create --bm25-store`` (or ``klea-stores-create store
---bm25-store``).  When both are configured, retrieval queries the
-vector stores and the BM25 stores and combines the results with
-Reciprocal Rank Fusion -- exact name/symbol matches from BM25 complement
-the semantic matches from the vector stores.
+--bm25-store``).  If you did not pass ``--bm25-store``, the corpus was
+written to ``<collection>.pkl`` in the directory you ran the command
+from; it can be moved anywhere before it is referenced here.  When both
+are configured, retrieval queries the vector stores and the BM25 stores
+and combines the results with Reciprocal Rank Fusion -- exact
+name/symbol matches from BM25 complement the semantic matches from the
+vector stores.
 
 Vector stores can override the retrieval settings independently.  Stores
 that set their own ``default_k``, ``k_max``, and ``k_inc`` use those
@@ -199,14 +218,14 @@ cover corpora of very different sizes:
                "vector_stores": [
                    {
                        "name": "large-corpus",
-                       "path": "chroma:/path/to/large-store.db",
+                       "path": "chroma:/path/to/large-store",
                        "default_k": 10,
                        "k_max": 25,
                        "k_inc": 5
                    },
                    {
                        "name": "small-corpus",
-                       "path": "chroma:/path/to/small-store.db"
+                       "path": "chroma:/path/to/small-store"
                    }
                ]
            }

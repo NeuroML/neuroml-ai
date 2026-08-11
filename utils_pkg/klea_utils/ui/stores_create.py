@@ -21,10 +21,21 @@ app = typer.Typer(help="Create stores from documents")
 def build(
     source_dir: str = typer.Argument(help="Directory containing source documents"),
     collection_name: str = typer.Option(
-        ..., "--collection", "-n", help="Collection name for the vector store"
+        ...,
+        "--collection",
+        "-n",
+        help="Collection name for the vector store. Must match the "
+        "'name' of the corresponding vector_stores/bm25_stores entry in "
+        "the RAG config file (e.g. klea.json); a different name on an "
+        "existing store file creates a new collection",
     ),
     store_path: str = typer.Option(
-        ..., "--store", "-s", help="Vector store URI (e.g. chroma:/path/to/store)"
+        ...,
+        "--store",
+        "-s",
+        help="Vector store URI (e.g. chroma:/path/to/store). For local "
+        "Chroma stores, point at the store folder: the database file "
+        "inside it is always named chroma.sqlite3",
     ),
     embedding_model: str = typer.Option(
         "ollama:bge-m3:latest",
@@ -46,7 +57,10 @@ def build(
         None,
         "--bm25-store",
         help="Write the combined document corpus to this path for BM25 "
-        "retrieval (a pickle of all chunked documents)",
+        "retrieval (a pickle of all chunked documents). Defaults to "
+        "<collection>.pkl in the current directory; the file can be "
+        "moved after creation",
+        show_default="<collection>.pkl",
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
@@ -59,8 +73,9 @@ def build(
     Processed chunks are cached in ``<source_dir>/.klea-cache/`` so
     subsequent runs (e.g. with ``--metadata-map``) skip conversion.
 
-    The optional ``--bm25-store`` flag writes the combined chunked
-    documents to a single pickle file that can be used as a BM25 store.
+    The ``--bm25-store`` option (default ``<collection>.pkl`` in the
+    current directory) writes the combined chunked documents to a single
+    pickle file that can be used as a BM25 store.
 
     The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file
     organised by source file.  Within each file entry, the most specific
@@ -93,6 +108,12 @@ def build(
         f"\n  Max tokens: {max_tokens}"
         f"\n  Metadata map: {metadata_map_path or '(none)'}"
     )
+
+    # Typer cannot compute a default that depends on another argument, so
+    # the dynamic --bm25-store default is resolved here.
+    if bm25_store is None:
+        bm25_store = f"{collection_name}.pkl"
+    logger.info(f"BM25 store: {bm25_store}")
 
     try:
         # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
@@ -174,10 +195,21 @@ def chunk(
 def store(
     source_dir: str = typer.Argument(help="Directory containing source documents"),
     collection_name: str = typer.Option(
-        ..., "--collection", "-n", help="Collection name for the vector store"
+        ...,
+        "--collection",
+        "-n",
+        help="Collection name for the vector store. Must match the "
+        "'name' of the corresponding vector_stores/bm25_stores entry in "
+        "the RAG config file (e.g. klea.json); a different name on an "
+        "existing store file creates a new collection",
     ),
     store_path: str = typer.Option(
-        ..., "--store", "-s", help="Vector store URI (e.g. chroma:/path/to/store)"
+        ...,
+        "--store",
+        "-s",
+        help="Vector store URI (e.g. chroma:/path/to/store). For local "
+        "Chroma stores, point at the store folder: the database file "
+        "inside it is always named chroma.sqlite3",
     ),
     embedding_model: str = typer.Option(
         "ollama:bge-m3:latest",
@@ -199,7 +231,10 @@ def store(
         None,
         "--bm25-store",
         help="Write the combined document corpus to this path for BM25 "
-        "retrieval (a pickle of all chunked documents)",
+        "retrieval (a pickle of all chunked documents). Defaults to "
+        "<collection>.pkl in the current directory; the file can be "
+        "moved after creation",
+        show_default="<collection>.pkl",
     ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
@@ -212,8 +247,9 @@ def store(
     them to the vector store.  Unseen files are converted and chunked
     on the fly.
 
-    The optional ``--bm25-store`` flag writes the combined chunked
-    documents to a single pickle file that can be used as a BM25 store.
+    The ``--bm25-store`` option (default ``<collection>.pkl`` in the
+    current directory) writes the combined chunked documents to a single
+    pickle file that can be used as a BM25 store.
 
     Run ``klea-stores-create chunk`` first to populate the cache and
     generate a ``metadata-map.template.json``.
@@ -227,6 +263,12 @@ def store(
         f"\n  Model: {embedding_model}"
         f"\n  Metadata map: {metadata_map_path or '(none)'}"
     )
+
+    # Typer cannot compute a default that depends on another argument, so
+    # the dynamic --bm25-store default is resolved here.
+    if bm25_store is None:
+        bm25_store = f"{collection_name}.pkl"
+    logger.info(f"BM25 store: {bm25_store}")
 
     try:
         from pathlib import Path
