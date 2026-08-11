@@ -37,6 +37,38 @@ ingestion where new files are added to an existing store.
 """
 
 
+def _escape_literal(value: str) -> str:
+    """Escape a string for a PDF literal-string object."""
+    return value.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
+
+
+def _build_pdf(path: Path, metadata: dict[str, str]) -> None:
+    """Write a minimal single-page PDF with an Info dict."""
+    objs: list[str] = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>",
+        "<< "
+        + " ".join(
+            f"/{key} ({_escape_literal(value)})" for key, value in metadata.items()
+        )
+        + " >>",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = [0] * (len(objs) + 1)
+    for index, body in enumerate(objs, start=1):
+        offsets[index] = len(out)
+        out += f"{index} 0 obj\n{body}\nendobj\n".encode()
+    xref_pos = len(out)
+    out += f"xref\n0 {len(objs) + 1}\n".encode()
+    out += b"0000000000 65535 f \n"
+    for offset in offsets[1:]:
+        out += f"{offset:010d} 00000 n \n".encode()
+    trailer = f"<< /Size {len(objs) + 1} /Root 1 0 R /Info {len(objs)} 0 R >>\n"
+    out += f"trailer\n{trailer}startxref\n{xref_pos}\n%%EOF\n".encode()
+    path.write_bytes(bytes(out))
+
+
 class TestIngestion:
     """Test vector store ingestion."""
 
@@ -207,6 +239,84 @@ class TestIngestion:
             pytest.skip(str(e))
         except ConnectionError as e:
             pytest.skip(str(e))
+
+    def test_do_ocr_defaults_to_true(self):
+        """OCR is enabled by default, preserving the previous behaviour."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder.do_ocr is True
+
+    def test_do_ocr_false_constructs_converter(self):
+        """do_ocr=False is stored and builds a converter without error."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        assert builder.do_ocr is False
+        converter = builder._get_converter()
+        assert converter is not None
+        assert converter is builder._get_converter()
+
+    def test_cache_round_trips_extracted_metadata(self):
+        """Cached entries restore both chunks and extracted metadata."""
+        doc = Document(
+            page_content="Some content.", metadata={"headings": ["Section 1"]}
+        )
+        extracted = {
+            "title": "T",
+            "_metadata_complete": True,
+            "_sources": ["docling"],
+        }
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._save_to_cache([doc], extracted, self.tmpdir_path, "xxh64:abc")
+
+        loaded = builder._load_from_cache(self.tmpdir_path, "xxh64:abc")
+        assert loaded is not None
+        docs, restored = loaded
+        assert docs[0].page_content == "Some content."
+        assert restored == extracted
+
+    def test_cache_load_handles_legacy_format(self):
+        """Legacy plain-list cache entries load with empty extraction."""
+        doc = Document(page_content="Legacy.", metadata={})
+        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir.mkdir()
+        with open(cache_dir / "xxh64_legacy.pkl", "wb") as f:
+            pickle.dump([doc], f)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        loaded = builder._load_from_cache(self.tmpdir_path, "xxh64:legacy")
+        assert loaded == ([doc], {})
+
+    @pytest.mark.localonly
+    def test_chunk_all_prefills_metadata_template(self):
+        """chunk_all pre-fills the per-file DEFAULT template entry.
+
+        Runs the biblio extraction cascade on a real PDF conversion: the
+        PDF Info dict (title/author/keywords) lands in the DEFAULT entry
+        along with the internal ``_metadata_complete`` / ``_sources``
+        flags.  A re-run hits the cache and must restore the same
+        extraction rather than degrading to regex-only.
+        """
+        _build_pdf(
+            self.tmpdir_path / "paper.pdf",
+            {
+                "Title": "Synthetic Title",
+                "Author": "Jane Doe",
+                "Keywords": "alpha, beta",
+            },
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        _, file_headings = builder.chunk_all(self.tmpdir_path)
+
+        default = file_headings["paper.pdf"]["DEFAULT"]
+        self.logger.info(f"pre-filled DEFAULT: {default}")
+        assert default["title"] == "Synthetic Title"
+        assert default["authors"] == ["Jane Doe"]
+        assert default["keywords"] == ["alpha", "beta"]
+        assert default["_metadata_complete"] is True
+        assert "pdf-info" in default["_sources"]
+
+        # Cache hit: the persisted full extraction is restored unchanged.
+        _, file_headings2 = builder.chunk_all(self.tmpdir_path)
+        assert file_headings2["paper.pdf"]["DEFAULT"] == default
 
     def test_write_bm25_store(self):
         """write_bm25_store pickles the combined chunked documents."""
