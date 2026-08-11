@@ -70,6 +70,15 @@ ruff check . --select I --fix    # import sorting
 # Type check
 ty
 
+# Docs build
+uv pip install -r requirements-docs.txt   # installs sphinx + furo + sphinxcontrib-typer
+cd docs && make html                       # builds to docs/_build/html
+
+# NOTE: the docs build needs sphinxcontrib-typer, which is only present if
+# requirements-docs.txt is installed.  Without it, `make html` falls back to
+# the system sphinx (which lacks the extension) and the `.. typer::` CLI
+# reference pages fail to build.
+
 # Pre-commit (CI gate)
 pre-commit run --all-files
 ```
