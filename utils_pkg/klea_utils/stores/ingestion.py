@@ -17,6 +17,7 @@ from typing import Any
 import xxhash
 from langchain_core.documents import Document
 
+from ..biblio.extract import Resolver, extract_metadata, extract_metadata_from_text
 from ..llm import setup_embedding
 from .utils import instantiate_vector_store
 
@@ -43,6 +44,7 @@ class StoresBuilder:
         max_tokens: int = DEFAULT_MAX_TOKENS,
         merge_peers: bool = DEFAULT_MERGE_PEERS,
         tokenizer_model: str = DEFAULT_TOKENIZER_MODEL,
+        do_ocr: bool = True,
     ):
         """Initialise the builder.
 
@@ -55,12 +57,17 @@ class StoresBuilder:
             elements (e.g. consecutive paragraphs)
         :param tokenizer_model: HuggingFace tokenizer model used for
             token-aware chunking
+        :param do_ocr: Whether Docling should OCR pages during PDF
+            conversion.  Keep enabled for scanned/image-based PDFs;
+            disabling it speeds up conversion of text-based PDFs
+            significantly.
         """
         self.embedding_model = embedding_model
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
         self.max_tokens = max_tokens
         self.merge_peers = merge_peers
         self.tokenizer_model = tokenizer_model
+        self.do_ocr = do_ocr
 
         self.embeddings = None
         self._converter = None
@@ -68,7 +75,8 @@ class StoresBuilder:
 
         self.logger.info(
             f"StoresBuilder initialised (max_tokens={max_tokens}, "
-            f"merge_peers={merge_peers}, tokenizer={tokenizer_model})"
+            f"merge_peers={merge_peers}, tokenizer={tokenizer_model}, "
+            f"do_ocr={do_ocr})"
         )
 
     def build(
@@ -119,6 +127,9 @@ class StoresBuilder:
         Skips converting files whose cache entry exists (unless
         ``force`` is ``True``).  Always caches newly-converted chunks.
         Heading chains are collected per file for template generation.
+        The per-file ``DEFAULT`` template entry is pre-filled with the
+        automatically-extracted bibliographic metadata (see
+        :func:`~klea_utils.biblio.extract.extract_metadata`).
 
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment,
@@ -126,13 +137,15 @@ class StoresBuilder:
         :param force: Re-process all files even if cached
         :returns: ``(results, file_headings)`` where *results* is a
             list of ``(file_hash, docs, file_path)`` tuples and
-            *file_headings* is a ``{file_name: {"DEFAULT": {},
-            "heading > heading": {}, ...}}`` dict
+            *file_headings* is a ``{file_name: {"DEFAULT": {extracted
+            metadata}, "heading > heading": {}, ...}}`` dict
         """
         self._ensure_tokenizer()
 
         files = self._find_files(source_path)
         self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
+
+        resolver = self._make_resolver(source_path)
 
         results: list[tuple[str, list[Document], Path]] = []
         file_headings: dict[str, dict[str, Any]] = {}
@@ -142,14 +155,17 @@ class StoresBuilder:
             file_hash = _hash_file(file_path)
 
             docs = None
+            extracted: dict[str, Any] = {}
             if not force:
-                docs = self._load_from_cache(source_path, file_hash)
+                cached = self._load_from_cache(source_path, file_hash)
+                if cached is not None:
+                    docs, extracted = cached
 
             if docs is None:
                 self.logger.info(f"Processing: {file_path.name} ({ctr}/{total})")
                 try:
-                    docs = self._convert_and_chunk(file_path)
-                    self._save_to_cache(docs, source_path, file_hash)
+                    docs, extracted = self._convert_and_chunk(file_path, resolver)
+                    self._save_to_cache(docs, extracted, source_path, file_hash)
                 except Exception as e:
                     self.logger.error(f"Failed to process {file_path.name}: {e}")
                     continue
@@ -157,6 +173,34 @@ class StoresBuilder:
                 self.logger.debug(
                     f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
                 )
+                if not extracted:
+                    # No persisted extraction (e.g. a legacy cache entry
+                    # written before the biblio cascade existed), so run
+                    # the text-only extraction over the cached chunks:
+                    # regex + pdf-info (for PDFs) + DOI resolution.
+                    cached_text = "\n".join(
+                        doc.page_content for doc in docs if doc.page_content
+                    )
+                    extracted = (
+                        extract_metadata_from_text(
+                            cached_text,
+                            str(file_path),
+                            pdf_path=(
+                                str(file_path)
+                                if file_path.suffix.lower() == ".pdf"
+                                else None
+                            ),
+                            resolver=resolver,
+                        )
+                        if cached_text
+                        else {}
+                    )
+                    self.logger.warning(
+                        f"No cached metadata extraction for {file_path.name}, "
+                        f"falling back to text-only extraction "
+                        f"({len(extracted)} fields); re-run with --force to "
+                        f"regenerate the full extraction"
+                    )
 
             for doc in docs:
                 doc.metadata.update(
@@ -177,7 +221,7 @@ class StoresBuilder:
                     if meta:
                         doc.metadata.update(meta)
 
-            file_entry: dict[str, Any] = {"DEFAULT": {}}
+            file_entry: dict[str, Any] = {"DEFAULT": extracted}
             for doc in docs:
                 headings = doc.metadata.get("headings", [])
                 if headings:
@@ -188,6 +232,8 @@ class StoresBuilder:
 
             results.append((file_hash, docs, file_path))
 
+        # The resolver's HTTP client is left for the process to clean up;
+        # ingestion is a one-shot CLI run.
         return results, file_headings
 
     def store_all(
@@ -325,13 +371,22 @@ class StoresBuilder:
         return self._cache_dir(source_dir) / f"{safe_hash}.pkl"
 
     def _save_to_cache(
-        self, docs: list[Document], source_dir: Path, file_hash: str
+        self,
+        docs: list[Document],
+        extracted: dict[str, Any],
+        source_dir: Path,
+        file_hash: str,
     ) -> None:
-        """Pickle *docs* to the cache directory.
+        """Pickle *docs* and their extracted metadata to the cache directory.
 
-        Creates the cache directory if it does not exist.
+        Creates the cache directory if it does not exist.  The cache
+        entry is a ``(docs, extracted)`` tuple so that cache hits can
+        restore the full-cascade bibliographic extraction instead of
+        degrading to a weaker regex-only pass.  (Legacy cache entries
+        hold a plain list of docs; :meth:`_load_from_cache` handles both.)
 
         :param docs: List of chunked documents to cache
+        :param extracted: Bibliographic metadata extracted for the file
         :param source_dir: Resolved source directory path
         :param file_hash: xxhash digest of the source file
         """
@@ -339,33 +394,41 @@ class StoresBuilder:
         cache_dir.mkdir(parents=True, exist_ok=True)
         path = self._cache_path(source_dir, file_hash)
         with open(path, "wb") as f:
-            pickle.dump(docs, f)
+            pickle.dump((docs, extracted), f)
         self.logger.info(f"Cached {len(docs)} chunks to {path}")
 
     def _load_from_cache(
         self, source_dir: Path, file_hash: str
-    ) -> list[Document] | None:
-        """Load pickled chunks from the cache.
+    ) -> tuple[list[Document], dict[str, Any]] | None:
+        """Load pickled chunks and their extracted metadata from the cache.
 
         To inspect cached chunks from a Python shell::
 
             import pickle
             from pathlib import Path
             for p in Path("<source_dir>/.klea-cache/").glob("*.pkl"):
-                docs = pickle.load(open(p, "rb"))
-                print(p.stem, docs[0].metadata.get("headings"))
+                data = pickle.load(open(p, "rb"))
+                docs, extracted = data if isinstance(data, tuple) else (data, {})
+                print(p.stem, docs[0].metadata.get("headings"), extracted)
+
+        Handles legacy cache entries (a plain list of documents) by
+        returning an empty extracted dict for them.
 
         :param source_dir: Resolved source directory path
         :param file_hash: xxhash digest of the source file
-        :returns: List of :class:`~langchain_core.documents.Document`, or
-            ``None`` if the cache file does not exist
+        :returns: ``(docs, extracted)``, or ``None`` if the cache file
+            does not exist
         """
         path = self._cache_path(source_dir, file_hash)
         if not path.is_file():
             return None
         self.logger.debug(f"Cache hit: {path.name}")
         with open(path, "rb") as f:
-            return pickle.load(f)
+            data = pickle.load(f)
+        if isinstance(data, tuple):
+            docs, extracted = data
+            return docs, extracted or {}
+        return data, {}
 
     # ------------------------------------------------------------------
     # Metadata map helpers
@@ -489,14 +552,38 @@ class StoresBuilder:
         """Lazily initialise and return the Docling
         :class:`~docling.document_converter.DocumentConverter` singleton.
 
+        When :attr:`do_ocr` is ``False``, the PDF pipeline is configured
+        with OCR disabled, which speeds up conversion of text-based PDFs
+        significantly (scanned/image-based PDFs then lose their
+        embedded text).
+
         :returns: Shared :class:`~docling.document_converter.DocumentConverter`
             instance
         """
         if self._converter is None:
-            self.logger.debug("Initialising Docling DocumentConverter")
-            from docling.document_converter import DocumentConverter
+            self.logger.debug(
+                f"Initialising Docling DocumentConverter (do_ocr={self.do_ocr})"
+            )
+            from docling.document_converter import (
+                DocumentConverter,
+                PdfFormatOption,
+            )
 
-            self._converter = DocumentConverter()
+            if self.do_ocr:
+                self._converter = DocumentConverter()
+            else:
+                # Lazy: the pipeline-options imports pull in docling's
+                # pipeline machinery; only needed when OCR is disabled.
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import PdfPipelineOptions
+
+                options = PdfPipelineOptions()
+                options.do_ocr = False
+                self._converter = DocumentConverter(
+                    format_options={
+                        InputFormat.PDF: PdfFormatOption(pipeline_options=options)
+                    }
+                )
         return self._converter
 
     def _get_chunker(self):
@@ -526,17 +613,27 @@ class StoresBuilder:
             )
         return self._chunker
 
-    def _convert_and_chunk(self, file_path: Path) -> list[Document]:
+    def _convert_and_chunk(
+        self, file_path: Path, resolver: Resolver | None
+    ) -> tuple[list[Document], dict[str, Any]]:
         """Convert ``file_path`` with Docling, chunk with the
         :class:`~docling.chunking.HybridChunker`,
-        and return :class:`~langchain_core.documents.Document` objects.
+        and return :class:`~langchain_core.documents.Document` objects
+        alongside the automatically-extracted bibliographic metadata.
 
         Each document's metadata includes a ``headings`` list (the heading
-        hierarchy for the chunk).
+        hierarchy for the chunk).  The extracted metadata (see
+        :func:`~klea_utils.biblio.extract.extract_metadata`) is used to
+        pre-fill the per-file template ``DEFAULT`` entry; it is not
+        attached to the chunks themselves.
 
         :param file_path: Path to the source document file
-        :returns: List of chunked :class:`~langchain_core.documents.Document`
-            objects ready for embedding
+        :param resolver: DOI resolver for the extraction cascade, or
+            ``None`` to skip DOI resolution
+        :returns: ``(docs, extracted)`` where *docs* is the list of
+            chunked :class:`~langchain_core.documents.Document` objects
+            ready for embedding and *extracted* is the flat
+            bibliographic metadata dict
         """
         converter = self._get_converter()
         chunker = self._get_chunker()
@@ -556,7 +653,31 @@ class StoresBuilder:
             )
             docs.append(doc)
 
-        return docs
+        extracted = extract_metadata(
+            dl_doc,
+            str(file_path),
+            pdf_path=str(file_path) if file_path.suffix.lower() == ".pdf" else None,
+            resolver=resolver,
+        )
+
+        return docs, extracted
+
+    def _make_resolver(self, source_path: Path) -> Resolver:
+        """Build a DOI resolver for a source directory.
+
+        The resolver caches resolved DOIs under the source directory's
+        ``.klea-cache/`` and picks up the ``KLEA_INGEST_MAILTO``
+        polite-pool address from the environment.
+
+        :param source_path: Resolved source directory path
+        :returns: A configured
+            :class:`~klea_utils.biblio.doi.DoiResolver`
+        """
+        # Lazy: importing the DOI resolver pulls in httpx; it is only
+        # needed when documents are being converted.
+        from ..biblio.doi import DoiResolver
+
+        return DoiResolver(cache_dir=self._cache_dir(source_path))
 
 
 def _hash_file(file_path: Path) -> str:
