@@ -102,7 +102,11 @@ cross-package imports.
 
 ## Testing quirks
 
-- Tests marked `localonly` require an LLM -- skipped in CI.
+- Tests marked `localonly` require an LLM (and, for some, docling/HF model
+  downloads).  They are NOT filtered out of the suite: `scripts/run_tests.sh`
+  and CI run them against the models CI pulls (ollama `qwen3:0.6b` + `bge-m3`),
+  and they self-skip only when the connection to the model backend fails.  Use
+  `pytest -m "not localonly"` locally for a quick run without an LLM.
 - `utils_pkg/tests/test_stores_retrieval.py` reads `STORES_TEST_CONFIG` env var (default `stores-tests.json`).
 - MCP tests are asyncio + single-process; do **not** run with `-n auto` (uses `addopts = -n 1` in `pyproject.toml`).
 - All packages ignore `F403` and `F405` in ruff.
