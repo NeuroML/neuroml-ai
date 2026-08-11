@@ -107,6 +107,9 @@ Flags explained:
   can move the file afterwards and point the config at its new location.
 * ``--model`` / ``-m`` -- embedding model (default ``ollama:bge-m3:latest``).
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
+* ``--ocr`` / ``--no-ocr`` -- whether to OCR pages during PDF conversion
+  (default: on).  Keep it on for scanned/image-based PDFs; pass
+  ``--no-ocr`` for text-based PDFs to speed up conversion considerably.
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
 
 Re-running ``klea-stores-create build`` on the same directory is safe --
