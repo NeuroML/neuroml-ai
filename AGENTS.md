@@ -94,7 +94,7 @@ cross-package imports.
 ## Testing quirks
 
 - Tests marked `localonly` require an LLM -- skipped in CI.
-- `utils_pkg/tests/test_stores_retrieval.py` reads `VS_TEST_CONFIG` env var (default `vector-stores-tests.json`).
+- `utils_pkg/tests/test_stores_retrieval.py` reads `STORES_TEST_CONFIG` env var (default `stores-tests.json`).
 - MCP tests are asyncio + single-process; do **not** run with `-n auto` (uses `addopts = -n 1` in `pyproject.toml`).
 - All packages ignore `F403` and `F405` in ruff.
 

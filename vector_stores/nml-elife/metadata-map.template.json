@@ -1,0 +1,8 @@
+{
+    "nml-elife.pdf": {
+        "DEFAULT": {
+            "url": "https://elifesciences.org/articles/95135",
+            "citation": "Ankur Sinha, Padraig Gleeson, Bóris Marin, Salvador Dura-Bernal, Sotirios Panagiotou, Sharon Crook, Matteo Cantarelli, Robert C Cannon, Andrew P Davison, Harsha Gurnani, Robin Angus Silver (2025) The NeuroML ecosystem for standardized multi-scale modeling in neuroscience eLife 13:RP95135 https://doi.org/10.7554/eLife.95135.3"
+        }
+    }
+}

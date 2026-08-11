@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test vector store related code.
+Test store retrieval code.
 
 File: tests/test_stores_retrieval.py
 
@@ -147,23 +147,33 @@ class TestStores(unittest.TestCase):
         self.assertEqual(retriever._current_k("NeuroML", small), 5)
 
     def test_retrieval(self):
-        """Test retrieval"""
+        """Test retrieval from the configured vector and BM25 stores."""
         try:
-            vs_config_file = os.environ.get("VS_TEST_CONFIG", None)
-            assert vs_config_file
-            with open(vs_config_file, "r") as f:
+            stores_config_file = os.environ.get("STORES_TEST_CONFIG", None)
+            assert stores_config_file
+            with open(stores_config_file, "r") as f:
                 config = json.load(f)
-            print(config)
+            logger = logging.getLogger("test_stores")
             retriever_config = RetrieverConfig(**config)
 
-            logger = logging.getLogger("test_stores")
-            stores = VSRetriever(
+            vector_stores = VSRetriever(
                 config=retriever_config,
                 logger=logger,
                 embedding_model="ollama:bge-m3:latest",
             )
-            stores.setup()
-            stores.retrieve("NeuroML", "NeuroML community")
+            vector_stores.setup()
+            vs_results = vector_stores.retrieve("NeuroML", "NeuroML community")
+            self.assertIsNotNone(vs_results)
+            logger.info(f"Vector store retrieval returned {len(vs_results)} documents")
+
+            bm25_stores = BM25RetrieverManager(
+                config=retriever_config,
+                logger=logger,
+            )
+            bm25_stores.setup()
+            bm25_results = bm25_stores.retrieve("NeuroML", "NeuroML community")
+            self.assertIsNotNone(bm25_results)
+            logger.info(f"BM25 retrieval returned {len(bm25_results)} documents")
         except ResponseError as e:
             pytest.skip(str(e))
         except ConnectionError as e:

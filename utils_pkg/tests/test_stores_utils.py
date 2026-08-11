@@ -10,14 +10,72 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
+import pytest
 from klea_utils.stores.utils import (
     format_source_scores,
+    instantiate_vector_store,
     rrf_merge,
     serialize_vs_retrieval,
 )
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
+
+
+class _FakeEmbeddings:
+    """Minimal embedding object for Chroma; never called during init."""
+
+    def embed_documents(self, texts):
+        return [[0.0] * 8 for _ in texts]
+
+    def embed_query(self, text):
+        return [0.0] * 8
+
+
+def test_instantiate_chroma_rejects_file_path(tmp_path):
+    """A chroma location pointing at an existing file is rejected."""
+    pytest.importorskip("langchain_chroma")
+    store_file = tmp_path / "chroma.sqlite3"
+    store_file.touch()
+
+    with pytest.raises(FileNotFoundError):
+        instantiate_vector_store(
+            f"chroma:{store_file}",
+            "test_collection",
+            _FakeEmbeddings(),
+            logger,
+            create=True,
+        )
+
+
+def test_instantiate_chroma_creates_missing_folder(tmp_path):
+    """create=True creates a missing store folder and initialises it."""
+    pytest.importorskip("langchain_chroma")
+    store_dir = tmp_path / "new-store"
+
+    store = instantiate_vector_store(
+        f"chroma:{store_dir}",
+        "test_collection",
+        _FakeEmbeddings(),
+        logger,
+        create=True,
+    )
+    logger.info(f"store: {store}")
+    assert store is not None
+    assert store_dir.is_dir()
+    assert (store_dir / "chroma.sqlite3").is_file()
+
+
+def test_instantiate_chroma_folder_must_exist_when_not_creating(tmp_path):
+    """create=False requires an existing store folder."""
+    pytest.importorskip("langchain_chroma")
+    with pytest.raises(FileNotFoundError):
+        instantiate_vector_store(
+            f"chroma:{tmp_path / 'missing-store'}",
+            "test_collection",
+            _FakeEmbeddings(),
+            logger,
+        )
 
 
 def _doc(content: str) -> Document:
