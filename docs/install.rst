@@ -104,6 +104,54 @@ klea (WIP: coming soon) and neuroml-mcp (from source)
 To install them, clone the repository and follow the
 :doc:`development workflow <contributing>`.
 
+PyTorch / CUDA (optional)
+-------------------------
+
+No Klea package declares PyTorch as a direct dependency, and the correct
+torch build depends on your GPU hardware: newer CUDA builds drop kernel
+support for older GPUs.  torch is, however, installed transitively by
+the document-ingestion extra (``ingest`` -> docling ->
+``docling-slim[standard]`` -> ``torch`` + ``torchvision``), which the
+``full``/``test``/``dev`` extras all include.  That transitive build is
+unpinned and comes from the default index, so it may lack kernels for
+your GPU; docling's OCR/layout processing then falls back to the CPU
+instead of using the GPU.
+
+If you want a GPU-accelerated build, install it yourself -- see
+:file:`requirements-torch.txt` in the repository root for the full
+guide, pinned install commands, and a verified example.  Install the
+pinned ``torch`` + ``torchvision`` pair (from the same CUDA index)
+*before* the Klea requirements: an installed torch that satisfies
+docling's ``torch>=2.2.2,<3.0.0`` is left untouched by the installers.
+If a wrong build is already present, force-reinstall the pair instead
+(see the file).
+
+The short version:
+
+.. list-table::
+   :header-rows: 1
+
+   * - GPU compute capability
+     - CUDA build to use
+   * - 6.0/6.1 (Pascal) and 7.0/7.5 (Volta/Turing)
+     - ``cu126`` or ``cu128`` (CUDA 12.8 or earlier)
+   * - 8.0+ (Ampere, Ada, Hopper, Blackwell)
+     - Any recent build (``cu129``, ``cu130``, ...)
+
+Check your capability with ``torch.cuda.get_device_capability(0)`` and
+install the ``torch``/``torchvision`` pair with the full pin so the
+package manager cannot pick a different CUDA suffix::
+
+   uv pip install "torch==<version>+cu126" "torchvision==<version>+cu126" \
+       --extra-index-url https://download.pytorch.org/whl/cu126
+
+``torchvision`` must come from the same CUDA index as ``torch``; a
+mismatch installs silently but breaks ``import torchvision`` at runtime.
+
+PyTorch wheels bundle their own CUDA runtime, so a system CUDA toolkit
+is not required to run torch.  It is only needed to compile CUDA
+extensions yourself, and it must match the wheel's CUDA version.
+
 Configuration
 -------------
 
