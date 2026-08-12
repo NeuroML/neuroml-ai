@@ -496,16 +496,18 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """Load system prompt from file, optionally adding memory summary and output schema."""
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
+        if self.memory:
+            memory_addition = self._get_memory_addition(state)
+            system_prompt += memory_addition
+
         if self.output_schema:
             # we pass this as part of the prompt because not all models/end
             # points support passing schemas separately, or respect `with
             # structured output`.  This is the safest, most general way of
             # doing it.
+            # Appended last so it is the instruction closest to the human
+            # query (recency), maximizing adherence to the JSON format.
             system_prompt += self._format_output_schema_prompt()
-
-        if self.memory:
-            memory_addition = self._get_memory_addition(state)
-            system_prompt += memory_addition
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt
