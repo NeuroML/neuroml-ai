@@ -302,6 +302,12 @@
 <span class="c1">#: ``{&quot;vector store&quot;: 0.87, &quot;BM25&quot;: 3.21}``), set by :func:`rrf_merge`.</span>
 <span class="n">SOURCE_SCORES_KEY</span> <span class="o">=</span> <span class="s2">&quot;_source_scores&quot;</span>
 
+<span class="c1">#: HNSW distance space used for Chroma collections created by Klea.  Cosine</span>
+<span class="c1">#: makes the vector-store relevance scores true cosine similarities</span>
+<span class="c1">#: (``1 - cosine_distance``), so a ``score_threshold`` reads as a minimum</span>
+<span class="c1">#: cosine similarity.</span>
+<span class="n">CHROMA_HNSW_SPACE</span> <span class="o">=</span> <span class="s2">&quot;cosine&quot;</span>
+
 <span class="c1">#: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a</span>
 <span class="c1">#: source&#39;s result list contributes ``1 / (RRF_K + r)`` to its fused score.</span>
 <span class="n">RRF_K</span> <span class="o">=</span> <span class="mi">60</span>
@@ -470,6 +476,11 @@
 <span class="sd">    collections, so reusing an existing folder with a new collection</span>
 <span class="sd">    name creates a new collection in it.</span>
 
+<span class="sd">    New Chroma collections are created with the :data:`CHROMA_HNSW_SPACE`</span>
+<span class="sd">    HNSW distance space (cosine).  The configuration is only applied at</span>
+<span class="sd">    collection creation; loading an existing collection keeps its own</span>
+<span class="sd">    distance space.</span>
+
 <span class="sd">    :param path: URI-style string with scheme prefix</span>
 <span class="sd">        (e.g. ``&quot;chroma:/path/to/dir&quot;``,</span>
 <span class="sd">        ``&quot;qdrant:http://localhost:6333&quot;``,</span>
@@ -540,6 +551,7 @@
                 <span class="n">collection_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">embedding_function</span><span class="o">=</span><span class="n">embeddings</span><span class="p">,</span>
                 <span class="n">client_settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
+                <span class="n">collection_configuration</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hnsw&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;space&quot;</span><span class="p">:</span> <span class="n">CHROMA_HNSW_SPACE</span><span class="p">}},</span>
             <span class="p">)</span>
 
         <span class="k">case</span> <span class="s2">&quot;qdrant&quot;</span><span class="p">:</span>

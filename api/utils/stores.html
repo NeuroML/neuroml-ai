@@ -659,6 +659,15 @@ full-text search) instead.</p>
 <p>Copyright 2026 Ankur Sinha
 Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.CHROMA_HNSW_SPACE">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">CHROMA_HNSW_SPACE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cosine'</span></span><a class="headerlink" href="#klea_utils.stores.utils.CHROMA_HNSW_SPACE" title="Link to this definition">¶</a></dt>
+<dd><p>HNSW distance space used for Chroma collections created by Klea.  Cosine
+makes the vector-store relevance scores true cosine similarities
+(<code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">cosine_distance</span></code>), so a <code class="docutils literal notranslate"><span class="pre">score_threshold</span></code> reads as a minimum
+cosine similarity.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.RRF_K">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">RRF_K</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">60</span></span><a class="headerlink" href="#klea_utils.stores.utils.RRF_K" title="Link to this definition">¶</a></dt>
 <dd><p>Rank offset for Reciprocal Rank Fusion.  A document at rank <em>r</em> within a
@@ -707,6 +716,10 @@ filename is not configurable, so a path pointing at an existing file
 addressed: a single ChromaDB store file can hold multiple
 collections, so reusing an existing folder with a new collection
 name creates a new collection in it.</p>
+<p>New Chroma collections are created with the <a class="reference internal" href="#klea_utils.stores.utils.CHROMA_HNSW_SPACE" title="klea_utils.stores.utils.CHROMA_HNSW_SPACE"><code class="xref py py-data docutils literal notranslate"><span class="pre">CHROMA_HNSW_SPACE</span></code></a>
+HNSW distance space (cosine).  The configuration is only applied at
+collection creation; loading an existing collection keeps its own
+distance space.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -896,6 +909,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 </ul>
 </li>
 <li><a class="reference internal" href="#module-klea_utils.stores.utils">Utilities</a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.utils.CHROMA_HNSW_SPACE"><code class="docutils literal notranslate"><span class="pre">CHROMA_HNSW_SPACE</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.RRF_K"><code class="docutils literal notranslate"><span class="pre">RRF_K</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.format_source_scores"><code class="docutils literal notranslate"><span class="pre">format_source_scores()</span></code></a></li>

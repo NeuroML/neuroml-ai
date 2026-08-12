@@ -387,7 +387,10 @@ chunks were written to.  Retrieval looks stores up by name, so a
 mismatch silently returns no results.  For local Chroma stores the
 <code class="docutils literal notranslate"><span class="pre">path</span></code> points at the store folder; the database file inside it is
 always named <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> (see
-<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>).</p>
+<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>).  Chroma collections created by
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> use <strong>cosine</strong> HNSW distance, so the vector-store
+relevance score is a cosine similarity (and the retrieval
+<code class="docutils literal notranslate"><span class="pre">score_threshold</span></code> reads as a minimum cosine similarity).</p>
 <p>This means one RAG server can simultaneously serve completely
 different knowledge areas – the classifier routes queries to the
 right domain automatically.</p>
