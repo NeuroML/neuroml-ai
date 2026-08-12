@@ -370,6 +370,21 @@
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
         <span class="s2">&quot;.nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }&quot;</span>
     <span class="p">)</span>
+    <span class="c1"># GitHub-style alerts (rendered from ``&gt; [!WARNING]`` etc. by the markdown2</span>
+    <span class="c1"># &#39;alerts&#39; extra) used for the fallback / best-effort warnings in bubbles.</span>
+    <span class="c1"># No default style defined by nicegui for these extras</span>
+    <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
+        <span class="s2">&quot;.nicegui-markdown div.alert { &quot;</span>
+        <span class="s2">&quot;padding: 0.4rem 0.75rem; &quot;</span>
+        <span class="s2">&quot;border-left: 4px solid #d29922; &quot;</span>
+        <span class="s2">&quot;border-radius: 0.25rem; &quot;</span>
+        <span class="s2">&quot;background: rgba(210, 153, 34, 0.12); &quot;</span>
+        <span class="s2">&quot;margin: 0.5rem 0; &quot;</span>
+        <span class="s2">&quot;}&quot;</span>
+    <span class="p">)</span>
+    <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
+        <span class="s2">&quot;.nicegui-markdown div.alert em { font-style: normal; font-weight: 600; }&quot;</span>
+    <span class="p">)</span>
     <span class="c1"># Collapse long bot messages to 4 lines with an expand / collapse toggle.</span>
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span><span class="s2">&quot;.msg-collapsed { max-height: 6em; overflow: hidden; }&quot;</span><span class="p">)</span>
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span><span class="s2">&quot;.msg-expanded { max-height: none; }&quot;</span><span class="p">)</span>
