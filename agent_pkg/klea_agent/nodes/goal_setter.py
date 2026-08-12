@@ -2,7 +2,7 @@
 """
 Goal setter node
 
-File: code_pkg/klea_code/nodes/goal_setter.py
+File: klea_agent/nodes/goal_setter.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_code.schemas import GoalSchema, KleaCodeState
+from klea_agent.schemas import GoalSchema, KleaAgentState
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
 
@@ -47,7 +47,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         )
 
     @override
-    def _get_prompt_variables(self, state: KleaCodeState) -> dict:
+    def _get_prompt_variables(self, state: KleaAgentState) -> dict:
         """Format prompt with state-specific parameters"""
         variables = {"query": state.query}
         self.logger.debug(f"{variables =}")

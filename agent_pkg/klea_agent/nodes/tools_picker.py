@@ -2,7 +2,7 @@
 """
 Tools picker node
 
-File: code_pkg/klea_code/nodes/tools_picker.py
+File: klea_agent/nodes/tools_picker.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -11,12 +11,12 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_code.schemas import KleaCodeState, ToolCallSchema
+from klea_agent.schemas import KleaAgentState, ToolCallSchema
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.base import BaseLLMNode
 
 
-class ToolsPicker(BaseLLMNode[KleaCodeState]):
+class ToolsPicker(BaseLLMNode[KleaAgentState]):
     """Node that selects the best tools for the current step."""
 
     model_type = "plan"
@@ -56,12 +56,12 @@ class ToolsPicker(BaseLLMNode[KleaCodeState]):
         )
 
     @override
-    def _get_human_prompt(self, state: KleaCodeState) -> str:
+    def _get_human_prompt(self, state: KleaAgentState) -> str:
         """Return empty string  ---  this node only uses a system prompt."""
         return ""
 
     @override
-    def _get_prompt_variables(self, state: KleaCodeState) -> dict:
+    def _get_prompt_variables(self, state: KleaAgentState) -> dict:
         """Format prompt with current step state."""
         current_step_index = state.plan.current_step_index
         current_step = state.plan.step_list[current_step_index]
@@ -75,7 +75,7 @@ class ToolsPicker(BaseLLMNode[KleaCodeState]):
 
     @override
     def _update_state(
-        self, result: ToolCallSchema, state: KleaCodeState
+        self, result: ToolCallSchema, state: KleaAgentState
     ) -> dict[str, Any]:
         """Update state with the selected tool call."""
         return {"tool_call": result}

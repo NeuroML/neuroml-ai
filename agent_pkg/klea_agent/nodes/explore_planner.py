@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Explore planner node for KleaCode
+Explore planner node for KleaAgent
 
-File: code_pkg/klea_code/nodes/explore_planner.py
+File: klea_agent/nodes/explore_planner.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -10,8 +10,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from typing import Any, override
 
-from klea_code.nodes.planner import Planner
-from klea_code.schemas import KleaCodeState, PlanSchema
+from klea_agent.nodes.planner import Planner
+from klea_agent.schemas import KleaAgentState, PlanSchema
 from pydantic import BaseModel
 
 
@@ -35,7 +35,7 @@ class ExplorePlanner(Planner):
         self.prompt_prefix = "ExplorePlanner"
 
     @override
-    def _get_prompt_variables(self, state: KleaCodeState) -> dict:
+    def _get_prompt_variables(self, state: KleaAgentState) -> dict:
         """Format prompt with current state."""
         # TODO: limit to required state field
         return {

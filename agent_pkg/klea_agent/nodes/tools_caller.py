@@ -2,7 +2,7 @@
 """
 Tools caller node
 
-File: code_pkg/klea_code/nodes/tools_caller.py
+File: klea_agent/nodes/tools_caller.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -14,11 +14,11 @@ from typing import Any, override
 
 from fastmcp import Client
 from fastmcp.client.client import CallToolResult
-from klea_code.schemas import KleaCodeState
+from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
-class ToolsCaller(AbstractLangGraphNode[KleaCodeState, CallToolResult]):
+class ToolsCaller(AbstractLangGraphNode[KleaAgentState, CallToolResult]):
     """Node that calls the selected tools."""
 
     def __init__(self, logger: logging.Logger, label: str, mcp_client: Client | None):
@@ -32,7 +32,7 @@ class ToolsCaller(AbstractLangGraphNode[KleaCodeState, CallToolResult]):
         self._mcp_client = mcp_client
 
     @override
-    async def execute(self, state: KleaCodeState) -> dict[str, Any]:
+    async def execute(self, state: KleaAgentState) -> dict[str, Any]:
         self.logger.debug(f"{state =}")
         result: dict[str, Any] = {}
 

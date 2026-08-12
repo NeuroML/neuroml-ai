@@ -1,11 +1,11 @@
-# AGENTS.md - Code AI Package
+# AGENTS.md - Agent Package
 
-AI assisted coding/workflow system using LangChain/LangGraph.
+General purpose agent (with coding capabilities) using LangChain/LangGraph.
 
 ## Package Overview
 
-Package: `klea_code`
-CLI entry: `klea-code`
+Package: `klea_agent`
+CLI entry: `klea`, `klea-serve`
 
 ## Development Commands
 
@@ -33,9 +33,6 @@ ruff check . --select I --fix
 # Run all tests
 pytest
 
-# Run a single test file
-pytest tests/test_code_ai.py
-
 # Run tests with verbose output
 pytest -v
 ```
@@ -44,13 +41,13 @@ pytest -v
 
 ### Package Structure
 ```
-klea_code/
+klea_agent/
 ├── api/             # FastAPI server (thin wrappers around klea_utils routers)
 │   ├── main.py      # FastAPI app creation
 │   └── server.py    # Typer serve command
 ├── config.py        # Configuration loading (env file + JSON)
-├── klea_code.py     # Main CodeAgent orchestrator (extends BaseLangGraph)
-├── nodes/           # LangGraph nodes for code generation workflows
+├── klea_agent.py    # Main Agent orchestrator (extends BaseLangGraph)
+├── nodes/           # LangGraph nodes for agent workflows
 │   ├── answer_user.py
 │   ├── evaluator.py
 │   ├── explore_planner.py
@@ -65,7 +62,7 @@ klea_code/
 ├── tools/           # Bundled MCP tools
 │   └── bundled.py
 └── ui/
-    └── cli.py       # Typer CLI entry point (klea-code, klea-code-serve)
+    └── cli.py       # Typer CLI entry point (klea, klea-serve)
 ```
 
 ### Key Technologies
@@ -94,12 +91,12 @@ from fastmcp import Context
 from pydantic import BaseModel
 
 # 3. Local imports
-from klea_code.schemas import CodeGenRequest
-from klea_code.nodes import generate_code_node
+from klea_agent.schemas import GoalSchema
+from klea_agent.nodes import Planner
 ```
 
 ### Naming Conventions
-- **Functions**: snake_case (`generate_code_node`, `validate_neuroml_model`)
-- **Classes**: PascalCase (`CodeGenRequest`, `LangGraphAgent`)
+- **Functions**: snake_case (`execute_node`, `validate_neuroml_model`)
+- **Classes**: PascalCase (`KleaAgent`, `LangGraphAgent`)
 - **Variables**: snake_case (`model_name`, `code_output`)
 - **Constants**: UPPER_CASE (`DEFAULT_MODEL`, `MAX_RETRIES`)

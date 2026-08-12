@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Planner node for KleaCode
+Planner node for KleaAgent
 
-File: code_pkg/klea_code/nodes/planner.py
+File: klea_agent/nodes/planner.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_code.schemas import KleaCodeState, PlanSchema
+from klea_agent.schemas import KleaAgentState, PlanSchema
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
@@ -57,7 +57,7 @@ class Planner(BaseLLMNode[PlanSchema]):
         )
 
     @override
-    def _get_prompt_variables(self, state: KleaCodeState) -> dict:
+    def _get_prompt_variables(self, state: KleaAgentState) -> dict:
         """Format prompt with current plan state."""
         return {
             "query": state.query,

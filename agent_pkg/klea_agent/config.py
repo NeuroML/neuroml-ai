@@ -2,7 +2,7 @@
 """
 Configurations for the API server
 
-File: code_pkg/klea_code/api/conf.py
+File: klea_agent/config.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -15,9 +15,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppEnv(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="KLEA_CODE_")
+    model_config = SettingsConfigDict(env_prefix="KLEA_AGENT_")
 
-    app_config_file: str = "klea_code.json"
+    app_config_file: str = "klea_agent.json"
     chat_model: str = "ollama:qwen3.5:0.8b"
     reasoning_model: str = "ollama:qwen3.5:0.8b"
     guard_model: str = "ollama:llama-guard3:1b"

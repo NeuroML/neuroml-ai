@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Schemas used in the RAG
+Schemas used by the agent
 
-File: klea_rag/schemas.py
+File: klea_agent/schemas.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -72,7 +72,7 @@ class Discovery(BaseModel):
     pass
 
 
-class KleaCodeState(BaseModel):
+class KleaAgentState(BaseModel):
     """The state of the graph"""
 
     query: str = ""

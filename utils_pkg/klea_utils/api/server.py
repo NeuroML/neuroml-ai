@@ -149,7 +149,7 @@ def spawn_server(
                 raise RuntimeError(
                     f"Server process exited immediately (code {proc.returncode}). "
                     "Check the server's log file, or run the server directly "
-                    "with 'klea-rag-serve serve' / 'klea-code-serve serve' "
+                    "with 'klea-rag-serve serve' / 'klea-serve serve' "
                     "to see the error."
                 )
             if _probe_once():
@@ -162,7 +162,7 @@ def spawn_server(
                 raise RuntimeError(
                     f"Server at {health_url} did not become ready within {timeout:g}s. "
                     "Check the server's log file, or run the server directly "
-                    "with 'klea-rag-serve serve' / 'klea-code-serve serve' "
+                    "with 'klea-rag-serve serve' / 'klea-serve serve' "
                     "to see the error."
                 ) from exc
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Bundled tools server for Klea Code.
+Bundled tools server for Klea Agent.
 
 Provides core tools that run in-process via stdio MCP transport,
 eliminating the need for an external MCP server for common operations.
 
-File: code_pkg/klea_code/tools/bundled.py
+File: klea_agent/tools/bundled.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -18,7 +18,7 @@ from fastmcp import FastMCP
 from pydantic import Field
 
 bundle_server = FastMCP(
-    "KleaBundled",
+    "KleaAgent",
     instructions="Built-in tools for code exploration and file operations.",
 )
 

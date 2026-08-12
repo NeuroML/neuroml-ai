@@ -21,7 +21,7 @@ from typing import Any
 KLEA_LOG_NAMESPACES = (
     "klea_utils",
     "klea_rag",
-    "klea_code",
+    "klea_agent",
     "neuroml_mcp",
 )
 

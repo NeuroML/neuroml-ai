@@ -2,7 +2,7 @@
 """
 Tools router node
 
-File: code_pkg/klea_code/nodes/tools_router.py
+File: klea_agent/nodes/tools_router.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -11,11 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import override
 
-from klea_code.schemas import KleaCodeState
+from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractRouterNode
 
 
-class ToolsRouter(AbstractRouterNode[KleaCodeState]):
+class ToolsRouter(AbstractRouterNode[KleaAgentState]):
     """Route based on tool call outputs."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -27,7 +27,7 @@ class ToolsRouter(AbstractRouterNode[KleaCodeState]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: KleaCodeState) -> str:
+    async def execute(self, state: KleaAgentState) -> str:
         """Route based on tool call outputs.
 
         :param state: The current state

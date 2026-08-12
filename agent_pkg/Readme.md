@@ -1,9 +1,9 @@
-# Klea Code
+# Klea Agent
 
 Klea is a suite of AI tools for Neuroscience.
 
-This package provides an AI-assisted coding and workflow system.  It
-uses a LangGraph agent with access to MCP tools to help with code
+This package provides a general purpose agent with coding capabilities.
+It uses a LangGraph agent with access to MCP tools to help with code
 generation, review, and workflow automation.
 
 - CLI and API interfaces

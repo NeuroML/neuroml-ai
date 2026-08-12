@@ -2,7 +2,7 @@
 """
 Answer user node
 
-File: code_pkg/klea_code/nodes/answer_user.py
+File: klea_agent/nodes/answer_user.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -11,11 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_code.schemas import KleaCodeState
+from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
-class AnswerUser(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
+class AnswerUser(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
     """Node that returns the final message to the user."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -27,7 +27,7 @@ class AnswerUser(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: KleaCodeState) -> dict[str, Any]:
+    async def execute(self, state: KleaAgentState) -> dict[str, Any]:
         """Return the message for the user.
 
         :param state: Current graph state

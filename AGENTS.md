@@ -9,7 +9,7 @@ workflow, git conventions, session-log guidelines, and CLI patterns that must be
 followed. Do not proceed until you have read every section below.
 
 Multi-package Python project (setuptools + `setup.cfg`). Each `*_pkg/` is a
-separate installable; `code_pkg` and `rag_pkg` depend on `utils_pkg`.
+separate installable; `agent_pkg` and `rag_pkg` depend on `utils_pkg`.
 
 ## Workflow
 
@@ -34,9 +34,13 @@ Verification in step 2 covers:
 | Dir | Package name | CLI entry |
 |-----|-------------|-----------|
 | `utils_pkg/` | `klea_utils` | -- (shared lib) |
-| `code_pkg/` | `klea_code` | `klea-code` |
+| `agent_pkg/` | `klea_agent` | `klea`, `klea-serve` |
 | `rag_pkg/` | `klea_rag` | `klea-rag`, `klea-rag-serve` |
 | `mcp_pkg/` | `neuroml_mcp` | `nml-mcp` |
+
+`klea_agent` is the main application: a general purpose agent with coding
+capabilities.  `klea_rag` is primarily consumed by `klea_agent` (as a
+retrieval/RAG service).
 
 Each has its own `AGENTS.md` with architecture details -- refer to those for
 package-specific commands, node layout, and conventions.
@@ -93,8 +97,8 @@ pre-commit run --all-files
 
 ## Config & env loading
 
-Both `KleaCode` and `RAG` orchestrators load configuration via:
-1. An env file (`k=v` format, path from `KLEA_CODE_ENV_FILE` / `KLEA_RAG_ENV_FILE` or default `klea_code.env` / `rag.env`)
+Both `KleaAgent` and `RAG` orchestrators load configuration via:
+1. An env file (`k=v` format, path from `KLEA_AGENT_ENV_FILE` / `KLEA_RAG_ENV_FILE` or default `klea_agent.env` / `rag.env`)
 2. A JSON config file referenced inside the env file
 
 `ty.toml` adds `extra-paths` for all four packages so type-checking resolves
@@ -145,7 +149,7 @@ Git log has the step-by-step edits. Omit routine work.
 ## Versioning
 
 - Version is tracked in each package's ``setup.cfg`` (``version`` field).
-- ``klea_utils`` and ``klea_rag`` are published to PyPI; ``klea_code`` and
+- ``klea_utils`` and ``klea_rag`` are published to PyPI; ``klea_agent`` and
   ``neuroml_mcp`` are not yet published.
 - Pre-1.0 (0.x.y) releases: bump minor for new features, patch for bug fixes.
 - When cutting a release:

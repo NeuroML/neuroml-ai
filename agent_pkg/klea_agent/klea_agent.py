@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Klea code framework implementation
+Klea agent framework implementation
 
-File: klea_code.py
+File: klea_agent.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -13,15 +13,6 @@ import sys
 from typing import Any, final, override
 
 from fastmcp.mcp_config import MCPConfig, StdioMCPServer
-from klea_code.nodes.answer_user import AnswerUser
-from klea_code.nodes.evaluator import Evaluator
-from klea_code.nodes.explore_planner import ExplorePlanner
-from klea_code.nodes.goal_setter import GoalSetter
-from klea_code.nodes.init_graph import InitGraphState
-from klea_code.nodes.planner import Planner
-from klea_code.nodes.tools_caller import ToolsCaller
-from klea_code.nodes.tools_picker import ToolsPicker
-from klea_code.nodes.tools_router import ToolsRouter
 from klea_utils.graph.base import BaseLangGraph
 from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.fixed_answer import FixedAnswer
@@ -29,19 +20,29 @@ from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from langgraph.graph import END, START, StateGraph
 
+from klea_agent.nodes.answer_user import AnswerUser
+from klea_agent.nodes.evaluator import Evaluator
+from klea_agent.nodes.explore_planner import ExplorePlanner
+from klea_agent.nodes.goal_setter import GoalSetter
+from klea_agent.nodes.init_graph import InitGraphState
+from klea_agent.nodes.planner import Planner
+from klea_agent.nodes.tools_caller import ToolsCaller
+from klea_agent.nodes.tools_picker import ToolsPicker
+from klea_agent.nodes.tools_router import ToolsRouter
+
 from .config import AppConfig, AppEnv
-from .schemas import GoalSchema, KleaCodeState
+from .schemas import GoalSchema, KleaAgentState
 
 
 @final
-class KleaCode(BaseLangGraph):
-    """Klea Code implementation"""
+class KleaAgent(BaseLangGraph):
+    """Klea Agent implementation"""
 
     env_class = AppEnv
-    env_var = "KLEA_CODE_ENV_FILE"
-    env_file_default = "klea_code.env"
+    env_var = "KLEA_AGENT_ENV_FILE"
+    env_file_default = "klea_agent.env"
     config_class = AppConfig
-    graph_name = "klea-code"
+    graph_name = "klea"
 
     # type hints
     app_env: AppEnv
@@ -95,7 +96,7 @@ class KleaCode(BaseLangGraph):
         # Build bundled server config
         bundle_server = StdioMCPServer(
             command=sys.executable,
-            args=["-m", "klea_code.tools.bundled"],
+            args=["-m", "klea_agent.tools.bundled"],
         )
 
         # Merge external + bundled
@@ -106,12 +107,12 @@ class KleaCode(BaseLangGraph):
         self.domain_mcp_configs = {"code": MCPConfig(mcpServers=all_servers)}
 
     # TODO: replace with class
-    async def _step_router_node(self, state: KleaCodeState) -> str:
+    async def _step_router_node(self, state: KleaAgentState) -> str:
         return state.plan.status
 
     async def _create_graph(self):
         """Create the LangGraph"""
-        self.workflow = StateGraph(KleaCodeState)
+        self.workflow = StateGraph(KleaAgentState)
 
         self._init_graph_state_node = InitGraphState(
             logger=self.logger, label="Initializing"
@@ -263,4 +264,4 @@ class KleaCode(BaseLangGraph):
         else:
             self.graph = self.workflow.compile()
 
-        self._export_graph_png("code-ai-lang-graph.png")
+        self._export_graph_png("klea-agent-lang-graph.png")

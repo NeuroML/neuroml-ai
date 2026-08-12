@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Evaluator node for KleaCode
+Evaluator node for KleaAgent
 
-File: code_pkg/klea_code/nodes/evaluator.py
+File: klea_agent/nodes/evaluator.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -13,11 +13,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_code.schemas import KleaCodeState
+from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 
-class Evaluator(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
+class Evaluator(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
     """Node that evaluates whether all plan steps are completed."""
 
     def __init__(self, logger: logging.Logger, label: str):
@@ -29,7 +29,7 @@ class Evaluator(AbstractLangGraphNode[KleaCodeState, dict[str, Any]]):
         super().__init__(logger, label)
 
     @override
-    async def execute(self, state: KleaCodeState) -> dict[str, Any]:
+    async def execute(self, state: KleaAgentState) -> dict[str, Any]:
         """Check if all steps are completed and update plan status.
 
         :param state: Current graph state
