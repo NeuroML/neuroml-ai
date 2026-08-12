@@ -2,6 +2,19 @@
 
 ## v0.4.0 (wip)
 
+### Rename: klea-code -> klea / klea_agent
+
+- ``code_pkg`` renamed to ``agent_pkg``; package ``klea_code`` renamed to
+  ``klea_agent`` (not yet published to PyPI)
+- CLI entry points renamed: ``klea-code`` -> ``klea``,
+  ``klea-code-serve`` -> ``klea-serve``; client log identities
+  ``klea-code-tui``/``klea-code-web`` -> ``klea-tui``/``klea-web``
+- ``KleaCode``/``KleaCodeState`` -> ``KleaAgent``/``KleaAgentState``;
+  config env prefix ``KLEA_CODE_`` -> ``KLEA_AGENT_``
+  (``KLEA_AGENT_ENV_FILE``, ``klea_agent.env``, ``klea_agent.json``)
+- ``klea_agent`` is the main application: a general purpose agent with
+  coding capabilities; ``klea_rag`` is primarily consumed by it
+
 ### Automatic metadata extraction
 
 - New `klea_utils.biblio` package: tiered bibliographic metadata extraction
