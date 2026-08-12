@@ -374,69 +374,91 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection    -n              TEXT     Collection name for    │
-│                                             the vector store. Must │
-│                                             match the &#39;name&#39; of    │
-│                                             the corresponding      │
-│                                             vector_stores/bm25_st… │
-│                                             entry in the RAG       │
-│                                             config file (e.g.      │
-│                                             klea.json); a          │
-│                                             different name on an   │
-│                                             existing store file    │
-│                                             creates a new          │
-│                                             collection             │
-│                                             [required]             │
-│ *  --store         -s              TEXT     Vector store URI (e.g. │
-│                                             chroma:/path/to/store… │
-│                                             For local Chroma       │
-│                                             stores, point at the   │
-│                                             store folder: the      │
-│                                             database file inside   │
-│                                             it is always named     │
-│                                             chroma.sqlite3         │
-│                                             [required]             │
-│    --model         -m              TEXT     Embedding model        │
-│                                             identifier             │
-│                                             [default:              │
-│                                             ollama:bge-m3:latest]  │
-│    --max-tokens                    INTEGER  Maximum tokens per     │
-│                                             chunk                  │
-│                                             [default: 450]         │
-│    --ocr               --no-ocr             Whether to perform     │
-│                                             optical character      │
-│                                             recognition (OCR)      │
-│                                             during PDF conversion  │
-│                                             (default: on). Keep    │
-│                                             for scanned/image      │
-│                                             PDFs; disable for      │
-│                                             text-based PDFs to     │
-│                                             speed up conversion    │
-│                                             significantly          │
-│                                             [default: ocr]         │
-│    --metadata-map  -M              TEXT     JSON file keyed by     │
-│                                             source filename; each  │
-│                                             file entry maps        │
-│                                             heading chains to      │
-│                                             metadata dicts (with   │
-│                                             per-file DEFAULT       │
-│                                             fallback)              │
-│    --bm25-store                    TEXT     Write the combined     │
-│                                             document corpus to     │
-│                                             this path for BM25     │
-│                                             retrieval (a pickle of │
-│                                             all chunked            │
-│                                             documents). Defaults   │
-│                                             to &lt;collection&gt;.pkl in │
-│                                             the current directory; │
-│                                             the file can be moved  │
-│                                             after creation         │
-│                                             [default:              │
-│                                             (&lt;collection&gt;.pkl)]    │
-│    --force         -f                       Re-process all files   │
-│                                             even if unchanged      │
-│    --help                                   Show this message and  │
-│                                             exit.                  │
+│ *  --collection        -n              TEXT     Collection name    │
+│                                                 for the vector     │
+│                                                 store. Must match  │
+│                                                 the &#39;name&#39; of the  │
+│                                                 corresponding      │
+│                                                 vector_stores/bm2… │
+│                                                 entry in the RAG   │
+│                                                 config file (e.g.  │
+│                                                 klea.json); a      │
+│                                                 different name on  │
+│                                                 an existing store  │
+│                                                 file creates a new │
+│                                                 collection         │
+│                                                 [required]         │
+│ *  --store             -s              TEXT     Vector store URI   │
+│                                                 (e.g.              │
+│                                                 chroma:/path/to/s… │
+│                                                 For local Chroma   │
+│                                                 stores, point at   │
+│                                                 the store folder:  │
+│                                                 the database file  │
+│                                                 inside it is       │
+│                                                 always named       │
+│                                                 chroma.sqlite3     │
+│                                                 [required]         │
+│    --model             -m              TEXT     Embedding model    │
+│                                                 identifier         │
+│                                                 [default:          │
+│                                                 ollama:bge-m3:lat… │
+│    --max-tokens                        INTEGER  Maximum tokens per │
+│                                                 chunk              │
+│                                                 [default: 450]     │
+│    --ocr                   --no-ocr             Whether to perform │
+│                                                 optical character  │
+│                                                 recognition (OCR)  │
+│                                                 during PDF         │
+│                                                 conversion         │
+│                                                 (default: on).     │
+│                                                 Keep for           │
+│                                                 scanned/image      │
+│                                                 PDFs; disable for  │
+│                                                 text-based PDFs to │
+│                                                 speed up           │
+│                                                 conversion         │
+│                                                 significantly      │
+│                                                 [default: ocr]     │
+│    --metadata-map      -M              TEXT     JSON file keyed by │
+│                                                 source filename;   │
+│                                                 each file entry    │
+│                                                 maps heading       │
+│                                                 chains to metadata │
+│                                                 dicts (with        │
+│                                                 per-file DEFAULT   │
+│                                                 fallback)          │
+│    --bm25-store                        TEXT     Write the combined │
+│                                                 document corpus to │
+│                                                 this path for BM25 │
+│                                                 retrieval (a       │
+│                                                 pickle of all      │
+│                                                 chunked            │
+│                                                 documents).        │
+│                                                 Defaults to        │
+│                                                 &lt;collection&gt;.pkl   │
+│                                                 in the current     │
+│                                                 directory; the     │
+│                                                 file can be moved  │
+│                                                 after creation     │
+│                                                 [default:          │
+│                                                 (&lt;collection&gt;.pkl… │
+│    --embed-batch-size                  INTEGER  Number of chunks   │
+│                                                 embedded per store │
+│                                                 write call.        │
+│                                                 Smaller values     │
+│                                                 report progress    │
+│                                                 more frequently;   │
+│                                                 larger values      │
+│                                                 reduce per-request │
+│                                                 overhead on very   │
+│                                                 large corpora      │
+│                                                 [default: 256]     │
+│    --force             -f                       Re-process all     │
+│                                                 files even if      │
+│                                                 unchanged          │
+│    --help                                       Show this message  │
+│                                                 and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
@@ -500,70 +522,92 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection    -n              TEXT     Collection name for    │
-│                                             the vector store. Must │
-│                                             match the &#39;name&#39; of    │
-│                                             the corresponding      │
-│                                             vector_stores/bm25_st… │
-│                                             entry in the RAG       │
-│                                             config file (e.g.      │
-│                                             klea.json); a          │
-│                                             different name on an   │
-│                                             existing store file    │
-│                                             creates a new          │
-│                                             collection             │
-│                                             [required]             │
-│ *  --store         -s              TEXT     Vector store URI (e.g. │
-│                                             chroma:/path/to/store… │
-│                                             For local Chroma       │
-│                                             stores, point at the   │
-│                                             store folder: the      │
-│                                             database file inside   │
-│                                             it is always named     │
-│                                             chroma.sqlite3         │
-│                                             [required]             │
-│    --model         -m              TEXT     Embedding model        │
-│                                             identifier             │
-│                                             [default:              │
-│                                             ollama:bge-m3:latest]  │
-│    --max-tokens                    INTEGER  Maximum tokens per     │
-│                                             chunk (for files not   │
-│                                             yet cached)            │
-│                                             [default: 450]         │
-│    --ocr               --no-ocr             Whether to perform     │
-│                                             optical character      │
-│                                             recognition (OCR)      │
-│                                             during PDF conversion  │
-│                                             (default: on). Keep    │
-│                                             for scanned/image      │
-│                                             PDFs; disable for      │
-│                                             text-based PDFs to     │
-│                                             speed up conversion    │
-│                                             significantly          │
-│                                             [default: ocr]         │
-│    --metadata-map  -M              TEXT     JSON file keyed by     │
-│                                             source filename; each  │
-│                                             file entry maps        │
-│                                             heading chains to      │
-│                                             metadata dicts (with   │
-│                                             per-file DEFAULT       │
-│                                             fallback)              │
-│    --bm25-store                    TEXT     Write the combined     │
-│                                             document corpus to     │
-│                                             this path for BM25     │
-│                                             retrieval (a pickle of │
-│                                             all chunked            │
-│                                             documents). Defaults   │
-│                                             to &lt;collection&gt;.pkl in │
-│                                             the current directory; │
-│                                             the file can be moved  │
-│                                             after creation         │
-│                                             [default:              │
-│                                             (&lt;collection&gt;.pkl)]    │
-│    --force         -f                       Re-process all files   │
-│                                             even if unchanged      │
-│    --help                                   Show this message and  │
-│                                             exit.                  │
+│ *  --collection        -n              TEXT     Collection name    │
+│                                                 for the vector     │
+│                                                 store. Must match  │
+│                                                 the &#39;name&#39; of the  │
+│                                                 corresponding      │
+│                                                 vector_stores/bm2… │
+│                                                 entry in the RAG   │
+│                                                 config file (e.g.  │
+│                                                 klea.json); a      │
+│                                                 different name on  │
+│                                                 an existing store  │
+│                                                 file creates a new │
+│                                                 collection         │
+│                                                 [required]         │
+│ *  --store             -s              TEXT     Vector store URI   │
+│                                                 (e.g.              │
+│                                                 chroma:/path/to/s… │
+│                                                 For local Chroma   │
+│                                                 stores, point at   │
+│                                                 the store folder:  │
+│                                                 the database file  │
+│                                                 inside it is       │
+│                                                 always named       │
+│                                                 chroma.sqlite3     │
+│                                                 [required]         │
+│    --model             -m              TEXT     Embedding model    │
+│                                                 identifier         │
+│                                                 [default:          │
+│                                                 ollama:bge-m3:lat… │
+│    --max-tokens                        INTEGER  Maximum tokens per │
+│                                                 chunk (for files   │
+│                                                 not yet cached)    │
+│                                                 [default: 450]     │
+│    --ocr                   --no-ocr             Whether to perform │
+│                                                 optical character  │
+│                                                 recognition (OCR)  │
+│                                                 during PDF         │
+│                                                 conversion         │
+│                                                 (default: on).     │
+│                                                 Keep for           │
+│                                                 scanned/image      │
+│                                                 PDFs; disable for  │
+│                                                 text-based PDFs to │
+│                                                 speed up           │
+│                                                 conversion         │
+│                                                 significantly      │
+│                                                 [default: ocr]     │
+│    --metadata-map      -M              TEXT     JSON file keyed by │
+│                                                 source filename;   │
+│                                                 each file entry    │
+│                                                 maps heading       │
+│                                                 chains to metadata │
+│                                                 dicts (with        │
+│                                                 per-file DEFAULT   │
+│                                                 fallback)          │
+│    --bm25-store                        TEXT     Write the combined │
+│                                                 document corpus to │
+│                                                 this path for BM25 │
+│                                                 retrieval (a       │
+│                                                 pickle of all      │
+│                                                 chunked            │
+│                                                 documents).        │
+│                                                 Defaults to        │
+│                                                 &lt;collection&gt;.pkl   │
+│                                                 in the current     │
+│                                                 directory; the     │
+│                                                 file can be moved  │
+│                                                 after creation     │
+│                                                 [default:          │
+│                                                 (&lt;collection&gt;.pkl… │
+│    --embed-batch-size                  INTEGER  Number of chunks   │
+│                                                 embedded per store │
+│                                                 write call.        │
+│                                                 Smaller values     │
+│                                                 report progress    │
+│                                                 more frequently;   │
+│                                                 larger values      │
+│                                                 reduce per-request │
+│                                                 overhead on very   │
+│                                                 large corpora      │
+│                                                 [default: 256]     │
+│    --force             -f                       Re-process all     │
+│                                                 files even if      │
+│                                                 unchanged          │
+│    --help                                       Show this message  │
+│                                                 and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>

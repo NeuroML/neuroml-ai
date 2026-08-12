@@ -367,10 +367,17 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract answer, append fallback warning if configured, update messages.&quot;&quot;&quot;</span>
         <span class="n">answer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
-        <span class="c1"># Add fallback warning if configured and query was domain-related</span>
+        <span class="c1"># Add fallback warning if configured and query was domain-related.</span>
+        <span class="c1"># The RAG stores classified domains in ``query_domains`` (a list);</span>
+        <span class="c1"># a genuinely non-domain query is classified as ``[&quot;undefined&quot;]``.</span>
+        <span class="c1"># Warn only when a real domain matched, i.e. the query fell back to</span>
+        <span class="c1"># training data after failed retrieval, not for plain general chat.</span>
+        <span class="c1"># Default to ``[&quot;undefined&quot;]`` so states without the attribute</span>
+        <span class="c1"># (e.g. non-RAG graphs) never show the warning.</span>
         <span class="n">fallback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fallback_config</span>
         <span class="k">if</span> <span class="n">fallback</span> <span class="ow">and</span> <span class="n">fallback</span><span class="o">.</span><span class="n">enabled</span> <span class="ow">and</span> <span class="n">fallback</span><span class="o">.</span><span class="n">warning</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;query_domain&quot;</span><span class="p">,</span> <span class="s2">&quot;undefined&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;undefined&quot;</span><span class="p">:</span>
+            <span class="n">query_domains</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;query_domains&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;undefined&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">&quot;undefined&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">query_domains</span><span class="p">:</span>
                 <span class="n">answer</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="si">{</span><span class="n">fallback</span><span class="o">.</span><span class="n">warning</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
 
         <span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>

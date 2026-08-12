@@ -316,7 +316,6 @@
 
 <span class="n">_INTERNAL_META_KEYS</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;file_name&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;source_path&quot;</span><span class="p">,</span>
     <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span>
     <span class="s2">&quot;headings&quot;</span><span class="p">,</span>
     <span class="n">SOURCE_SCORES_KEY</span><span class="p">,</span>
@@ -408,7 +407,12 @@
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doc_by_key</span><span class="p">:</span>
                 <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span>
                 <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">][</span><span class="n">source_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">score</span>
+            <span class="c1"># Cast to Python floats: BM25 and vector-store scores are numpy</span>
+            <span class="c1"># scalars (np.float64/np.float32).  The scores are persisted in</span>
+            <span class="c1"># doc metadata, which ends up inside the graph state; LangGraph&#39;s</span>
+            <span class="c1"># msgpack checkpoint serializer cannot encode numpy scalars, so</span>
+            <span class="c1"># plain floats keep the state checkpoint-serializable.</span>
+            <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">][</span><span class="n">source_label</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
 
     <span class="n">merged</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
         <span class="p">((</span><span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">rrf</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">rrf</span> <span class="ow">in</span> <span class="n">rrf_scores</span><span class="o">.</span><span class="n">items</span><span class="p">()),</span>
@@ -466,7 +470,6 @@
 
 <span class="sd">    - ``headings``: list of heading hierarchy (most specific last)</span>
 <span class="sd">    - ``file_name``: source filename</span>
-<span class="sd">    - ``source_path``: full path to source file</span>
 <span class="sd">    - ``_source_scores``: optional per-retriever scores (from the RRF merge)</span>
 <span class="sd">    - Optional custom keys from the ``--metadata-map`` (e.g., ``url``)</span>
 
