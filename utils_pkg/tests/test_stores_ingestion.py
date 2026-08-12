@@ -679,6 +679,42 @@ class TestIngestion:
         )
         assert meta == {"topic": "nml"}
 
+    @pytest.mark.localonly
+    def test_chunk_all_warns_when_metadata_map_matches_nothing(self, caplog):
+        """chunk_all warns when a metadata map resolves nothing for a file.
+
+        A map not keyed by the source filename (e.g. the flat heading-keyed
+        url-map format from the single-page doc generator) must produce a
+        warning so the misconfiguration is easy to spot.
+        """
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        # Deliberately keyed by a filename that does not exist in the source
+        # directory, mirroring the flat url-map format that has no per-file
+        # wrapper at all.
+        metadata_map = {"other.md": {"DEFAULT": {"url": "https://example.com"}}}
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with caplog.at_level(logging.WARNING):
+            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+
+        assert "No metadata resolved for test.md" in caplog.text
+
+    @pytest.mark.localonly
+    def test_chunk_all_no_warning_when_metadata_map_resolves(self, caplog):
+        """chunk_all stays quiet when the metadata map resolves for a file."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        metadata_map = {"test.md": {"DEFAULT": {"url": "https://example.com"}}}
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with caplog.at_level(logging.WARNING):
+            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+
+        assert "No metadata resolved" not in caplog.text
+
     def test_write_bm25_store(self):
         """write_bm25_store pickles the combined chunked documents."""
         doc = Document(

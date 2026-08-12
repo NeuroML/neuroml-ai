@@ -215,6 +215,7 @@ class StoresBuilder:
                 )
 
             if metadata_map:
+                resolved_count = 0
                 for doc in docs:
                     meta = self._resolve_metadata(
                         file_path.name,
@@ -223,6 +224,14 @@ class StoresBuilder:
                     )
                     if meta:
                         doc.metadata.update(meta)
+                        resolved_count += 1
+                if resolved_count == 0:
+                    self.logger.warning(
+                        f"No metadata resolved for {file_path.name} from the "
+                        f"metadata map. Check that the map is keyed by the "
+                        f"source filename and that the chunk headings (or a "
+                        f"DEFAULT entry) provide metadata."
+                    )
 
             normalized_default = _normalize_extracted_metadata(extracted)
             if normalized_default != extracted:
