@@ -74,7 +74,8 @@ jobs:
       run: |
         klea-rag --help
         klea-rag-serve --help
-        klea-code  --help
+        klea --help
+        klea-serve --help
         klea-stores-create  --help
         nml-mcp --help
 
