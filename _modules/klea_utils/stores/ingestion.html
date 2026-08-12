@@ -849,6 +849,14 @@
         <span class="k">if</span> <span class="n">file_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
+            <span class="c1"># NOTE: only individual headings are matched here, never the</span>
+            <span class="c1"># full heading chain (e.g. &quot;A &gt; B&quot;).  The metadata map keys</span>
+            <span class="c1"># written by write_heading_template are full chains, so deep</span>
+            <span class="c1"># chunks resolve to the top-level heading&#39;s metadata (usually</span>
+            <span class="c1"># the page URL) rather than the most specific section entry.</span>
+            <span class="c1"># Page-level links are acceptable for now; if per-section</span>
+            <span class="c1"># anchors are ever needed, try the joined chain first, then</span>
+            <span class="c1"># progressively shorter suffixes.</span>
             <span class="k">for</span> <span class="n">heading</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">headings</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">heading</span> <span class="ow">in</span> <span class="n">file_map</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolved metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: &#39;</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
