@@ -294,6 +294,8 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
@@ -324,6 +326,56 @@
     <span class="s2">&quot;_metadata_complete&quot;</span><span class="p">,</span>
     <span class="s2">&quot;_sources&quot;</span><span class="p">,</span>
 <span class="p">}</span>
+
+<span class="c1">#: No-break space variants mapped to a regular space by :func:`normalize_text`</span>
+<span class="c1">#: (NFKC also folds these, but the explicit mapping keeps the intent visible).</span>
+<span class="n">_NO_BREAK_SPACES</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\u00a0\u2007\u202f</span><span class="s2">&quot;</span>
+
+<span class="c1">#: Zero-width / invisible characters stripped by :func:`normalize_text`.</span>
+<span class="c1">#: ``\ufeff`` is the byte-order mark emitted at the start of extracted text;</span>
+<span class="c1">#: ``\u200e``/``\u200f`` are bidi marks; ``\ufe00``-``\ufe0f`` are variation</span>
+<span class="c1">#: selectors.</span>
+<span class="n">_ZERO_WIDTH_CHARS</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\ufeff\u200b\u200c\u200d\u200e\u200f\u2060\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f</span><span class="s2">&quot;</span>
+
+
+<div class="viewcode-block" id="normalize_text">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.normalize_text">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalise free text for consistent indexing and retrieval.</span>
+
+<span class="sd">    Document conversion (e.g. Docling&#39;s PDF extraction) embeds</span>
+<span class="sd">    typographic artifacts that hurt search: soft hyphens (``\\u00ad``)</span>
+<span class="sd">    split words mid-token, no-break / zero-width characters distort</span>
+<span class="sd">    embeddings and BM25 keyword matching, and ligatures / full-width</span>
+<span class="sd">    forms / superscripts / typographic spaces tokenise differently from</span>
+<span class="sd">    their plain equivalents.  This strips or maps them so that indexed</span>
+<span class="sd">    chunks and retrieval queries share the same plain-text form.</span>
+
+<span class="sd">    The final pass uses NFKC compatibility composition, which (unlike NFC)</span>
+<span class="sd">    also folds ligatures (``\\ufb01`` -&gt; &quot;fi&quot;), full-width forms</span>
+<span class="sd">    (``\\uff21`` -&gt; &quot;A&quot;), superscripts (``\\u00b2`` -&gt; &quot;2&quot;), typographic</span>
+<span class="sd">    spaces (en/em/thin/ideographic), and the non-breaking hyphen</span>
+<span class="sd">    (``\\u2011`` -&gt; ``\\u2010``).  Typographic em/en dashes are kept</span>
+<span class="sd">    unchanged.</span>
+
+<span class="sd">    :param text: Raw text, possibly containing typographic artifacts</span>
+<span class="sd">    :returns: Normalised plain text</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Soft hyphen: an invisible line-break hint; dropping it rejoins the</span>
+    <span class="c1"># split word (e.g. &quot;multi-\\u00adscale&quot; -&gt; &quot;multi-scale&quot;).</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\u00ad</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="c1"># No-break space variants -&gt; regular space.</span>
+    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">_NO_BREAK_SPACES</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+    <span class="c1"># Byte-order mark and zero-width characters carry no meaning.</span>
+    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">_ZERO_WIDTH_CHARS</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="c1"># NFKC: canonical + compatibility composition (ligatures, full-width</span>
+    <span class="c1"># forms, superscripts, typographic spaces; see docstring).</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">&quot;NFKC&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="c1"># Collapse repeated horizontal whitespace and trim.</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[ \t]{2,}&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
 
 
 <div class="viewcode-block" id="rrf_merge">

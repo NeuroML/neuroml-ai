@@ -151,6 +151,14 @@ bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
 pre-population aid: the researcher reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.
 
+Multiple URLs are written as separate keys (``url_1``, ``url_2``, ...);
+each ``url*`` key is shown as its own reference in retrieval results and
+passed to the answer LLM.  A non-numeric key suffix becomes its display
+label: rename ``url_1`` to ``url_orcid`` in the template and the
+reference panel shows ``orcid: <url>``.  When a DOI is found, the
+``DEFAULT`` entry also gets a ``url_doi`` key derived from it
+(``https://doi.org/<doi>``).
+
 The extraction runs a tiered cascade, most authoritative first; each
 tier only fills fields the tiers above it have not already set:
 
@@ -189,6 +197,13 @@ recognition (OCR), which slows the conversion of text-based PDFs
 considerably, can be disabled with ``klea-stores-create --no-ocr`` (see
 `Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_
 for details).
+
+Docling selects the inference accelerator automatically (CUDA, MPS, or
+CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
+cannot run the Triton-compiled layout model.  Set the ``DOCLING_DEVICE``
+environment variable to ``cpu`` in that case (optionally raising
+``DOCLING_NUM_THREADS`` above the default of 4 to use more CPU cores);
+see :doc:`../tutorials/create-and-use-rag` for a worked example.
 
 See :doc:`../api/utils/biblio` for the Python API and
 :doc:`../tutorials/create-and-use-rag` for the ``chunk`` / ``store``

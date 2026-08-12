@@ -396,6 +396,17 @@ image-based PDFs; pass <code class="docutils literal notranslate"><span class="p
 conversion considerably.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--force</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code> – re-process all files even if previously cached.</p></li>
 </ul>
+<p>Docling’s inference accelerator is configured through environment
+variables rather than CLI flags.  By default it auto-detects the best
+available device, but GPUs whose CUDA capability is below 7.0 (e.g. a
+Quadro P1000) fail the Triton compiler used for the layout model.  Force
+Docling to the CPU in that case:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">DOCLING_DEVICE</span><span class="o">=</span>cpu<span class="w"> </span><span class="nv">DOCLING_NUM_THREADS</span><span class="o">=</span><span class="m">16</span><span class="w"> </span>klea-stores-create<span class="w"> </span>build<span class="w"> </span><span class="se">\\</span>
+<span class="w">    </span>&lt;folder-of-files&gt;<span class="w"> </span>--collection<span class="w"> </span>my-docs<span class="w"> </span>--store<span class="w"> </span>chroma:/path/to/my-store
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">DOCLING_NUM_THREADS</span></code> (default 4) sets the CPU threads used for model
+inference; <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> is honoured as an alternative.</p>
 <p>Re-running <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">build</span></code> on the same directory is safe –
 it skips files whose content has not changed and skips chunks whose
 hashes already exist in the store (idempotent).  Adding new files to
@@ -572,7 +583,8 @@ could be extracted – see <a class="reference internal" href="../concepts/rag.h
 cascade.  Review and correct the values (check the
 <code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> flag), then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span>
 <span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.  See <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for
-examples.</p>
+examples.  The metadata-map file may live inside the source directory:
+it and the generated template are excluded from ingestion.</p>
 </dd>
 <dt><strong>Different embedding models</strong></dt><dd><p>Swap <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code> for a HuggingFace embedding model
 (see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for model naming conventions).</p>

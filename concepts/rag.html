@@ -423,6 +423,13 @@ per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</s
 bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
 pre-population aid: the researcher reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.</p>
+<p>Multiple URLs are written as separate keys (<code class="docutils literal notranslate"><span class="pre">url_1</span></code>, <code class="docutils literal notranslate"><span class="pre">url_2</span></code>, …);
+each <code class="docutils literal notranslate"><span class="pre">url*</span></code> key is shown as its own reference in retrieval results and
+passed to the answer LLM.  A non-numeric key suffix becomes its display
+label: rename <code class="docutils literal notranslate"><span class="pre">url_1</span></code> to <code class="docutils literal notranslate"><span class="pre">url_orcid</span></code> in the template and the
+reference panel shows <code class="docutils literal notranslate"><span class="pre">orcid:</span> <span class="pre">&lt;url&gt;</span></code>.  When a DOI is found, the
+<code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry also gets a <code class="docutils literal notranslate"><span class="pre">url_doi</span></code> key derived from it
+(<code class="docutils literal notranslate"><span class="pre">https://doi.org/&lt;doi&gt;</span></code>).</p>
 <p>The extraction runs a tiered cascade, most authoritative first; each
 tier only fills fields the tiers above it have not already set:</p>
 <ul class="simple">
@@ -460,6 +467,12 @@ recognition (OCR), which slows the conversion of text-based PDFs
 considerably, can be disabled with <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--no-ocr</span></code> (see
 <a class="reference external" href="https://en.wikipedia.org/wiki/Optical_character_recognition">Wikipedia</a>
 for details).</p>
+<p>Docling selects the inference accelerator automatically (CUDA, MPS, or
+CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
+cannot run the Triton-compiled layout model.  Set the <code class="docutils literal notranslate"><span class="pre">DOCLING_DEVICE</span></code>
+environment variable to <code class="docutils literal notranslate"><span class="pre">cpu</span></code> in that case (optionally raising
+<code class="docutils literal notranslate"><span class="pre">DOCLING_NUM_THREADS</span></code> above the default of 4 to use more CPU cores);
+see <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for a worked example.</p>
 <p>See <a class="reference internal" href="../api/utils/biblio.html"><span class="doc">Bibliographic metadata extraction (klea\_utils.biblio)</span></a> for the Python API and
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for the <code class="docutils literal notranslate"><span class="pre">chunk</span></code> / <code class="docutils literal notranslate"><span class="pre">store</span></code>
 workflow.</p>

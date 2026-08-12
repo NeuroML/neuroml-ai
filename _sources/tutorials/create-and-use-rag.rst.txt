@@ -115,6 +115,20 @@ Flags explained:
   conversion considerably.
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
 
+Docling's inference accelerator is configured through environment
+variables rather than CLI flags.  By default it auto-detects the best
+available device, but GPUs whose CUDA capability is below 7.0 (e.g. a
+Quadro P1000) fail the Triton compiler used for the layout model.  Force
+Docling to the CPU in that case:
+
+.. code-block:: bash
+
+   DOCLING_DEVICE=cpu DOCLING_NUM_THREADS=16 klea-stores-create build \\
+       <folder-of-files> --collection my-docs --store chroma:/path/to/my-store
+
+``DOCLING_NUM_THREADS`` (default 4) sets the CPU threads used for model
+inference; ``OMP_NUM_THREADS`` is honoured as an alternative.
+
 Re-running ``klea-stores-create build`` on the same directory is safe --
 it skips files whose content has not changed and skips chunks whose
 hashes already exist in the store (idempotent).  Adding new files to
@@ -320,7 +334,8 @@ Once the basic pipeline works, here are natural next steps:
    cascade.  Review and correct the values (check the
    ``_metadata_complete`` flag), then ``klea-stores-create store
    --metadata-map <file>``.  See ``klea-stores-create --help`` for
-   examples.
+   examples.  The metadata-map file may live inside the source directory:
+   it and the generated template are excluded from ingestion.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model

@@ -479,7 +479,7 @@
         <span class="c1"># --help fast (Python only needs the function signature).</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoresBuilder</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">,</span> <span class="n">StoresBuilder</span>
 
         <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
             <span class="n">embedding_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>  <span class="c1"># not needed for chunking only</span>
@@ -493,10 +493,21 @@
 
         <span class="n">_</span><span class="p">,</span> <span class="n">file_headings</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">)</span>
         <span class="n">builder</span><span class="o">.</span><span class="n">write_heading_template</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Chunking complete -- cache is ready&quot;</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">file_headings</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Chunking complete -- cache is ready&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Review/update the metadata map before storing: &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> -- fill in per-heading entries, &quot;</span>
+        <span class="s2">&quot;then run &#39;klea-stores-create store&#39; with --metadata-map&quot;</span>
+    <span class="p">)</span></div>
 
 
 
@@ -611,10 +622,18 @@
         <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span>
             <span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="o">=</span><span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">builder</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span>
             <span class="n">results</span><span class="p">,</span> <span class="n">store_path</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span> <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span>
         <span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done -- collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; is ready&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
+        <span class="k">raise</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>

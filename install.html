@@ -416,6 +416,61 @@ listed below — add them with e.g. <code class="docutils literal notranslate"><
 To install them, clone the repository and follow the
 <a class="reference internal" href="contributing.html"><span class="doc">development workflow</span></a>.</p>
 </section>
+<section id="pytorch-cuda-optional">
+<h2>PyTorch / CUDA (optional)<a class="headerlink" href="#pytorch-cuda-optional" title="Link to this heading">¶</a></h2>
+<p>No Klea package declares PyTorch as a direct dependency, and the correct
+torch build depends on your GPU hardware: newer CUDA builds drop kernel
+support for older GPUs.  torch is, however, installed transitively by
+the document-ingestion extra (<code class="docutils literal notranslate"><span class="pre">ingest</span></code> -&gt; docling -&gt;
+<code class="docutils literal notranslate"><span class="pre">docling-slim[standard]</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">torch</span></code> + <code class="docutils literal notranslate"><span class="pre">torchvision</span></code>), which the
+<code class="docutils literal notranslate"><span class="pre">full</span></code>/<code class="docutils literal notranslate"><span class="pre">test</span></code>/<code class="docutils literal notranslate"><span class="pre">dev</span></code> extras all include.  That transitive build is
+unpinned and comes from the default index, so it may lack kernels for
+your GPU; docling’s OCR/layout processing then falls back to the CPU
+instead of using the GPU.</p>
+<p>If you want a GPU-accelerated build, install it yourself – see
+<code class="file docutils literal notranslate"><span class="pre">requirements-torch.txt</span></code> in the repository root for the full
+guide, pinned install commands, and a verified example.  Install the
+pinned <code class="docutils literal notranslate"><span class="pre">torch</span></code> + <code class="docutils literal notranslate"><span class="pre">torchvision</span></code> pair (from the same CUDA index)
+<em>before</em> the Klea requirements: an installed torch that satisfies
+docling’s <code class="docutils literal notranslate"><span class="pre">torch&gt;=2.2.2,&lt;3.0.0</span></code> is left untouched by the installers.
+If a wrong build is already present, force-reinstall the pair instead
+(see the file).</p>
+<p>The short version:</p>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>GPU compute capability</p></th>
+<th class="head"><p>CUDA build to use</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>6.0/6.1 (Pascal) and 7.0/7.5 (Volta/Turing)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cu126</span></code> or <code class="docutils literal notranslate"><span class="pre">cu128</span></code> (CUDA 12.8 or earlier)</p></td>
+</tr>
+<tr class="row-odd"><td><p>8.0+ (Ampere, Ada, Hopper, Blackwell)</p></td>
+<td><p>Any recent build (<code class="docutils literal notranslate"><span class="pre">cu129</span></code>, <code class="docutils literal notranslate"><span class="pre">cu130</span></code>, …)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Check your capability with <code class="docutils literal notranslate"><span class="pre">torch.cuda.get_device_capability(0)</span></code> and
+install the <code class="docutils literal notranslate"><span class="pre">torch</span></code>/<code class="docutils literal notranslate"><span class="pre">torchvision</span></code> pair with the full pin so the
+package manager cannot pick a different CUDA suffix:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">pip</span> <span class="n">install</span> <span class="s2">&quot;torch==&lt;version&gt;+cu126&quot;</span> <span class="s2">&quot;torchvision==&lt;version&gt;+cu126&quot;</span> \
+    <span class="o">--</span><span class="n">extra</span><span class="o">-</span><span class="n">index</span><span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="o">.</span><span class="n">pytorch</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">whl</span><span class="o">/</span><span class="n">cu126</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">torchvision</span></code> must come from the same CUDA index as <code class="docutils literal notranslate"><span class="pre">torch</span></code>; a
+mismatch installs silently but breaks <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">torchvision</span></code> at runtime.</p>
+<p>To verify the installed build actually computes on your GPU, run
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">scripts/test_torch.py</span></code> from the repository root.  It runs a
+real CUDA compute op; <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">torch.utils.collect_env</span></code> only prints
+a snapshot and reports CUDA as available even when the build lacks
+kernels for your GPU.</p>
+<p>PyTorch wheels bundle their own CUDA runtime, so a system CUDA toolkit
+is not required to run torch.  It is only needed to compile CUDA
+extensions yourself, and it must match the wheel’s CUDA version.</p>
+</section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
 <p>Both the RAG and Agent packages load configuration from:</p>
@@ -607,6 +662,7 @@ id are then not shown in that browser).</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#klea-wip-coming-soon-and-neuroml-mcp-from-source">klea (WIP: coming soon) and neuroml-mcp (from source)</a></li>
+<li><a class="reference internal" href="#pytorch-cuda-optional">PyTorch / CUDA (optional)</a></li>
 <li><a class="reference internal" href="#configuration">Configuration</a><ul>
 <li><a class="reference internal" href="#choosing-models">Choosing models</a></li>
 </ul>

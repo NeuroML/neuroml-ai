@@ -483,6 +483,9 @@ from <a class="reference internal" href="#klea_utils.stores.ingestion.StoresBuil
 <p>Each file gets a <code class="docutils literal notranslate"><span class="pre">&quot;DEFAULT&quot;</span></code> placeholder and one entry per
 unique heading chain found in that file.  The user fills in the
 <code class="docutils literal notranslate"><span class="pre">{}</span></code> with their metadata key-value pairs.</p>
+<p>Refuses to write when <em>file_headings</em> is empty (no files were
+chunked): an existing template is preserved rather than clobbered
+with an empty one.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -747,6 +750,33 @@ ChromaDB store does not exist</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.normalize_text">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">normalize_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#normalize_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.normalize_text" title="Link to this definition">¶</a></dt>
+<dd><p>Normalise free text for consistent indexing and retrieval.</p>
+<p>Document conversion (e.g. Docling’s PDF extraction) embeds
+typographic artifacts that hurt search: soft hyphens (<code class="docutils literal notranslate"><span class="pre">\u00ad</span></code>)
+split words mid-token, no-break / zero-width characters distort
+embeddings and BM25 keyword matching, and ligatures / full-width
+forms / superscripts / typographic spaces tokenise differently from
+their plain equivalents.  This strips or maps them so that indexed
+chunks and retrieval queries share the same plain-text form.</p>
+<p>The final pass uses NFKC compatibility composition, which (unlike NFC)
+also folds ligatures (<code class="docutils literal notranslate"><span class="pre">\ufb01</span></code> -&gt; “fi”), full-width forms
+(<code class="docutils literal notranslate"><span class="pre">\uff21</span></code> -&gt; “A”), superscripts (<code class="docutils literal notranslate"><span class="pre">\u00b2</span></code> -&gt; “2”), typographic
+spaces (en/em/thin/ideographic), and the non-breaking hyphen
+(<code class="docutils literal notranslate"><span class="pre">\u2011</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">\u2010</span></code>).  Typographic em/en dashes are kept
+unchanged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> – Raw text, possibly containing typographic artifacts</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalised plain text</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.rrf_merge">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">rrf_merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_refs_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#rrf_merge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.rrf_merge" title="Link to this definition">¶</a></dt>
 <dd><p>Fuse per-source retrieval results with Reciprocal Rank Fusion.</p>
@@ -914,6 +944,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 <li><a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.format_source_scores"><code class="docutils literal notranslate"><span class="pre">format_source_scores()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.instantiate_vector_store"><code class="docutils literal notranslate"><span class="pre">instantiate_vector_store()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.rrf_merge"><code class="docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.serialize_vs_retrieval"><code class="docutils literal notranslate"><span class="pre">serialize_vs_retrieval()</span></code></a></li>
 </ul>

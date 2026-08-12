@@ -304,7 +304,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..biblio.extract</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resolver</span><span class="p">,</span> <span class="n">extract_metadata</span><span class="p">,</span> <span class="n">extract_metadata_from_text</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_embedding</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span><span class="p">,</span> <span class="n">normalize_text</span>
 
 <span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">&quot;.klea-cache&quot;</span>
 <span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;metadata-map.template.json&quot;</span>
@@ -359,6 +359,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_chunker</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;StoresBuilder initialised (max_tokens=</span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">, &quot;</span>
@@ -402,6 +403,8 @@
             <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
 
         <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">store_uri</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">bm25_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ingestion complete for collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
 
@@ -513,7 +516,18 @@
                     <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
                         <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
 
-            <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="n">extracted</span><span class="p">}</span>
+            <span class="n">normalized_default</span> <span class="o">=</span> <span class="n">_normalize_extracted_metadata</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">normalized_default</span> <span class="o">!=</span> <span class="n">extracted</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Normalised extracted metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">split_default</span> <span class="o">=</span> <span class="n">_split_url_list</span><span class="p">(</span><span class="n">normalized_default</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">split_default</span> <span class="o">!=</span> <span class="n">normalized_default</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Split url list into per-url keys for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="n">default_metadata</span> <span class="o">=</span> <span class="n">_ensure_doi_url</span><span class="p">(</span><span class="n">split_default</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">default_metadata</span> <span class="o">!=</span> <span class="n">split_default</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Derived url_doi for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="n">default_metadata</span><span class="p">}</span>
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])</span>
                 <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
@@ -578,7 +592,19 @@
                     <span class="p">)</span>
                     <span class="k">continue</span>
 
-            <span class="n">store</span><span class="o">.</span><span class="n">add_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+            <span class="c1"># Chroma rejects empty-list and None metadata values on upsert.</span>
+            <span class="c1"># The cache keeps ``headings: []`` as an explicit &quot;no headings</span>
+            <span class="c1"># found&quot; marker, so it (and any other empty/None value) is</span>
+            <span class="c1"># dropped only here, from copies -- the originals (used for the</span>
+            <span class="c1"># BM25 corpus) keep their metadata intact.</span>
+            <span class="n">sanitized_docs</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">Document</span><span class="p">(</span>
+                    <span class="n">page_content</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">page_content</span><span class="p">,</span>
+                    <span class="n">metadata</span><span class="o">=</span><span class="n">_sanitize_store_metadata</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span>
+            <span class="p">]</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">add_documents</span><span class="p">(</span><span class="n">sanitized_docs</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Added </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks from </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
             <span class="p">)</span>
@@ -634,14 +660,31 @@
 <span class="sd">        unique heading chain found in that file.  The user fills in the</span>
 <span class="sd">        ``{}`` with their metadata key-value pairs.</span>
 
+<span class="sd">        Refuses to write when *file_headings* is empty (no files were</span>
+<span class="sd">        chunked): an existing template is preserved rather than clobbered</span>
+<span class="sd">        with an empty one.</span>
+
 <span class="sd">        :param file_headings: ``{file_name: {&quot;DEFAULT&quot;: {},</span>
 <span class="sd">            &quot;heading &gt; heading&quot;: {}, ...}, ...}`` from :meth:`chunk_all`</span>
 <span class="sd">        :param source_dir: Resolved source directory path (template is</span>
 <span class="sd">            written alongside it)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">out_path</span> <span class="o">=</span> <span class="n">source_dir</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_headings</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">out_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;No files chunked; keeping existing template </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">return</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No files chunked and no existing template at </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c1"># ensure_ascii=False keeps accented characters (e.g. &quot;B\u00f3ris&quot;)</span>
+        <span class="c1"># as literal UTF-8 in the file, so the human editing the template</span>
+        <span class="c1"># can see exactly what text a heading/author contains.</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">total_chains</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">file_headings</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
@@ -751,6 +794,9 @@
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata map file not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># Remember the exact file so _find_files can exclude it from the</span>
+        <span class="c1"># ingestible set when it lives inside the source directory.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading metadata map from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
@@ -768,6 +814,15 @@
                     <span class="sa">f</span><span class="s2">&quot;Values in metadata map must be dicts, &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> for key </span><span class="si">{</span><span class="n">k</span><span class="si">!r}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
+        <span class="c1"># Normalise heading keys so user-filled keys (possibly pasted with</span>
+        <span class="c1"># typographic artifacts) match the normalised chunk headings.  The</span>
+        <span class="c1"># ``DEFAULT`` key passes through unchanged.</span>
+        <span class="n">changed_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data</span> <span class="k">if</span> <span class="n">normalize_text</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">!=</span> <span class="n">k</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">changed_keys</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Normalised </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">changed_keys</span><span class="p">)</span><span class="si">}</span><span class="s2"> heading keys in metadata map&quot;</span>
+            <span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="n">normalize_text</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded metadata map with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 
@@ -812,6 +867,9 @@
 <span class="sd">        docling&#39;s :attr:`~docling.datamodel.base_models.FormatToExtensions`.</span>
 
 <span class="sd">        Files with unsupported extensions are logged as a warning and skipped.</span>
+<span class="sd">        The generated ``metadata-map.template.json`` and the metadata map</span>
+<span class="sd">        passed via :meth:`_load_metadata_map` (when it lives inside</span>
+<span class="sd">        *source_dir*) are excluded: they are config, not source documents.</span>
 
 <span class="sd">        :param source_dir: Directory to walk recursively</span>
 <span class="sd">        :returns: Sorted list of files with supported extensions</span>
@@ -827,6 +885,13 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="n">CACHE_DIR_NAME</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span>
+            <span class="p">):</span>
                 <span class="k">continue</span>
             <span class="n">suffix</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">all_exts</span><span class="p">:</span>
@@ -946,12 +1011,24 @@
 
         <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunker</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="n">dl_doc</span><span class="o">=</span><span class="n">dl_doc</span><span class="p">):</span>
-            <span class="n">chunk_text</span> <span class="o">=</span> <span class="n">chunker</span><span class="o">.</span><span class="n">contextualize</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">)</span>
+            <span class="n">raw_text</span> <span class="o">=</span> <span class="n">chunker</span><span class="o">.</span><span class="n">contextualize</span><span class="p">(</span><span class="n">chunk</span><span class="o">=</span><span class="n">chunk</span><span class="p">)</span>
+            <span class="n">chunk_text</span> <span class="o">=</span> <span class="n">normalize_text</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span>
             <span class="n">meta</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
+            <span class="c1"># DocMeta.headings is Optional[list[str]] (default None) for</span>
+            <span class="c1"># chunks not under a heading hierarchy; normalise to [].</span>
+            <span class="n">raw_headings</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+            <span class="n">headings</span> <span class="o">=</span> <span class="p">[</span><span class="n">normalize_text</span><span class="p">(</span><span class="n">heading</span><span class="p">)</span> <span class="k">for</span> <span class="n">heading</span> <span class="ow">in</span> <span class="n">raw_headings</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">chunk_text</span> <span class="o">!=</span> <span class="n">raw_text</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Normalised chunk text: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk_text</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">headings</span> <span class="o">!=</span> <span class="n">raw_headings</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Normalised headings: </span><span class="si">{</span><span class="n">raw_headings</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">headings</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
             <span class="n">doc</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span>
                 <span class="n">page_content</span><span class="o">=</span><span class="n">chunk_text</span><span class="p">,</span>
-                <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;headings&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])},</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;headings&quot;</span><span class="p">:</span> <span class="n">headings</span><span class="p">},</span>
             <span class="p">)</span>
             <span class="n">docs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
 
@@ -994,6 +1071,107 @@
         <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">65536</span><span class="p">),</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
             <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;xxh64:</span><span class="si">{</span><span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_store_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy of *metadata* without values Chroma rejects on upsert.</span>
+
+<span class="sd">    Chroma requires metadata list values to be non-empty and does not</span>
+<span class="sd">    accept ``None``.  The chunk cache deliberately keeps ``headings: []``</span>
+<span class="sd">    as an explicit &quot;no headings found&quot; marker, so the empty list (and any</span>
+<span class="sd">    other empty/``None`` value) is dropped only here, at storage time, on</span>
+<span class="sd">    a copy -- the source documents (and the BM25 corpus) keep their</span>
+<span class="sd">    metadata intact.</span>
+
+<span class="sd">    :param metadata: Document metadata dict</span>
+<span class="sd">    :returns: Copy of *metadata* with empty-list and ``None`` values removed</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="p">[]</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_extracted_metadata</span><span class="p">(</span><span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *extracted* with typographic artifacts stripped from string fields.</span>
+
+<span class="sd">    The bibliographic cascade (:func:`~klea_utils.biblio.extract.extract_metadata`)</span>
+<span class="sd">    runs over raw converted text, so fields such as ``title``, ``authors``,</span>
+<span class="sd">    and ``urls`` can carry soft hyphens / no-break spaces.  Normalising them</span>
+<span class="sd">    keeps ``metadata-map.template.json``&#39;s ``DEFAULT`` entry plain text.</span>
+<span class="sd">    Non-string values (e.g. ``year``, ``_metadata_complete``) are untouched.</span>
+
+<span class="sd">    :param extracted: Metadata dict from the extraction cascade</span>
+<span class="sd">    :returns: Copy of *extracted* with string values normalised</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">normalized</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">extracted</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">normalized</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_text</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">normalized</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">normalize_text</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">item</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">normalized</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">normalized</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_split_url_list</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *metadata* with a ``urls`` list expanded into per-url keys.</span>
+
+<span class="sd">    The retrieval display and the answer-LLM context assume one URL per</span>
+<span class="sd">    ``url*`` metadata key (every ``url``/``url_1``/... key is shown as its</span>
+<span class="sd">    own reference).  The bibliographic cascade produces a ``urls`` list,</span>
+<span class="sd">    which would render as a single Python-list repr.  This expands</span>
+<span class="sd">    ``urls: [u1, u2, ...]`` into ``url_1: u1, url_2: u2, ...`` and drops</span>
+<span class="sd">    the ``urls`` key.  An empty ``urls`` list is dropped.</span>
+
+<span class="sd">    Numbering starts at ``url_1`` so a singular ``url`` key already</span>
+<span class="sd">    provided by another tier (e.g. the PDF Info dict) is left untouched;</span>
+<span class="sd">    indices already present in *metadata* are skipped.</span>
+
+<span class="sd">    :param metadata: Flat metadata dict from the extraction cascade</span>
+<span class="sd">    :returns: Copy of *metadata* with the ``urls`` list split into</span>
+<span class="sd">        ``url_1``/``url_2``/... keys</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">urls</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">urls</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;urls&quot;</span><span class="p">}</span>
+
+    <span class="n">split</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="n">split</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+        <span class="k">while</span> <span class="sa">f</span><span class="s2">&quot;url_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">split</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">split</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;url_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
+        <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">split</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_doi_url</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *metadata* with a ``url_doi`` key derived from ``doi``.</span>
+
+<span class="sd">    The answer LLM receives the bare ``doi`` identifier, but a resolvable</span>
+<span class="sd">    URL form is more reliable than expecting it to construct one (and lets</span>
+<span class="sd">    the references panel show ``doi: &lt;url&gt;`` via the ``url_&lt;label&gt;``</span>
+<span class="sd">    convention).  Adds ``url_doi = https://doi.org/&lt;doi&gt;`` when a ``doi``</span>
+<span class="sd">    is present and ``url_doi`` is not already set (so the researcher&#39;s own</span>
+<span class="sd">    value wins).</span>
+
+<span class="sd">    :param metadata: Flat metadata dict from the extraction cascade</span>
+<span class="sd">    :returns: Copy of *metadata* with ``url_doi`` derived from ``doi``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">doi</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">doi</span> <span class="ow">or</span> <span class="s2">&quot;url_doi&quot;</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metadata</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;url_doi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://doi.org/</span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">result</span>
 </pre></div>
         </article>
       </div>
