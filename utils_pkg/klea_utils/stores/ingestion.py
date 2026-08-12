@@ -113,6 +113,8 @@ class StoresBuilder:
             metadata_map = self._load_metadata_map(metadata_map_path)
 
         results, _ = self.chunk_all(source_path, metadata_map, force)
+        if not results:
+            raise RuntimeError(f"No files were successfully chunked from {source_path}")
         self.store_all(results, store_uri, collection_name, force, bm25_path)
         self.logger.info(f"Ingestion complete for collection '{collection_name}'")
 
@@ -336,14 +338,31 @@ class StoresBuilder:
         unique heading chain found in that file.  The user fills in the
         ``{}`` with their metadata key-value pairs.
 
+        Refuses to write when *file_headings* is empty (no files were
+        chunked): an existing template is preserved rather than clobbered
+        with an empty one.
+
         :param file_headings: ``{file_name: {"DEFAULT": {},
             "heading > heading": {}, ...}, ...}`` from :meth:`chunk_all`
         :param source_dir: Resolved source directory path (template is
             written alongside it)
         """
         out_path = source_dir / TEMPLATE_FILE_NAME
+        if not file_headings:
+            if out_path.is_file():
+                self.logger.warning(
+                    f"No files chunked; keeping existing template {out_path}"
+                )
+                return
+            self.logger.warning(
+                f"No files chunked and no existing template at {out_path}"
+            )
+            return
+        # ensure_ascii=False keeps accented characters (e.g. "B\u00f3ris")
+        # as literal UTF-8 in the file, so the human editing the template
+        # can see exactly what text a heading/author contains.
         with open(out_path, "w") as f:
-            json.dump(file_headings, f, indent=4)
+            json.dump(file_headings, f, indent=4, ensure_ascii=False)
             f.write("\n")
         total_chains = sum(len(v) - 1 for v in file_headings.values())
         self.logger.info(
@@ -659,7 +678,9 @@ class StoresBuilder:
             raw_text = chunker.contextualize(chunk=chunk)
             chunk_text = normalize_text(raw_text)
             meta = chunk.meta.model_dump()
-            raw_headings = meta.get("headings", [])
+            # DocMeta.headings is Optional[list[str]] (default None) for
+            # chunks not under a heading hierarchy; normalise to [].
+            raw_headings = meta.get("headings") or []
             headings = [normalize_text(heading) for heading in raw_headings]
 
             if chunk_text != raw_text:

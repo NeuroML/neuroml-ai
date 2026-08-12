@@ -163,7 +163,10 @@ Git log has the step-by-step edits. Omit routine work.
 
 ## File conventions
 
-- Use ASCII-only text. No unicode dashes, arrows, ellipsis, or emoticons.
+- Use ASCII-only text in code and documentation. No unicode dashes, arrows,
+  ellipsis, or emoticons.  Generated data files (e.g.
+  `metadata-map.template.json`, `.klea-cache/`) are exempt: they are UTF-8
+  and may legitimately contain accented characters.
 - Preserve existing comments (TODOs, FIXMEs, notes, etc.) -- never remove or
   edit comments that are unrelated to the immediate change being made.
 

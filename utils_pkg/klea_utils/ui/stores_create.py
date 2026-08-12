@@ -203,10 +203,16 @@ def chunk(
 
         _, file_headings = builder.chunk_all(source_path, force=force)
         builder.write_heading_template(file_headings, source_path)
-        logger.info("Chunking complete -- cache is ready")
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
+
+    if not file_headings:
+        logger.error(
+            f"No files were successfully chunked from {source_path} -- see errors above"
+        )
+        raise typer.Exit(1)
+    logger.info("Chunking complete -- cache is ready")
 
 
 @app.command()
@@ -318,10 +324,18 @@ def store(
         results, _ = builder.chunk_all(
             source_path, metadata_map=metadata_map, force=force
         )
+        if not results:
+            logger.error(
+                f"No files were successfully chunked from "
+                f"{source_path} -- see errors above"
+            )
+            raise typer.Exit(1)
         builder.store_all(
             results, store_path, collection_name, force=force, bm25_path=bm25_store
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
+    except typer.Exit:
+        raise
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None

@@ -15,7 +15,11 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from klea_utils.stores.ingestion import StoresBuilder, _normalize_extracted_metadata
+from klea_utils.stores.ingestion import (
+    TEMPLATE_FILE_NAME,
+    StoresBuilder,
+    _normalize_extracted_metadata,
+)
 from klea_utils.stores.utils import instantiate_vector_store, normalize_text
 from langchain_core.documents import Document
 from ollama import ResponseError
@@ -232,6 +236,72 @@ class TestConvertAndChunkNormalization:
         assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
         assert docs[1].page_content == "plain content"
         assert docs[1].metadata["headings"] == ["Introduction", "eLife Assessment"]
+
+    def test_convert_and_chunk_handles_none_headings(self, monkeypatch):
+        """Chunks whose DocMeta.headings is None produce empty heading lists.
+
+        docling's ``DocMeta.headings`` is ``Optional[list[str]]`` defaulting
+        to ``None`` (chunks outside a heading hierarchy), so this exercises
+        the real pydantic model rather than a mock that assumes a list.
+        """
+        from types import SimpleNamespace
+
+        from docling_core.transforms.chunker.doc_chunk import DocChunk, DocMeta
+        from docling_core.types.doc import TextItem
+        from docling_core.types.doc.labels import DocItemLabel
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        def _doc_chunk(text: str, headings: list[str] | None) -> DocChunk:
+            item = TextItem(
+                self_ref="#/texts/0",
+                label=DocItemLabel.TEXT,
+                orig=text,
+                text=text,
+            )
+            return DocChunk(
+                text=text,
+                meta=DocMeta(doc_items=[item], headings=headings),
+            )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk.text
+
+        converter = _FakeConverter()
+        chunker = _FakeChunker(
+            [
+                _doc_chunk(
+                    "multi-\u00adscale model\u00ading",
+                    ["Multi-\u00adscale Model\u00ading"],
+                ),
+                _doc_chunk("no heading chunk", None),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: converter)
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
+
+        assert extracted == {}
+        assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
+        assert docs[1].page_content == "no heading chunk"
+        assert docs[1].metadata["headings"] == []
 
 
 class TestIngestion:
@@ -559,6 +629,58 @@ class TestIngestion:
         builder.write_bm25_store([], str(out_path))
 
         assert not out_path.exists()
+
+    def test_write_heading_template_preserves_existing_when_empty(self):
+        """An empty chunk run must not clobber an existing template."""
+        existing = {"paper.pdf": {"DEFAULT": {"title": "T"}}}
+        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template.write_text(json.dumps(existing))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.write_heading_template({}, self.tmpdir_path)
+
+        assert json.loads(template.read_text()) == existing
+
+    def test_write_heading_template_writes_literal_utf8(self):
+        """Accented characters are written literally, not \\u-escaped.
+
+        The template is a human-edited file; an author such as "B\u00f3ris
+        Marin" must appear as-is so the editor can see the exact text.
+        """
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.write_heading_template(
+            {
+                "paper.pdf": {
+                    "DEFAULT": {
+                        "title": "Caf\u00e9 science",
+                        "authors": ["B\u00f3ris Marin"],
+                    }
+                }
+            },
+            self.tmpdir_path,
+        )
+
+        text = (self.tmpdir_path / TEMPLATE_FILE_NAME).read_text()
+        assert "B\u00f3ris Marin" in text
+        assert "\\u00f3" not in text
+        assert json.loads(text)["paper.pdf"]["DEFAULT"]["authors"] == [
+            "B\u00f3ris Marin"
+        ]
+
+    def test_write_heading_template_empty_no_existing_no_write(self):
+        """An empty chunk run with no existing template writes nothing."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.write_heading_template({}, self.tmpdir_path)
+
+        assert not (self.tmpdir_path / TEMPLATE_FILE_NAME).exists()
+
+    def test_build_raises_when_nothing_chunked(self, monkeypatch):
+        """build() fails loudly instead of storing nothing and reporting done."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        monkeypatch.setattr(builder, "chunk_all", lambda *a, **k: ([], {}))
+
+        with pytest.raises(RuntimeError, match="No files were successfully chunked"):
+            builder.build(str(self.tmpdir_path), "chroma:/tmp/x", "c")
 
 
 if __name__ == "__main__":
