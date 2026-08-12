@@ -34,6 +34,7 @@ from ..llm import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     add_memory_to_prompt,
     classify_llm_invocation_error,
+    content_to_str,
     get_provider_allowed_fields,
     get_token_limit_param,
     is_output_truncated,
@@ -85,6 +86,25 @@ def _schema_to_example(schema: dict[str, Any]) -> Any:
             }
         case _:
             return None
+
+
+def _is_empty_result(result: Any, schema: type[BaseModel] | None = None) -> bool:
+    """Return True if *result* carries no usable content.
+
+    A structured output that parsed to an all-default instance (the model
+    echoed the schema back instead of producing an instance) compares equal
+    to a freshly-constructed default; a non-structured response is empty
+    when its content is blank.  Used to flag silently-degraded LLM output.
+
+    :param result: Processed output from :meth:`BaseLLMNode._process_output`
+    :param schema: The node's output schema, or ``None`` for non-structured
+    :returns: True when nothing usable was produced
+    """
+    if schema is not None:
+        return isinstance(result, schema) and result == schema()
+    if isinstance(result, AIMessage):
+        return not content_to_str(result.content).strip()
+    return False
 
 
 class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
@@ -411,7 +431,18 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             return output
 
     def _process_output(self, output: AIMessage | dict[str, Any]) -> Any:
-        """Common output processing with error handling"""
+        """Common output processing with error handling.
+
+        NOTE: structured output is best-effort.  A model can return a valid
+        JSON object that is not an instance of the schema (e.g. it echoes the
+        schema definition back, or returns only defaults); the parser then
+        yields an all-default instance without any ``parsing_error``.  An
+        empty result here is therefore a possible failure mode, not a normal
+        "the model had nothing to say" response.  The prompt (example instance
+        + directive) reduces the odds; if empty results recur for a model,
+        revisit the prompt/model rather than expecting a loud invocation
+        error.
+        """
         result: TSchema | AIMessage | None = None
         schema = self.output_schema
 
@@ -445,6 +476,12 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             result = output
             self.logger.debug(
                 f"No output schema. Returning unprocessed output: {result}"
+            )
+
+        if _is_empty_result(result, self.output_schema):
+            self.logger.warning(
+                f"Empty LLM output from {self.label}: nothing usable was "
+                f"produced (all-default structured result or blank message)"
             )
 
         return result
