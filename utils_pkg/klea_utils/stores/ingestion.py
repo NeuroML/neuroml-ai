@@ -72,6 +72,7 @@ class StoresBuilder:
         self.embeddings = None
         self._converter = None
         self._chunker = None
+        self._metadata_map_path: Path | None = None
 
         self.logger.info(
             f"StoresBuilder initialised (max_tokens={max_tokens}, "
@@ -479,6 +480,9 @@ class StoresBuilder:
         path = Path(metadata_map_path)
         if not path.is_file():
             raise FileNotFoundError(f"Metadata map file not found: {path}")
+        # Remember the exact file so _find_files can exclude it from the
+        # ingestible set when it lives inside the source directory.
+        self._metadata_map_path = path.resolve()
         self.logger.info(f"Loading metadata map from {path}")
         with open(path) as f:
             data = json.load(f)
@@ -549,6 +553,9 @@ class StoresBuilder:
         docling's :attr:`~docling.datamodel.base_models.FormatToExtensions`.
 
         Files with unsupported extensions are logged as a warning and skipped.
+        The generated ``metadata-map.template.json`` and the metadata map
+        passed via :meth:`_load_metadata_map` (when it lives inside
+        *source_dir*) are excluded: they are config, not source documents.
 
         :param source_dir: Directory to walk recursively
         :returns: Sorted list of files with supported extensions
@@ -564,6 +571,13 @@ class StoresBuilder:
             if not f.is_file():
                 continue
             if CACHE_DIR_NAME in f.parts:
+                continue
+            if f.name == TEMPLATE_FILE_NAME:
+                continue
+            if (
+                self._metadata_map_path is not None
+                and f.resolve() == self._metadata_map_path
+            ):
                 continue
             suffix = f.suffix.lstrip(".").lower()
             if suffix in all_exts:

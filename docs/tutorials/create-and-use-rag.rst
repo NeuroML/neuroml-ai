@@ -334,7 +334,8 @@ Once the basic pipeline works, here are natural next steps:
    cascade.  Review and correct the values (check the
    ``_metadata_complete`` flag), then ``klea-stores-create store
    --metadata-map <file>``.  See ``klea-stores-create --help`` for
-   examples.
+   examples.  The metadata-map file may live inside the source directory:
+   it and the generated template are excluded from ingestion.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model

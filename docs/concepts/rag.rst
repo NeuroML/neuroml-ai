@@ -151,6 +151,14 @@ bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
 pre-population aid: the researcher reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.
 
+Multiple URLs are written as separate keys (``url_1``, ``url_2``, ...);
+each ``url*`` key is shown as its own reference in retrieval results and
+passed to the answer LLM.  A non-numeric key suffix becomes its display
+label: rename ``url_1`` to ``url_orcid`` in the template and the
+reference panel shows ``orcid: <url>``.  When a DOI is found, the
+``DEFAULT`` entry also gets a ``url_doi`` key derived from it
+(``https://doi.org/<doi>``).
+
 The extraction runs a tiered cascade, most authoritative first; each
 tier only fills fields the tiers above it have not already set:
 

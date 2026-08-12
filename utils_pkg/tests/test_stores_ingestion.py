@@ -736,6 +736,31 @@ class TestIngestion:
         with pytest.raises(RuntimeError, match="No files were successfully chunked"):
             builder.build(str(self.tmpdir_path), "chroma:/tmp/x", "c")
 
+    def test_find_files_excludes_template(self):
+        """The generated template is not treated as an ingestible file."""
+        (self.tmpdir_path / TEMPLATE_FILE_NAME).write_text("{}")
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._find_files(self.tmpdir_path) == []
+
+    def test_find_files_excludes_loaded_metadata_map(self):
+        """The --metadata-map file is excluded when it lives in source_dir."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        map_path = self.tmpdir_path / "metadata.json"
+        map_path.write_text(json.dumps({"paper.pdf": {"DEFAULT": {}}}))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._load_metadata_map(str(map_path))
+
+        assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_find_files_includes_non_metadata_json(self):
+        """Other .json files (docling json_docling) stay ingestible."""
+        src = self.tmpdir_path / "docling-doc.json"
+        src.write_text("{}")
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
 
 if __name__ == "__main__":
     pytest.main()
