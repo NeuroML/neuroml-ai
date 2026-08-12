@@ -547,6 +547,14 @@ class StoresBuilder:
         if file_map is None:
             return None
         if headings:
+            # NOTE: only individual headings are matched here, never the
+            # full heading chain (e.g. "A > B").  The metadata map keys
+            # written by write_heading_template are full chains, so deep
+            # chunks resolve to the top-level heading's metadata (usually
+            # the page URL) rather than the most specific section entry.
+            # Page-level links are acceptable for now; if per-section
+            # anchors are ever needed, try the joined chain first, then
+            # progressively shorter suffixes.
             for heading in reversed(headings):
                 if heading in file_map:
                     self.logger.debug(f"Resolved metadata for {file_name}: '{heading}'")
