@@ -157,6 +157,9 @@ Git log has the step-by-step edits. Omit routine work.
   2. The OIDC trusted publisher workflow builds and publishes to PyPI
 - After a release, bump to the next dev version in ``setup.cfg``.
 - ``CHANGELOG.md`` is kept at the repo root, covering all packages.
+  Entries are concise (one short bullet per user-visible change, no
+  implementation detail), grouped as ``Breaking changes`` (first) /
+  ``Added`` / ``Changed`` / ``Fixed`` / ``Dependencies``.
 
 ## File conventions
 
