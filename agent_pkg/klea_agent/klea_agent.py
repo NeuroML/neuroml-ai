@@ -13,13 +13,6 @@ import sys
 from typing import Any, final, override
 
 from fastmcp.mcp_config import MCPConfig, StdioMCPServer
-from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import create_configurable_model
-from klea_utils.nodes.fixed_answer import FixedAnswer
-from klea_utils.nodes.guard import GuardNode
-from klea_utils.nodes.guard_router import GuardRouterNode
-from langgraph.graph import END, START, StateGraph
-
 from klea_code.nodes.answer_user import AnswerUser
 from klea_code.nodes.evaluator import Evaluator
 from klea_code.nodes.explore_planner import ExplorePlanner
@@ -29,6 +22,12 @@ from klea_code.nodes.planner import Planner
 from klea_code.nodes.tools_caller import ToolsCaller
 from klea_code.nodes.tools_picker import ToolsPicker
 from klea_code.nodes.tools_router import ToolsRouter
+from klea_utils.graph.base import BaseLangGraph
+from klea_utils.llm import create_configurable_model
+from klea_utils.nodes.fixed_answer import FixedAnswer
+from klea_utils.nodes.guard import GuardNode
+from klea_utils.nodes.guard_router import GuardRouterNode
+from langgraph.graph import END, START, StateGraph
 
 from .config import AppConfig, AppEnv
 from .schemas import GoalSchema, KleaCodeState
