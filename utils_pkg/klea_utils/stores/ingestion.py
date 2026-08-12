@@ -221,7 +221,6 @@ class StoresBuilder:
                     {
                         "file_hash": file_hash,
                         "file_name": file_path.name,
-                        "source_path": str(file_path),
                     }
                 )
 

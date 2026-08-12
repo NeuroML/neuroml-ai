@@ -432,7 +432,6 @@ class TestIngestion:
             first_meta = result["metadatas"][0]
             assert "file_hash" in first_meta
             assert "file_name" in first_meta
-            assert "source_path" in first_meta
             assert "headings" in first_meta
             assert first_meta["file_name"] == "test.md"
             self.logger.info(

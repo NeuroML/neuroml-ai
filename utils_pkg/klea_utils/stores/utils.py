@@ -31,7 +31,6 @@ RRF_K = 60
 
 _INTERNAL_META_KEYS = {
     "file_name",
-    "source_path",
     "file_hash",
     "headings",
     SOURCE_SCORES_KEY,
@@ -175,7 +174,6 @@ def serialize_vs_retrieval(
 
     - ``headings``: list of heading hierarchy (most specific last)
     - ``file_name``: source filename
-    - ``source_path``: full path to source file
     - ``_source_scores``: optional per-retriever scores (from the RRF merge)
     - Optional custom keys from the ``--metadata-map`` (e.g., ``url``)
 
