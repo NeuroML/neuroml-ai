@@ -118,7 +118,12 @@ def rrf_merge(
             if key not in doc_by_key:
                 doc_by_key[key] = doc
                 doc.metadata[SOURCE_SCORES_KEY] = {}
-            doc_by_key[key].metadata[SOURCE_SCORES_KEY][source_label] = score
+            # Cast to Python floats: BM25 and vector-store scores are numpy
+            # scalars (np.float64/np.float32).  The scores are persisted in
+            # doc metadata, which ends up inside the graph state; LangGraph's
+            # msgpack checkpoint serializer cannot encode numpy scalars, so
+            # plain floats keep the state checkpoint-serializable.
+            doc_by_key[key].metadata[SOURCE_SCORES_KEY][source_label] = float(score)
 
     merged = sorted(
         ((doc_by_key[key], rrf) for key, rrf in rrf_scores.items()),
