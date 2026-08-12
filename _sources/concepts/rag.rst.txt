@@ -135,6 +135,15 @@ The original per-source scores are preserved in each document's
 ``_source_scores`` metadata, so the answer LLM sees e.g. both the
 vector-store similarity and the BM25 score, labelled by source.
 
+These per-source scores are informational context, not a comparable
+ranking.  The vector-store score is a cosine similarity in ``[0, 1]``
+(1 = most similar to the query), while the BM25 score is a raw keyword
+relevance value on an unbounded scale (higher = more matching terms).
+The two are on different scales, so a BM25 value of e.g. ``5.1`` does
+not mean the chunk is "better" than one with a vector-store score of
+``0.68``.  Documents are ordered by the RRF rank fusion above, never by
+comparing these raw values.
+
 To create a BM25 store alongside a vector store, pass
 ``--bm25-store`` to ``klea-stores-create`` (see
 :doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``

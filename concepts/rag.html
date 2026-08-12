@@ -411,6 +411,14 @@ and the top <code class="docutils literal notranslate"><span class="pre">k</span
 <p>The original per-source scores are preserved in each document’s
 <code class="docutils literal notranslate"><span class="pre">_source_scores</span></code> metadata, so the answer LLM sees e.g. both the
 vector-store similarity and the BM25 score, labelled by source.</p>
+<p>These per-source scores are informational context, not a comparable
+ranking.  The vector-store score is a cosine similarity in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>
+(1 = most similar to the query), while the BM25 score is a raw keyword
+relevance value on an unbounded scale (higher = more matching terms).
+The two are on different scales, so a BM25 value of e.g. <code class="docutils literal notranslate"><span class="pre">5.1</span></code> does
+not mean the chunk is “better” than one with a vector-store score of
+<code class="docutils literal notranslate"><span class="pre">0.68</span></code>.  Documents are ordered by the RRF rank fusion above, never by
+comparing these raw values.</p>
 <p>To create a BM25 store alongside a vector store, pass
 <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> (see
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>), then add a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
