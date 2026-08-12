@@ -189,7 +189,7 @@ def chunk(
         # --help fast (Python only needs the function signature).
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import StoresBuilder
+        from klea_utils.stores.ingestion import TEMPLATE_FILE_NAME, StoresBuilder
 
         builder = StoresBuilder(
             embedding_model="",  # not needed for chunking only
@@ -213,6 +213,11 @@ def chunk(
         )
         raise typer.Exit(1)
     logger.info("Chunking complete -- cache is ready")
+    logger.info(
+        f"Review/update the metadata map before storing: "
+        f"{source_path / TEMPLATE_FILE_NAME} -- fill in per-heading entries, "
+        "then run 'klea-stores-create store' with --metadata-map"
+    )
 
 
 @app.command()

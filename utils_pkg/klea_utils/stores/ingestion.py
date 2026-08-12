@@ -226,7 +226,15 @@ class StoresBuilder:
             normalized_default = _normalize_extracted_metadata(extracted)
             if normalized_default != extracted:
                 self.logger.debug(f"Normalised extracted metadata for {file_path.name}")
-            file_entry: dict[str, Any] = {"DEFAULT": normalized_default}
+            split_default = _split_url_list(normalized_default)
+            if split_default != normalized_default:
+                self.logger.debug(
+                    f"Split url list into per-url keys for {file_path.name}"
+                )
+            default_metadata = _ensure_doi_url(split_default)
+            if default_metadata != split_default:
+                self.logger.debug(f"Derived url_doi for {file_path.name}")
+            file_entry: dict[str, Any] = {"DEFAULT": default_metadata}
             for doc in docs:
                 headings = doc.metadata.get("headings", [])
                 if headings:
@@ -760,3 +768,58 @@ def _normalize_extracted_metadata(extracted: dict[str, Any]) -> dict[str, Any]:
         else:
             normalized[key] = value
     return normalized
+
+
+def _split_url_list(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return *metadata* with a ``urls`` list expanded into per-url keys.
+
+    The retrieval display and the answer-LLM context assume one URL per
+    ``url*`` metadata key (every ``url``/``url_1``/... key is shown as its
+    own reference).  The bibliographic cascade produces a ``urls`` list,
+    which would render as a single Python-list repr.  This expands
+    ``urls: [u1, u2, ...]`` into ``url_1: u1, url_2: u2, ...`` and drops
+    the ``urls`` key.  An empty ``urls`` list is dropped.
+
+    Numbering starts at ``url_1`` so a singular ``url`` key already
+    provided by another tier (e.g. the PDF Info dict) is left untouched;
+    indices already present in *metadata* are skipped.
+
+    :param metadata: Flat metadata dict from the extraction cascade
+    :returns: Copy of *metadata* with the ``urls`` list split into
+        ``url_1``/``url_2``/... keys
+    """
+    urls = metadata.get("urls")
+    if not urls:
+        return {k: v for k, v in metadata.items() if k != "urls"}
+
+    split = dict(metadata)
+    split.pop("urls", None)
+    index = 1
+    for url in urls:
+        while f"url_{index}" in split:
+            index += 1
+        split[f"url_{index}"] = url
+        index += 1
+    return split
+
+
+def _ensure_doi_url(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return *metadata* with a ``url_doi`` key derived from ``doi``.
+
+    The answer LLM receives the bare ``doi`` identifier, but a resolvable
+    URL form is more reliable than expecting it to construct one (and lets
+    the references panel show ``doi: <url>`` via the ``url_<label>``
+    convention).  Adds ``url_doi = https://doi.org/<doi>`` when a ``doi``
+    is present and ``url_doi`` is not already set (so the researcher's own
+    value wins).
+
+    :param metadata: Flat metadata dict from the extraction cascade
+    :returns: Copy of *metadata* with ``url_doi`` derived from ``doi``
+    """
+    doi = metadata.get("doi")
+    if not doi or "url_doi" in metadata:
+        return metadata
+
+    result = dict(metadata)
+    result["url_doi"] = f"https://doi.org/{doi}"
+    return result

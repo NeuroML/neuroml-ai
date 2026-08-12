@@ -147,11 +147,24 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
             seen: dict[Hashable, tuple[Any, float, list[str]]] = {}
             for doc, score in sorted(docs, key=lambda x: x[1], reverse=True):
-                url_values = [v for k, v in doc.metadata.items() if k.startswith("url")]
+                url_items = [
+                    (k, v)
+                    for k, v in doc.metadata.items()
+                    if k.startswith("url") and isinstance(v, str)
+                ]
                 file_name = doc.metadata.get("file_name", "") or ""
-                if url_values:
-                    key: Hashable = tuple(sorted(url_values))
-                    display_values = url_values
+                if url_items:
+                    # A non-numeric key suffix becomes the display label
+                    # (e.g. url_orcid -> "orcid: <url>"); bare "url" and
+                    # numbered keys (url_1, url_2) stay plain.
+                    display_values = []
+                    for k, v in url_items:
+                        label = k[len("url") :].lstrip("_")
+                        if label and not label.isdigit():
+                            display_values.append(f"{label}: {v}")
+                        else:
+                            display_values.append(v)
+                    key: Hashable = tuple(sorted(v for _, v in url_items))
                 elif file_name:
                     key = file_name
                     display_values = [file_name]

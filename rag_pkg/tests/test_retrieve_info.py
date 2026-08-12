@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from typing import Any
 
 from klea_rag.nodes.retrieve_info import RetrieveInfoNode
 from klea_rag.schemas import EvaluateAnswerSchema, RAGState
@@ -129,6 +130,36 @@ async def test_execute_normalizes_retrieval_query():
     expected = "multi-scale modeling in neuroscience"
     assert r1.queries == [expected]
     assert r2.queries == [expected]
+
+
+async def test_execute_labels_url_keys_in_display():
+    """url_<label> keys display as 'label: <url>'; bare/numbered stay plain."""
+    events: list[dict] = []
+
+    doc = _doc("NeuroML content")
+    doc.metadata.update(
+        {
+            "url": "https://example.org/main",
+            "url_1": "https://example.org/extra",
+            "url_orcid": "https://orcid.org/0000-0000-0000-0000",
+        }
+    )
+    node: Any = _make_node([FakeRetriever([(doc, 0.9)], name="vector store")])
+    node.write_custom_stream = lambda event: events.append(event)
+
+    state = RAGState(
+        query="q",
+        query_domains=["NeuroML"],
+        retrieval_query="q",
+    )
+    await node.execute(state)
+
+    display = next(e["data"]["display"] for e in events if e.get("type") == "state")
+    logger.info(f"reference display markdown:\n{display}")
+
+    assert "- orcid: https://orcid.org/0000-0000-0000-0000" in display
+    assert "- https://example.org/main" in display
+    assert "- https://example.org/extra" in display
 
 
 async def test_execute_no_retrievers_skips():

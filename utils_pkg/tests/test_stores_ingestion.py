@@ -18,7 +18,9 @@ import pytest
 from klea_utils.stores.ingestion import (
     TEMPLATE_FILE_NAME,
     StoresBuilder,
+    _ensure_doi_url,
     _normalize_extracted_metadata,
+    _split_url_list,
 )
 from klea_utils.stores.utils import instantiate_vector_store, normalize_text
 from langchain_core.documents import Document
@@ -157,6 +159,58 @@ class TestNormalizeText:
         assert out["_metadata_complete"] is True
         # The original dict is not mutated.
         assert extracted["title"] == "Multi-\u00adscale Model\u00ading"
+
+    def test_split_url_list(self):
+        """A urls list is expanded into url_1/url_2 keys."""
+        out = _split_url_list(
+            {"title": "T", "urls": ["https://a", "https://b", "https://c"]}
+        )
+        assert out == {
+            "title": "T",
+            "url_1": "https://a",
+            "url_2": "https://b",
+            "url_3": "https://c",
+        }
+
+    def test_split_url_list_keeps_existing_url_keys(self):
+        """A singular url/source_url key is left untouched and not reused."""
+        out = _split_url_list(
+            {
+                "url": "https://pdf",
+                "source_url": "https://source",
+                "urls": ["https://a", "https://b"],
+            }
+        )
+        assert out["url"] == "https://pdf"
+        assert out["source_url"] == "https://source"
+        assert out["url_1"] == "https://a"
+        assert out["url_2"] == "https://b"
+
+    def test_split_url_list_skips_taken_indices(self):
+        """Numbering skips indices already present in the metadata."""
+        out = _split_url_list({"url_1": "https://taken", "urls": ["https://a"]})
+        assert out == {"url_1": "https://taken", "url_2": "https://a"}
+
+    def test_split_url_list_drops_empty_or_absent(self):
+        """An empty/absent urls list leaves no urls keys behind."""
+        assert _split_url_list({"title": "T", "urls": []}) == {"title": "T"}
+        assert _split_url_list({"title": "T"}) == {"title": "T"}
+
+    def test_ensure_doi_url_derived(self):
+        """url_doi is derived from the doi field as a resolvable URL."""
+        out = _ensure_doi_url({"title": "T", "doi": "10.7554/elife.95135"})
+        assert out["url_doi"] == "https://doi.org/10.7554/elife.95135"
+        assert out["doi"] == "10.7554/elife.95135"
+
+    def test_ensure_doi_url_keeps_existing_url_doi(self):
+        """A researcher-provided url_doi wins over the derived value."""
+        out = _ensure_doi_url({"doi": "10.x/y", "url_doi": "https://custom"})
+        assert out["url_doi"] == "https://custom"
+
+    def test_ensure_doi_url_no_doi_unchanged(self):
+        """No doi field means no url_doi key is added."""
+        out = _ensure_doi_url({"title": "T"})
+        assert out == {"title": "T"}
 
 
 class _FakeMeta:
