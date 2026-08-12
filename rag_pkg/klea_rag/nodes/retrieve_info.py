@@ -18,7 +18,7 @@ from klea_utils.nodes.abstract import (
     NodeStreamEvent,
 )
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
-from klea_utils.stores.utils import format_source_scores, rrf_merge
+from klea_utils.stores.utils import format_source_scores, normalize_text, rrf_merge
 
 from klea_rag.schemas import RAGState
 
@@ -77,9 +77,13 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         self.write_custom_stream({"type": "progress", "node": self.label})
 
         reference_material = state.reference_material
-        cleaned_query = state.retrieval_query
-
-        self.logger.debug(f"retrieval query: {cleaned_query}")
+        # Apply the same normalization used at indexing time so query and
+        # stored chunks share an identical plain-text form (see
+        # klea_utils.stores.utils.normalize_text).  The query is LLM-generated
+        # so artifacts are rare, but this makes the invariant explicit.
+        raw_query = state.retrieval_query
+        cleaned_query = normalize_text(raw_query)
+        self.logger.debug(f"{raw_query = }\n{cleaned_query = }")
 
         # Check if evaluator requested more info
         if state.text_response_eval.next_step == "retrieve_more_info":

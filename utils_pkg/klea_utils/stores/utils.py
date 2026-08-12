@@ -9,6 +9,8 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import re
+import unicodedata
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -39,6 +41,53 @@ _INTERNAL_META_KEYS = {
     "_metadata_complete",
     "_sources",
 }
+
+#: No-break space variants mapped to a regular space by :func:`normalize_text`
+#: (NFKC also folds these, but the explicit mapping keeps the intent visible).
+_NO_BREAK_SPACES = "\u00a0\u2007\u202f"
+
+#: Zero-width / invisible characters stripped by :func:`normalize_text`.
+#: ``\ufeff`` is the byte-order mark emitted at the start of extracted text;
+#: ``\u200e``/``\u200f`` are bidi marks; ``\ufe00``-``\ufe0f`` are variation
+#: selectors.
+_ZERO_WIDTH_CHARS = "\ufeff\u200b\u200c\u200d\u200e\u200f\u2060\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f"
+
+
+def normalize_text(text: str) -> str:
+    """Normalise free text for consistent indexing and retrieval.
+
+    Document conversion (e.g. Docling's PDF extraction) embeds
+    typographic artifacts that hurt search: soft hyphens (``\\u00ad``)
+    split words mid-token, no-break / zero-width characters distort
+    embeddings and BM25 keyword matching, and ligatures / full-width
+    forms / superscripts / typographic spaces tokenise differently from
+    their plain equivalents.  This strips or maps them so that indexed
+    chunks and retrieval queries share the same plain-text form.
+
+    The final pass uses NFKC compatibility composition, which (unlike NFC)
+    also folds ligatures (``\\ufb01`` -> "fi"), full-width forms
+    (``\\uff21`` -> "A"), superscripts (``\\u00b2`` -> "2"), typographic
+    spaces (en/em/thin/ideographic), and the non-breaking hyphen
+    (``\\u2011`` -> ``\\u2010``).  Typographic em/en dashes are kept
+    unchanged.
+
+    :param text: Raw text, possibly containing typographic artifacts
+    :returns: Normalised plain text
+    """
+    # Soft hyphen: an invisible line-break hint; dropping it rejoins the
+    # split word (e.g. "multi-\\u00adscale" -> "multi-scale").
+    text = text.replace("\u00ad", "")
+    # No-break space variants -> regular space.
+    for ch in _NO_BREAK_SPACES:
+        text = text.replace(ch, " ")
+    # Byte-order mark and zero-width characters carry no meaning.
+    for ch in _ZERO_WIDTH_CHARS:
+        text = text.replace(ch, "")
+    # NFKC: canonical + compatibility composition (ligatures, full-width
+    # forms, superscripts, typographic spaces; see docstring).
+    text = unicodedata.normalize("NFKC", text)
+    # Collapse repeated horizontal whitespace and trim.
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
 def rrf_merge(

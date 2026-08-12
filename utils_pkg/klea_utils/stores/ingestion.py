@@ -19,7 +19,7 @@ from langchain_core.documents import Document
 
 from ..biblio.extract import Resolver, extract_metadata, extract_metadata_from_text
 from ..llm import setup_embedding
-from .utils import instantiate_vector_store
+from .utils import instantiate_vector_store, normalize_text
 
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
@@ -221,7 +221,10 @@ class StoresBuilder:
                     if meta:
                         doc.metadata.update(meta)
 
-            file_entry: dict[str, Any] = {"DEFAULT": extracted}
+            normalized_default = _normalize_extracted_metadata(extracted)
+            if normalized_default != extracted:
+                self.logger.debug(f"Normalised extracted metadata for {file_path.name}")
+            file_entry: dict[str, Any] = {"DEFAULT": normalized_default}
             for doc in docs:
                 headings = doc.metadata.get("headings", [])
                 if headings:
@@ -466,6 +469,15 @@ class StoresBuilder:
                     f"Values in metadata map must be dicts, "
                     f"got {type(v).__name__} for key {k!r}"
                 )
+        # Normalise heading keys so user-filled keys (possibly pasted with
+        # typographic artifacts) match the normalised chunk headings.  The
+        # ``DEFAULT`` key passes through unchanged.
+        changed_keys = [k for k in data if normalize_text(k) != k]
+        if changed_keys:
+            self.logger.debug(
+                f"Normalised {len(changed_keys)} heading keys in metadata map"
+            )
+        data = {normalize_text(k): v for k, v in data.items()}
         self.logger.info(f"Loaded metadata map with {len(data)} entries from {path}")
         return data
 
@@ -644,12 +656,22 @@ class StoresBuilder:
 
         docs: list[Document] = []
         for chunk in chunker.chunk(dl_doc=dl_doc):
-            chunk_text = chunker.contextualize(chunk=chunk)
+            raw_text = chunker.contextualize(chunk=chunk)
+            chunk_text = normalize_text(raw_text)
             meta = chunk.meta.model_dump()
+            raw_headings = meta.get("headings", [])
+            headings = [normalize_text(heading) for heading in raw_headings]
+
+            if chunk_text != raw_text:
+                self.logger.debug(
+                    f"Normalised chunk text: {len(raw_text)} -> {len(chunk_text)} chars"
+                )
+            if headings != raw_headings:
+                self.logger.debug(f"Normalised headings: {raw_headings} -> {headings}")
 
             doc = Document(
                 page_content=chunk_text,
-                metadata={"headings": meta.get("headings", [])},
+                metadata={"headings": headings},
             )
             docs.append(doc)
 
@@ -691,3 +713,29 @@ def _hash_file(file_path: Path) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return f"xxh64:{h.hexdigest()}"
+
+
+def _normalize_extracted_metadata(extracted: dict[str, Any]) -> dict[str, Any]:
+    """Return *extracted* with typographic artifacts stripped from string fields.
+
+    The bibliographic cascade (:func:`~klea_utils.biblio.extract.extract_metadata`)
+    runs over raw converted text, so fields such as ``title``, ``authors``,
+    and ``urls`` can carry soft hyphens / no-break spaces.  Normalising them
+    keeps ``metadata-map.template.json``'s ``DEFAULT`` entry plain text.
+    Non-string values (e.g. ``year``, ``_metadata_complete``) are untouched.
+
+    :param extracted: Metadata dict from the extraction cascade
+    :returns: Copy of *extracted* with string values normalised
+    """
+    normalized: dict[str, Any] = {}
+    for key, value in extracted.items():
+        if isinstance(value, str):
+            normalized[key] = normalize_text(value)
+        elif isinstance(value, list):
+            normalized[key] = [
+                normalize_text(item) if isinstance(item, str) else item
+                for item in value
+            ]
+        else:
+            normalized[key] = value
+    return normalized

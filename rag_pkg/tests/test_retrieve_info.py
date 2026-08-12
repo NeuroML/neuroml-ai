@@ -25,8 +25,10 @@ class FakeRetriever:
         self.source_label = name
         self.inc_count = 0
         self.reset_count = 0
+        self.queries: list[str] = []
 
     def retrieve(self, domain_name, query):
+        self.queries.append(query)
         return self.results
 
     def inc_k(self):
@@ -104,6 +106,29 @@ async def test_execute_inc_k_on_all_retrievers_for_more_info():
 
     assert r1.inc_count == 1
     assert r2.inc_count == 1
+
+
+async def test_execute_normalizes_retrieval_query():
+    """Artifact-laden retrieval queries reach every retriever normalized.
+
+    Queries are LLM-generated so artifacts are rare, but they must share
+    the same plain-text form as indexed chunks (soft hyphens, no-break
+    spaces, etc. stripped at indexing time).
+    """
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    r2 = FakeRetriever([(_doc("content"), 1.0)], name="BM25")
+    node = _make_node([r1, r2])
+
+    state = RAGState(
+        query="q",
+        query_domains=["NeuroML"],
+        retrieval_query="multi-\u00adscale model\u00ading in\u00a0neuroscience",
+    )
+    await node.execute(state)
+
+    expected = "multi-scale modeling in neuroscience"
+    assert r1.queries == [expected]
+    assert r2.queries == [expected]
 
 
 async def test_execute_no_retrievers_skips():

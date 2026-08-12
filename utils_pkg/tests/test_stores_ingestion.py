@@ -8,14 +8,15 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import json
 import logging
 import pickle
 import tempfile
 from pathlib import Path
 
 import pytest
-from klea_utils.stores.ingestion import StoresBuilder
-from klea_utils.stores.utils import instantiate_vector_store
+from klea_utils.stores.ingestion import StoresBuilder, _normalize_extracted_metadata
+from klea_utils.stores.utils import instantiate_vector_store, normalize_text
 from langchain_core.documents import Document
 from ollama import ResponseError
 
@@ -67,6 +68,170 @@ def _build_pdf(path: Path, metadata: dict[str, str]) -> None:
     trailer = f"<< /Size {len(objs) + 1} /Root 1 0 R /Info {len(objs)} 0 R >>\n"
     out += f"trailer\n{trailer}startxref\n{xref_pos}\n%%EOF\n".encode()
     path.write_bytes(bytes(out))
+
+
+class TestNormalizeText:
+    """Unit tests for normalize_text()."""
+
+    def test_soft_hyphen_rejoins_split_words(self):
+        """Soft hyphens (PDF line-break artifacts) are dropped in place."""
+        assert normalize_text("multi-\u00adscale") == "multi-scale"
+        assert (
+            normalize_text("Multi-\u00adscale Model\u00ading") == "Multi-scale Modeling"
+        )
+
+    def test_no_break_spaces_become_regular_spaces(self):
+        """No-break space variants map to a regular space."""
+        assert normalize_text("in\u00a0neuroscience") == "in neuroscience"
+        assert normalize_text("a\u2007b\u202fc") == "a b c"
+
+    def test_zero_width_and_bom_stripped(self):
+        """BOM and zero-width characters are removed entirely."""
+        assert normalize_text("\ufeffleading\u200bedge") == "leadingedge"
+
+    def test_bidi_and_variation_selectors_stripped(self):
+        """Bidi marks and variation selectors are removed entirely."""
+        assert normalize_text("a\u200eb\u200fc\ufe0e") == "abc"
+
+    def test_ligatures_folded(self):
+        """NFKC folds ligatures into their plain letters."""
+        assert normalize_text("e\ufb00icient") == "efficient"
+        assert normalize_text("\ufb01le") == "file"
+        assert normalize_text("\ufb00") == "ff"
+
+    def test_fullwidth_folded(self):
+        """NFKC folds full-width forms to ASCII."""
+        assert normalize_text("\uff21\uff10\uff08") == "A0("
+
+    def test_superscripts_folded(self):
+        """NFKC folds superscript digits to plain digits."""
+        assert normalize_text("10\u2070\u00b9\u00b2") == "10012"
+
+    def test_typographic_spaces_folded(self):
+        """NFKC folds en/em/thin/ideographic spaces to a regular space."""
+        assert normalize_text("a\u2002b\u2003c\u3000d") == "a b c d"
+
+    def test_non_breaking_hyphen_folded(self):
+        """NFKC folds the non-breaking hyphen to a regular hyphen."""
+        assert normalize_text("a\u2011b") == "a\u2010b"
+
+    def test_typographic_dashes_preserved(self):
+        """Em/en dashes are meaningful punctuation and are kept unchanged."""
+        assert normalize_text("a\u2013b\u2014c") == "a\u2013b\u2014c"
+
+    def test_nfc_composition(self):
+        """Canonical unicode composition (e.g. combining accents)."""
+        assert normalize_text("e\u0301") == "\u00e9"
+        assert normalize_text("cafe\u0301") == "caf\u00e9"
+
+    def test_collapses_whitespace_and_strips(self):
+        """Repeated spaces/tabs collapse and edges are trimmed."""
+        assert normalize_text("  a\t\tb   c  ") == "a b c"
+
+    def test_plain_text_unchanged(self):
+        """Already-clean text passes through untouched."""
+        assert (
+            normalize_text("Plain text stays the same") == "Plain text stays the same"
+        )
+        assert normalize_text("") == ""
+
+    def test_normalize_extracted_metadata(self):
+        """String fields are normalized; non-string fields pass through."""
+        extracted = {
+            "title": "Multi-\u00adscale Model\u00ading",
+            "authors": ["A\xa0Sinha", "Jane Doe"],
+            "year": 2025,
+            "urls": ["https://example.org/x"],
+            "_metadata_complete": True,
+        }
+        out = _normalize_extracted_metadata(extracted)
+
+        assert out["title"] == "Multi-scale Modeling"
+        assert out["authors"] == ["A Sinha", "Jane Doe"]
+        assert out["year"] == 2025
+        assert out["urls"] == ["https://example.org/x"]
+        assert out["_metadata_complete"] is True
+        # The original dict is not mutated.
+        assert extracted["title"] == "Multi-\u00adscale Model\u00ading"
+
+
+class _FakeMeta:
+    """Minimal stand-in for a chunk's pydantic ``meta`` object."""
+
+    def __init__(self, headings: list[str]):
+        self._headings = headings
+
+    def model_dump(self) -> dict:
+        return {"headings": self._headings}
+
+
+class _FakeChunk:
+    """Minimal stand-in for a Docling chunk."""
+
+    def __init__(self, text: str, headings: list[str]):
+        self._text = text
+        self._headings = headings
+
+    @property
+    def meta(self) -> _FakeMeta:
+        return _FakeMeta(self._headings)
+
+
+class TestConvertAndChunkNormalization:
+    """_convert_and_chunk normalises chunk text and headings."""
+
+    def setup_method(self):
+        self.logger = logging.getLogger("test_ingestion_normalization")
+
+    def test_convert_and_chunk_normalizes_text_and_headings(self, monkeypatch):
+        from types import SimpleNamespace
+
+        # Skip the real biblio cascade; it operates on a Docling document
+        # we are not building here.
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk._text
+
+        converter = _FakeConverter()
+        chunker = _FakeChunker(
+            [
+                _FakeChunk(
+                    "multi-\u00adscale model\u00ading in\u00a0neuroscience",
+                    ["Multi-\u00adscale Model\u00ading"],
+                ),
+                _FakeChunk(
+                    "plain content",
+                    ["Introduction", "eLife Assessment"],
+                ),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: converter)
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
+
+        assert extracted == {}
+        assert docs[0].page_content == "multi-scale modeling in neuroscience"
+        assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
+        assert docs[1].page_content == "plain content"
+        assert docs[1].metadata["headings"] == ["Introduction", "eLife Assessment"]
 
 
 class TestIngestion:
@@ -325,6 +490,47 @@ class TestIngestion:
         # Cache hit: the persisted full extraction is restored unchanged.
         _, file_headings2 = builder.chunk_all(self.tmpdir_path)
         assert file_headings2["paper.pdf"]["DEFAULT"] == default
+
+    def test_load_metadata_map_normalizes_heading_keys(self):
+        """Heading keys with typographic artifacts are normalized on load.
+
+        Users may paste keys (e.g. from a PDF) containing soft hyphens or
+        no-break spaces; they must still match the normalized chunk headings.
+        """
+        map_path = self.tmpdir_path / "metadata-map.json"
+        map_path.write_text(
+            json.dumps(
+                {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Multi-\u00adscale Model\u00ading in\u00a0neuroscience": {
+                        "topic": "nml"
+                    },
+                }
+            )
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        loaded = builder._load_metadata_map(str(map_path))
+
+        assert loaded["DEFAULT"] == {"topic": "fallback"}
+        assert loaded["Multi-scale Modeling in neuroscience"] == {"topic": "nml"}
+        assert (
+            loaded.get("Multi-\u00adscale Model\u00ading in\u00a0neuroscience") is None
+        )
+
+    def test_resolve_metadata_matches_normalized_headings(self):
+        """_resolve_metadata matches normalized chunk headings to map keys."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Multi-scale Modeling"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Multi-scale Modeling": {"topic": "nml"},
+                }
+            },
+        )
+        assert meta == {"topic": "nml"}
 
     def test_write_bm25_store(self):
         """write_bm25_store pickles the combined chunked documents."""
