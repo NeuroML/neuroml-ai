@@ -385,6 +385,7 @@ class RAG(BaseLangGraph):
                 "rewrite_answer": self._generate_answer_from_context_node.label,
                 "modify_query": self._generate_retrieval_query_node.label,
                 "fallback": self._answer_general_node.label,
+                "best_effort": self._answer_user_node.label,
                 "undefined": self._ask_user_for_clarification_node.label,
             },
         )

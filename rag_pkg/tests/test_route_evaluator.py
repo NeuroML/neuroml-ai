@@ -12,6 +12,7 @@ import logging
 
 from klea_rag.nodes.route_evaluator import RouteEvaluator
 from klea_rag.schemas import EvaluateAnswerSchema, RAGState
+from langchain_core.messages import AIMessage
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +20,15 @@ logger = logging.getLogger(__name__)
 class FakeRetriever:
     """Minimal retriever recording k calls."""
 
-    def __init__(self, name="fake"):
+    def __init__(self, name="fake", k_can_increment=True):
         self.name = name
+        self.k_can_increment = k_can_increment
         self.inc_count = 0
         self.reset_count = 0
 
     def inc_k(self):
         self.inc_count += 1
-        return True
+        return self.k_can_increment
 
     def reset_k(self):
         self.reset_count += 1
@@ -96,17 +98,147 @@ def test_retrieve_more_info_increments_k_on_all_retrievers():
     assert r2.inc_count == 1
 
 
-def test_retrieve_more_info_without_retrievers_continues():
-    """Without retrievers, 'retrieve_more_info' routes to 'continue'."""
+def test_retrieve_more_info_without_retrievers_uses_exhausted_decision():
+    """Without retrievers, 'retrieve_more_info' cannot retrieve: the routing
+    falls to the exhausted-budget decision instead of continuing."""
     router = _make_router([])
 
     state = RAGState(
         query="q",
+        messages=[AIMessage(content="a grounded but partial answer")],
         text_response_eval=EvaluateAnswerSchema(
-            coverage=0.5, confidence=0.4, next_step="retrieve_more_info"
+            coverage=0.5,
+            confidence=0.4,
+            groundedness=0.7,
+            relevance=0.6,
+            coherence=0.8,
+            conciseness=0.8,
+            next_step="retrieve_more_info",
         ),
     )
     route = router.execute(state)
     logger.info(f"route with no retrievers: {route}")
 
-    assert route == "continue"
+    assert route == "best_effort"
+
+
+def test_rewrite_answer_directive_not_dropped_by_retrieval_budget():
+    """An explicit 'rewrite_answer' directive routes to rewrite even when the
+    retrieval budget and retrievers are available (retrieval actions take
+    priority, but must not swallow an explicit rewrite)."""
+    router = _make_router([FakeRetriever("vector")])
+
+    state = RAGState(
+        query="q",
+        retrieval_attempts=0,
+        rewrite_attempts=0,
+        text_response_eval=EvaluateAnswerSchema(
+            coverage=0.6,
+            confidence=0.6,
+            relevance=0.6,
+            groundedness=0.2,
+            coherence=0.8,
+            conciseness=0.8,
+            next_step="rewrite_answer",
+        ),
+    )
+    route = router.execute(state)
+
+    assert route == "rewrite_answer"
+
+
+def _exhausted_state(
+    coverage,
+    confidence,
+    groundedness,
+    content="some answer",
+    next_step="modify_query",
+):
+    """A state with all retrieval/rewrite budgets exhausted."""
+    return RAGState(
+        query="q",
+        retrieval_attempts=5,
+        rewrite_attempts=1,
+        messages=[AIMessage(content=content)] if content else [],
+        text_response_eval=EvaluateAnswerSchema(
+            coverage=coverage,
+            confidence=confidence,
+            groundedness=groundedness,
+            relevance=0.6,
+            coherence=0.8,
+            conciseness=0.8,
+            next_step=next_step,
+        ),
+    )
+
+
+def test_exhausted_low_coverage_falls_back():
+    """Exhausted with low coverage falls back to training data when enabled."""
+    router = _make_router([])
+    router.fallback_to_training_data = True
+
+    route = router.execute(
+        _exhausted_state(coverage=0.2, confidence=0.6, groundedness=0.7)
+    )
+
+    assert route == "fallback"
+
+
+def test_exhausted_low_coverage_without_fallback_clarifies():
+    """Exhausted with low coverage asks for clarification when fallback is off."""
+    router = _make_router([])
+
+    route = router.execute(
+        _exhausted_state(coverage=0.2, confidence=0.6, groundedness=0.7)
+    )
+
+    assert route == "undefined"
+
+
+def test_exhausted_low_confidence_falls_back():
+    """Exhausted with vague context (low confidence) falls back to training data.
+
+    Reached via the retrieve_more_info branch once k can no longer grow and
+    the query budget is exhausted.
+    """
+    router = _make_router([FakeRetriever("vector", k_can_increment=False)])
+    router.fallback_to_training_data = True
+
+    route = router.execute(
+        _exhausted_state(coverage=0.6, confidence=0.2, groundedness=0.7)
+    )
+
+    assert route == "fallback"
+
+
+def test_exhausted_ungrounded_clarifies():
+    """Exhausted with an ungrounded answer asks for clarification."""
+    router = _make_router([])
+
+    route = router.execute(
+        _exhausted_state(coverage=0.6, confidence=0.6, groundedness=0.2)
+    )
+
+    assert route == "undefined"
+
+
+def test_exhausted_empty_answer_clarifies():
+    """Exhausted with an empty answer asks for clarification."""
+    router = _make_router([])
+
+    route = router.execute(
+        _exhausted_state(coverage=0.6, confidence=0.6, groundedness=0.7, content="")
+    )
+
+    assert route == "undefined"
+
+
+def test_exhausted_best_effort():
+    """Exhausted with a grounded, non-empty answer routes to best_effort."""
+    router = _make_router([])
+
+    route = router.execute(
+        _exhausted_state(coverage=0.5, confidence=0.6, groundedness=0.7)
+    )
+
+    assert route == "best_effort"

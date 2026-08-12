@@ -237,6 +237,22 @@ def content_to_str(
     return str(content)
 
 
+def format_alert(text: str, level: str = "warning") -> str:
+    """Wrap *text* as a GitHub-style markdown alert (e.g. ``> [!WARNING]``).
+
+    Multi-line text is prefixed per line so the whole thing stays inside the
+    blockquote.  Renderers with the markdown2 ``alerts`` extra (the NiceGUI
+    speech bubbles) show it as a styled callout; others fall back to a plain
+    blockquote.
+
+    :param text: Alert body text
+    :param level: Alert level (note, tip, important, warning, caution)
+    :returns: Markdown alert blockquote
+    """
+    body = text.strip().replace("\n", "\n> ")
+    return f"> [!{level.upper()}]\n> {body}"
+
+
 def prompt_value_to_messages(prompt: PromptValue) -> list[dict]:
     """Convert a ``PromptValue`` to a clean list of message dicts.
 

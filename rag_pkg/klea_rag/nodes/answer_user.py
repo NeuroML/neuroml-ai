@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_utils.llm import content_to_str
+from klea_utils.llm import content_to_str, format_alert
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
 from klea_rag.schemas import RAGState
@@ -19,6 +19,14 @@ from klea_rag.schemas import RAGState
 
 class AnswerUser(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     """Node that returns the final message to the user."""
+
+    #: Hardcoded note appended when the answer is a best-effort delivery:
+    #: the evaluator was not satisfied but every retrieval/rewrite budget is
+    #: exhausted, so the (grounded) answer is served with this caveat.
+    BEST_EFFORT_WARNING = (
+        "Note: the retrieved sources only partially covered your query; "
+        "this answer may be incomplete."
+    )
 
     def __init__(self, logger: logging.Logger, label: str):
         """Initialise with a logger.
@@ -32,6 +40,10 @@ class AnswerUser(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     async def execute(self, state: RAGState) -> dict[str, Any]:
         """Return the message for the user.
 
+        A ``best_effort`` delivery (evaluation was not "continue") appends
+        the hardcoded :attr:`BEST_EFFORT_WARNING`; a clean "continue"
+        verdict returns the answer untouched.
+
         :param state: Current graph state
         :returns: State update with message_for_user
         """
@@ -40,7 +52,11 @@ class AnswerUser(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
         messages = state.messages
         answer = messages[-1]
+        message = content_to_str(answer.content)
 
-        self.logger.info(f"Returning final answer to user: {answer}")
+        if state.text_response_eval.next_step != "continue":
+            message += f"\n\n{format_alert(self.BEST_EFFORT_WARNING)}\n\n"
 
-        return {"message_for_user": content_to_str(answer.content)}
+        self.logger.info(f"Returning final answer to user: {message}")
+
+        return {"message_for_user": message}

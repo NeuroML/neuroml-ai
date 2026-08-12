@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from ..llm import (
     content_to_str,
     extract_llm_output_content,
+    format_alert,
     prompt_value_to_messages,
     split_output_by_section,
 )
@@ -88,7 +89,7 @@ class AnswerGeneral(BaseLLMNode):
         if fallback and fallback.enabled and fallback.warning:
             query_domains = getattr(state, "query_domains", ["undefined"])
             if "undefined" not in query_domains:
-                answer += f"\n\n{fallback.warning}\n\n"
+                answer += f"\n\n{format_alert(fallback.warning)}\n\n"
 
         content = content_to_str(result.content)
         thought, answer_text = split_output_by_section(content, "<think>", "</think>")
