@@ -59,6 +59,18 @@
 # nvidia-* wheels.  The FULL pin (torch==<version>+cu<NN>) stops the
 # package manager silently picking a different CUDA suffix.
 #
+# VERIFY YOUR INSTALL
+# -------------------
+# Snapshot (build, GPU, driver) -- useful for support requests, but note
+# that "Is CUDA available: True" in its output does NOT mean this build
+# has kernels for your GPU:
+#
+#     python -m torch.utils.collect_env
+#
+# Definitive check -- a real CUDA compute op (run from the repo root):
+#
+#     python scripts/test_torch.py
+#
 # PyTorch wheels bundle their own CUDA runtime libraries, so no system
 # CUDA toolkit is required to RUN torch.  A toolkit (with nvcc) is only
 # needed to compile CUDA extensions yourself, and it must match the CUDA

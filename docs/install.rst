@@ -148,6 +148,12 @@ package manager cannot pick a different CUDA suffix::
 ``torchvision`` must come from the same CUDA index as ``torch``; a
 mismatch installs silently but breaks ``import torchvision`` at runtime.
 
+To verify the installed build actually computes on your GPU, run
+``python scripts/test_torch.py`` from the repository root.  It runs a
+real CUDA compute op; ``python -m torch.utils.collect_env`` only prints
+a snapshot and reports CUDA as available even when the build lacks
+kernels for your GPU.
+
 PyTorch wheels bundle their own CUDA runtime, so a system CUDA toolkit
 is not required to run torch.  It is only needed to compile CUDA
 extensions yourself, and it must match the wheel's CUDA version.
