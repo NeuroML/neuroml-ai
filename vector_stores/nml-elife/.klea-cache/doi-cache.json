@@ -1,0 +1,22 @@
+{
+  "10.7554/eLife.95135": {
+    "title": "The NeuroML ecosystem for standardized multi-scale modeling in neuroscience",
+    "authors": [
+      "Ankur Sinha",
+      "Padraig Gleeson",
+      "Bóris Marin",
+      "Salvador Dura-Bernal",
+      "Sotirios Panagiotou",
+      "Sharon Crook",
+      "Matteo Cantarelli",
+      "Robert C Cannon",
+      "Andrew P Davison",
+      "Harsha Gurnani",
+      "Robin Angus Silver"
+    ],
+    "year": 2025,
+    "venue": "eLife",
+    "abstract": "Data-driven models of neurons and circuits are important for understanding how the properties of membrane conductances, synapses, dendrites, and the anatomical connectivity between neurons generate the complex dynamical behaviors of brain circuits in health and disease. However, the inherent complexity of these biological processes makes the construction and reuse of biologically detailed models challenging. A wide range of tools have been developed to aid their construction and simulation, but differences in design and internal representation act as technical barriers to those who wish to use data-driven models in their research workflows. NeuroML, a model description language for computational neuroscience, was developed to address this fragmentation in modeling tools. Since its inception, NeuroML has evolved into a mature community standard that encompasses a wide range of model types and approaches in computational neuroscience. It has enabled the development of a large ecosystem of interoperable open-source software tools for the creation, visualization, validation, and simulation of data-driven models. Here, we describe how the NeuroML ecosystem can be incorporated into research workflows to simplify the construction, testing, and analysis of standardized models of neural systems, and supports the FAIR (Findability, Accessibility, Interoperability, and Reusability) principles, thus promoting open, transparent and reproducible science.",
+    "doi": "10.7554/elife.95135"
+  }
+}

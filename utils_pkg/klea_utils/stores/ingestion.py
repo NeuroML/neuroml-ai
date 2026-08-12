@@ -297,7 +297,19 @@ class StoresBuilder:
                     )
                     continue
 
-            store.add_documents(docs)
+            # Chroma rejects empty-list and None metadata values on upsert.
+            # The cache keeps ``headings: []`` as an explicit "no headings
+            # found" marker, so it (and any other empty/None value) is
+            # dropped only here, from copies -- the originals (used for the
+            # BM25 corpus) keep their metadata intact.
+            sanitized_docs = [
+                Document(
+                    page_content=doc.page_content,
+                    metadata=_sanitize_store_metadata(doc.metadata),
+                )
+                for doc in docs
+            ]
+            store.add_documents(sanitized_docs)
             self.logger.info(
                 f"Added {len(docs)} chunks from {file_path.name} ({ctr}/{total})"
             )
@@ -756,6 +768,26 @@ def _hash_file(file_path: Path) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return f"xxh64:{h.hexdigest()}"
+
+
+def _sanitize_store_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of *metadata* without values Chroma rejects on upsert.
+
+    Chroma requires metadata list values to be non-empty and does not
+    accept ``None``.  The chunk cache deliberately keeps ``headings: []``
+    as an explicit "no headings found" marker, so the empty list (and any
+    other empty/``None`` value) is dropped only here, at storage time, on
+    a copy -- the source documents (and the BM25 corpus) keep their
+    metadata intact.
+
+    :param metadata: Document metadata dict
+    :returns: Copy of *metadata* with empty-list and ``None`` values removed
+    """
+    return {
+        key: value
+        for key, value in metadata.items()
+        if value is not None and value != []
+    }
 
 
 def _normalize_extracted_metadata(extracted: dict[str, Any]) -> dict[str, Any]:

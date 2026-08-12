@@ -1,0 +1,31 @@
+{
+    "nml-elife.pdf": {
+        "DEFAULT": {
+            "title": "The NeuroML ecosystem for standardized multi-scale modeling in neuroscience",
+            "authors": [
+                "Ankur Sinha",
+                "Padraig Gleeson",
+                "Bóris Marin",
+                "Salvador Dura-Bernal",
+                "Sotirios Panagiotou",
+                "Sharon Crook",
+                "Matteo Cantarelli",
+                "Robert C Cannon",
+                "Andrew P Davison",
+                "Harsha Gurnani",
+                "Robin Angus Silver"
+            ],
+            "year": 2025,
+            "venue": "eLife",
+            "doi": "10.7554/elife.95135",
+            "source_type": "application/pdf",
+            "_metadata_complete": true,
+            "_sources": [
+                "doi-service",
+                "docling"
+            ],
+            "url_docs": "http://neuroml.org/gettingstarted",
+            "url_doi": "https://doi.org/10.7554/elife.95135"
+        }
+    }
+}

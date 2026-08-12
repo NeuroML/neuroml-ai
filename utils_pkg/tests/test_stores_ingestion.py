@@ -20,6 +20,7 @@ from klea_utils.stores.ingestion import (
     StoresBuilder,
     _ensure_doi_url,
     _normalize_extracted_metadata,
+    _sanitize_store_metadata,
     _split_url_list,
 )
 from klea_utils.stores.utils import instantiate_vector_store, normalize_text
@@ -211,6 +212,28 @@ class TestNormalizeText:
         """No doi field means no url_doi key is added."""
         out = _ensure_doi_url({"title": "T"})
         assert out == {"title": "T"}
+
+    def test_sanitize_store_metadata(self):
+        """Empty-list and None metadata values are dropped; the rest kept."""
+        meta = {
+            "headings": [],
+            "authors": ["X", "Y"],
+            "file_name": "a.md",
+            "extra": None,
+            "url_doi": "https://doi.org/x",
+        }
+        out = _sanitize_store_metadata(meta)
+        assert out == {
+            "authors": ["X", "Y"],
+            "file_name": "a.md",
+            "url_doi": "https://doi.org/x",
+        }
+        # The source dict is not mutated.
+        assert meta["headings"] == []
+
+    def test_sanitize_store_metadata_keeps_non_empty_lists(self):
+        """Non-empty list values (e.g. authors) survive sanitization."""
+        assert _sanitize_store_metadata({"authors": ["X"]}) == {"authors": ["X"]}
 
 
 class _FakeMeta:
@@ -760,6 +783,53 @@ class TestIngestion:
         src.write_text("{}")
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_store_all_sanitizes_metadata_for_upsert(self, monkeypatch):
+        """Empty-list/None metadata is dropped at upsert; originals intact.
+
+        Chroma rejects empty-list metadata values, so ``headings: []`` is
+        removed from the copies sent to the store.  The source documents
+        (and hence the BM25 corpus) keep ``headings: []``.
+        """
+
+        class FakeStore:
+            def __init__(self):
+                self.added: list[Document] = []
+
+            def add_documents(self, docs):
+                self.added.extend(docs)
+
+        fake = FakeStore()
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: fake,
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+
+        doc = Document(
+            page_content="content",
+            metadata={
+                "file_name": "a.md",
+                "headings": [],
+                "authors": ["X"],
+                "extra": None,
+            },
+        )
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            force=True,
+        )
+
+        assert len(fake.added) == 1
+        meta = fake.added[0].metadata
+        assert "headings" not in meta
+        assert "extra" not in meta
+        assert meta["authors"] == ["X"]
+        assert meta["file_name"] == "a.md"
+        assert doc.metadata["headings"] == []
 
 
 if __name__ == "__main__":
