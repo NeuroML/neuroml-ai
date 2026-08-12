@@ -190,6 +190,13 @@ considerably, can be disabled with ``klea-stores-create --no-ocr`` (see
 `Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_
 for details).
 
+Docling selects the inference accelerator automatically (CUDA, MPS, or
+CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
+cannot run the Triton-compiled layout model.  Set the ``DOCLING_DEVICE``
+environment variable to ``cpu`` in that case (optionally raising
+``DOCLING_NUM_THREADS`` above the default of 4 to use more CPU cores);
+see :doc:`../tutorials/create-and-use-rag` for a worked example.
+
 See :doc:`../api/utils/biblio` for the Python API and
 :doc:`../tutorials/create-and-use-rag` for the ``chunk`` / ``store``
 workflow.
