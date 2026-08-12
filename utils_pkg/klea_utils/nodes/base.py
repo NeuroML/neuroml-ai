@@ -55,6 +55,38 @@ MAX_TRUNCATION_RETRIES = 2
 MIN_OUTPUT_TOKENS = 64
 
 
+def _schema_to_example(schema: dict[str, Any]) -> Any:
+    """Generate a placeholder example value from a JSON schema fragment.
+
+    Walks a JSON Schema fragment (as produced by
+    ``convert_to_json_schema``) and returns a placeholder value for each
+    type, so the prompt can show the model a concrete instance to imitate
+    instead of the abstract schema definition (which invites the model to
+    echo the schema back verbatim instead of producing an instance).
+
+    :param schema: JSON Schema fragment (a ``{"type": ...}`` dict)
+    :returns: A placeholder value matching the schema's type
+    """
+    if schema.get("enum"):
+        return schema["enum"][0]
+    match schema.get("type"):
+        case "string":
+            return "text"
+        case "integer" | "number":
+            return 0
+        case "boolean":
+            return True
+        case "array":
+            return [_schema_to_example(schema.get("items", {}))]
+        case "object":
+            return {
+                key: _schema_to_example(value)
+                for key, value in schema.get("properties", {}).items()
+            }
+        case _:
+            return None
+
+
 class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     """Base class for LangGraph nodes that load prompts from files.
 
@@ -425,6 +457,41 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         self.logger.debug(f"{prompt =}")
         return prompt
 
+    def _format_output_schema_prompt(self) -> str:
+        """Return the ``Output schema (strict)`` prompt block.
+
+        The raw JSON Schema (``title``/``type``/``properties``) invites
+        models to echo the schema definition back instead of producing an
+        instance (the observed failure mode), so the prompt shows a
+        sanitized schema (top-level ``title``/``description`` dropped), an
+        explicit directive, and a generated example instance.
+
+        :returns: Prompt text describing the required JSON output
+        """
+        schema = {
+            key: value
+            for key, value in self.output_schema_json.items()
+            if key not in ("title", "description")
+        }
+        example = _schema_to_example(self.output_schema_json)
+        return dedent(
+            f"""
+            ## Output schema (strict)
+
+            Respond in JSON following this schema:
+
+            {json.dumps(schema).replace("{", "{{").replace("}", "}}")}
+
+            The response must be a JSON object like this example (replace
+            the placeholder values with real content):
+
+            {json.dumps(example).replace("{", "{{").replace("}", "}}")}
+
+            Do not output the schema definition itself, or the
+            'title'/'type'/'properties' keys.
+            """
+        )
+
     def _get_system_prompt(self, state: BaseModel) -> str:
         """Load system prompt from file, optionally adding memory summary and output schema."""
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
@@ -434,15 +501,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             # points support passing schemas separately, or respect `with
             # structured output`.  This is the safest, most general way of
             # doing it.
-            system_prompt += dedent(
-                f"""
-                ## Output schema (strict)
-
-                Respond in JSON following this schema:
-
-                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
-                """
-            )
+            system_prompt += self._format_output_schema_prompt()
 
         if self.memory:
             memory_addition = self._get_memory_addition(state)

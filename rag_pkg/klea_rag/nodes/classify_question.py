@@ -8,9 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import json
 import logging
-from textwrap import dedent
 from typing import Any, override
 
 from klea_utils.llm import (
@@ -91,15 +89,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         system_prompt += f"\n\n## Domains\n{self._build_domain_str()}\n\n"
 
         if self.output_schema:
-            system_prompt += dedent(
-                f"""
-                ## Output schema (strict)
-
-                Respond in JSON following this schema:
-
-                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
-                """
-            )
+            system_prompt += self._format_output_schema_prompt()
 
         if self.memory:
             memory_addition = self._get_memory_addition(state)
