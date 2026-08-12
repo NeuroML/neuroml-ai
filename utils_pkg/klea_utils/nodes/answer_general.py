@@ -77,10 +77,17 @@ class AnswerGeneral(BaseLLMNode):
         """Extract answer, append fallback warning if configured, update messages."""
         answer = ""
 
-        # Add fallback warning if configured and query was domain-related
+        # Add fallback warning if configured and query was domain-related.
+        # The RAG stores classified domains in ``query_domains`` (a list);
+        # a genuinely non-domain query is classified as ``["undefined"]``.
+        # Warn only when a real domain matched, i.e. the query fell back to
+        # training data after failed retrieval, not for plain general chat.
+        # Default to ``["undefined"]`` so states without the attribute
+        # (e.g. non-RAG graphs) never show the warning.
         fallback = self.fallback_config
         if fallback and fallback.enabled and fallback.warning:
-            if getattr(state, "query_domain", "undefined") != "undefined":
+            query_domains = getattr(state, "query_domains", ["undefined"])
+            if "undefined" not in query_domains:
                 answer += f"\n\n{fallback.warning}\n\n"
 
         content = content_to_str(result.content)
