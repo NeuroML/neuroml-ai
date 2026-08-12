@@ -323,7 +323,9 @@ class DoiResolver:
         try:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             with open(self._cache_path, "w") as f:
-                json.dump(self._cache, f, indent=2)
+                # ensure_ascii=False keeps accented author/title characters
+                # as literal UTF-8 (the cache may hold names like "B\u00f3ris").
+                json.dump(self._cache, f, indent=2, ensure_ascii=False)
                 f.write("\n")
         except OSError as e:
             self.logger.warning(f"Could not write DOI cache {self._cache_path}: {e}")

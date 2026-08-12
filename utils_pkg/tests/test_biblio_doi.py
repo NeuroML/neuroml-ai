@@ -228,6 +228,34 @@ def test_resolve_writes_cache(tmp_path):
     assert cache["10.1234/abc.5678"]["title"] == "A Crossref Sample Paper"
 
 
+def test_cache_written_as_literal_utf8(tmp_path):
+    """Accented author names are written literally, not \\u-escaped."""
+    crossref_json = {
+        "message": {
+            "DOI": "10.7554/elife.95135",
+            "title": ["A Sample Paper"],
+            "author": [{"given": "B\u00f3ris", "family": "Marin"}],
+            "issued": {"date-parts": [[2025, 1, 1]]},
+            "container-title": ["Journal of Samples"],
+        }
+    }
+
+    def route(service, request):
+        return httpx.Response(200, json=crossref_json)
+
+    resolver = _make_resolver(tmp_path, _handler_for(route))
+    try:
+        resolver.resolve("10.7554/elife.95135")
+    finally:
+        resolver.close()
+
+    text = (tmp_path / "doi-cache.json").read_text()
+    assert "B\u00f3ris Marin" in text
+    assert "\\u00f3" not in text
+    cache = json.loads(text)
+    assert cache["10.7554/elife.95135"]["authors"] == ["B\u00f3ris Marin"]
+
+
 def test_resolve_invalid_doi_skips_network(tmp_path):
     """Invalid DOI strings never trigger a network request."""
 
