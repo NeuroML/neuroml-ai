@@ -20,7 +20,7 @@ How Klea uses MCP
 
 Klea acts as the MCP client: it uses MCP servers to give its LLMs access
 to external tools (validation, file handling, model lookup, code
-execution, etc.).  A domain in a RAG or code config can declare one or
+execution, etc.).  A domain in a RAG or agent config can declare one or
 more MCP servers; the tools they expose are fetched at startup and made
 available to the graph's tool picker, which decides which tools to call
 for a given query.

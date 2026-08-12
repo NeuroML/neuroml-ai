@@ -96,10 +96,10 @@ Usage::
 
    pip install klea_rag[full]
 
-klea-code (WIP: coming soon) and neuroml-mcp (from source)
-----------------------------------------------------------
+klea (WIP: coming soon) and neuroml-mcp (from source)
+------------------------------------------------------
 
-``klea-code`` is under active development and not yet ready for general use.
+``klea`` is under active development and not yet ready for general use.
 ``neuroml-mcp`` is also in active development.  Neither is on PyPI.
 To install them, clone the repository and follow the
 :doc:`development workflow <contributing>`.
@@ -107,17 +107,17 @@ To install them, clone the repository and follow the
 Configuration
 -------------
 
-Both the RAG and Code packages load configuration from:
+Both the RAG and Agent packages load configuration from:
 
 1. An env file (``k=v`` format):
 
    * ``KLEA_RAG_ENV_FILE`` or ``rag.env`` for the RAG system
-   * ``KLEA_CODE_ENV_FILE`` or ``klea_code.env`` for the Code system
+   * ``KLEA_AGENT_ENV_FILE`` or ``klea_agent.env`` for the Agent system
 
 2. A JSON configuration file referenced inside the env file.
 
    * ``rag_pkg/example-configs/klea_rag.json`` or a copy you customise
-   * ``code_pkg/mcp.json`` for Code MCP server configuration
+   * ``agent_pkg/mcp.json`` for Agent MCP server configuration
 
 Example env file::
 
@@ -189,12 +189,12 @@ third-party libraries.  Each CLI uses its own ``<app>`` name:
      - ``klea-rag-tui/klea-rag-tui.log``
    * - ``klea-rag`` web client
      - ``klea-rag-web/klea-rag-web.log``
-   * - ``klea-code`` (Code server / graph)
-     - ``klea-code/klea-code.log``
-   * - ``klea-code`` TUI client
-     - ``klea-code-tui/klea-code-tui.log``
-   * - ``klea-code`` web client
-     - ``klea-code-web/klea-code-web.log``
+   * - ``klea`` (Agent server / graph)
+     - ``klea/klea.log``
+   * - ``klea`` TUI client
+     - ``klea-tui/klea-tui.log``
+   * - ``klea`` web client
+     - ``klea-web/klea-web.log``
    * - ``nml-mcp`` (MCP server)
      - ``nml_mcp/nml_mcp.log``
 
@@ -203,7 +203,7 @@ third-party libraries.  Each CLI uses its own ``<app>`` name:
 Web client user storage
 -----------------------
 
-The NiceGUI web clients (``klea-rag web``, ``klea-code web``) keep a small
+The NiceGUI web clients (``klea-rag web``, ``klea web``) keep a small
 per-browser-session identity file so that a returning browser is linked
 back to the same user.  The files are written to a ``.nicegui/`` directory
 relative to the working directory the web client is launched from (not the
