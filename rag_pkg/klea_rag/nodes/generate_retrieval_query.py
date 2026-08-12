@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from textwrap import dedent
-from typing import Any, override
+from typing import Any, cast, override
 
 from klea_utils.llm import (
     content_to_str,
@@ -102,7 +102,6 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         return {
             "messages": messages,
             "retrieval_query": answer,
-            "retrieval_attempts": state.retrieval_attempts + 1,
         }
 
     @override
@@ -114,9 +113,14 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
     def _get_info(self) -> NodeStreamData:
         """Return retrieval query and attempt number."""
         assert self._last_state_updates is not None
+        assert self._last_state is not None
         query = self._last_state_updates.get("retrieval_query", "")
-        attempt = self._last_state_updates.get("retrieval_attempts", 1)
-        action = "Regenerated" if attempt > 1 else "Generated"
+        # Display-only: this node does not bump the counter (the retrieval
+        # node does). Here it holds the number of prior retrieval passes, so
+        # the current query generation is labelled as the next attempt.
+        state = cast(RAGState, self._last_state)
+        attempt = state.retrieval_attempts + 1
+        action = "Regenerated" if state.retrieval_attempts > 0 else "Generated"
         return NodeStreamData(
             heading="Retrieval Query Generation",
             summary=f"{action} retrieval query (attempt {attempt})",

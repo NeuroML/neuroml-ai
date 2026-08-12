@@ -70,9 +70,15 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
     @override
     async def execute(self, state: RAGState) -> dict[str, Any]:
         """Retrieve and rank reference material."""
+        # Every pass through this node is one retrieval attempt (the initial
+        # query retrieval, retrieve_more_info k-increases, and modify_query
+        # re-retrievals), so the evaluator loop budgets against a single
+        # combined counter instead of per-kind counters.
+        retrieval_attempts = state.retrieval_attempts + 1
+
         if not self.retrievers:
             self.logger.debug("No retrievers configured, skipping retrieval")
-            return {}
+            return {"retrieval_attempts": retrieval_attempts}
 
         self.write_custom_stream({"type": "progress", "node": self.label})
 
@@ -193,4 +199,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         self.logger.debug(f"{status_event.model_dump() = }")
         self.write_custom_stream(status_event.model_dump())
 
-        return {"reference_material": reference_material}
+        return {
+            "reference_material": reference_material,
+            "retrieval_attempts": retrieval_attempts,
+        }

@@ -69,7 +69,9 @@ class RAGState(BaseModel):
     # reference material from retrievals
     reference_material: dict[str, list[tuple]] = Field(default_factory=dict)
 
-    # number of retrieval query modification attempts in evaluator loop
+    # number of retrieval passes in the evaluator loop (the initial query
+    # retrieval, retrieve_more_info k-increases, and modify_query
+    # re-retrievals); incremented once per RetrieveInfoNode execution
     retrieval_attempts: int = 0
 
     # number of answer rewrite attempts in evaluator loop

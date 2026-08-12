@@ -162,14 +162,31 @@ async def test_execute_labels_url_keys_in_display():
     assert "- https://example.org/extra" in display
 
 
-async def test_execute_no_retrievers_skips():
-    """execute() returns no updates when no retrievers are configured."""
+async def test_execute_increments_retrieval_attempts():
+    """execute() counts each retrieval pass via retrieval_attempts."""
+    doc = _doc("NeuroML standard")
+    node = _make_node([FakeRetriever([(doc, 0.9)], name="vector store")])
+
+    state = RAGState(
+        query="standard",
+        query_domains=["NeuroML"],
+        retrieval_query="standard",
+        retrieval_attempts=2,
+    )
+    result = await node.execute(state)
+
+    logger.info(f"result: {result}")
+    assert result["retrieval_attempts"] == 3
+
+
+async def test_execute_no_retrievers_still_counts_attempt():
+    """A retrieval pass with no retrievers still advances the counter."""
     node = _make_node([])
 
     result = await node.execute(RAGState(query="q", query_domains=["NeuroML"]))
-    logger.info(f"result with no retrievers: {result}")
 
-    assert result == {}
+    logger.info(f"result with no retrievers: {result}")
+    assert result == {"retrieval_attempts": 1}
 
 
 async def test_execute_skips_undefined_domain():

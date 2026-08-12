@@ -52,7 +52,9 @@ class RouteEvaluator(AbstractRouterNode):
         :param label: Human-readable label for UI progress display
         :param retrievers: Retrievers whose k is incremented/reset when
             routing between retrieval attempts
-        :param max_retrieval_attempts: Max retrieval query modifications
+        :param max_retrieval_attempts: Combined budget for retrieval passes
+            in the evaluator loop (the initial query retrieval, retrieve_more_info
+            k-increases, and modify_query re-retrievals)
         :param max_rewrite_attempts: Max answer rewrites
         :param fallback_to_training_data: Whether to fall back to LLM training data
         """
