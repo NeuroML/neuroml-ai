@@ -149,8 +149,9 @@ class TestStores(unittest.TestCase):
     def test_retrieval(self):
         """Test retrieval from the configured vector and BM25 stores."""
         try:
-            stores_config_file = os.environ.get("STORES_TEST_CONFIG", None)
-            assert stores_config_file
+            stores_config_file = os.environ.get(
+                "STORES_TEST_CONFIG", "stores-tests.json"
+            )
             with open(stores_config_file, "r") as f:
                 config = json.load(f)
             logger = logging.getLogger("test_stores")

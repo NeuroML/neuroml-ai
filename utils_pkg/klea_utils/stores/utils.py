@@ -17,6 +17,12 @@ from langchain_core.documents import Document
 #: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.
 SOURCE_SCORES_KEY = "_source_scores"
 
+#: HNSW distance space used for Chroma collections created by Klea.  Cosine
+#: makes the vector-store relevance scores true cosine similarities
+#: (``1 - cosine_distance``), so a ``score_threshold`` reads as a minimum
+#: cosine similarity.
+CHROMA_HNSW_SPACE = "cosine"
+
 #: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a
 #: source's result list contributes ``1 / (RRF_K + r)`` to its fused score.
 RRF_K = 60
@@ -174,6 +180,11 @@ def instantiate_vector_store(
     collections, so reusing an existing folder with a new collection
     name creates a new collection in it.
 
+    New Chroma collections are created with the :data:`CHROMA_HNSW_SPACE`
+    HNSW distance space (cosine).  The configuration is only applied at
+    collection creation; loading an existing collection keeps its own
+    distance space.
+
     :param path: URI-style string with scheme prefix
         (e.g. ``"chroma:/path/to/dir"``,
         ``"qdrant:http://localhost:6333"``,
@@ -244,6 +255,7 @@ def instantiate_vector_store(
                 collection_name=name,
                 embedding_function=embeddings,
                 client_settings=settings,
+                collection_configuration={"hnsw": {"space": CHROMA_HNSW_SPACE}},
             )
 
         case "qdrant":

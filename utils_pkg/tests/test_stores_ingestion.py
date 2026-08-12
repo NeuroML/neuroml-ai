@@ -113,6 +113,10 @@ class TestIngestion:
             assert result["ids"], "No documents found in store"
             assert len(result["ids"]) > 0
 
+            hnsw_space = store._chroma_collection.configuration["hnsw"]["space"]
+            self.logger.info(f"Chroma HNSW space: {hnsw_space}")
+            assert hnsw_space == "cosine"
+
             first_meta = result["metadatas"][0]
             assert "file_hash" in first_meta
             assert "file_name" in first_meta
@@ -159,6 +163,10 @@ class TestIngestion:
             first_result = store.get()
             first_count = len(first_result["metadatas"])
             self.logger.info(f"First build: {first_count} chunks")
+
+            hnsw_space = store._chroma_collection.configuration["hnsw"]["space"]
+            self.logger.info(f"Chroma HNSW space: {hnsw_space}")
+            assert hnsw_space == "cosine"
 
             builder.build(
                 source_dir=str(self.tmpdir_path),
