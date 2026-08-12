@@ -75,7 +75,9 @@ class ChatBubble(ui.element):
                 else f"{text_align} msg-expanded"
             )
             with ui.element("div").classes(text_cls):
-                ui.markdown(text)
+                # 'alerts' extra renders GitHub-style ``> [!WARNING]`` blocks
+                # (used for the fallback / best-effort warnings) as callouts.
+                ui.markdown(text, extras=["fenced-code-blocks", "tables", "alerts"])
 
             with ui.row().classes(f"flex flex-row {bottom_align} items-center gap-1"):
                 ui.label(stamp).classes("text-xs text-grey-5")

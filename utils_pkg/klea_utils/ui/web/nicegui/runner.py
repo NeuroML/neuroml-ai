@@ -83,6 +83,21 @@ def setup_layout(
     ui.add_css(
         ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
     )
+    # GitHub-style alerts (rendered from ``> [!WARNING]`` etc. by the markdown2
+    # 'alerts' extra) used for the fallback / best-effort warnings in bubbles.
+    # No default style defined by nicegui for these extras
+    ui.add_css(
+        ".nicegui-markdown div.alert { "
+        "padding: 0.4rem 0.75rem; "
+        "border-left: 4px solid #d29922; "
+        "border-radius: 0.25rem; "
+        "background: rgba(210, 153, 34, 0.12); "
+        "margin: 0.5rem 0; "
+        "}"
+    )
+    ui.add_css(
+        ".nicegui-markdown div.alert em { font-style: normal; font-weight: 600; }"
+    )
     # Collapse long bot messages to 4 lines with an expand / collapse toggle.
     ui.add_css(".msg-collapsed { max-height: 6em; overflow: hidden; }")
     ui.add_css(".msg-expanded { max-height: none; }")
