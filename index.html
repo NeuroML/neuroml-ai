@@ -213,8 +213,8 @@
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/nml-mcp.html">nml-mcp</a></li>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-code.html">klea-code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-code-serve.html">klea-code-serve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea.html">klea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
 </ul>
@@ -292,9 +292,9 @@
           <section id="welcome-to-klea">
 <h1>Welcome to Klea<a class="headerlink" href="#welcome-to-klea" title="Link to this heading">¶</a></h1>
 <p>Knowledge vaLidated Expert AI Assistant for Neuroscience.</p>
-<p>Klea is a suite of AI tools for Neuroscience.  It provides a generic
-RAG pipeline, an AI-assisted coding workflow system, and MCP servers
-for modelling and analysis.</p>
+<p>Klea is a suite of AI tools for Neuroscience.  It provides a general
+purpose agent with coding capabilities, a generic RAG pipeline, and
+MCP servers for modelling and analysis.</p>
 <section id="architecture">
 <h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading">¶</a></h2>
 <p>The project is organised as a monorepo with four installable packages:</p>
@@ -318,10 +318,10 @@ for modelling and analysis.</p>
 <td><p><code class="docutils literal notranslate"><span class="pre">klea-rag</span></code>, <code class="docutils literal notranslate"><span class="pre">klea-rag-serve</span></code></p></td>
 <td><p>Generic RAG pipeline with multi-domain support</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">code_pkg</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">klea_code</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code>, <code class="docutils literal notranslate"><span class="pre">klea-code-serve</span></code></p></td>
-<td><p>AI-assisted coding and workflow system</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">agent_pkg</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea_agent</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea</span></code>, <code class="docutils literal notranslate"><span class="pre">klea-serve</span></code></p></td>
+<td><p>General purpose agent with coding capabilities</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mcp_pkg</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">neuroml_mcp</span></code></p></td>
@@ -336,6 +336,9 @@ provides configurable LLM setup (with runtime model switching), vector
 store abstraction (Chroma / PGVector / Qdrant), and the
 <a class="reference internal" href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph" title="klea_utils.graph.base.BaseLangGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a> orchestrator framework.
 Web interfaces are available via NiceGUI (primary) and Streamlit.</p>
+<p><code class="docutils literal notranslate"><span class="pre">klea_agent</span></code> is the main application: a general purpose agent that can
+also code.  <code class="docutils literal notranslate"><span class="pre">klea_rag</span></code> is an additional component, primarily consumed by
+<code class="docutils literal notranslate"><span class="pre">klea_agent</span></code> as a retrieval/RAG service.</p>
 </section>
 <section id="prototype-deployments">
 <h2>Prototype Deployments<a class="headerlink" href="#prototype-deployments" title="Link to this heading">¶</a></h2>

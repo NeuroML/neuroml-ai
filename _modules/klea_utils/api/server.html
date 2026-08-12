@@ -212,8 +212,8 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../cli/nml-mcp.html">nml-mcp</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-code.html">klea-code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-code-serve.html">klea-code-serve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea.html">klea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../cli/klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
 </ul>
@@ -445,7 +445,7 @@
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;Server process exited immediately (code </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">). &quot;</span>
                     <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
-                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-code-serve serve&#39; &quot;</span>
+                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-serve serve&#39; &quot;</span>
                     <span class="s2">&quot;to see the error.&quot;</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="n">_probe_once</span><span class="p">():</span>
@@ -458,7 +458,7 @@
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">&quot;Server at </span><span class="si">{</span><span class="n">health_url</span><span class="si">}</span><span class="s2"> did not become ready within </span><span class="si">{</span><span class="n">timeout</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">s. &quot;</span>
                     <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
-                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-code-serve serve&#39; &quot;</span>
+                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-serve serve&#39; &quot;</span>
                     <span class="s2">&quot;to see the error.&quot;</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 

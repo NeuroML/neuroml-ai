@@ -213,8 +213,8 @@
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="cli/nml-mcp.html">nml-mcp</a></li>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-code.html">klea-code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="cli/klea-code-serve.html">klea-code-serve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea.html">klea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli/klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
 </ul>
@@ -409,27 +409,27 @@ listed below — add them with e.g. <code class="docutils literal notranslate"><
 </div>
 </section>
 </section>
-<section id="klea-code-wip-coming-soon-and-neuroml-mcp-from-source">
-<h2>klea-code (WIP: coming soon) and neuroml-mcp (from source)<a class="headerlink" href="#klea-code-wip-coming-soon-and-neuroml-mcp-from-source" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> is under active development and not yet ready for general use.
+<section id="klea-wip-coming-soon-and-neuroml-mcp-from-source">
+<h2>klea (WIP: coming soon) and neuroml-mcp (from source)<a class="headerlink" href="#klea-wip-coming-soon-and-neuroml-mcp-from-source" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">klea</span></code> is under active development and not yet ready for general use.
 <code class="docutils literal notranslate"><span class="pre">neuroml-mcp</span></code> is also in active development.  Neither is on PyPI.
 To install them, clone the repository and follow the
 <a class="reference internal" href="contributing.html"><span class="doc">development workflow</span></a>.</p>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
-<p>Both the RAG and Code packages load configuration from:</p>
+<p>Both the RAG and Agent packages load configuration from:</p>
 <ol class="arabic simple">
 <li><p>An env file (<code class="docutils literal notranslate"><span class="pre">k=v</span></code> format):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">KLEA_RAG_ENV_FILE</span></code> or <code class="docutils literal notranslate"><span class="pre">rag.env</span></code> for the RAG system</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">KLEA_CODE_ENV_FILE</span></code> or <code class="docutils literal notranslate"><span class="pre">klea_code.env</span></code> for the Code system</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">KLEA_AGENT_ENV_FILE</span></code> or <code class="docutils literal notranslate"><span class="pre">klea_agent.env</span></code> for the Agent system</p></li>
 </ul>
 </li>
 <li><p>A JSON configuration file referenced inside the env file.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">rag_pkg/example-configs/klea_rag.json</span></code> or a copy you customise</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">code_pkg/mcp.json</span></code> for Code MCP server configuration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">agent_pkg/mcp.json</span></code> for Agent MCP server configuration</p></li>
 </ul>
 </li>
 </ol>
@@ -505,14 +505,14 @@ third-party libraries.  Each CLI uses its own <code class="docutils literal notr
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea-rag</span></code> web client</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">klea-rag-web/klea-rag-web.log</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> (Code server / graph)</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">klea-code/klea-code.log</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea</span></code> (Agent server / graph)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea/klea.log</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> TUI client</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">klea-code-tui/klea-code-tui.log</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">klea</span></code> TUI client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-tui/klea-tui.log</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea-code</span></code> web client</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">klea-code-web/klea-code-web.log</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">klea</span></code> web client</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">klea-web/klea-web.log</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nml-mcp</span></code> (MCP server)</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">nml_mcp/nml_mcp.log</span></code></p></td>
@@ -524,7 +524,7 @@ third-party libraries.  Each CLI uses its own <code class="docutils literal notr
 </section>
 <section id="web-client-user-storage">
 <h2>Web client user storage<a class="headerlink" href="#web-client-user-storage" title="Link to this heading">¶</a></h2>
-<p>The NiceGUI web clients (<code class="docutils literal notranslate"><span class="pre">klea-rag</span> <span class="pre">web</span></code>, <code class="docutils literal notranslate"><span class="pre">klea-code</span> <span class="pre">web</span></code>) keep a small
+<p>The NiceGUI web clients (<code class="docutils literal notranslate"><span class="pre">klea-rag</span> <span class="pre">web</span></code>, <code class="docutils literal notranslate"><span class="pre">klea</span> <span class="pre">web</span></code>) keep a small
 per-browser-session identity file so that a returning browser is linked
 back to the same user.  The files are written to a <code class="docutils literal notranslate"><span class="pre">.nicegui/</span></code> directory
 relative to the working directory the web client is launched from (not the
@@ -606,7 +606,7 @@ id are then not shown in that browser).</p>
 <li><a class="reference internal" href="#klea-rag-extras">klea-rag extras</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#klea-code-wip-coming-soon-and-neuroml-mcp-from-source">klea-code (WIP: coming soon) and neuroml-mcp (from source)</a></li>
+<li><a class="reference internal" href="#klea-wip-coming-soon-and-neuroml-mcp-from-source">klea (WIP: coming soon) and neuroml-mcp (from source)</a></li>
 <li><a class="reference internal" href="#configuration">Configuration</a><ul>
 <li><a class="reference internal" href="#choosing-models">Choosing models</a></li>
 </ul>

@@ -213,8 +213,8 @@
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../cli/nml-mcp.html">nml-mcp</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../cli/klea-code.html">klea-code</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../cli/klea-code-serve.html">klea-code-serve</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cli/klea.html">klea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cli/klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
 </ul>
@@ -307,7 +307,7 @@ for the next step.</p>
 <h2>How Klea uses MCP<a class="headerlink" href="#how-klea-uses-mcp" title="Link to this heading">¶</a></h2>
 <p>Klea acts as the MCP client: it uses MCP servers to give its LLMs access
 to external tools (validation, file handling, model lookup, code
-execution, etc.).  A domain in a RAG or code config can declare one or
+execution, etc.).  A domain in a RAG or agent config can declare one or
 more MCP servers; the tools they expose are fetched at startup and made
 available to the graph’s tool picker, which decides which tools to call
 for a given query.</p>

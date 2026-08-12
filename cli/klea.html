@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Contributing" href="../contributing.html"><link rel="prev" title="klea-code" href="klea-code.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="klea-serve" href="klea-serve.html"><link rel="prev" title="nml-mcp" href="nml-mcp.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>klea-code-serve - Klea</title>
+        <title>klea - Klea</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -213,8 +213,8 @@
 <li class="toctree-l2"><a class="reference internal" href="klea-rag-serve.html">klea-rag-serve</a></li>
 <li class="toctree-l2"><a class="reference internal" href="klea-rag.html">klea-rag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="nml-mcp.html">nml-mcp</a></li>
-<li class="toctree-l2"><a class="reference internal" href="klea-code.html">klea-code</a></li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">klea-code-serve</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">klea</a></li>
+<li class="toctree-l2"><a class="reference internal" href="klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
 </ul>
@@ -271,7 +271,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/cli/klea-code-serve.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/cli/klea.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -289,36 +289,88 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="klea-code-serve">
-<h1>klea-code-serve<a class="headerlink" href="#klea-code-serve" title="Link to this heading">¶</a></h1>
-<p><strong>WIP: coming soon</strong> – this server is under active development and not yet
+          <section id="klea">
+<h1>klea<a class="headerlink" href="#klea" title="Link to this heading">¶</a></h1>
+<p><strong>WIP: coming soon</strong> – this CLI is under active development and not yet
 ready for general use.</p>
-<p>Run the Klea Code API server.</p>
+<p>General purpose agent (with coding capabilities) client.</p>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-code-serve [OPTIONS]                                     
+ Usage: klea [OPTIONS] COMMAND [ARGS]...                              
                                                                       
- Run the API server.                                                  
+ Simple KLEA Agent user client                                        
                                                                       
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ --host                      TEXT     [default: 127.0.0.1]          │
-│ --port                      INTEGER  [default: 8006]               │
-│ --dev                                Enable auto-reload (like      │
-│                                      fastapi dev)                  │
-│ --install-completion                 Install completion for the    │
-│                                      current shell.                │
-│ --show-completion                    Show completion for the       │
-│                                      current shell, to copy it or  │
-│                                      customize the installation.   │
-│ --help                               Show this message and exit.   │
+│ --install-completion          Install completion for the current   │
+│                               shell.                               │
+│ --show-completion             Show completion for the current      │
+│                               shell, to copy it or customize the   │
+│                               installation.                        │
+│ --help                        Show this message and exit.          │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Commands ─────────────────────────────────────────────────────────╮
+│ cli  Klea Agent cli client                                         │
+│ web  Klea Agent web client (NiceGUI)                               │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea cli [OPTIONS]                                            
+                                                                      
+ Klea Agent cli client                                                
+                                                                      
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --server        -s      TEXT  KLEA Agent server (URL:port)         │
+│                               [default: http://127.0.0.1:8006]     │
+│ --title         -t      TEXT  Title for application                │
+│                               [default: KLEA Agent]                │
+│ --single-query  -q      TEXT  Single query mode: answer a query    │
+│                               and exit                             │
+│ --help                        Show this message and exit.          │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea web [OPTIONS]                                            
+                                                                      
+ Klea Agent web client (NiceGUI)                                      
+                                                                      
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --server          -s      TEXT  KLEA Agent server (URL:port)       │
+│                                 [default: http://127.0.0.1:8006]   │
+│ --title           -t      TEXT  Title for application              │
+│                                 [default: KLEA Agent]              │
+│ --subtitle        -b      TEXT  Subtitle shown next to title in    │
+│                                 header                             │
+│ --disclaimer      -c      TEXT  Disclaimer text shown below the    │
+│                                 chat area                          │
+│                                 [default: Answers use LLM          │
+│                                 technology and may be incorrect.   │
+│                                 Please re-confirm.]                │
+│ --footer                  TEXT  Footer HTML content                │
+│                                 [default: Powered by &lt;a            │
+│                                 href=&quot;https://github.com/neuroml/… │
+│ --nicegui-url             TEXT  Host:port to bind the NiceGUI web  │
+│                                 server to                          │
+│                                 [default: 0.0.0.0:7860]            │
+│ --storage-secret          TEXT  NiceGUI storage secret for session │
+│                                 persistence                        │
+│                                 [default:                          │
+│                                 klea-nicegui-secret-change-me]     │
+│ --debug           -d            Enable auto-reload on file changes │
+│ --help                          Show this message and exit.        │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
 </div>
 </div>
 <section id="environment-variables">
 <h2>Environment variables<a class="headerlink" href="#environment-variables" title="Link to this heading">¶</a></h2>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">KLEA_CODE_ENV_FILE</span></code></dt><dd><p>Path to environment file (default: <code class="docutils literal notranslate"><span class="pre">klea_code.env</span></code>).</p>
+<dt><code class="docutils literal notranslate"><span class="pre">KLEA_AGENT_ENV_FILE</span></code></dt><dd><p>Path to environment file (default: <code class="docutils literal notranslate"><span class="pre">klea_agent.env</span></code>).</p>
 </dd>
 </dl>
 </section>
@@ -329,23 +381,23 @@ ready for general use.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../contributing.html">
+          <a class="next-page" href="klea-serve.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Contributing</div>
+                <div class="title">klea-serve</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="klea-code.html">
+          <a class="prev-page" href="nml-mcp.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">klea-code</div>
+                <div class="title">nml-mcp</div>
                 
               </div>
             </a>
@@ -378,7 +430,7 @@ ready for general use.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">klea-code-serve</a><ul>
+<li><a class="reference internal" href="#">klea</a><ul>
 <li><a class="reference internal" href="#environment-variables">Environment variables</a></li>
 </ul>
 </li>
