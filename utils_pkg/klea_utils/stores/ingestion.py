@@ -37,6 +37,13 @@ class StoresBuilder:
     DEFAULT_MERGE_PEERS = True
     DEFAULT_TOKENIZER_MODEL = "BAAI/bge-m3"
 
+    #: Number of chunks embedded per ``add_documents`` call in
+    #: :meth:`store_all`.  Batching gives the embedding phase (which can take
+    #: minutes for large corpora) a progress signal between calls; embedding
+    #: backends like Ollama send all texts in a single request otherwise.
+    #: The value is mostly a progress-granularity knob, not a throughput one.
+    DEFAULT_EMBED_BATCH_SIZE = 256
+
     def __init__(
         self,
         embedding_model: str,
@@ -45,6 +52,7 @@ class StoresBuilder:
         merge_peers: bool = DEFAULT_MERGE_PEERS,
         tokenizer_model: str = DEFAULT_TOKENIZER_MODEL,
         do_ocr: bool = True,
+        embed_batch_size: int = DEFAULT_EMBED_BATCH_SIZE,
     ):
         """Initialise the builder.
 
@@ -61,6 +69,8 @@ class StoresBuilder:
             conversion.  Keep enabled for scanned/image-based PDFs;
             disabling it speeds up conversion of text-based PDFs
             significantly.
+        :param embed_batch_size: Chunks per ``add_documents`` call when
+            writing to the vector store
         """
         self.embedding_model = embedding_model
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
@@ -68,6 +78,7 @@ class StoresBuilder:
         self.merge_peers = merge_peers
         self.tokenizer_model = tokenizer_model
         self.do_ocr = do_ocr
+        self.embed_batch_size = embed_batch_size
 
         self.embeddings = None
         self._converter = None
@@ -318,9 +329,24 @@ class StoresBuilder:
                 )
                 for doc in docs
             ]
-            store.add_documents(sanitized_docs)
+            # Embed in batches: a single ``add_documents`` call embeds every
+            # chunk in one request (Ollama sends all texts at once), which can
+            # take minutes with no output.  Batching reports progress at 10%
+            # milestones so the output stays bounded for any corpus size.
+            num_docs = len(sanitized_docs)
+            last_pct = -1
+            for i in range(0, num_docs, self.embed_batch_size):
+                store.add_documents(sanitized_docs[i : i + self.embed_batch_size])
+                done = min(i + self.embed_batch_size, num_docs)
+                pct = done * 100 // num_docs
+                if pct >= last_pct + 10:
+                    last_pct = pct
+                    self.logger.info(
+                        f"Stored {done}/{num_docs} chunks ({pct}%) from "
+                        f"{file_path.name}"
+                    )
             self.logger.info(
-                f"Added {len(docs)} chunks from {file_path.name} ({ctr}/{total})"
+                f"Added {num_docs} chunks from {file_path.name} ({ctr}/{total})"
             )
 
         if bm25_path:

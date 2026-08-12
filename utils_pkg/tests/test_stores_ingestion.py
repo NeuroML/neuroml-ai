@@ -867,6 +867,53 @@ class TestIngestion:
         assert meta["file_name"] == "a.md"
         assert doc.metadata["headings"] == []
 
+    def test_store_all_batches_and_logs_progress(self, monkeypatch, caplog):
+        """store_all embeds in batches and logs bounded progress lines.
+
+        A single ``add_documents`` call embeds every chunk in one request,
+        which can take minutes with no output; batching reports progress at
+        10% milestones while keeping the final per-file line.
+        """
+
+        class FakeStore:
+            def __init__(self):
+                self.calls: list[int] = []
+
+            def add_documents(self, docs):
+                self.calls.append(len(docs))
+
+        fake = FakeStore()
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: fake,
+        )
+        builder = StoresBuilder(
+            embedding_model="",
+            logger=self.logger,
+            embed_batch_size=4,
+        )
+        builder.embeddings = object()
+
+        docs = [
+            Document(
+                page_content=f"content {i}",
+                metadata={"file_name": "a.md"},
+            )
+            for i in range(10)
+        ]
+        with caplog.at_level(logging.INFO):
+            builder.store_all(
+                [("xxh64:abc", docs, Path("a.md"))],
+                "chroma:/tmp/x",
+                "col",
+                force=True,
+            )
+
+        assert fake.calls == [4, 4, 2]
+        assert "Stored 4/10 chunks (40%) from a.md" in caplog.text
+        assert "Stored 8/10 chunks (80%) from a.md" in caplog.text
+        assert "Added 10 chunks from a.md (1/1)" in caplog.text
+
 
 if __name__ == "__main__":
     pytest.main()

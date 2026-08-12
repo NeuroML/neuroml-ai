@@ -70,6 +70,13 @@ def build(
         "moved after creation",
         show_default="<collection>.pkl",
     ),
+    embed_batch_size: int = typer.Option(
+        256,
+        "--embed-batch-size",
+        help="Number of chunks embedded per store write call. Smaller "
+        "values report progress more frequently; larger values reduce "
+        "per-request overhead on very large corpora",
+    ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
@@ -135,6 +142,7 @@ def build(
             logger=logger,
             max_tokens=max_tokens,
             do_ocr=ocr,
+            embed_batch_size=embed_batch_size,
         )
         builder.build(
             source_dir=source_dir,
@@ -273,6 +281,13 @@ def store(
         "moved after creation",
         show_default="<collection>.pkl",
     ),
+    embed_batch_size: int = typer.Option(
+        256,
+        "--embed-batch-size",
+        help="Number of chunks embedded per store write call. Smaller "
+        "values report progress more frequently; larger values reduce "
+        "per-request overhead on very large corpora",
+    ),
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
@@ -317,6 +332,7 @@ def store(
             logger=logger,
             max_tokens=max_tokens,
             do_ocr=ocr,
+            embed_batch_size=embed_batch_size,
         )
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
