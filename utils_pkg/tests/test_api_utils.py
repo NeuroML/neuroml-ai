@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import asyncio
 import logging
 import threading
 import time
@@ -15,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 import httpx
+import klea_utils.api.utils as api_utils
 import pytest
 from klea_utils.api.utils import check_api_is_ready
 
@@ -105,3 +107,149 @@ class TestCheckApiIsReady:
             logger.debug("timeout bound gave up after %.2fs", elapsed)
         finally:
             server.shutdown()
+
+
+class TestMakeRetryerHttpx:
+    """Isolated tests of the httpx retryer's retry predicate."""
+
+    @pytest.fixture(autouse=True)
+    def _fast_waits(self, monkeypatch):
+        # Neutralise the exponential backoff so tests do not sleep.
+        monkeypatch.setattr(api_utils, "wait_random_exponential", lambda **kw: 0.0)
+
+    def _status_error(self, status_code: int) -> httpx.HTTPStatusError:
+        request = httpx.Request("GET", "http://example.com/x")
+        response = httpx.Response(status_code, request=request)
+        return httpx.HTTPStatusError(
+            f"HTTP {status_code}", request=request, response=response
+        )
+
+    async def test_retries_transient_connect_error_then_succeeds(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls < 3:
+                raise httpx.ConnectError("connection reset")
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 3
+
+    async def test_retries_read_error(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise httpx.ReadError("stream broken")
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 2
+
+    async def test_retries_read_timeout(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise httpx.ReadTimeout("slow")
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 2
+
+    async def test_retries_http_500(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise self._status_error(500)
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 2
+
+    async def test_retries_http_429(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise self._status_error(429)
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 2
+
+    async def test_does_not_retry_http_404(self):
+        # 404 is a client mistake; only 429 and 5xx are retried.
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            raise self._status_error(404)
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        with pytest.raises(httpx.HTTPStatusError):
+            await retryer(flaky)
+        assert calls == 1
+
+    async def test_retries_timeout(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise asyncio.TimeoutError()
+            return "ok"
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        result = await retryer(flaky)
+        assert result == "ok"
+        assert calls == 2
+
+    async def test_does_not_retry_unrelated_exception(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            raise ValueError("not an http error")
+
+        retryer = api_utils._make_retryer_httpx(attempts=5)
+        with pytest.raises(ValueError):
+            await retryer(flaky)
+        assert calls == 1
+
+    async def test_attempts_bound_honoured(self):
+        calls = 0
+
+        async def flaky():
+            nonlocal calls
+            calls += 1
+            raise httpx.ConnectError("down")
+
+        retryer = api_utils._make_retryer_httpx(attempts=3)
+        with pytest.raises(httpx.ConnectError):
+            await retryer(flaky)
+        assert calls == 3
