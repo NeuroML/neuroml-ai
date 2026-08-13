@@ -116,6 +116,23 @@ class BaseKleaRetriever(ABC):
                     loaded.append((domain_name, store))
         return loaded
 
+    def can_inc_k(self) -> bool:
+        """Return whether any loaded store still has room to grow k.
+
+        Non-mutating counterpart of :meth:`inc_k`: reports whether an
+        ``inc_k()`` call would increase at least one store's k, without
+        changing any k values.  Routers use this to decide between
+        retrieving more information and re-querying, so the actual
+        increment happens once, at the point of retrieval.
+
+        :returns: True if at least one loaded store's k is below its cap
+        """
+        for domain_name, store in self._loaded_stores():
+            current = self._current_k(domain_name, store)
+            if current + self._k_inc_for(store) <= self._k_max_for(store):
+                return True
+        return False
+
     def inc_k(self) -> bool:
         """Increase k for all loaded stores by their per-store increment.
 

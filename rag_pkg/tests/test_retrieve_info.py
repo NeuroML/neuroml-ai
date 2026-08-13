@@ -32,6 +32,9 @@ class FakeRetriever:
         self.queries.append(query)
         return self.results
 
+    def can_inc_k(self):
+        return True
+
     def inc_k(self):
         self.inc_count += 1
         return True

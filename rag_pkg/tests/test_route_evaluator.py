@@ -26,6 +26,9 @@ class FakeRetriever:
         self.inc_count = 0
         self.reset_count = 0
 
+    def can_inc_k(self):
+        return self.k_can_increment
+
     def inc_k(self):
         self.inc_count += 1
         return self.k_can_increment
@@ -77,8 +80,12 @@ def test_continue_resets_k_on_all_retrievers():
     assert r2.reset_count == 1
 
 
-def test_retrieve_more_info_increments_k_on_all_retrievers():
-    """Routing 'retrieve_more_info' increments k on every retriever."""
+def test_retrieve_more_info_checks_capacity_without_mutating():
+    """Routing 'retrieve_more_info' consults capacity but never mutates k.
+
+    The router only reports whether k can still grow; the actual ``inc_k()``
+    is applied once by RetrieveInfoNode when it retrieves.
+    """
     r1 = FakeRetriever("vector")
     r2 = FakeRetriever("bm25")
     router = _make_router([r1, r2])
@@ -94,8 +101,8 @@ def test_retrieve_more_info_increments_k_on_all_retrievers():
     logger.info(f"route: {route} | incs: r1={r1.inc_count}, r2={r2.inc_count}")
 
     assert route == "retrieve_more_info"
-    assert r1.inc_count == 1
-    assert r2.inc_count == 1
+    assert r1.inc_count == 0
+    assert r2.inc_count == 0
 
 
 def test_retrieve_more_info_without_retrievers_uses_exhausted_decision():

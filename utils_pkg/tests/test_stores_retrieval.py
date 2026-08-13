@@ -130,6 +130,31 @@ class TestStores(unittest.TestCase):
         self.assertEqual(retriever._current_k("NeuroML", small), 6)
         self.assertEqual(retriever._current_k("NeuroML", big), 4)
 
+    def test_can_inc_k_reports_capacity_without_mutating(self):
+        """can_inc_k() reports room to grow k but never changes any k value."""
+        retriever = self._make_retriever()
+        big, small = retriever.config.domains["NeuroML"].vector_stores
+
+        # only load "big"; "small" stays unloaded
+        big.loaded_object = FakeStore()
+
+        # big (2, k_max=4, k_inc=2) has room; nothing is mutated
+        self.assertTrue(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", big), 2)
+
+        # big at k_max and no other loaded store: no room, still no mutation
+        retriever.inc_k()
+        self.assertFalse(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", big), 4)
+
+        # an unloaded store with room does not count
+        self.assertNotIn(("NeuroML", "small"), retriever._k)
+
+        # loading small makes can_inc_k() true again (5 -> 6 within k_max=10)
+        small.loaded_object = FakeStore()
+        self.assertTrue(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", small), 5)
+
     def test_reset_k(self):
         """reset_k() restores loaded stores to their per-store defaults."""
         retriever = self._make_retriever()
