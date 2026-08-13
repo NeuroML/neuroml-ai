@@ -434,6 +434,7 @@ vector store to a domain:</p>
 <span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">     </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
 <span class="w">     </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">     </span><span class="nt">&quot;max_refs_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;non_domain_chat&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;fallback_to_training_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">},</span>
@@ -461,9 +462,18 @@ vector store to a domain:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">default_k</span></code> – number of documents to retrieve per query.  This is the
 graph-wide default; individual vector stores can override it (see below).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">k_max</span></code> – maximum <code class="docutils literal notranslate"><span class="pre">k</span></code> when the evaluator requests more context.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">k_max</span></code> – maximum number of candidates a store may fetch per retrieval
+pass.  Once every store has reached its cap, the evaluator loop stops
+pulling more of the same query and reformulates it instead.  <code class="docutils literal notranslate"><span class="pre">k_max</span></code>
+does not bound what reaches the answer LLM – that is
+<code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code>’s job.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">k_inc</span></code> – how much <code class="docutils literal notranslate"><span class="pre">k</span></code> is increased by each time the evaluator
 requests more information.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code> – total character budget for the reference material
+serialized into the answer LLM’s context (across all domains).  The
+best-ranked chunks are kept up to this budget, so raising <code class="docutils literal notranslate"><span class="pre">default_k</span></code>
+or <code class="docutils literal notranslate"><span class="pre">k_max</span></code> surfaces more chunks only while there is budget left –
+useful when chunks are small and more of them help.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">non_domain_chat</span></code> – whether to fall back to the LLM’s training data
 for questions that do not match any domain.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fallback_to_training_data</span></code> – whether to let the LLM answer from its
@@ -495,7 +505,8 @@ cover corpora of very different sizes:</p>
 <span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;max_refs_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;domains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;MyDomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -523,6 +534,10 @@ steps of 5 when the evaluator asks for more context, while <code class="docutils
 inherits the <code class="docutils literal notranslate"><span class="pre">general</span></code> settings (5, capped at 10, stepping by 1).  The
 dynamic <code class="docutils literal notranslate"><span class="pre">k_inc</span></code>/<code class="docutils literal notranslate"><span class="pre">k_max</span></code> adjustments only apply to stores that are
 already loaded, so a store only grows once it has been queried once.</p>
+<p>After the retrievers are queried, the fused results are truncated to the
+global <code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code> character budget, so <code class="docutils literal notranslate"><span class="pre">k</span></code>/<code class="docutils literal notranslate"><span class="pre">k_max</span></code> control how
+many candidates are fetched while <code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code> controls how much of
+them reaches the answer LLM.</p>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p><a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for details on HuggingFace, OpenAI, and other
@@ -624,7 +639,9 @@ errors (trailing commas, missing quotes).</p>
 </dd>
 <dt><strong>Queries return empty or irrelevant results</strong></dt><dd><p>Increase <code class="docutils literal notranslate"><span class="pre">default_k</span></code> in the JSON config.  Verify the vector store
 path and collection name match.  Check that your source files are in
-a format Docling supports.</p>
+a format Docling supports.  If raising <code class="docutils literal notranslate"><span class="pre">default_k</span></code>/<code class="docutils literal notranslate"><span class="pre">k_max</span></code> does
+not bring in more useful chunks, confirm <code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code> is large
+enough to fit them.</p>
 </dd>
 </dl>
 <div class="admonition seealso">

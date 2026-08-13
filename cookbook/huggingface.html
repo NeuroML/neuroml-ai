@@ -360,6 +360,7 @@ your content.  The store path format is
 <span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;max_refs_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;non_domain_chat&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;domains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -383,7 +384,10 @@ and adjust the rest.</p>
 <p>Individual vector stores may override the <code class="docutils literal notranslate"><span class="pre">general</span></code> retrieval
 settings (<code class="docutils literal notranslate"><span class="pre">default_k</span></code>, <code class="docutils literal notranslate"><span class="pre">k_max</span></code>, <code class="docutils literal notranslate"><span class="pre">k_inc</span></code>) with their own
 per-store values, e.g. a store covering a large corpus can set
-<code class="docutils literal notranslate"><span class="pre">&quot;default_k&quot;:</span> <span class="pre">10,</span> <span class="pre">&quot;k_max&quot;:</span> <span class="pre">25,</span> <span class="pre">&quot;k_inc&quot;:</span> <span class="pre">5</span></code> on its entry.</p>
+<code class="docutils literal notranslate"><span class="pre">&quot;default_k&quot;:</span> <span class="pre">10,</span> <span class="pre">&quot;k_max&quot;:</span> <span class="pre">25,</span> <span class="pre">&quot;k_inc&quot;:</span> <span class="pre">5</span></code> on its entry.
+<code class="docutils literal notranslate"><span class="pre">general.max_refs_size</span></code> bounds the total number of reference
+characters serialized into the answer LLM’s context, independent of
+the per-store <code class="docutils literal notranslate"><span class="pre">k</span></code> settings.</p>
 <p>See <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for a full explanation of
 the configuration schema.</p>
 </li>
@@ -538,7 +542,8 @@ The token must have access to the gated model repository.</p>
 </dd>
 <dt><strong>Space runs out of memory.</strong></dt><dd><p>The free <code class="docutils literal notranslate"><span class="pre">cpu-basic</span></code> tier has limited RAM.  Reduce <code class="docutils literal notranslate"><span class="pre">k_max</span></code> in
 <code class="docutils literal notranslate"><span class="pre">klea_rag.json</span></code>, use smaller embedding models, or upgrade to a
-paid hardware tier on HuggingFace.</p>
+paid hardware tier on HuggingFace.  Reducing <code class="docutils literal notranslate"><span class="pre">max_refs_size</span></code> also
+shrinks the reference context sent to the answer LLM.</p>
 </dd>
 <dt><strong>Container crashes on startup.</strong></dt><dd><p>Check the Space logs for Python tracebacks.  Common causes: a typo in
 <code class="docutils literal notranslate"><span class="pre">klea_rag.json</span></code> (e.g. trailing comma), a missing vector store path,

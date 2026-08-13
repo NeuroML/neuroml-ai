@@ -532,6 +532,22 @@ for a store</p></li>
 <p>Subclasses should set <a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.source_label" title="klea_utils.stores.retrieval.base.BaseKleaRetriever.source_label"><code class="xref py py-attr docutils literal notranslate"><span class="pre">source_label</span></code></a> to a human-readable name
 for the retriever type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;vector</span> <span class="pre">store&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;BM25&quot;</span></code>), used to
 label the original per-source scores preserved during fusion.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="klea_utils.stores.retrieval.base.BaseKleaRetriever.can_inc_k">
+<span class="sig-name descname"><span class="pre">can_inc_k</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/retrieval/base.html#BaseKleaRetriever.can_inc_k"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.can_inc_k" title="Link to this definition">¶</a></dt>
+<dd><p>Return whether any loaded store still has room to grow k.</p>
+<p>Non-mutating counterpart of <a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k" title="klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k"><code class="xref py py-meth docutils literal notranslate"><span class="pre">inc_k()</span></code></a>: reports whether an
+<code class="docutils literal notranslate"><span class="pre">inc_k()</span></code> call would increase at least one store’s k, without
+changing any k values.  Routers use this to decide between
+retrieving more information and re-querying, so the actual
+increment happens once, at the point of retrieval.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if at least one loaded store’s k is below its cap</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="klea_utils.stores.retrieval.base.BaseKleaRetriever.domains">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">domains</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.domains" title="Link to this definition">¶</a></dt>
@@ -681,6 +697,15 @@ cosine similarity.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.REF_DOC_OVERHEAD">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">REF_DOC_OVERHEAD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">200</span></span><a class="headerlink" href="#klea_utils.stores.utils.REF_DOC_OVERHEAD" title="Link to this definition">¶</a></dt>
+<dd><p>Per-document character overhead attributed by <a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material" title="klea_utils.stores.utils.truncate_reference_material"><code class="xref py py-func docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a>
+for the serialized markup that wraps each reference in the LLM context
+(<code class="docutils literal notranslate"><span class="pre">###</span> <span class="pre">Document</span> <span class="pre">N/M:</span> <span class="pre">[file]</span> <span class="pre">headings</span> <span class="pre">(relevance:</span> <span class="pre">...)</span></code> plus the optional
+metadata line).  Approximate; the page content dominates in practice.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.RRF_K">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">RRF_K</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">60</span></span><a class="headerlink" href="#klea_utils.stores.utils.RRF_K" title="Link to this definition">¶</a></dt>
 <dd><p>Rank offset for Reciprocal Rank Fusion.  A document at rank <em>r</em> within a
@@ -788,7 +813,7 @@ unchanged.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.rrf_merge">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">rrf_merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_refs_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#rrf_merge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.rrf_merge" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">rrf_merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_refs_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#rrf_merge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.rrf_merge" title="Link to this definition">¶</a></dt>
 <dd><p>Fuse per-source retrieval results with Reciprocal Rank Fusion.</p>
 <p>Scores from different retrievers (e.g. cosine similarity vs BM25) are not
 comparable, so each document is scored purely by its rank within each
@@ -800,12 +825,15 @@ each document’s <a class="reference internal" href="#klea_utils.stores.utils.S
 <li><p><strong>result_sets</strong> – List of <code class="docutils literal notranslate"><span class="pre">(source_label,</span> <span class="pre">results)</span></code> pairs, where each
 <em>results</em> is a list of <code class="docutils literal notranslate"><span class="pre">(document,</span> <span class="pre">score)</span></code> tuples already ranked by
 its source</p></li>
-<li><p><strong>num_refs_max</strong> – Maximum number of documents to return</p></li>
+<li><p><strong>num_refs_max</strong> – Maximum number of documents to return, or <code class="docutils literal notranslate"><span class="pre">None</span></code>
+to return every fused document.  Callers that want to bound the
+context fed to an LLM should cap by characters via
+<a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material" title="klea_utils.stores.utils.truncate_reference_material"><code class="xref py py-func docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a> instead of by document count.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Documents ordered by RRF score, deduplicated by content, capped
-at <em>num_refs_max</em></p>
+at <em>num_refs_max</em> when set</p>
 </dd>
 </dl>
 </dd></dl>
@@ -828,6 +856,31 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Formatted string representation of references</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.truncate_reference_material">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">truncate_reference_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#truncate_reference_material"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.truncate_reference_material" title="Link to this definition">¶</a></dt>
+<dd><p>Truncate reference material to a global character budget.</p>
+<p>The RRF merge orders documents by fused rank but does not bound how
+much context the answer LLM receives; that is what this function does.
+Documents are consumed in RRF order per domain (domains in their dict
+order), counting <code class="docutils literal notranslate"><span class="pre">len(page_content)</span></code> plus the per-document
+serialization overhead (<a class="reference internal" href="#klea_utils.stores.utils.REF_DOC_OVERHEAD" title="klea_utils.stores.utils.REF_DOC_OVERHEAD"><code class="xref py py-data docutils literal notranslate"><span class="pre">REF_DOC_OVERHEAD</span></code></a>), until the budget is
+exhausted.  The first document that crosses the budget is still
+included, so a single large chunk never silently yields empty context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reference_material</strong> – <code class="docutils literal notranslate"><span class="pre">{domain:</span> <span class="pre">[(doc,</span> <span class="pre">score),</span> <span class="pre">...]}</span></code> in RRF order</p></li>
+<li><p><strong>max_chars</strong> – Total character budget across all domains</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New mapping with the same domain keys, lists truncated to the
+budget</p>
 </dd>
 </dl>
 </dd></dl>
@@ -927,6 +980,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 </li>
 <li><a class="reference internal" href="#retrieval">Retrieval</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever"><code class="docutils literal notranslate"><span class="pre">BaseKleaRetriever</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.can_inc_k"><code class="docutils literal notranslate"><span class="pre">BaseKleaRetriever.can_inc_k()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.domains"><code class="docutils literal notranslate"><span class="pre">BaseKleaRetriever.domains</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k"><code class="docutils literal notranslate"><span class="pre">BaseKleaRetriever.inc_k()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.retrieval.base.BaseKleaRetriever.load"><code class="docutils literal notranslate"><span class="pre">BaseKleaRetriever.load()</span></code></a></li>
@@ -950,6 +1004,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 </li>
 <li><a class="reference internal" href="#module-klea_utils.stores.utils">Utilities</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.utils.CHROMA_HNSW_SPACE"><code class="docutils literal notranslate"><span class="pre">CHROMA_HNSW_SPACE</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.REF_DOC_OVERHEAD"><code class="docutils literal notranslate"><span class="pre">REF_DOC_OVERHEAD</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.RRF_K"><code class="docutils literal notranslate"><span class="pre">RRF_K</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.format_source_scores"><code class="docutils literal notranslate"><span class="pre">format_source_scores()</span></code></a></li>
@@ -957,6 +1012,7 @@ Uses Docling <code class="docutils literal notranslate"><span class="pre">Hybrid
 <li><a class="reference internal" href="#klea_utils.stores.utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.rrf_merge"><code class="docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.serialize_vs_retrieval"><code class="docutils literal notranslate"><span class="pre">serialize_vs_retrieval()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material"><code class="docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a></li>
 </ul>
 </li>
 </ul>

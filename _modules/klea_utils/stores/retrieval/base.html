@@ -406,6 +406,26 @@
                     <span class="n">loaded</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">loaded</span>
 
+<div class="viewcode-block" id="BaseKleaRetriever.can_inc_k">
+<a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.can_inc_k">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">can_inc_k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return whether any loaded store still has room to grow k.</span>
+
+<span class="sd">        Non-mutating counterpart of :meth:`inc_k`: reports whether an</span>
+<span class="sd">        ``inc_k()`` call would increase at least one store&#39;s k, without</span>
+<span class="sd">        changing any k values.  Routers use this to decide between</span>
+<span class="sd">        retrieving more information and re-querying, so the actual</span>
+<span class="sd">        increment happens once, at the point of retrieval.</span>
+
+<span class="sd">        :returns: True if at least one loaded store&#39;s k is below its cap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loaded_stores</span><span class="p">():</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_k</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_inc_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_max_for</span><span class="p">(</span><span class="n">store</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
 <div class="viewcode-block" id="BaseKleaRetriever.inc_k">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">inc_k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
