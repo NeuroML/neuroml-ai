@@ -19,6 +19,8 @@ from cachetools import TTLCache
 from fastmcp import Context
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.tools.download_file import download_file_to_cache
+from klea_utils.paths import get_cache_dir
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -26,10 +28,11 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from ..utils import NML_MCP_DIRS
+
 # set the implementation for development
 from .sandbox import nml_mcp_sandbox
 from .sandbox.sandbox import RunCommand
-from .web_tools import _download_file_to_cache_by_content
 
 sbox = nml_mcp_sandbox
 
@@ -275,12 +278,13 @@ async def get_models_from_neuromldb(
                 mcopy["resource"] = NEUROMLDB_XML_CACHE[model_id]
             else:
                 try:
-                    xml_path = await _download_file_to_cache_by_content(
+                    xml_path = await download_file_to_cache(
                         NMLDB_CLIENT,
                         neuromldb_model_xml_url,
+                        cache_dir=get_cache_dir(NML_MCP_DIRS),
+                        file_name=f"{model_id}.xml",
                         params={"modelID": model_id},
                         timeout=XML_DOWNLOAD_TIMEOUT,
-                        disk_file_name=f"{model_id}.xml",
                     )
                     if xml_path is not None:
                         NEUROMLDB_XML_CACHE[model_id] = xml_path

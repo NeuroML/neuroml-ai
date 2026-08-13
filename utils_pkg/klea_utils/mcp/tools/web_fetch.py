@@ -16,7 +16,7 @@ import os
 import random
 import socket
 import time
-from typing import Any, Protocol
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -24,6 +24,7 @@ from bs4 import BeautifulSoup
 from platformdirs import PlatformDirs
 
 from klea_utils.api.utils import _make_retryer_httpx
+from klea_utils.mcp.tools.session import SessionLike
 from klea_utils.paths import get_cache_dir
 
 logger = logging.getLogger(__name__)
@@ -177,16 +178,6 @@ async def _resolve_user_agents() -> list[str]:
         return _UA_LIST
 
 
-class _SessionLike(Protocol):
-    """Minimal session interface needed by :func:`web_fetch`.
-
-    Kept structural so tests can substitute a fake and so the implementation
-    does not depend on a specific HTTP client library.
-    """
-
-    def stream(self, method: str, url: str, **kwargs: Any) -> Any: ...
-
-
 def _html_to_text(html: str) -> str:
     """Strip HTML to plain text suitable for an LLM."""
     soup = BeautifulSoup(html, "html.parser")
@@ -253,7 +244,7 @@ async def _read_capped(response: httpx.Response, max_bytes: int) -> tuple[bytes,
 
 
 async def web_fetch(
-    session: _SessionLike | None,
+    session: SessionLike | None,
     url: str,
     timeout: float = 30.0,
     max_chars: int = 100_000,

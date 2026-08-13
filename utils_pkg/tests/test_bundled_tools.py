@@ -17,6 +17,7 @@ import httpx
 import klea_utils.api.utils as api_utils
 import pytest
 from klea_utils.mcp.tools import web_fetch as web_fetch_module
+from klea_utils.mcp.tools.download_file import download_file, download_file_to_cache
 from klea_utils.mcp.tools.list_files import list_files
 from klea_utils.mcp.tools.web_fetch import web_fetch
 
@@ -46,6 +47,14 @@ class _FakeResponse:
                 f"HTTP {self.status_code}", request=request, response=response
             )
 
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 300
+
+    @property
+    def text(self) -> str:
+        return self._body.decode("utf-8", errors="replace")
+
     async def aiter_bytes(self):
         yield self._body
 
@@ -74,6 +83,12 @@ class _FakeSession:
         self.calls.append((method, url, kwargs))
         return _FakeStreamCM(response=self._response, error=self._error)
 
+    async def get(self, url, **kwargs):
+        self.calls.append(("GET", url, kwargs))
+        if self._error is not None:
+            raise self._error
+        return self._response
+
 
 class _FlakySession:
     """Session that fails with the given status twice, then succeeds."""
@@ -91,6 +106,10 @@ class _FlakySession:
         else:
             response = _FakeResponse(self._body, status=200, content_type="text/plain")
         return _FakeStreamCM(response=response)
+
+    async def get(self, url, **kwargs):
+        # Not used by the web_fetch tests this drives; satisfies SessionLike.
+        raise AssertionError("_FlakySession.get is not exercised in these tests")
 
 
 @pytest.fixture(autouse=True)
@@ -315,6 +334,10 @@ class _ChallengeSession:
             response = _FakeResponse(self._body, status=200, content_type="text/plain")
         return _FakeStreamCM(response=response)
 
+    async def get(self, url, **kwargs):
+        # Not used by the web_fetch test this drives; satisfies SessionLike.
+        raise AssertionError("_ChallengeSession.get is not exercised in these tests")
+
 
 @pytest.mark.asyncio
 async def test_web_fetch_cloudflare_challenge_retries_honest_ua():
@@ -384,6 +407,49 @@ async def test_web_fetch_ssrf_allows_public_host():
     )
     assert result["status_code"] == 200
     assert result["content"] == "public"
+
+
+class TestDownloadFile:
+    """Tests of the shared download_file implementation."""
+
+    async def test_download_file_writes_target(self, tmp_path):
+        fake = _FakeResponse("file body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "out.txt"
+        result = await download_file(
+            session=session, url="https://example.com/f.txt", file_path=target
+        )
+        assert result == target
+        assert target.read_text() == "file body"
+
+    async def test_download_file_missing_session(self, tmp_path):
+        result = await download_file(
+            session=None, url="https://example.com/f.txt", file_path=tmp_path / "x"
+        )
+        assert result is None
+
+    async def test_download_file_http_error(self, tmp_path):
+        fake = _FakeResponse("missing", status=404, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        result = await download_file(
+            session=session, url="https://example.com/f.txt", file_path=tmp_path / "x"
+        )
+        assert result is None
+        assert not (tmp_path / "x").exists()
+
+    async def test_download_file_to_cache(self, tmp_path):
+        fake = _FakeResponse("cached body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        cache_dir = tmp_path / "cache"
+        result = await download_file_to_cache(
+            session=session,
+            url="https://example.com/f.txt",
+            cache_dir=cache_dir,
+            file_name="f.txt",
+        )
+        assert result is not None
+        assert result == cache_dir / "f.txt"
+        assert result.read_text() == "cached body"
 
 
 def test_list_files_rejects_dotdot():

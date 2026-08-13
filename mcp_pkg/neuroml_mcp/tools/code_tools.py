@@ -11,11 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from dataclasses import asdict
-from pathlib import Path
 from typing import Annotated, Any
 
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.tools.list_files import list_files as list_files_impl
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
@@ -91,52 +91,15 @@ async def list_files(
         Dict with the matching files, an error message (if any), and a
         truncated flag.
     """
-    the_path = Path(path)
-    truncated = "False"
-    error = ""
-    files: list[dict[str, Any]] = []
-    paths: list[Path] = []
-
-    if ".." in path:
-        return {
-            "files": [],
-            "truncated": "False",
-            "error": "Path contains '..', exiting.",
-        }
-
-    patterns = pattern.split()
-    patterns = list(set(patterns))
-
-    try:
-        for p in patterns:
-            if recursive:
-                paths.extend(list(the_path.rglob(p)))
-            else:
-                paths.extend(list(the_path.glob(p)))
-
-        if len(paths) > max_results:
-            truncated = "True"
-
-        for f in paths[:max_results]:
-            ftype = "file"
-            if f.is_dir():
-                ftype = "directory"
-            if f.is_symlink():
-                ftype = "link"
-            files.append(
-                {
-                    "path": str(f),
-                    "type": ftype,
-                    "modified time": f.stat().st_mtime,
-                    "size": f.stat().st_size,
-                }
-            )
-    except Exception as e:
-        error = e.__str__()
-
-    result = {"files": files, "error": error, "truncated": truncated}
-
-    return result
+    return list_files_impl(
+        path=path,
+        max_depth=max_depth,
+        pattern=pattern,
+        include_files=include_files,
+        include_directories=include_directories,
+        recursive=recursive,
+        max_results=max_results,
+    )
 
 
 @tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
