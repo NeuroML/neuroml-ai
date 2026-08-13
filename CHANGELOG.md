@@ -16,6 +16,11 @@
 - Chunk text and headings are now normalized for retrieval; existing
   `.klea-cache` entries are stale -- re-run
   `klea-stores-create ... --force` once to re-chunk.
+- Bibliographic metadata key `venue` renamed to `journal` (matches the
+  retrieval filter schema); existing `metadata-map.template.json`,
+  `metadata-map.json`, `.klea-cache` and `doi-cache.json` entries with
+  `venue` are stale -- re-run `klea-stores-create chunk --force` once to
+  regenerate.
 
 ### Added
 
