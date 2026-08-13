@@ -17,6 +17,7 @@ from klea_utils.llm import setup_embedding
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 
 from ..config import PerDomainConfig, RetrieverConfig
+from ..filters import translate_metadata_filter
 from ..utils import instantiate_vector_store
 
 
@@ -98,19 +99,38 @@ class VSRetriever(BaseKleaRetriever):
 
     @override
     def _retrieve_from_store(
-        self, store: Any, query: str, k: int
+        self,
+        store: Any,
+        query: str,
+        k: int,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[tuple[Document, float]]:
         """Run similarity search on a single vector store.
+
+        When *metadata_filter* is set it is translated to the backend's
+        native ``filter`` (selected by the store path scheme) and applied
+        *inside* the similarity search, so only matching vectors are
+        candidates.
 
         :param store: Loaded vector store to query
         :param query: User query string
         :param k: Number of documents to retrieve from this store
+        :param metadata_filter: Optional metadata filter in the DSL (see
+            :func:`klea_utils.stores.filters.validate_metadata_filter`)
         :returns: List of (document, relevance_score) tuples
         """
+        search_args: dict[str, Any] = {
+            "query": query,
+            "k": k,
+            "score_threshold": self.sim_thresh,
+        }
+        if metadata_filter is not None:
+            search_args["filter"] = translate_metadata_filter(
+                store.path, metadata_filter
+            )
+            self.logger.debug(f"{search_args['filter'] = }")
         data = store.loaded_object.similarity_search_with_relevance_scores(
-            query,
-            k=k,
-            score_threshold=self.sim_thresh,
+            **search_args
         )
         self.logger.debug(f"{data =}")
         if len(data) == 0:

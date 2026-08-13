@@ -18,6 +18,12 @@ from langchain_core.documents import Document
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 
 from ..config import PerDomainConfig, RetrieverConfig
+from ..filters import filter_docs_by_metadata
+
+#: How many extra candidates the BM25 store fetches before post-filtering
+#: when a metadata filter is active, so enough matching documents remain
+#: after the filter removes non-matching results.
+BM25_FILTER_MARGIN = 3
 
 
 class BM25RetrieverManager(BaseKleaRetriever):
@@ -102,23 +108,47 @@ class BM25RetrieverManager(BaseKleaRetriever):
 
     @override
     def _retrieve_from_store(
-        self, store: Any, query: str, k: int
+        self,
+        store: Any,
+        query: str,
+        k: int,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[tuple[Document, float]]:
         """Run BM25 keyword search on a single store.
+
+        When *metadata_filter* is set, more candidates than *k* are
+        fetched (a :data:`BM25_FILTER_MARGIN`) and only the matching
+        subset is kept, because the ``rank_bm25`` index has no native
+        filter support.  If fewer than *k* documents remain after
+        filtering, retrieval degrades gracefully (the fuser simply sees
+        fewer results).
 
         :param store: Loaded BM25 store to query
         :param query: User query string
         :param k: Number of documents to retrieve from this store
+        :param metadata_filter: Optional metadata filter in the DSL (see
+            :func:`klea_utils.stores.filters.validate_metadata_filter`)
         :returns: List of (document, relevance_score) tuples.  Documents
             with a non-positive score (no term overlap with the query)
             are dropped.
         """
         retriever = store.loaded_object
         processed = retriever.preprocess_func(query)
-        top_docs = retriever.vectorizer.get_top_n(processed, retriever.docs, n=k)
+        margin = k * BM25_FILTER_MARGIN if metadata_filter is not None else k
+        top_docs = retriever.vectorizer.get_top_n(processed, retriever.docs, n=margin)
         scores = retriever.vectorizer.get_scores(processed)
         # get_top_n returns the same Document objects, so map scores by id.
         score_by_id = {id(doc): score for doc, score in zip(retriever.docs, scores)}
 
         result = [(doc, score_by_id[id(doc)]) for doc in top_docs]
-        return [(doc, score) for doc, score in result if score > 0]
+        result = [(doc, score) for doc, score in result if score > 0]
+
+        if metadata_filter is not None:
+            kept = filter_docs_by_metadata([doc for doc, _ in result], metadata_filter)
+            kept_ids = {id(doc) for doc in kept}
+            result = [(doc, score) for doc, score in result if id(doc) in kept_ids][:k]
+            self.logger.debug(
+                f"BM25 filter: kept {len(result)} after filtering with "
+                f"{metadata_filter = }"
+            )
+        return result

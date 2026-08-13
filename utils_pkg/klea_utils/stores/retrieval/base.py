@@ -202,11 +202,20 @@ class BaseKleaRetriever(ABC):
                 f"Finished loading store '{store_name}' from {store.path}"
             )
 
-    def retrieve(self, domain_name: str, query: str) -> list[tuple[Document, float]]:
+    def retrieve(
+        self,
+        domain_name: str,
+        query: str,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> list[tuple[Document, float]]:
         """Retrieve documents from all stores for a domain.
 
         :param domain_name: Name of the domain to search in
         :param query: User query string
+        :param metadata_filter: Optional metadata filter in the DSL (see
+            :func:`klea_utils.stores.filters.validate_metadata_filter`).
+            Applied natively by stores that support a backend filter and
+            post-filtered for stores that do not (BM25)
         :returns: List of (document, relevance_score) tuples
         """
         self.load(domain_name)
@@ -219,7 +228,10 @@ class BaseKleaRetriever(ABC):
             if store.loaded_object is None:
                 continue
             data = self._retrieve_from_store(
-                store, query, self._current_k(domain_name, store)
+                store,
+                query,
+                self._current_k(domain_name, store),
+                metadata_filter,
             )
             res.extend(data)
 
@@ -246,13 +258,19 @@ class BaseKleaRetriever(ABC):
 
     @abstractmethod
     def _retrieve_from_store(
-        self, store: Any, query: str, k: int
+        self,
+        store: Any,
+        query: str,
+        k: int,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[tuple[Document, float]]:
         """Retrieve from a single store, returning (document, score) tuples.
 
         :param store: Loaded store object to query
         :param query: User query string
         :param k: Number of documents to retrieve from this store
-        :returns: List of (document, relevance_score) tuples
+        :param metadata_filter: Optional metadata filter in the DSL (see
+            :func:`klea_utils.stores.filters.validate_metadata_filter`)
+        :returns: List of (document, score) tuples
         """
         ...

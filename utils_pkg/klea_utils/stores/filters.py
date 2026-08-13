@@ -178,6 +178,47 @@ def to_pgvector_filter(f: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def translate_metadata_filter(path: str, f: dict[str, Any]) -> Any:
+    """Translate a filter for the backend named by a store path.
+
+    Dispatch helper used by the retrievers: reads the URI scheme from a
+    store path (e.g. ``chroma:/data/store``) and returns the matching
+    backend-native filter.  ``filter_docs_by_metadata`` is *not* returned
+    here -- callers that need the in-memory matcher (the BM25 store)
+    call it directly.
+
+    Example::
+
+        translate_metadata_filter("chroma:/data/store",
+                                  {"authors": {"$contains": "Magee"}})
+        -> {"authors": {"$contains": "Magee"}}
+
+    :param path: Store URI (``scheme:location``)
+    :param f: Metadata filter in the DSL (see
+        :func:`validate_metadata_filter`)
+    :returns: Backend-native filter for the store's scheme
+    :raises ValueError: When the scheme is missing or unknown
+    """
+    scheme, sep, _ = path.partition(":")
+    if not sep:
+        raise ValueError(
+            f"Invalid store path '{path}': expected format "
+            f"'scheme:location' (e.g. 'chroma:/path/to/store')"
+        )
+    match scheme.lower():
+        case "chroma":
+            return to_chroma_filter(f)
+        case "qdrant":
+            return to_qdrant_filter(f)
+        case "pgvector":
+            return to_pgvector_filter(f)
+        case _:
+            raise ValueError(
+                f"Unsupported vector store scheme '{scheme}' for filter "
+                f"translation. Supported: chroma, qdrant, pgvector"
+            )
+
+
 def filter_docs_by_metadata(docs: list[Document], f: dict[str, Any]) -> list[Document]:
     """Return the subset of *docs* whose metadata matches the filter.
 
