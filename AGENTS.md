@@ -184,6 +184,10 @@ Git log has the step-by-step edits. Omit routine work.
 
 ## Logging conventions
 
+- Add a module-level `logger = logging.getLogger(__name__)` to every new
+  module, and log at appropriate levels at key points (function entry, result
+  summaries, warnings, errors) so failures can be traced.  Do not write code
+  without logging.
 - Use `f"{variable = }"` (Python 3.8+ f-string debug syntax) when logging
   variable values, one variable per line:
   ```python
