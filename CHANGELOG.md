@@ -16,6 +16,9 @@
 - Chunk text and headings are now normalized for retrieval; existing
   `.klea-cache` entries are stale -- re-run
   `klea-stores-create ... --force` once to re-chunk.
+- `neuroml_mcp` tool names dropped the `_tool` suffix (e.g.
+  `get_models_from_neuromldb_tool` -> `get_models_from_neuromldb`); clients
+  that call tools by hardcoded name must update them.
 
 ### Added
 
@@ -51,7 +54,9 @@
 
 - `neuroml_mcp` and `klea_agent` register their tools through the shared
   `klea_utils.mcp.registry` (`tool_meta` / `register_tools`) instead of
-  package-local copies; bundled tool names now carry the `_tool` suffix.
+  package-local copies; tools are discovered by their `@tool_meta`
+  decoration (function name is the tool name) rather than a `_tool` name
+  suffix.
 
 ### Fixed
 
