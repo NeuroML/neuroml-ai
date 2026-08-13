@@ -96,7 +96,7 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
 
 
 @tool_meta(ToolInfo(title="Echo text", tags={"testing", "neuroml"}))
-async def dummy_tool(astring: str) -> str:
+async def dummy(astring: str) -> str:
     """Return the input string in a sentence (testing tool only).
 
     Use this tool to test and debug the MCP tool infrastructure.
@@ -107,7 +107,7 @@ async def dummy_tool(astring: str) -> str:
     Do not use for:
     - Any real task - this tool provides no real functionality.
 
-    Example: dummy_tool("hello")
+    Example: dummy("hello")
 
     Args:
         astring: Any string to be echoed back.
@@ -118,7 +118,7 @@ async def dummy_tool(astring: str) -> str:
 @tool_meta(
     ToolInfo(title="Create a NeuroML model template", tags={"testing", "neuroml"})
 )
-def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
+def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     """Create a new blank NeuroML model template.
 
     Use this tool to generate a starting template for NeuroML models, which
@@ -133,7 +133,7 @@ def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
     - Validating or simulating models (use the validation and simulation
       tools instead).
 
-    Example: create_new_NeuroML_model_tool("MyNeuralNetwork")
+    Example: create_new_NeuroML_model("MyNeuralNetwork")
 
     Args:
         model_name: Name for the NeuroML model. Will be used as the network
@@ -198,7 +198,7 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
         tags={"testing", "neuroml", "neuroml-db"},
     )
 )
-async def get_models_from_neuromldb_tool(
+async def get_models_from_neuromldb(
     ctx: Context, search_query: str, num: int = 3, download: bool = False
 ) -> dict[str, Any]:
     """Search and optionally download cell and ion channel models from NeuroML-DB.
@@ -299,7 +299,7 @@ async def get_models_from_neuromldb_tool(
         tags={"testing", "neuroml", "neuroml-db"},
     )
 )
-async def get_repositories_from_open_source_brain_tool(
+async def get_repositories_from_open_source_brain(
     ctx: Context,
     search_query: str,
     search_data: bool = True,
@@ -323,7 +323,7 @@ async def get_repositories_from_open_source_brain_tool(
     - Directly downloading files (use the download tools instead).
     - Searching NeuroML-DB for cell models (use the NeuroML-DB search tool).
 
-    Example: get_repositories_from_open_source_brain_tool(search_query="cerebellum")
+    Example: get_repositories_from_open_source_brain(search_query="cerebellum")
 
     Args:
         search_query: search term for querying Open Source Brain. Must be

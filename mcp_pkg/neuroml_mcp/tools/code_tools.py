@@ -27,7 +27,7 @@ sbox = nml_mcp_sandbox
 
 
 @tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
-async def dummy_code_tool(
+async def dummy_code(
     astring: str,
 ) -> str:
     """Return the input string in a sentence (testing tool only).
@@ -40,7 +40,7 @@ async def dummy_code_tool(
     Do not use for:
     - Any real task - this tool provides no real functionality.
 
-    Example: dummy_code_tool("hello")
+    Example: dummy_code("hello")
 
     Args:
         astring: String to be echoed back.
@@ -49,7 +49,7 @@ async def dummy_code_tool(
 
 
 @tool_meta(ToolInfo(title="List files and directories", tags={"testing"}))
-async def list_files_tool(
+async def list_files(
     path: Annotated[str, Field(min_length=1)],
     max_depth: int | None = None,
     # LLMs are trained on shell style globs, so they insist on using space
@@ -74,7 +74,7 @@ async def list_files_tool(
     - Reading the contents of a file (use the file reading tool instead).
     - Running commands or scripts (use the code execution tool instead).
 
-    Example: list_files_tool(path=".", pattern="*.py", recursive=True)
+    Example: list_files(path=".", pattern="*.py", recursive=True)
 
     Args:
         path: Directory path to list. Must be relative to the current working
@@ -140,7 +140,7 @@ async def list_files_tool(
 
 
 @tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
-async def run_python_code_tool(
+async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
 ) -> dict[str, Any]:
     """Execute Python code in a sandboxed environment.
@@ -156,7 +156,7 @@ async def run_python_code_tool(
     - Simple file operations (use the file tools instead).
     - Long-running or interactive programs (the sandbox rejects these).
 
-    Example: run_python_code_tool("import numpy; print('numpy version:', numpy.__version__)")
+    Example: run_python_code("import numpy; print('numpy version:', numpy.__version__)")
 
     Args:
         code: Complete Python code to execute. Must be valid Python syntax

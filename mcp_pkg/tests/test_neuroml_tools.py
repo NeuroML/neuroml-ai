@@ -14,8 +14,8 @@ import aiohttp
 import pytest
 import pytest_asyncio
 from neuroml_mcp.tools.neuroml_tools import (
-    get_models_from_neuromldb_tool,
-    get_repositories_from_open_source_brain_tool,
+    get_models_from_neuromldb,
+    get_repositories_from_open_source_brain,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def aiohttp_ctx():
 @pytest.mark.asyncio
 async def test_get_models_from_neuromldb_download(aiohttp_ctx):
     model = "NMLCL000595"
-    res = await get_models_from_neuromldb_tool(
+    res = await get_models_from_neuromldb(
         ctx=aiohttp_ctx, search_query=model, num=1, download=True
     )
     logger.debug(f"{res = }")
@@ -60,7 +60,7 @@ async def test_get_models_from_neuromldb_download(aiohttp_ctx):
 @pytest.mark.asyncio
 async def test_get_models_from_neuromldb_nodownload(aiohttp_ctx):
     model = "NMLCL000595"
-    res = await get_models_from_neuromldb_tool(
+    res = await get_models_from_neuromldb(
         ctx=aiohttp_ctx, search_query=model, num=1, download=False
     )
     logger.debug(f"{res = }")
@@ -78,7 +78,7 @@ async def test_get_models_from_neuromldb_nodownload(aiohttp_ctx):
 async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
     # Test basic functionality with a simple search
     search_term = "cerebellum"
-    res = await get_repositories_from_open_source_brain_tool(
+    res = await get_repositories_from_open_source_brain(
         ctx=aiohttp_ctx,
         search_query=search_term,
         search_data=True,
@@ -99,7 +99,7 @@ async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
 async def test_get_repositories_from_open_source_brain_no_results(aiohttp_ctx):
     # Test with a search term that likely won't return results
     search_term = "nonexistent_search_term_12345"
-    res = await get_repositories_from_open_source_brain_tool(
+    res = await get_repositories_from_open_source_brain(
         ctx=aiohttp_ctx,
         search_query=search_term,
         search_data=True,

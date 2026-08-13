@@ -22,8 +22,8 @@ async def mcp_client():
 
 
 @pytest.mark.asyncio
-async def test_dummy_code_tool(mcp_client: Client[FastMCPTransport]):
+async def test_dummy_code(mcp_client: Client[FastMCPTransport]):
     ret = await mcp_client.call_tool_mcp(
-        "dummy_code_tool", arguments={"astring": "Hello world"}
+        "dummy_code", arguments={"astring": "Hello world"}
     )
     assert ret.structuredContent["result"] == "I got Hello world"
