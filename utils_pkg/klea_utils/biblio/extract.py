@@ -50,7 +50,7 @@ def extract_metadata(
     1. ``doi-service`` -- a DOI discovered by any tier below is resolved
        via Crossref/OpenAlex/Semantic Scholar (round-robin across calls,
        fallback on rate limits, disk-cached).  Its title, authors, year,
-       venue and DOI override everything else.  Skipped when *resolver*
+       journal and DOI override everything else.  Skipped when *resolver*
        is ``None``.
     2. ``pdf-info`` -- the PDF Info dict (title, authors, keywords, doi,
        url), read with pypdfium2.  Local and fast, but often empty: many
@@ -67,7 +67,7 @@ def extract_metadata(
        first-page footer.
 
     **Output** -- a flat dict of non-empty fields (``title``,
-    ``authors``, ``keywords``, ``year``, ``venue``, ``doi``, ``url``,
+    ``authors``, ``keywords``, ``year``, ``journal``, ``doi``, ``url``,
     ``source_type``, ``source_url``, ``urls``) plus two internal keys:
 
     - ``_metadata_complete`` -- ``True`` only when a full DOI record
@@ -252,7 +252,7 @@ def _record_fields(record: BiblioRecord) -> dict:
         "title": record.title,
         "authors": record.authors,
         "year": record.year,
-        "venue": record.venue,
+        "journal": record.journal,
         "doi": record.doi,
     }
     return {key: value for key, value in fields.items() if value not in (None, [], "")}

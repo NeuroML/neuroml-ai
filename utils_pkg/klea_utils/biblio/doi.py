@@ -33,7 +33,7 @@ class BiblioRecord(BaseModel):
     title: str | None = None
     authors: list[str] = []
     year: int | None = None
-    venue: str | None = None
+    journal: str | None = None
     abstract: str | None = None
     doi: str | None = None
 
@@ -100,7 +100,7 @@ def _normalize_crossref(data: dict) -> BiblioRecord:
         title=(titles[0] if titles else None),
         authors=authors,
         year=year,
-        venue=(container[0] if container else None),
+        journal=(container[0] if container else None),
         abstract=_strip_tags(message.get("abstract")),
         doi=message.get("DOI") or None,
     )
@@ -120,7 +120,7 @@ def _normalize_openalex(data: dict) -> BiblioRecord:
         title=data.get("title"),
         authors=authors,
         year=data.get("publication_year"),
-        venue=source.get("display_name"),
+        journal=source.get("display_name"),
         abstract=_reconstruct_inverted_index(data.get("abstract_inverted_index")),
         doi=normalize_doi(str(raw_doi)) if raw_doi else None,
     )
@@ -134,7 +134,7 @@ def _normalize_semantic_scholar(data: dict) -> BiblioRecord:
         title=data.get("title"),
         authors=authors,
         year=data.get("year"),
-        venue=data.get("venue"),
+        journal=data.get("venue"),
         abstract=data.get("abstract"),
         doi=external.get("DOI") or None,
     )

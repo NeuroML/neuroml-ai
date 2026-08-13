@@ -97,7 +97,7 @@ def test_normalize_crossref():
     assert record.title == "A Crossref Sample Paper"
     assert record.authors == ["Jane Doe", "John Smith"]
     assert record.year == 2024
-    assert record.venue == "Journal of Samples"
+    assert record.journal == "Journal of Samples"
     assert record.abstract == "This is the abstract text."
     assert record.doi == "10.1234/abc.5678"
 
@@ -109,7 +109,7 @@ def test_normalize_openalex():
     assert record.title == "An OpenAlex Sample Paper"
     assert record.authors == ["Jane Doe", "John Smith"]
     assert record.year == 2023
-    assert record.venue == "Journal of Open Samples"
+    assert record.journal == "Journal of Open Samples"
     assert record.abstract == "This is an abstract"
     assert record.doi == "10.2345/def.6789"
 
@@ -121,7 +121,7 @@ def test_normalize_semantic_scholar():
     assert record.title == "A Semantic Scholar Sample Paper"
     assert record.authors == ["Jane Doe", "John Smith"]
     assert record.year == 2022
-    assert record.venue == "Journal of Semantic Samples"
+    assert record.journal == "Journal of Semantic Samples"
     assert record.abstract == "Plain abstract text."
     assert record.doi == "10.3456/ghi.7890"
 
@@ -189,7 +189,7 @@ def test_resolve_cache_hit_skips_network(tmp_path):
             "title": "Cached Paper",
             "authors": ["Jane Doe"],
             "year": 2020,
-            "venue": "Cached Venue",
+            "journal": "Cached Venue",
             "abstract": None,
             "doi": "10.1000/xyz.123",
         }

@@ -28,7 +28,7 @@ RESOLVED = BiblioRecord(
     title="Resolved Title",
     authors=["Jane Doe", "John Smith"],
     year=2024,
-    venue="Journal of Samples",
+    journal="Journal of Samples",
     abstract="Full abstract text, not to be persisted.",
     doi="10.1234/abc.5678",
 )
@@ -121,7 +121,7 @@ def test_resolved_record_is_authoritative_and_complete():
     assert result["title"] == "Resolved Title"
     assert result["authors"] == ["Jane Doe", "John Smith"]
     assert result["year"] == 2024
-    assert result["venue"] == "Journal of Samples"
+    assert result["journal"] == "Journal of Samples"
     assert result["doi"] == "10.1234/abc.5678"
     assert "abstract" not in result
     assert result["_metadata_complete"] is True
@@ -227,7 +227,7 @@ def test_from_text_resolves_doi_record():
     assert result["title"] == "Resolved Title"
     assert result["authors"] == ["Jane Doe", "John Smith"]
     assert result["year"] == 2024
-    assert result["venue"] == "Journal of Samples"
+    assert result["journal"] == "Journal of Samples"
     assert result["doi"] == "10.1234/abc.5678"
     assert result["keywords"] == ["alpha", "beta"]
     assert "abstract" not in result
