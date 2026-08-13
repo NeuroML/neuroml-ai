@@ -24,6 +24,35 @@ from .utils import instantiate_vector_store, normalize_text
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
 
+#: Metadata keys that are always stored in the vector store, together with
+#: the bibliographic fields produced by the extraction cascade
+#: (``title``, ``authors``, ``keywords``, ``year``, ``journal``, ``doi``).
+#: Any ``url*`` key (``url``, ``url_1``, ``url_doi``, ...) is also always
+#: stored.  This whitelist documents the guaranteed stored schema; *presence*
+#: of the cascade fields is determined by the metadata map (whose
+#: researcher-curated keys pass through unmodified).  See
+#: :func:`_apply_store_metadata_policy`.
+ALWAYS_STORED_METADATA_KEYS = frozenset(
+    {
+        "file_name",
+        "file_hash",
+        "headings",
+        "title",
+        "authors",
+        "keywords",
+        "year",
+        "journal",
+        "doi",
+    }
+)
+
+#: Metadata keys that are never stored.  Provenance keys from the biblio
+#: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,
+#: ``_sources``, ``_source_scores``) are also always dropped.  These guide
+#: the researcher reviewing ``metadata-map.template.json`` but carry no
+#: meaning in a store.  See :func:`_apply_store_metadata_policy`.
+STORE_DROPPED_METADATA_KEYS = frozenset({"source_path", "source_type", "source_url"})
+
 
 class StoresBuilder:
     """Build stores from a directory of source documents.
@@ -102,7 +131,14 @@ class StoresBuilder:
     ) -> None:
         """Full pipeline: chunk documents and write them to a vector store.
 
-        Convenience wrapper around :meth:`chunk_all` + :meth:`store_all`.
+        One-shot quick start around :meth:`chunk_all` + :meth:`store_all`.
+        When no *metadata_map_path* is given, the map is generated in the
+        chunk phase from the extracted bibliographic metadata (and written to
+        ``metadata-map.template.json``, exactly as :meth:`write_heading_template`
+        does) and consumed in the store phase -- so ``build`` works without a
+        prior ``chunk``, at the cost of no review step.  For the review-driven
+        flow (``chunk``, edit the template, ``store``), pass the map
+        explicitly or let ``store`` auto-fall back to the template.
 
         :param source_dir: Path to a directory containing source documents
         :param store_uri: Vector store URI (e.g. ``chroma:/path``)
@@ -122,11 +158,29 @@ class StoresBuilder:
 
         metadata_map = None
         if metadata_map_path:
-            metadata_map = self._load_metadata_map(metadata_map_path)
+            metadata_map = self._resolve_metadata_map(source_path, metadata_map_path)
 
-        results, _ = self.chunk_all(source_path, metadata_map, force)
+        results, file_headings = self.chunk_all(source_path, metadata_map, force)
         if not results:
             raise RuntimeError(f"No files were successfully chunked from {source_path}")
+
+        if metadata_map is None:
+            # One-shot quick start: no --metadata-map was given, so generate
+            # the template from what was just chunked (exactly as the chunk
+            # command would) and consume it -- the same fold and missing-file
+            # behaviour as the chunk -> store workflow, just without a review
+            # step in between.  The template file is written too, so it can
+            # be reviewed and re-stored later.
+            self.write_heading_template(file_headings, source_path)
+            template_map = self._load_metadata_map(
+                str(source_path / TEMPLATE_FILE_NAME)
+            )
+            results, _ = self.chunk_all(source_path, template_map, force=False)
+            if not results:
+                raise RuntimeError(
+                    f"No files were successfully chunked from {source_path}"
+                )
+
         self.store_all(results, store_uri, collection_name, force, bm25_path)
         self.logger.info(f"Ingestion complete for collection '{collection_name}'")
 
@@ -225,6 +279,14 @@ class StoresBuilder:
                 )
 
             if metadata_map:
+                if file_path.name not in metadata_map:
+                    raise ValueError(
+                        f"No metadata map entry for {file_path.name}. "
+                        f"Add a '{file_path.name}' entry (a DEFAULT entry "
+                        f"is enough) to the metadata map; run "
+                        f"'klea-stores-create chunk' to regenerate the "
+                        f"template."
+                    )
                 resolved_count = 0
                 for doc in docs:
                     meta = self._resolve_metadata(
@@ -233,7 +295,7 @@ class StoresBuilder:
                         metadata_map,
                     )
                     if meta:
-                        doc.metadata.update(meta)
+                        doc.metadata.update(_apply_store_metadata_policy(meta))
                         resolved_count += 1
                 if resolved_count == 0:
                     self.logger.warning(
@@ -558,6 +620,51 @@ class StoresBuilder:
         self.logger.info(f"Loaded metadata map with {len(data)} entries from {path}")
         return data
 
+    def _resolve_metadata_map(
+        self,
+        source_path: Path,
+        metadata_map_path: str | None,
+    ) -> dict[str, dict[str, Any]] | None:
+        """Resolve the metadata map to use for ingestion.
+
+        An explicit *metadata_map_path* always wins.  Otherwise, when the
+        source directory contains the generated
+        ``metadata-map.template.json``, it is used as an auto-fallback (its
+        per-file ``DEFAULT`` entries are pre-filled with extracted
+        bibliographic metadata).  Returns ``None`` when neither exists --
+        :meth:`build` then generates a map from what ``chunk`` produced,
+        while the ``store`` CLI aborts (``store`` is expected to consume the
+        template a prior ``chunk`` wrote).
+
+        Raises ``ValueError`` when the resolved map is empty (``{}``): an
+        empty map carries no metadata at all and is almost certainly a
+        mistake, even when passed explicitly with ``--metadata-map``.
+
+        :param source_path: Resolved source directory path
+        :param metadata_map_path: Explicit metadata map path, or ``None``
+        :returns: Loaded metadata map, or ``None`` when no map exists
+        :raises ValueError: If the resolved map is empty
+        """
+        map_source = metadata_map_path
+        if metadata_map_path:
+            metadata_map = self._load_metadata_map(metadata_map_path)
+        else:
+            template = source_path / TEMPLATE_FILE_NAME
+            if not template.is_file():
+                return None
+            self.logger.info(
+                f"No --metadata-map given; auto-falling back to {template}"
+            )
+            map_source = str(template)
+            metadata_map = self._load_metadata_map(map_source)
+        if not metadata_map:
+            raise ValueError(
+                f"The metadata map from {map_source} has no entries. "
+                f"Add one entry per source file (a DEFAULT entry is "
+                f"enough) before storing."
+            )
+        return metadata_map
+
     def _resolve_metadata(
         self,
         file_name: str,
@@ -812,22 +919,51 @@ def _hash_file(file_path: Path) -> str:
     return f"xxh64:{h.hexdigest()}"
 
 
-def _sanitize_store_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy of *metadata* without values Chroma rejects on upsert.
+def _apply_store_metadata_policy(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return *metadata* with internal and provenance keys removed.
 
-    Chroma requires metadata list values to be non-empty and does not
-    accept ``None``.  The chunk cache deliberately keeps ``headings: []``
-    as an explicit "no headings found" marker, so the empty list (and any
-    other empty/``None`` value) is dropped only here, at storage time, on
-    a copy -- the source documents (and the BM25 corpus) keep their
-    metadata intact.
+    The stored-metadata key policy is a whitelist + metadata-map
+    pass-through: the always-stored keys
+    (:data:`ALWAYS_STORED_METADATA_KEYS` plus any ``url*`` key) and
+    whatever the researcher put in the metadata map are kept, while
+    ``_``-prefixed internal keys and the provenance keys in
+    :data:`STORE_DROPPED_METADATA_KEYS` are dropped.  Applied both when the
+    metadata map is folded into chunks (:meth:`StoresBuilder.chunk_all`) and
+    as a final gate in :func:`_sanitize_store_metadata`.
 
     :param metadata: Document metadata dict
-    :returns: Copy of *metadata* with empty-list and ``None`` values removed
+    :returns: Copy of *metadata* without internal/provenance keys
     """
     return {
         key: value
         for key, value in metadata.items()
+        if not (key.startswith("_") or key in STORE_DROPPED_METADATA_KEYS)
+    }
+
+
+def _sanitize_store_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of *metadata* ready for a vector-store upsert.
+
+    Two filters are applied, each on a copy:
+
+    1. **Key policy** (:func:`_apply_store_metadata_policy`) -- drops
+       ``_``-prefixed internal keys and provenance keys, so nothing leaks
+       into the store no matter how it entered the chunk metadata.
+    2. **Value sanitization** -- Chroma rejects empty-list and ``None``
+       values on upsert.  The chunk cache deliberately keeps ``headings:
+       []`` as an explicit "no headings found" marker, so the empty list
+       (and any other empty/``None`` value) is dropped here, at storage
+       time, on a copy -- the source documents (and the BM25 corpus) keep
+       their metadata intact.
+
+    :param metadata: Document metadata dict
+    :returns: Copy of *metadata* without internal/provenance keys and
+        without empty-list / ``None`` values
+    """
+    filtered = _apply_store_metadata_policy(metadata)
+    return {
+        key: value
+        for key, value in filtered.items()
         if value is not None and value != []
     }
 

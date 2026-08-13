@@ -59,7 +59,9 @@ def build(
         "--metadata-map",
         "-M",
         help="JSON file keyed by source filename; each file entry maps "
-        "heading chains to metadata dicts (with per-file DEFAULT fallback)",
+        "heading chains to metadata dicts (with per-file DEFAULT fallback). "
+        "If not given, build generates metadata-map.template.json from the "
+        "extraction and uses it without a review step",
     ),
     bm25_store: str = typer.Option(
         None,
@@ -270,7 +272,9 @@ def store(
         "--metadata-map",
         "-M",
         help="JSON file keyed by source filename; each file entry maps "
-        "heading chains to metadata dicts (with per-file DEFAULT fallback)",
+        "heading chains to metadata dicts (with per-file DEFAULT fallback). "
+        "Defaults to metadata-map.template.json in the source "
+        "directory; required when no template exists",
     ),
     bm25_store: str = typer.Option(
         None,
@@ -325,7 +329,7 @@ def store(
     try:
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import StoresBuilder
+        from klea_utils.stores.ingestion import TEMPLATE_FILE_NAME, StoresBuilder
 
         builder = StoresBuilder(
             embedding_model=embedding_model,
@@ -338,9 +342,17 @@ def store(
         if not source_path.is_dir():
             raise FileNotFoundError(f"Source directory not found: {source_path}")
 
-        metadata_map = None
-        if metadata_map_path:
-            metadata_map = builder._load_metadata_map(metadata_map_path)
+        metadata_map = builder._resolve_metadata_map(source_path, metadata_map_path)
+        if metadata_map is None:
+            # store is the review-driven path: it consumes the template a
+            # prior chunk run wrote (or an explicit --metadata-map), so a
+            # missing map here is a misconfiguration, not a silent fallback.
+            raise ValueError(
+                f"No metadata map found for {source_path}. Run "
+                f"'klea-stores-create chunk' to generate "
+                f"{TEMPLATE_FILE_NAME} in the source directory, or pass "
+                f"--metadata-map."
+            )
 
         results, _ = builder.chunk_all(
             source_path, metadata_map=metadata_map, force=force

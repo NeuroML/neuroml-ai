@@ -18,6 +18,7 @@ import pytest
 from klea_utils.stores.ingestion import (
     TEMPLATE_FILE_NAME,
     StoresBuilder,
+    _apply_store_metadata_policy,
     _ensure_doi_url,
     _normalize_extracted_metadata,
     _sanitize_store_metadata,
@@ -234,6 +235,53 @@ class TestNormalizeText:
     def test_sanitize_store_metadata_keeps_non_empty_lists(self):
         """Non-empty list values (e.g. authors) survive sanitization."""
         assert _sanitize_store_metadata({"authors": ["X"]}) == {"authors": ["X"]}
+
+    def test_sanitize_store_metadata_drops_policy_keys(self):
+        """Internal/provenance keys are dropped alongside empty values."""
+        meta = {
+            "title": "T",
+            "journal": "J",
+            "_metadata_complete": True,
+            "source_path": "/x.pdf",
+            "headings": [],
+            "extra": None,
+        }
+        out = _sanitize_store_metadata(meta)
+        assert out == {"title": "T", "journal": "J"}
+
+    def test_apply_store_metadata_policy_drops_internal_and_provenance(self):
+        """Underscore-prefixed and provenance keys are removed; the rest kept."""
+        meta = {
+            "title": "T",
+            "journal": "J",
+            "year": 2024,
+            "_metadata_complete": True,
+            "_sources": ["doi-service"],
+            "_source_scores": {"vector store": 0.9},
+            "source_path": "/x/y.pdf",
+            "source_type": "application/pdf",
+            "source_url": "https://example.com/y.pdf",
+        }
+        out = _apply_store_metadata_policy(meta)
+        assert out == {"title": "T", "journal": "J", "year": 2024}
+        # The source dict is not mutated.
+        assert meta["_metadata_complete"] is True
+
+    def test_apply_store_metadata_policy_keeps_whitelist_and_custom(self):
+        """System keys, url* keys and researcher keys survive the policy."""
+        meta = {
+            "file_name": "a.md",
+            "file_hash": "xxh64:x",
+            "headings": ["S"],
+            "authors": ["X"],
+            "keywords": ["k"],
+            "doi": "10.x/y",
+            "url": "https://u",
+            "url_doi": "https://doi.org/10.x/y",
+            "url_orcid": "https://orcid.org/1",
+            "custom_key": "researcher-value",
+        }
+        assert _apply_store_metadata_policy(meta) == meta
 
 
 class _FakeMeta:
@@ -663,6 +711,101 @@ class TestIngestion:
             loaded.get("Multi-\u00adscale Model\u00ading in\u00a0neuroscience") is None
         )
 
+    def test_resolve_metadata_map_explicit_wins(self):
+        """An explicit metadata-map path beats the template fallback."""
+        explicit = self.tmpdir_path / "explicit.json"
+        explicit.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "explicit"}}}))
+        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        out = builder._resolve_metadata_map(self.tmpdir_path, str(explicit))
+        assert out is not None
+        assert out["test.md"]["DEFAULT"] == {"url": "explicit"}
+
+    def test_resolve_metadata_map_falls_back_to_template(self):
+        """Without an explicit path, the template map is used when present."""
+        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        out = builder._resolve_metadata_map(self.tmpdir_path, None)
+        assert out is not None
+        assert out["test.md"]["DEFAULT"] == {"url": "template"}
+
+    def test_resolve_metadata_map_none_without_map(self):
+        """No explicit path and no template resolves to None.
+
+        build() handles this case by generating the template internally; the
+        store CLI treats it as an error (store consumes what chunk wrote).
+        """
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._resolve_metadata_map(self.tmpdir_path, None) is None
+
+    def test_resolve_metadata_map_errors_on_empty_explicit_map(self):
+        """An explicit --metadata-map that is {} carries no metadata."""
+        explicit = self.tmpdir_path / "explicit.json"
+        explicit.write_text(json.dumps({}))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        with pytest.raises(ValueError, match="no entries"):
+            builder._resolve_metadata_map(self.tmpdir_path, str(explicit))
+
+    def test_resolve_metadata_map_errors_on_empty_template(self):
+        """An empty template map is treated the same as no map at all."""
+        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template.write_text(json.dumps({}))
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        with pytest.raises(ValueError, match="no entries"):
+            builder._resolve_metadata_map(self.tmpdir_path, None)
+
+    def test_build_generates_template_when_no_map(self, monkeypatch):
+        """build() is one-shot: with no map given it generates and consumes one.
+
+        The chunk phase produces the map (exactly what ``chunk`` would write
+        to metadata-map.template.json) and the store phase then consumes it,
+        so a plain ``build`` needs no prior ``chunk`` and no ``--metadata-map``
+        -- it just skips the human review step.
+        """
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        passed_maps: list = []
+        captured_store = False
+
+        def _fake_chunk_all(source_path, metadata_map=None, force=False):
+            passed_maps.append(metadata_map)
+            doc = Document(page_content="x", metadata={"headings": []})
+            return [("xxh64:x", [doc], Path("test.md"))], {
+                "test.md": {"DEFAULT": {"journal": "Journal of X"}}
+            }
+
+        def _fake_store_all(
+            results, store_uri, collection_name, force=False, bm25_path=None
+        ):
+            nonlocal captured_store
+            captured_store = True
+
+        monkeypatch.setattr(builder, "chunk_all", _fake_chunk_all)
+        monkeypatch.setattr(builder, "store_all", _fake_store_all)
+        builder.build(
+            source_dir=str(self.tmpdir_path),
+            store_uri="chroma:/tmp/x",
+            collection_name="c",
+        )
+
+        # chunk_all ran twice: once with no map, then once with the generated
+        # template as the map.
+        assert len(passed_maps) == 2
+        assert passed_maps[0] is None
+        assert passed_maps[1] is not None
+        assert passed_maps[1]["test.md"]["DEFAULT"]["journal"] == "Journal of X"
+        assert captured_store is True
+        # The template was written so it can be reviewed for a later store.
+        assert (self.tmpdir_path / TEMPLATE_FILE_NAME).is_file()
+
     def test_resolve_metadata_matches_normalized_headings(self):
         """_resolve_metadata matches normalized chunk headings to map keys."""
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -679,12 +822,13 @@ class TestIngestion:
         assert meta == {"topic": "nml"}
 
     @pytest.mark.localonly
-    def test_chunk_all_warns_when_metadata_map_matches_nothing(self, caplog):
-        """chunk_all warns when a metadata map resolves nothing for a file.
+    def test_chunk_all_errors_when_file_missing_from_map(self):
+        """chunk_all raises when a source file has no metadata map entry.
 
-        A map not keyed by the source filename (e.g. the flat heading-keyed
-        url-map format from the single-page doc generator) must produce a
-        warning so the misconfiguration is easy to spot.
+        The map must contain every ingested file (keyed by filename).  A map
+        not keyed by the source filename (e.g. the flat heading-keyed url-map
+        format from the single-page doc generator) must abort ingestion so
+        the misconfiguration is impossible to miss.
         """
         md_file = self.tmpdir_path / "test.md"
         md_file.write_text(TEST_MD_CONTENT)
@@ -695,10 +839,63 @@ class TestIngestion:
         metadata_map = {"other.md": {"DEFAULT": {"url": "https://example.com"}}}
 
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with pytest.raises(ValueError, match="test.md"):
+            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+
+    @pytest.mark.localonly
+    def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
+        """chunk_all warns when a map entry exists but resolves no metadata.
+
+        A file present in the map whose DEFAULT is empty (and whose headings
+        match no entry) contributes no metadata -- that is a legitimate
+        researcher choice, but worth a warning so an accidentally-empty entry
+        is easy to spot.
+        """
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        metadata_map = {"test.md": {"DEFAULT": {}}}
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         with caplog.at_level(logging.WARNING):
             builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
 
         assert "No metadata resolved for test.md" in caplog.text
+
+    @pytest.mark.localonly
+    def test_chunk_all_strips_internal_keys_when_folding(self):
+        """Internal/provenance keys from the map are not folded into chunks.
+
+        The template's pre-filled DEFAULT carries ``_metadata_complete`` and
+        ``_sources`` (extraction provenance) plus ``source_type``; folding
+        must strip them so neither the vector store nor the BM25 corpus
+        (which shares these chunk objects) leaks them.
+        """
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        metadata_map = {
+            "test.md": {
+                "DEFAULT": {
+                    "title": "T",
+                    "journal": "Journal of X",
+                    "_metadata_complete": True,
+                    "_sources": ["docling"],
+                    "source_type": "text/markdown",
+                }
+            }
+        }
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        results, _ = builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+        docs = results[0][1]
+        assert docs
+        for doc in docs:
+            assert doc.metadata["title"] == "T"
+            assert doc.metadata["journal"] == "Journal of X"
+            assert "_metadata_complete" not in doc.metadata
+            assert "_sources" not in doc.metadata
+            assert "source_type" not in doc.metadata
 
     @pytest.mark.localonly
     def test_chunk_all_no_warning_when_metadata_map_resolves(self, caplog):
