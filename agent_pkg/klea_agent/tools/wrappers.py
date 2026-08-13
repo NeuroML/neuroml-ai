@@ -13,13 +13,13 @@ from typing import Annotated, Any
 from fastmcp import Context
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
-from klea_utils.mcp.tools.list_files import list_files
+from klea_utils.mcp.tools.list_files import list_files as list_files_impl
 from klea_utils.mcp.tools.web_fetch import web_fetch as web_fetch_impl
 from pydantic import Field
 
 
 @tool_meta(ToolInfo(tags={"bundled", "web"}))
-async def web_fetch_tool(
+async def web_fetch(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],
     timeout: Annotated[float, Field(ge=1.0, le=120.0)] = 30.0,
@@ -49,7 +49,7 @@ async def web_fetch_tool(
 
 
 @tool_meta(ToolInfo(tags={"bundled", "files"}))
-async def list_files_tool(
+async def list_files(
     path: Annotated[
         str,
         Field(
@@ -95,7 +95,7 @@ async def list_files_tool(
 
     Example: list_files(path=".", pattern="*.py", recursive=True)
     """
-    return list_files(
+    return list_files_impl(
         path=path,
         max_depth=max_depth,
         pattern=pattern,

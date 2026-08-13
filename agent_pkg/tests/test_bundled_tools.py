@@ -13,7 +13,7 @@ import logging
 import pytest
 from fastmcp import Client
 from klea_agent.tools.bundled import bundle_server
-from klea_agent.tools.wrappers import list_files_tool, web_fetch_tool
+from klea_agent.tools.wrappers import list_files, web_fetch
 
 logger = logging.getLogger(__name__)
 
@@ -65,26 +65,26 @@ async def test_bundled_server_exposes_tools():
         tools = await client.list_tools()
         names = [t.name for t in tools]
         logger.debug(f"{names = }")
-        assert "web_fetch_tool" in names
-        assert "list_files_tool" in names
+        assert "web_fetch" in names
+        assert "list_files" in names
 
 
 @pytest.mark.asyncio
-async def test_web_fetch_tool_missing_session():
-    result = await web_fetch_tool(ctx=MockContext(), url="https://example.com")
+async def test_web_fetch_missing_session():
+    result = await web_fetch(ctx=MockContext(), url="https://example.com")
     logger.debug(f"{result = }")
     assert result["content"] == ""
     assert "session" in result["error"].lower()
 
 
 @pytest.mark.asyncio
-async def test_web_fetch_tool_with_session():
+async def test_web_fetch_with_session():
     fake = _FakeResponse(
         "<html><body><h1>Hello</h1><script>x()</script></body></html>",
         content_type="text/html; charset=utf-8",
     )
     ctx = MockContext(aiohttp_session=_FakeSession(response=fake))
-    result = await web_fetch_tool(ctx=ctx, url="https://example.com")
+    result = await web_fetch(ctx=ctx, url="https://example.com")
     logger.debug(f"{result = }")
     assert result["status_code"] == 200
     assert "Hello" in result["content"]
@@ -92,11 +92,11 @@ async def test_web_fetch_tool_with_session():
 
 
 @pytest.mark.asyncio
-async def test_list_files_tool(tmp_path):
+async def test_list_files(tmp_path):
     (tmp_path / "a.py").write_text("")
     (tmp_path / "b.md").write_text("")
 
-    result = await list_files_tool(path=str(tmp_path), pattern="*")
+    result = await list_files(path=str(tmp_path), pattern="*")
     logger.debug(f"{result = }")
 
     names = {f["path"].split("/")[-1] for f in result["files"]}
