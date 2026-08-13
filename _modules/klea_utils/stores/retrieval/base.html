@@ -509,11 +509,20 @@
 
 <div class="viewcode-block" id="BaseKleaRetriever.retrieve">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.retrieve">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">retrieve</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">domain_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve documents from all stores for a domain.</span>
 
 <span class="sd">        :param domain_name: Name of the domain to search in</span>
 <span class="sd">        :param query: User query string</span>
+<span class="sd">        :param metadata_filter: Optional metadata filter in the DSL (see</span>
+<span class="sd">            :func:`klea_utils.stores.filters.validate_metadata_filter`).</span>
+<span class="sd">            Applied natively by stores that support a backend filter and</span>
+<span class="sd">            post-filtered for stores that do not (BM25)</span>
 <span class="sd">        :returns: List of (document, relevance_score) tuples</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">domain_name</span><span class="p">)</span>
@@ -526,7 +535,10 @@
             <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retrieve_from_store</span><span class="p">(</span>
-                <span class="n">store</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_k</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+                <span class="n">store</span><span class="p">,</span>
+                <span class="n">query</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_current_k</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">),</span>
+                <span class="n">metadata_filter</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">res</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
@@ -554,14 +566,20 @@
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_retrieve_from_store</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve from a single store, returning (document, score) tuples.</span>
 
 <span class="sd">        :param store: Loaded store object to query</span>
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param k: Number of documents to retrieve from this store</span>
-<span class="sd">        :returns: List of (document, relevance_score) tuples</span>
+<span class="sd">        :param metadata_filter: Optional metadata filter in the DSL (see</span>
+<span class="sd">            :func:`klea_utils.stores.filters.validate_metadata_filter`)</span>
+<span class="sd">        :returns: List of (document, score) tuples</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span></div>
 

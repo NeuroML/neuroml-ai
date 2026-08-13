@@ -303,6 +303,12 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseKleaRetriever</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PerDomainConfig</span><span class="p">,</span> <span class="n">RetrieverConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..filters</span><span class="w"> </span><span class="kn">import</span> <span class="n">filter_docs_by_metadata</span>
+
+<span class="c1">#: How many extra candidates the BM25 store fetches before post-filtering</span>
+<span class="c1">#: when a metadata filter is active, so enough matching documents remain</span>
+<span class="c1">#: after the filter removes non-matching results.</span>
+<span class="n">BM25_FILTER_MARGIN</span> <span class="o">=</span> <span class="mi">3</span>
 
 
 <div class="viewcode-block" id="BM25RetrieverManager">
@@ -389,26 +395,50 @@
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_retrieve_from_store</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Run BM25 keyword search on a single store.</span>
+
+<span class="sd">        When *metadata_filter* is set, more candidates than *k* are</span>
+<span class="sd">        fetched (a :data:`BM25_FILTER_MARGIN`) and only the matching</span>
+<span class="sd">        subset is kept, because the ``rank_bm25`` index has no native</span>
+<span class="sd">        filter support.  If fewer than *k* documents remain after</span>
+<span class="sd">        filtering, retrieval degrades gracefully (the fuser simply sees</span>
+<span class="sd">        fewer results).</span>
 
 <span class="sd">        :param store: Loaded BM25 store to query</span>
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param k: Number of documents to retrieve from this store</span>
+<span class="sd">        :param metadata_filter: Optional metadata filter in the DSL (see</span>
+<span class="sd">            :func:`klea_utils.stores.filters.validate_metadata_filter`)</span>
 <span class="sd">        :returns: List of (document, relevance_score) tuples.  Documents</span>
 <span class="sd">            with a non-positive score (no term overlap with the query)</span>
 <span class="sd">            are dropped.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">retriever</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span>
         <span class="n">processed</span> <span class="o">=</span> <span class="n">retriever</span><span class="o">.</span><span class="n">preprocess_func</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
-        <span class="n">top_docs</span> <span class="o">=</span> <span class="n">retriever</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">get_top_n</span><span class="p">(</span><span class="n">processed</span><span class="p">,</span> <span class="n">retriever</span><span class="o">.</span><span class="n">docs</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">margin</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">BM25_FILTER_MARGIN</span> <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">k</span>
+        <span class="n">top_docs</span> <span class="o">=</span> <span class="n">retriever</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">get_top_n</span><span class="p">(</span><span class="n">processed</span><span class="p">,</span> <span class="n">retriever</span><span class="o">.</span><span class="n">docs</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">margin</span><span class="p">)</span>
         <span class="n">scores</span> <span class="o">=</span> <span class="n">retriever</span><span class="o">.</span><span class="n">vectorizer</span><span class="o">.</span><span class="n">get_scores</span><span class="p">(</span><span class="n">processed</span><span class="p">)</span>
         <span class="c1"># get_top_n returns the same Document objects, so map scores by id.</span>
         <span class="n">score_by_id</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">):</span> <span class="n">score</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">retriever</span><span class="o">.</span><span class="n">docs</span><span class="p">,</span> <span class="n">scores</span><span class="p">)}</span>
 
         <span class="n">result</span> <span class="o">=</span> <span class="p">[(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score_by_id</span><span class="p">[</span><span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">)])</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">top_docs</span><span class="p">]</span>
-        <span class="k">return</span> <span class="p">[(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span></div>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">kept</span> <span class="o">=</span> <span class="n">filter_docs_by_metadata</span><span class="p">([</span><span class="n">doc</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">result</span><span class="p">],</span> <span class="n">metadata_filter</span><span class="p">)</span>
+            <span class="n">kept_ids</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">}</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span> <span class="ow">in</span> <span class="n">kept_ids</span><span class="p">][:</span><span class="n">k</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;BM25 filter: kept </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> after filtering with &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metadata_filter</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
 
 </pre></div>
         </article>

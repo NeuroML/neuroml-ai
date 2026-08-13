@@ -302,6 +302,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseKleaRetriever</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PerDomainConfig</span><span class="p">,</span> <span class="n">RetrieverConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..filters</span><span class="w"> </span><span class="kn">import</span> <span class="n">translate_metadata_filter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span>
 
 
@@ -388,19 +389,38 @@
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_retrieve_from_store</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Run similarity search on a single vector store.</span>
+
+<span class="sd">        When *metadata_filter* is set it is translated to the backend&#39;s</span>
+<span class="sd">        native ``filter`` (selected by the store path scheme) and applied</span>
+<span class="sd">        *inside* the similarity search, so only matching vectors are</span>
+<span class="sd">        candidates.</span>
 
 <span class="sd">        :param store: Loaded vector store to query</span>
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param k: Number of documents to retrieve from this store</span>
+<span class="sd">        :param metadata_filter: Optional metadata filter in the DSL (see</span>
+<span class="sd">            :func:`klea_utils.stores.filters.validate_metadata_filter`)</span>
 <span class="sd">        :returns: List of (document, relevance_score) tuples</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">search_args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span>
+            <span class="s2">&quot;k&quot;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span>
+            <span class="s2">&quot;score_threshold&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_thresh</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">search_args</span><span class="p">[</span><span class="s2">&quot;filter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">translate_metadata_filter</span><span class="p">(</span>
+                <span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">metadata_filter</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">search_args</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">]</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span><span class="o">.</span><span class="n">similarity_search_with_relevance_scores</span><span class="p">(</span>
-            <span class="n">query</span><span class="p">,</span>
-            <span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
-            <span class="n">score_threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_thresh</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">search_args</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
