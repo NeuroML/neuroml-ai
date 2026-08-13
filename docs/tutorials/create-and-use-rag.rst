@@ -164,6 +164,7 @@ vector store to a domain:
        "general": {
         "default_k": 5,
         "k_max": 10,
+        "max_refs_size": 20000,
            "non_domain_chat": true,
            "fallback_to_training_data": true
        },
@@ -190,9 +191,18 @@ The ``general`` section controls retrieval behaviour:
 
 * ``default_k`` -- number of documents to retrieve per query.  This is the
   graph-wide default; individual vector stores can override it (see below).
-* ``k_max`` -- maximum ``k`` when the evaluator requests more context.
+* ``k_max`` -- maximum number of candidates a store may fetch per retrieval
+  pass.  Once every store has reached its cap, the evaluator loop stops
+  pulling more of the same query and reformulates it instead.  ``k_max``
+  does not bound what reaches the answer LLM -- that is
+  ``max_refs_size``'s job.
 * ``k_inc`` -- how much ``k`` is increased by each time the evaluator
   requests more information.
+* ``max_refs_size`` -- total character budget for the reference material
+  serialized into the answer LLM's context (across all domains).  The
+  best-ranked chunks are kept up to this budget, so raising ``default_k``
+  or ``k_max`` surfaces more chunks only while there is budget left --
+  useful when chunks are small and more of them help.
 * ``non_domain_chat`` -- whether to fall back to the LLM's training data
   for questions that do not match any domain.
 * ``fallback_to_training_data`` -- whether to let the LLM answer from its
@@ -230,7 +240,8 @@ cover corpora of very different sizes:
        "general": {
            "default_k": 5,
            "k_max": 10,
-           "k_inc": 1
+           "k_inc": 1,
+           "max_refs_size": 20000
        },
        "domains": {
            "MyDomain": {
@@ -257,6 +268,11 @@ steps of 5 when the evaluator asks for more context, while ``small-corpus``
 inherits the ``general`` settings (5, capped at 10, stepping by 1).  The
 dynamic ``k_inc``/``k_max`` adjustments only apply to stores that are
 already loaded, so a store only grows once it has been queried once.
+
+After the retrievers are queried, the fused results are truncated to the
+global ``max_refs_size`` character budget, so ``k``/``k_max`` control how
+many candidates are fetched while ``max_refs_size`` controls how much of
+them reaches the answer LLM.
 
 .. seealso::
 
@@ -382,7 +398,9 @@ Troubleshooting
 **Queries return empty or irrelevant results**
    Increase ``default_k`` in the JSON config.  Verify the vector store
    path and collection name match.  Check that your source files are in
-   a format Docling supports.
+   a format Docling supports.  If raising ``default_k``/``k_max`` does
+   not bring in more useful chunks, confirm ``max_refs_size`` is large
+   enough to fit them.
 
 .. seealso::
 
