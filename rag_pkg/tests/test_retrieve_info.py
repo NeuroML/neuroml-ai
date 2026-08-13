@@ -12,7 +12,7 @@ import logging
 from typing import Any
 
 from klea_rag.nodes.retrieve_info import RetrieveInfoNode
-from klea_rag.schemas import EvaluateAnswerSchema, RAGState
+from klea_rag.schemas import EvaluateAnswerSchema, RAGState, RetrievalQueryOutput
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ async def test_execute_merges_retrievers_with_rrf():
     state = RAGState(
         query="action potential",
         query_domains=["NeuroML"],
-        retrieval_query="action potential",
+        retrieval_query=RetrievalQueryOutput(search_query="action potential"),
     )
     result = await node.execute(state)
 
@@ -102,7 +102,7 @@ async def test_execute_inc_k_on_all_retrievers_for_more_info():
     state = RAGState(
         query="q",
         query_domains=["NeuroML"],
-        retrieval_query="q",
+        retrieval_query=RetrievalQueryOutput(search_query="q"),
         text_response_eval=EvaluateAnswerSchema(next_step="retrieve_more_info"),
     )
     await node.execute(state)
@@ -127,7 +127,7 @@ async def test_execute_truncates_reference_material_to_size_budget():
     state = RAGState(
         query="q",
         query_domains=["NeuroML"],
-        retrieval_query="q",
+        retrieval_query=RetrievalQueryOutput(search_query="q"),
     )
 
     # default 20000 chars keeps everything
@@ -160,7 +160,9 @@ async def test_execute_normalizes_retrieval_query():
     state = RAGState(
         query="q",
         query_domains=["NeuroML"],
-        retrieval_query="multi-\u00adscale model\u00ading in\u00a0neuroscience",
+        retrieval_query=RetrievalQueryOutput(
+            search_query="multi-\u00adscale model\u00ading in\u00a0neuroscience"
+        ),
     )
     await node.execute(state)
 
@@ -187,7 +189,7 @@ async def test_execute_labels_url_keys_in_display():
     state = RAGState(
         query="q",
         query_domains=["NeuroML"],
-        retrieval_query="q",
+        retrieval_query=RetrievalQueryOutput(search_query="q"),
     )
     await node.execute(state)
 
@@ -207,7 +209,7 @@ async def test_execute_increments_retrieval_attempts():
     state = RAGState(
         query="standard",
         query_domains=["NeuroML"],
-        retrieval_query="standard",
+        retrieval_query=RetrievalQueryOutput(search_query="standard"),
         retrieval_attempts=2,
     )
     result = await node.execute(state)
@@ -230,7 +232,11 @@ async def test_execute_skips_undefined_domain():
     """The 'undefined' domain is skipped and yields no references."""
     node = _make_node([FakeRetriever([(_doc("content"), 1.0)])])
 
-    state = RAGState(query="q", query_domains=["undefined"], retrieval_query="q")
+    state = RAGState(
+        query="q",
+        query_domains=["undefined"],
+        retrieval_query=RetrievalQueryOutput(search_query="q"),
+    )
     result = await node.execute(state)
     logger.info(f"result with undefined domain: {result}")
 

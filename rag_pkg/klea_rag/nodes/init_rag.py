@@ -32,7 +32,9 @@ class InitRAGState(AbstractLangGraphNode[RAGState, dict[str, Any]]):
             "message_for_user": "",
             "retrieval_attempts": 0,
             "rewrite_attempts": 0,
-            "retrieval_query": "",
+            # retrieval_query is deliberately not reset here: the query
+            # generator is its sole writer and always writes a fresh
+            # RetrievalQueryOutput, so no cleanup is needed
             "tool_calls": [],
             "tool_results": [],
             "reference_material": {},

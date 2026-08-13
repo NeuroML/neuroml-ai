@@ -95,7 +95,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         # stored chunks share an identical plain-text form (see
         # klea_utils.stores.utils.normalize_text).  The query is LLM-generated
         # so artifacts are rare, but this makes the invariant explicit.
-        raw_query = state.retrieval_query
+        raw_query = state.retrieval_query.search_query
         cleaned_query = normalize_text(raw_query)
         self.logger.debug(f"{raw_query = }\n{cleaned_query = }")
 

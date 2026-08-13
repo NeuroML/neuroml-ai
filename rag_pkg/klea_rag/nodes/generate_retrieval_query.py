@@ -13,20 +13,23 @@ from textwrap import dedent
 from typing import Any, cast, override
 
 from klea_utils.llm import (
-    content_to_str,
     extract_llm_output_content,
     prompt_value_to_messages,
 )
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
 from langchain_core.messages import AIMessage
-from langchain_core.runnables.utils import Output
 
-from klea_rag.schemas import RAGState
+from klea_rag.schemas import RAGState, RetrievalQueryOutput
 
 
-class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
-    """Node that generates a concise retrieval query from the user's question."""
+class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
+    """Node that generates a concise retrieval query from the user's question.
+
+    Uses structured output (:class:`RetrievalQueryOutput`) so the search
+    query and any retrieval constraints (year range, journal, authors,
+    keywords) are produced together from the user's question.
+    """
 
     model_type = "chat"
     model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
@@ -47,7 +50,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
             logger=logger,
             label=label,
             llm_models=llm_models,
-            output_schema=None,
+            output_schema=RetrievalQueryOutput,
             memory=True,
         )
 
@@ -83,38 +86,41 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         return {
             "query": state.query,
             "feedback": state.text_response_eval.summary,
-            "previous": state.retrieval_query,
+            "previous": state.retrieval_query.search_query,
         }
 
     @override
-    def _update_state(self, result: Output, state: RAGState) -> dict[str, Any]:
-        """Update state with the generated retrieval query."""
-        content = content_to_str(result.content)
-        thought, answer = (
-            content.split("</think>", 1) if "</think>" in content else ("", content)
-        )
-        answer = answer.strip()
+    def _update_state(
+        self, result: RetrievalQueryOutput, state: RAGState
+    ) -> dict[str, Any]:
+        """Update state with the generated search query and filters.
 
+        Always writes a fresh :class:`RetrievalQueryOutput` instance from
+        the current LLM output, so nothing from a prior turn is carried
+        over.
+        """
         messages = state.messages
-        output = AIMessage(content=answer)
+        output = AIMessage(content=result.search_query)
         messages.append(output)
 
         return {
             "messages": messages,
-            "retrieval_query": answer,
+            "retrieval_query": result,
         }
 
     @override
-    def _get_default_error_result(self) -> Any:
+    def _get_default_error_result(self) -> RetrievalQueryOutput:
         """Return default result when processing fails."""
-        return ""
+        self.logger.error("Processing failed")
+        return RetrievalQueryOutput()
 
     @override
     def _get_info(self) -> NodeStreamData:
-        """Return retrieval query and attempt number."""
+        """Return search query, filters, and attempt number."""
         assert self._last_state_updates is not None
         assert self._last_state is not None
-        query = self._last_state_updates.get("retrieval_query", "")
+        rq = self._last_state_updates.get("retrieval_query") or RetrievalQueryOutput()
+        search_query = rq.search_query
         # Display-only: this node does not bump the counter (the retrieval
         # node does). Here it holds the number of prior retrieval passes, so
         # the current query generation is labelled as the next attempt.
@@ -125,7 +131,8 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
             heading="Retrieval Query Generation",
             summary=f"{action} retrieval query (attempt {attempt})",
             details={
-                "retrieval_query": query,
+                "search_query": search_query,
+                "metadata_filter": rq.to_metadata_filter(),
                 "retrieval_attempts": attempt,
             },
         )
@@ -150,7 +157,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RAGState]):
         state: RAGState = self._last_state  # type: ignore[assignment]
         if state.retrieval_attempts > 0 and state.text_response_eval:
             details["evaluator_feedback"] = state.text_response_eval.summary
-            details["previous_query"] = state.retrieval_query
+            details["previous_query"] = state.retrieval_query.search_query
         return NodeStreamData(
             heading=info.heading, summary=info.summary, details=details
         )
