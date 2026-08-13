@@ -1,0 +1,74 @@
+{
+  "projectName": "neuroklea",
+  "projectOwner": "NeuroML",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "Readme.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "sanjayankur31",
+      "name": "Ankur Sinha",
+      "avatar_url": "https://avatars.githubusercontent.com/u/102575?v=4",
+      "profile": "https://ankursinha.in/",
+      "contributions": [
+        "code",
+        "doc",
+        "bug",
+        "blog",
+        "data",
+        "design",
+        "example",
+        "financial",
+        "ideas",
+        "infra",
+        "maintenance",
+        "promotion",
+        "projectManagement",
+        "research",
+        "review",
+        "security",
+        "test",
+        "tutorial"
+      ]
+    },
+    {
+      "login": "pgleeson",
+      "name": "Padraig Gleeson",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1556687?v=4",
+      "profile": "http://www.opensourcebrain.org/",
+      "contributions": [
+        "code",
+        "doc",
+        "bug",
+        "financial",
+        "ideas",
+        "infra",
+        "maintenance",
+        "promotion",
+        "projectManagement",
+        "research",
+        "review",
+        "security",
+        "test",
+        "tutorial"
+      ]
+    },
+    {
+      "login": "khanak0509",
+      "name": "Khanak Khandelwal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/186187285?v=4",
+      "profile": "https://khanak-khandelwal-portfolio.vercel.app",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "linkToUsage": true,
+  "commitType": "docs"
+}
