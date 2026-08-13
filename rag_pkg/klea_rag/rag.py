@@ -60,9 +60,6 @@ class RAG(BaseLangGraph):
         """Initialise"""
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
-        # total number of reference documents
-        self.num_refs_max = 10
-
     @override
     def _setup_models(self) -> None:
         """Set up the LLM chat model
@@ -136,6 +133,7 @@ class RAG(BaseLangGraph):
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
         self.k_inc = self.app_config.general.k_inc
+        self.max_refs_size = self.app_config.general.max_refs_size
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
 
         # store per-domain MCP configs for domain-aware tool descriptions
@@ -265,7 +263,7 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Retrieving information",
             retrievers=retrievers,
-            num_refs_max=self.num_refs_max,
+            max_refs_size=self.max_refs_size,
         )
         self.workflow.add_node(
             self._retrieve_info_node.label, self._retrieve_info_node.execute

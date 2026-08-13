@@ -12,10 +12,12 @@ import logging
 
 import pytest
 from klea_utils.stores.utils import (
+    REF_DOC_OVERHEAD,
     format_source_scores,
     instantiate_vector_store,
     rrf_merge,
     serialize_vs_retrieval,
+    truncate_reference_material,
 )
 from langchain_core.documents import Document
 
@@ -124,6 +126,17 @@ def test_rrf_merge_caps_at_num_refs_max():
     assert len(merged) == 2
 
 
+def test_rrf_merge_no_cap_returns_all():
+    """With num_refs_max=None, rrf_merge keeps every fused document."""
+    docs = [_doc(f"content {i}") for i in range(5)]
+    results = [(doc, float(5 - i)) for i, doc in enumerate(docs)]
+
+    merged = rrf_merge([("vector store", results)], num_refs_max=None)
+    logger.info(f"num_refs_max=None, returned {len(merged)} documents")
+
+    assert len(merged) == 5
+
+
 def test_rrf_merge_preserves_source_scores():
     """Docs matched by both sources carry both original scores."""
     d1 = _doc("Hodgkin-Huxley action potential")
@@ -183,3 +196,62 @@ def test_serialize_vs_retrieval_falls_back_to_relevance_score():
 
     assert "relevance score: 0.4200" in text
     assert "_source_scores" not in text
+
+
+def _budgeted_refs(n_docs, content_len):
+    """Build ``{domain: [(doc, score)]}`` in RRF order with known sizes."""
+    return {
+        "NeuroML": [(_doc("a" * content_len), float(n_docs - i)) for i in range(n_docs)]
+    }
+
+
+def test_truncate_reference_material_keeps_top_ranked_within_budget():
+    """A tight budget keeps the top-ranked docs and stops at the budget."""
+    refs = _budgeted_refs(5, 50)
+    doc_size = 50 + REF_DOC_OVERHEAD  # 250
+
+    # budget fits doc1 (250); doc2 crosses (500 > 450) so it is the crossing
+    # doc, kept; doc3 and beyond are dropped
+    budgeted = truncate_reference_material(refs, max_chars=450)
+    logger.info(f"budget=450 -> {len(budgeted['NeuroML'])} docs")
+
+    kept = budgeted["NeuroML"]
+    assert [doc.page_content for doc, _ in kept] == ["a" * 50] * 2
+    assert len(kept) < 5
+    assert doc_size <= 450 < 2 * doc_size
+
+
+def test_truncate_reference_material_large_budget_admits_lower_ranked():
+    """A generous budget admits the lower-ranked docs too (k-increase case)."""
+    refs = _budgeted_refs(5, 50)
+    doc_size = 50 + REF_DOC_OVERHEAD
+
+    budgeted = truncate_reference_material(refs, max_chars=5 * doc_size)
+    logger.info(f"budget=5*doc_size -> {len(budgeted['NeuroML'])} docs")
+
+    assert len(budgeted["NeuroML"]) == 5
+
+
+def test_truncate_reference_material_keeps_oversized_single_doc():
+    """A single doc larger than the whole budget is still kept."""
+    refs = {"NeuroML": [(_doc("b" * 5000), 1.0)]}
+
+    budgeted = truncate_reference_material(refs, max_chars=2000)
+    logger.info(f"oversized doc kept: {len(budgeted['NeuroML'])} docs")
+
+    assert len(budgeted["NeuroML"]) == 1
+
+
+def test_truncate_reference_material_global_across_domains():
+    """The budget is shared across domains: the first to hit it empties the rest."""
+    refs = {
+        "A": [(_doc("c" * 50), 0.9), (_doc("c" * 50), 0.8)],
+        "B": [(_doc("c" * 50), 0.7)],
+    }
+    # doc A1 fits (250); A2 crosses the 450 budget and is kept; B has no budget
+    # left and is dropped entirely
+    budgeted = truncate_reference_material(refs, max_chars=450)
+    logger.info(f"domain counts: A={len(budgeted['A'])}, B={len(budgeted['B'])}")
+
+    assert len(budgeted["A"]) == 2
+    assert len(budgeted["B"]) == 0

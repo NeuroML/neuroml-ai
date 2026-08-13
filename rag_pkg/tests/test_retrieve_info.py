@@ -48,7 +48,7 @@ def _make_node(retrievers) -> RetrieveInfoNode:
     node.logger = logging.getLogger("test_retrieve_info")
     node.label = "Retrieving information"
     node.retrievers = retrievers
-    node.num_refs_max = 10
+    node.max_refs_size = 20000
     node.write_custom_stream = lambda event: None
     logger.info(
         f"configured retrievers: "
@@ -110,6 +110,40 @@ async def test_execute_inc_k_on_all_retrievers_for_more_info():
 
     assert r1.inc_count == 1
     assert r2.inc_count == 1
+
+
+async def test_execute_truncates_reference_material_to_size_budget():
+    """A small max_refs_size truncates refs; a large one keeps every doc."""
+    docs = [_doc(str(i) * 50) for i in range(3)]
+    node = _make_node(
+        [
+            FakeRetriever(
+                [(d, 1.0 - i / 10) for i, d in enumerate(docs)],
+                name="vector store",
+            )
+        ]
+    )
+
+    state = RAGState(
+        query="q",
+        query_domains=["NeuroML"],
+        retrieval_query="q",
+    )
+
+    # default 20000 chars keeps everything
+    result = await node.execute(state)
+    logger.info(f"default budget refs: {len(result['reference_material']['NeuroML'])}")
+    assert len(result["reference_material"]["NeuroML"]) == 3
+
+    # a tight budget (each doc is 50 + 200 overhead = 250) keeps only the
+    # top-ranked docs: doc0 fits, doc1 crosses the 450 budget and is kept,
+    # doc2 is dropped
+    node.max_refs_size = 450
+    result = await node.execute(state)
+    refs = result["reference_material"]["NeuroML"]
+    logger.info(f"tight budget refs: {len(refs)}")
+    assert len(refs) == 2
+    assert refs[0][0].page_content == "0" * 50
 
 
 async def test_execute_normalizes_retrieval_query():

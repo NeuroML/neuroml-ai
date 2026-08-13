@@ -18,7 +18,12 @@ from klea_utils.nodes.abstract import (
     NodeStreamEvent,
 )
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
-from klea_utils.stores.utils import format_source_scores, normalize_text, rrf_merge
+from klea_utils.stores.utils import (
+    format_source_scores,
+    normalize_text,
+    rrf_merge,
+    truncate_reference_material,
+)
 
 from klea_rag.schemas import RAGState
 
@@ -45,8 +50,9 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
     Queries all retrievers (vector stores, BM25 stores) for the domains in
     the ``query_domains`` list using the same retrieval query, fuses the
-    results with Reciprocal Rank Fusion, and keeps the top N references for
-    each domain.  Optionally increments k when asked to retrieve more info.
+    results with Reciprocal Rank Fusion, and keeps the references ranked
+    best by RRF up to a global character budget (``max_refs_size``).
+    Optionally increments k when asked to retrieve more info.
     """
 
     def __init__(
@@ -54,18 +60,20 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         logger: logging.Logger,
         label: str,
         retrievers: list[BaseKleaRetriever] | None = None,
-        num_refs_max: int = 10,
+        max_refs_size: int = 20000,
     ):
         """Initialise the retrieval node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param retrievers: Retrievers to query (empty list skips retrieval)
-        :param num_refs_max: Maximum number of references to keep per domain
+        :param max_refs_size: Global character budget for the reference
+            material fed to the answer LLM (see
+            ``klea_utils.stores.utils.truncate_reference_material``)
         """
         super().__init__(logger, label)
         self.retrievers = retrievers or []
-        self.num_refs_max = num_refs_max
+        self.max_refs_size = max_refs_size
 
     @override
     async def execute(self, state: RAGState) -> dict[str, Any]:
@@ -109,8 +117,12 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 )
                 for retriever in self.retrievers
             ]
-            merged = rrf_merge(result_sets, num_refs_max=self.num_refs_max)
+            merged = rrf_merge(result_sets)
             reference_material[domain_name] = merged
+
+        reference_material = truncate_reference_material(
+            reference_material, max_chars=self.max_refs_size
+        )
 
         self.logger.debug(f"{reference_material =}")
 

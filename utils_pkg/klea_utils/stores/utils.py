@@ -29,6 +29,12 @@ CHROMA_HNSW_SPACE = "cosine"
 #: source's result list contributes ``1 / (RRF_K + r)`` to its fused score.
 RRF_K = 60
 
+#: Per-document character overhead attributed by :func:`truncate_reference_material`
+#: for the serialized markup that wraps each reference in the LLM context
+#: (``### Document N/M: [file] headings (relevance: ...)`` plus the optional
+#: metadata line).  Approximate; the page content dominates in practice.
+REF_DOC_OVERHEAD = 200
+
 _INTERNAL_META_KEYS = {
     "file_name",
     "file_hash",
@@ -91,7 +97,7 @@ def normalize_text(text: str) -> str:
 
 def rrf_merge(
     result_sets: list[tuple[str, list[tuple[Document, float]]]],
-    num_refs_max: int,
+    num_refs_max: int | None = None,
 ) -> list[tuple[Document, float]]:
     """Fuse per-source retrieval results with Reciprocal Rank Fusion.
 
@@ -103,9 +109,12 @@ def rrf_merge(
     :param result_sets: List of ``(source_label, results)`` pairs, where each
         *results* is a list of ``(document, score)`` tuples already ranked by
         its source
-    :param num_refs_max: Maximum number of documents to return
+    :param num_refs_max: Maximum number of documents to return, or ``None``
+        to return every fused document.  Callers that want to bound the
+        context fed to an LLM should cap by characters via
+        :func:`truncate_reference_material` instead of by document count.
     :returns: Documents ordered by RRF score, deduplicated by content, capped
-        at *num_refs_max*
+        at *num_refs_max* when set
     """
     rrf_scores: dict[str, float] = {}
     doc_by_key: dict[str, Document] = {}
@@ -129,7 +138,45 @@ def rrf_merge(
         key=lambda tup: tup[1],
         reverse=True,
     )
+    if num_refs_max is None:
+        return merged
     return merged[:num_refs_max]
+
+
+def truncate_reference_material(
+    reference_material: dict[str, list[tuple[Document, float]]],
+    max_chars: int,
+) -> dict[str, list[tuple[Document, float]]]:
+    """Truncate reference material to a global character budget.
+
+    The RRF merge orders documents by fused rank but does not bound how
+    much context the answer LLM receives; that is what this function does.
+    Documents are consumed in RRF order per domain (domains in their dict
+    order), counting ``len(page_content)`` plus the per-document
+    serialization overhead (:data:`REF_DOC_OVERHEAD`), until the budget is
+    exhausted.  The first document that crosses the budget is still
+    included, so a single large chunk never silently yields empty context.
+
+    :param reference_material: ``{domain: [(doc, score), ...]}`` in RRF order
+    :param max_chars: Total character budget across all domains
+    :returns: New mapping with the same domain keys, lists truncated to the
+        budget
+    """
+    budgeted: dict[str, list[tuple[Document, float]]] = {}
+    total = 0
+    crossed = False
+    for domain, docs in reference_material.items():
+        domain_docs: list[tuple[Document, float]] = []
+        for doc, score in docs:
+            size = len(doc.page_content) + REF_DOC_OVERHEAD
+            if total + size > max_chars:
+                if crossed:
+                    break
+                crossed = True
+            domain_docs.append((doc, score))
+            total += size
+        budgeted[domain] = domain_docs
+    return budgeted
 
 
 def format_source_scores(doc: Document, precision: int = 2) -> str | None:
