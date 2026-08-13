@@ -10,14 +10,21 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
-import aiohttp
+import httpx
 from fastmcp.server.lifespan import lifespan
 
 logger = logging.getLogger(__name__)
 
+#: Connection-pool tuning for the shared HTTP session.  Generous so a busy
+#: multi-user MCP server keeps many warm connections instead of paying
+#: TCP/TLS handshakes under bursty load.
+_SESSION_LIMITS = httpx.Limits(
+    max_connections=100, max_keepalive_connections=100, keepalive_expiry=30.0
+)
 
-def make_http_session_lifespan(session_key: str = "aiohttp_session"):
-    """Create a FastMCP lifespan that provides a shared aiohttp session.
+
+def make_http_session_lifespan(session_key: str = "http_session"):
+    """Create a FastMCP lifespan that provides a shared httpx session.
 
     Tools that need an HTTP session (e.g. klea_utils.mcp.tools.web_fetch)
     read it from ``ctx.lifespan_context[<session_key>]`` in their MCP wrapper.
@@ -29,12 +36,14 @@ def make_http_session_lifespan(session_key: str = "aiohttp_session"):
 
     @lifespan
     async def _http_session_lifespan(server):
-        logger.debug("Creating shared aiohttp session")
-        aiohttp_session = aiohttp.ClientSession()
+        logger.debug("Creating shared httpx session")
+        http_session = httpx.AsyncClient(
+            limits=_SESSION_LIMITS, timeout=httpx.Timeout(30.0)
+        )
         try:
-            yield {session_key: aiohttp_session}
+            yield {session_key: http_session}
         finally:
-            logger.debug("Closing shared aiohttp session")
-            await aiohttp_session.close()
+            logger.debug("Closing shared httpx session")
+            await http_session.aclose()
 
     return _http_session_lifespan
