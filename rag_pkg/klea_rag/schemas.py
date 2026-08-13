@@ -28,7 +28,7 @@ class EvaluateAnswerSchema(BaseModel):
     conciseness: float = 0.0
     next_step: Literal[
         "continue", "retrieve_more_info", "modify_query", "rewrite_answer", "undefined"
-    ] = Field(default="undefined")
+    ] = Field(default="undefined", validate_default=True)
     summary: str = ""
 
 
@@ -50,7 +50,7 @@ class RAGState(BaseModel):
 
     query: str = ""
     # schema for this is computed at run time for the classifier node
-    query_domains: list[str] = ["undefined"]
+    query_domains: list[str] = Field(default=["undefined"], validate_default=True)
     text_response_eval: EvaluateAnswerSchema = EvaluateAnswerSchema()
     guard_decision: str = "safe"
     messages: list[AnyMessage] = Field(default_factory=list)
@@ -69,7 +69,9 @@ class RAGState(BaseModel):
     # reference material from retrievals
     reference_material: dict[str, list[tuple]] = Field(default_factory=dict)
 
-    # number of retrieval query modification attempts in evaluator loop
+    # number of retrieval passes in the evaluator loop (the initial query
+    # retrieval, retrieve_more_info k-increases, and modify_query
+    # re-retrievals); incremented once per RetrieveInfoNode execution
     retrieval_attempts: int = 0
 
     # number of answer rewrite attempts in evaluator loop

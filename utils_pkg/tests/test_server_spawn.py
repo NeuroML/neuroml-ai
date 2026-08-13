@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""
+Tests for the shared server launcher helpers.
+
+File: tests/test_server_spawn.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import logging
+import unittest
+from unittest import mock
+
+import httpx
+from klea_utils.api.server import is_loopback_host, spawn_server
+
+logger = logging.getLogger(__name__)
+
+
+class TestIsLoopbackHost(unittest.TestCase):
+    def test_loopback_hosts(self):
+        for host in ("127.0.0.1", "localhost", "::1"):
+            self.assertTrue(is_loopback_host(host))
+
+    def test_case_insensitive(self):
+        self.assertTrue(is_loopback_host("LOCALHOST"))
+
+    def test_non_loopback(self):
+        for host in ("192.168.1.10", "0.0.0.0", "example.com"):
+            self.assertFalse(is_loopback_host(host))
+
+
+class TestSpawnServer(unittest.TestCase):
+    """Exercise spawn_server with a mocked readiness check and subprocess.
+
+    Three things are mocked so the tests run with no real server, no bound
+    ports, and no waiting:
+
+    - ``check_api_is_ready`` (AsyncMock): drives every readiness probe.
+    - ``subprocess.Popen``: stands in for the spawned uvicorn process.
+    - ``time.sleep``: no-ops the fast-fail window so the tests run instantly.
+
+    The probe sequence is the main thing to get right: spawn_server first
+    probes once (reuse check), then polls the process every second in a
+    short fast-fail window, and only falls back to the long retrying wait
+    if the window expires.  The per-test ``side_effect`` lists below encode
+    which probe returns what.
+    """
+
+    def setUp(self):
+        self.mock_popen = mock.patch(
+            "klea_utils.api.server.subprocess.Popen", autospec=True
+        ).start()
+        self.addCleanup(mock.patch.stopall)
+        # Avoid actually sleeping through the fast-fail window.
+        self.mock_sleep = mock.patch("klea_utils.api.server.time.sleep").start()
+        self.mock_ready = mock.patch(
+            "klea_utils.api.utils.check_api_is_ready", new_callable=mock.AsyncMock
+        ).start()
+
+    def _proc(self, poll_result=None, returncode=None):
+        """A fake Popen: ``poll`` returns *poll_result* (None == alive)."""
+        proc = mock.Mock()
+        proc.poll.return_value = poll_result
+        proc.returncode = returncode
+        self.mock_popen.return_value = proc
+        return proc
+
+    def test_reuses_existing_server(self):
+        # The very first probe already reports ready, so spawn_server must
+        # yield None (reuse, no lifecycle ownership) and never spawn.
+        self.mock_ready.return_value = {"status": "ready"}
+
+        with spawn_server("klea_rag.api.main:app", port=8005) as proc:
+            self.assertIsNone(proc)
+        self.mock_popen.assert_not_called()
+
+    def test_spawns_and_terminates_on_exit(self):
+        mock_proc = self._proc(poll_result=None)
+        # Probe 1 (reuse check): down -> spawn.
+        # Probe 2 (window iteration 1): still down.
+        # Probe 3 (window iteration 2): up -> break out of the window.
+        self.mock_ready.side_effect = [
+            httpx.ConnectError("down"),
+            httpx.ConnectError("down"),
+            {"status": "ready"},
+        ]
+
+        with spawn_server("klea_rag.api.main:app", port=8005) as proc:
+            self.assertIsNotNone(proc)
+            logger.debug("server considered ready inside the with block")
+
+        # Leaving the with block must terminate the spawned process.
+        self.mock_popen.assert_called_once()
+        mock_proc.terminate.assert_called_once()
+        mock_proc.wait.assert_called_once()
+        logger.debug("spawned process was terminated and reaped on exit")
+
+    def test_fast_fail_on_instant_crash(self):
+        # poll() returning non-None simulates the spawned server crashing
+        # immediately (bad module path, port already in use).  The fast-fail
+        # window must raise right away instead of waiting out the retry
+        # budget, and the (already dead) process is not terminated again.
+        mock_proc = self._proc(poll_result=3, returncode=3)
+        self.mock_ready.side_effect = httpx.ConnectError("down")
+
+        with (
+            self.assertRaisesRegex(RuntimeError, "exited immediately"),
+            spawn_server("klea_rag.api.main:app", port=8005),
+        ):
+            pass
+
+        mock_proc.terminate.assert_not_called()
+        logger.debug("instant crash surfaced without terminating the dead process")
+
+    def test_timeout_when_never_ready(self):
+        # The server stays alive (poll() is None) but never becomes ready, so
+        # every probe fails.  The fast-fail window is exhausted, the long
+        # retrying wait gives up after ``timeout``, and spawn_server raises
+        # while still cleaning up the spawned process.
+        mock_proc = self._proc(poll_result=None)
+        self.mock_ready.side_effect = httpx.ConnectError("down")
+
+        with (
+            self.assertRaisesRegex(RuntimeError, "did not become ready"),
+            spawn_server("klea_rag.api.main:app", port=8005, timeout=1),
+        ):
+            pass
+
+        # Went through the fast-fail window before giving up, then cleaned up.
+        self.mock_sleep.assert_called()
+        mock_proc.terminate.assert_called_once()
+        logger.debug("timeout surfaced after the fast-fail window; process terminated")
+
+
+if __name__ == "__main__":
+    unittest.main()

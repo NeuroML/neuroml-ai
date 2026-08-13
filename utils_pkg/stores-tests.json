@@ -1,0 +1,18 @@
+{
+    "domains": {
+        "NeuroML": {
+            "vector_stores": [
+                {
+                    "name": "nml-elife",
+                    "path": "chroma:../vector_stores/nml-elife"
+                }
+            ],
+            "bm25_stores": [
+                {
+                    "name": "nml-elife",
+                    "path": "../vector_stores/nml-elife/bm25.pkl"
+                }
+            ]
+        }
+    }
+}

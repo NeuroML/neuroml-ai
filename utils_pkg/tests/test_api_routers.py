@@ -192,4 +192,59 @@ class TestChat:
         data_frames = [ln for ln in lines if ln.startswith("data: ")]
         events = [json.loads(f[6:]) for f in data_frames]
         self.logger.info(f"Got error event: {events[-1]}")
-        assert events[-1] == {"type": "error", "message": "stream broken"}
+        assert events[-1] == {
+            "type": "error",
+            "message": "stream broken",
+            "error_type": "RuntimeError",
+            "node": "",
+        }
+
+    async def test_query_stream_error_not_stored(self, app, client):
+        """Graph error during streaming yields an error event but nothing is persisted."""
+        self.logger.info("Injecting error into run_graph_astream_events")
+
+        async def _broken_stream(query, thread_id):
+            raise RuntimeError("stream broken")
+            yield  # pragma: no cover
+
+        app.state.graph.run_graph_astream_events = _broken_stream
+
+        self.logger.info("POST /query/stream with broken graph")
+        async with client.stream(
+            "POST",
+            "/query/stream",
+            json={"query": "hello", "chat_id": "err-chat", "user_id": "err-user"},
+        ) as response:
+            lines = []
+            async for line in response.aiter_lines():
+                lines.append(line)
+
+        data_frames = [ln for ln in lines if ln.startswith("data: ")]
+        events = [json.loads(f[6:]) for f in data_frames]
+        assert events[-1]["type"] == "error"
+
+        from klea_utils.api.sessions_db import SessionStore
+
+        store: SessionStore = app.state.chat_sessions
+        messages = store.get_messages("err-user", "err-chat")
+        self.logger.info(f"Messages stored after error: {len(messages)}")
+        assert len(messages) == 0
+
+    async def test_query_error_not_stored(self, app, client):
+        """Graph error on /query raises 500 and nothing is persisted."""
+        self.logger.info("Injecting error into run_graph_invoke")
+        app.state.graph.run_graph_invoke.side_effect = ValueError("boom")
+
+        self.logger.info("POST /query with broken graph")
+        response = await client.post(
+            "/query",
+            json={"query": "hello", "chat_id": "err-chat", "user_id": "err-user"},
+        )
+        assert response.status_code == 500
+
+        from klea_utils.api.sessions_db import SessionStore
+
+        store: SessionStore = app.state.chat_sessions
+        messages = store.get_messages("err-user", "err-chat")
+        self.logger.info(f"Messages stored after error: {len(messages)}")
+        assert len(messages) == 0

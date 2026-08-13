@@ -8,8 +8,10 @@ Shared utilities used by all Klea packages.
 
    utils/graph
    utils/stores
+   utils/biblio
    utils/llm
-   utils/cli
+   utils/mcp
+   utils/models_catalog
    utils/api
    utils/ui
    utils/nodes

@@ -12,10 +12,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Annotated, Any
 
 from pydantic import Field
-from typing_extensions import Annotated
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
 
@@ -28,72 +27,74 @@ sbox = nml_mcp_sandbox
 
 @tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
 async def dummy_code_tool(
-    astring: Annotated[str, Field(description="String to be echoed back")],
+    astring: str,
 ) -> str:
     """Return the input string in a sentence (testing tool only).
 
-    This is a dummy tool used only for unit testing and debugging.
+    Use this tool to test and debug the MCP tool infrastructure.
 
-    Example: dummy_code_tool("hello") returns "I got hello"
+    Use when:
+    - Unit testing the tool server or the tool picker.
+
+    Do not use for:
+    - Any real task - this tool provides no real functionality.
+
+    Example: dummy_code_tool("hello")
+
+    Args:
+        astring: String to be echoed back.
     """
     return f"I got {astring}"
 
 
 @tool_meta(ToolInfo(title="List files and directories", tags={"testing"}))
 async def list_files_tool(
-    path: Annotated[
-        str,
-        Field(
-            description=(
-                "Directory path to list. Must be relative to current working "
-                "directory and cannot contain '..' for security"
-            ),
-            min_length=1,
-        ),
-    ],
-    max_depth: Annotated[
-        int | None,
-        Field(description="Maximum directory depth to traverse. 'None' for unlimited"),
-    ] = None,
+    path: Annotated[str, Field(min_length=1)],
+    max_depth: int | None = None,
     # LLMs are trained on shell style globs, so they insist on using space
     # separated file patterns. So we explicitly support these. Otherwise, this
     # becomes error prone.
-    pattern: Annotated[
-        str,
-        Field(
-            description=(
-                """
-                Space separated file patterns to filter based on files type.
-                Correct: '*.py'
-                Correct: '*.md'
-                Correct: '*.py *.md'
-            """
-            )
-        ),
-    ] = "*",
-    include_files: Annotated[
-        bool, Field(description="Whether to include files in results")
-    ] = True,
-    include_directories: Annotated[
-        bool, Field(description="Whether to include directories in results")
-    ] = True,
-    recursive: Annotated[
-        bool, Field(description="If True, traverse subdirectories recursively")
-    ] = False,
-    max_results: Annotated[
-        int, Field(description="Maximum number of entries to return", ge=1, le=10000)
-    ] = 100,
-) -> Dict[str, Any]:
+    pattern: str = "*",
+    include_files: bool = True,
+    include_directories: bool = True,
+    recursive: bool = False,
+    max_results: Annotated[int, Field(ge=1, le=10000)] = 100,
+) -> dict[str, Any]:
     """List files and directories with filtering and metadata.
-    Use this tool to explore file system structure and find specific files.
+
+    Use this tool to explore the file system structure and find specific
+    files.
+
+    Use when:
+    - You need to see what files and directories exist under a path.
+    - You want to locate files matching a pattern (e.g. '*.py').
+
+    Do not use for:
+    - Reading the contents of a file (use the file reading tool instead).
+    - Running commands or scripts (use the code execution tool instead).
 
     Example: list_files_tool(path=".", pattern="*.py", recursive=True)
+
+    Args:
+        path: Directory path to list. Must be relative to the current working
+            directory and cannot contain '..' for security.
+        max_depth: Maximum directory depth to traverse. 'None' for unlimited.
+        pattern: Space separated file patterns to filter based on file type.
+            Correct: '*.py', '*.md', '*.py *.md'.
+        include_files: Whether to include files in results.
+        include_directories: Whether to include directories in results.
+        recursive: If True, traverse subdirectories recursively.
+        max_results: Maximum number of entries to return.
+
+    Returns:
+        Dict with the matching files, an error message (if any), and a
+        truncated flag.
     """
     the_path = Path(path)
     truncated = "False"
     error = ""
-    files: List[Dict[str, Any]] = []
-    paths: List[Path] = []
+    files: list[dict[str, Any]] = []
+    paths: list[Path] = []
 
     if ".." in path:
         return {
@@ -139,24 +140,29 @@ async def list_files_tool(
 
 @tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
 async def run_python_code_tool(
-    code: Annotated[
-        str,
-        Field(
-            description=(
-                "Complete Python code to execute. Must be valid Python syntax "
-                "and cannot require interactive input"
-            ),
-            min_length=1,
-        ),
-    ],
-) -> Dict[str, Any]:
+    code: Annotated[str, Field(min_length=1)],
+) -> dict[str, Any]:
     """Execute Python code in a sandboxed environment.
 
-    Use this tool to test code snippets, generate models, and perform calculations.
+    Use this tool to test code snippets, generate models, and perform
+    calculations.
 
-    Example: run_python_code_tool(
-        "import numpy; print('numpy version:', numpy.__version__)"
-    )
+    Use when:
+    - You need to run a short Python snippet to test or compute something.
+    - You need to generate or manipulate NeuroML structures with code.
+
+    Do not use for:
+    - Simple file operations (use the file tools instead).
+    - Long-running or interactive programs (the sandbox rejects these).
+
+    Example: run_python_code_tool("import numpy; print('numpy version:', numpy.__version__)")
+
+    Args:
+        code: Complete Python code to execute. Must be valid Python syntax
+            and cannot require interactive input.
+
+    Returns:
+        Dict with the execution result.
     """
     request = RunPythonCode(code=code)
     async with sbox(".") as f:

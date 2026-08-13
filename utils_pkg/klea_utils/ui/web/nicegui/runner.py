@@ -83,6 +83,21 @@ def setup_layout(
     ui.add_css(
         ".nicegui-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }"
     )
+    # GitHub-style alerts (rendered from ``> [!WARNING]`` etc. by the markdown2
+    # 'alerts' extra) used for the fallback / best-effort warnings in bubbles.
+    # No default style defined by nicegui for these extras
+    ui.add_css(
+        ".nicegui-markdown div.alert { "
+        "padding: 0.4rem 0.75rem; "
+        "border-left: 4px solid #d29922; "
+        "border-radius: 0.25rem; "
+        "background: rgba(210, 153, 34, 0.12); "
+        "margin: 0.5rem 0; "
+        "}"
+    )
+    ui.add_css(
+        ".nicegui-markdown div.alert em { font-style: normal; font-weight: 600; }"
+    )
     # Collapse long bot messages to 4 lines with an expand / collapse toggle.
     ui.add_css(".msg-collapsed { max-height: 6em; overflow: hidden; }")
     ui.add_css(".msg-expanded { max-height: none; }")
@@ -165,6 +180,10 @@ def setup_layout(
     toggle_icon_ref: list = [None]
     _is_streaming: list = [False]
 
+    # ``user_id`` (a setup_layout parameter) is captured by reference in
+    # every handler below.  Handlers therefore see a rebind made elsewhere
+    # in this scope -- _confirm_delete_all uses ``nonlocal user_id`` to
+    # switch the whole page session to a fresh identity after a delete.
     _expanded: set[int] = set()
 
     # ------------------------------------------------------------------
@@ -258,24 +277,51 @@ def setup_layout(
         """Fetch active model config for the current chat and update the status pane."""
         chat_id = _current_chat_id[0]
         if not chat_id:
+            logger.debug("fetch model info: no active chat (user=%s)", user_id)
             return
+        logger.debug("fetch model info: fetching for chat=%s", chat_id)
         active = await fetch_active_models(server_url, user_id, chat_id)
         if not active:
+            logger.debug(
+                "fetch model info: server returned no roles for chat=%s", chat_id
+            )
             return
         current = ensure_chat(user_id, chat_id)
         current["model_info"] = active
+        logger.debug(
+            "fetch model info: cached %d role(s) for chat=%s",
+            len(active),
+            chat_id,
+        )
         _status_pane.refresh()
 
-    def _model_config_dialog() -> None:
+    async def _model_config_dialog() -> None:
         """Open a dialog to view and change per-role model overrides."""
         chat_id = _current_chat_id[0]
         if not chat_id:
+            logger.debug("model config dialog: no active chat (user=%s)", user_id)
             return
         current_chat = ensure_chat(user_id, chat_id)
         current_info = current_chat.get("model_info", {})
         roles = list(current_info.keys())
         if not roles:
-            return
+            # No model info yet (e.g. a chat created by typing the first
+            # message). Fetch it on demand so the dialog has roles to render.
+            logger.debug(
+                "model config dialog: no roles cached, fetching model info for chat=%s",
+                chat_id,
+            )
+            await _fetch_model_info()
+            current_chat = ensure_chat(user_id, chat_id)
+            current_info = current_chat.get("model_info", {})
+            roles = list(current_info.keys())
+            if not roles:
+                logger.debug(
+                    "model config dialog: still no roles after fetch for chat=%s",
+                    chat_id,
+                )
+                return
+        logger.debug("model config dialog: chat=%s roles=%s", chat_id, roles)
 
         dialog = ui.dialog()
 
@@ -283,13 +329,32 @@ def setup_layout(
             payload = {"model": model_inp.value}
             if api_key_inp.value.strip():
                 payload["api_key"] = api_key_inp.value.strip()
+            logger.debug(
+                "model config dialog: saving role=%s model=%s chat=%s",
+                role,
+                payload["model"],
+                chat_id,
+            )
             ok = await set_model_override(server_url, user_id, chat_id, role, payload)
+            logger.debug(
+                "model config dialog: save role=%s ok=%s chat=%s",
+                role,
+                ok,
+                chat_id,
+            )
             if ok:
                 dialog.close()
                 await _fetch_model_info()
 
         async def _clear_role(role: str):
+            logger.debug("model config dialog: clearing role=%s chat=%s", role, chat_id)
             ok = await clear_model_override(server_url, user_id, chat_id, role)
+            logger.debug(
+                "model config dialog: clear role=%s ok=%s chat=%s",
+                role,
+                ok,
+                chat_id,
+            )
             if ok:
                 dialog.close()
                 await _fetch_model_info()
@@ -403,6 +468,9 @@ def setup_layout(
         """Flip the pinned flag for a chat and refresh the list."""
         current_chat = ensure_chat(user_id, chat_id)
         current_chat["pinned"] = not current_chat["pinned"]
+        logger.debug(
+            "toggled pin for chat=%s pinned=%s", chat_id, current_chat["pinned"]
+        )
         _render_chat_list.refresh()
 
     def _toggle_left_drawer():
@@ -415,6 +483,7 @@ def setup_layout(
         """
         nonlocal mini_state
         mini_state = not mini_state
+        logger.debug("toggling left drawer: mini_state=%s", mini_state)
         if mini_state:
             left_drawer.props("mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_right"
@@ -426,6 +495,10 @@ def setup_layout(
         """Open a modal dialog with inspector/debug entries for the active chat."""
         current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
         if not current_chat or not current_chat.get("inspector_entries"):
+            logger.debug(
+                "inspector dialog: no entries for chat=%s",
+                _current_chat_id[0],
+            )
             return
 
         logger.debug(
@@ -508,11 +581,13 @@ def setup_layout(
     def _rename_chat(chat_id: str) -> None:
         """Open a dialog to rename a chat and persist on server."""
         chat = ensure_chat(user_id, chat_id)
+        logger.debug("opening rename dialog for chat=%s", chat_id)
         dialog = ui.dialog()
 
         async def _save():
             chat["name"] = inp.value
             dialog.close()
+            logger.debug("renaming chat=%s to %r", chat_id, inp.value)
             await rename_chat_on_server(server_url, user_id, chat_id, inp.value)
             _render_chat_list.refresh()
             _status_pane.refresh()
@@ -601,31 +676,61 @@ def setup_layout(
         """DELETE all server data, reset in-memory state, and generate a new user ID."""
         import httpx
 
+        # ``user_id`` is setup_layout's parameter; every handler (send,
+        # _new_chat, _switch_chat, status pane, ...) closes over that same
+        # name.  Declaring it nonlocal here lets us rebind it below so the
+        # whole page session switches to the fresh identity immediately,
+        # instead of only after a page reload.  Without this, a new chat
+        # created after deleting the session would be stored under the OLD
+        # user id and become orphaned from the frontend's view.
+        nonlocal user_id
+        old_id = user_id
+        logger.debug("confirming delete of user session for user_id=%s", old_id)
         try:
             async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.delete(f"{server_url}/chat/{user_id}")
+                resp = await client.delete(f"{server_url}/chat/{old_id}")
                 if resp.status_code == 200:
-                    logger.debug(
-                        "delete_user_session succeeded for user_id=%s", user_id
+                    logger.debug("delete_user_session succeeded for user_id=%s", old_id)
+                else:
+                    logger.warning(
+                        "delete_user_session failed: HTTP %s for user_id=%s",
+                        resp.status_code,
+                        old_id,
                     )
+                    ui.notification(
+                        f"Failed to delete session (HTTP {resp.status_code}). "
+                        "No data was cleared.",
+                        type="negative",
+                        timeout=10000,
+                    )
+                    dialog.close()
+                    return
         except Exception as e:
             logger.warning("Failed to delete user session: %s", e)
+            ui.notification(
+                f"Failed to delete session: {e}",
+                type="negative",
+                timeout=10000,
+            )
             dialog.close()
             return
 
-        logger.debug("clearing in-memory chats for user_id=%s", user_id)
-        chat_key_prefix = f"{user_id}:"
+        logger.debug("clearing in-memory chats for user_id=%s", old_id)
+        chat_key_prefix = f"{old_id}:"
         for key in list(chats.keys()):
             if key.startswith(chat_key_prefix):
                 chats.pop(key, None)
 
         _current_chat_id[0] = ""
         app.storage.user["chat_id"] = ""
-        old_id = user_id
-        app.storage.user["user_id"] = str(uuid.uuid4())
+        new_id = str(uuid.uuid4())
+        app.storage.user["user_id"] = new_id
+        # Rebind the closure so every handler (new chat, send, status pane,
+        # etc.) uses the fresh identity for the rest of this page session.
+        user_id = new_id
         logger.debug(
             "reset local state: new user_id=%s (was %s)",
-            app.storage.user["user_id"],
+            user_id,
             old_id,
         )
         _render_chat_area()
@@ -643,6 +748,7 @@ def setup_layout(
         def _toggle_dark():
             """Flip the dark-mode flag in ``app.storage.user``."""
             dark.value = not dark.value
+            logger.debug("toggled dark mode: value=%s", dark.value)
 
         ui.button(icon="dark_mode", on_click=_toggle_dark).props(
             "flat color=white round"
@@ -719,26 +825,36 @@ def setup_layout(
                             )
                     ui.space()
                     with ui.element():
-                        ui.button(
-                            icon="settings", on_click=lambda: _model_config_dialog()
-                        ).props("flat dense round color=grey-9").classes("text-sm")
-                        ui.tooltip("Choose models")
-                        has_entries = bool(current_chat.get("inspector_entries"))
-                        btn = (
+                        with (
                             ui.button(
-                                icon="info",
-                                on_click=lambda: (
-                                    _show_inspection_dialog()
-                                    if not _is_streaming[0]
-                                    else None
-                                ),
+                                icon="settings",
+                                on_click=_model_config_dialog,
                             )
+                            .props("flat dense round color=grey-9")
+                            .classes("text-sm")
+                        ):
+                            ui.tooltip("Choose models")
+                        has_entries = bool(current_chat.get("inspector_entries"))
+
+                        def _open_inspector():
+                            """Log and open the inspector dialog if not streaming."""
+                            logger.debug(
+                                "inspector button clicked for chat=%s (streaming=%s)",
+                                _current_chat_id[0],
+                                _is_streaming[0],
+                            )
+                            if not _is_streaming[0]:
+                                _show_inspection_dialog()
+
+                        btn = (
+                            ui.button(icon="info", on_click=_open_inspector)
                             .props("flat dense round color=grey-9")
                             .classes("text-sm")
                         )
                         if _is_streaming[0] or not has_entries:
                             btn.props("disabled")
-                        ui.tooltip("Inspector available after query")
+                        with btn:
+                            ui.tooltip("Inspector available after query")
                 model_info = current_chat.get("model_info", {})
                 if model_info:
                     tooltip_parts: list[str] = []
@@ -855,6 +971,7 @@ def setup_layout(
                         query, chat_id, server_url, user_id=user_id
                     ):
                         t = event.get("type", "?")
+                        logger.debug("chat=%s stream event type=%s", chat_id, t)
                         if t == "progress":
                             pg_label.set_text(f"{event.get('node', '')}")
                         elif t == "debug":
@@ -918,27 +1035,29 @@ def setup_layout(
                             break
                         elif t == "error":
                             pg_row.delete()
-                            ensure_chat(user_id, chat_id)["messages"].append(
-                                (
-                                    f"Error: {event.get('message', 'Unknown error')}",
-                                    datetime.now().astimezone().strftime("%X"),
-                                    False,
-                                )
+                            logger.debug(
+                                "chat=%s stream error: %s",
+                                chat_id,
+                                event.get("message", "Unknown error"),
                             )
-                            _render_chat_area()
+                            with _stream_container:
+                                ui.notification(
+                                    f"Error: {event.get('message', 'Unknown error')}",
+                                    type="negative",
+                                    timeout=10000,
+                                )
                             _is_streaming[0] = False
                             _status_pane.refresh()
                             break
                 except httpx.RequestError as e:
                     pg_row.delete()
-                    ensure_chat(user_id, chat_id)["messages"].append(
-                        (
+                    logger.debug("chat=%s request error: %s", chat_id, e)
+                    with _stream_container:
+                        ui.notification(
                             f"Connection error: {e}",
-                            datetime.now().astimezone().strftime("%X"),
-                            False,
+                            type="negative",
+                            timeout=10000,
                         )
-                    )
-                    _render_chat_area()
                     _is_streaming[0] = False
                     _status_pane.refresh()
 
@@ -960,6 +1079,11 @@ def setup_layout(
                     background_tasks.create(
                         create_chat_on_server(server_url, user_id, current)
                     )
+                    # Populate model_info for the newly created chat so the
+                    # "Choose models" dialog has roles to render. Without this
+                    # the status pane stays empty and the dialog silently
+                    # no-ops for chats started by typing the first message.
+                    background_tasks.create(_fetch_model_info())
                     _render_chat_list.refresh()
 
                 ensure_chat(user_id, current)["messages"].append((query, stamp, True))
@@ -1054,6 +1178,20 @@ def run_nicegui_app(
         works after the client has connected, so we await
         ``ui.context.client.connected()`` first.
         """
+        # Establish the per-browser user identity at the very top of the
+        # page builder, before any await. `app.storage.user` is only
+        # guaranteed valid in the request context of the initial page
+        # build; after awaiting client.connected() / check_api_is_ready()
+        # the task may run outside that context and NiceGUI raises
+        # "user storage for ... should be created before accessing it".
+        if "user_id" not in app.storage.user:
+            app.storage.user["user_id"] = str(uuid.uuid4())
+            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
+        else:
+            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
+
+        user_id = app.storage.user["user_id"]
+
         await ui.context.client.connected()
 
         # The page builder runs exactly once -- build the appropriate page
@@ -1071,14 +1209,6 @@ def run_nicegui_app(
                     "text-grey-5"
                 )
             return
-
-        if "user_id" not in app.storage.user:
-            app.storage.user["user_id"] = str(uuid.uuid4())
-            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
-        else:
-            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
-
-        user_id = app.storage.user["user_id"]
 
         chat_id = ""
 

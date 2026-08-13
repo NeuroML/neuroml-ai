@@ -55,7 +55,9 @@ At a high level, a query flows through these stages:
 
 3. **Retrieval** -- the system generates one or more search queries,
    optionally calls MCP tools (for live data), and retrieves the most
-   relevant chunks from the matching domain's vector stores.
+   relevant chunks from the matching domain's stores (vector stores
+   and/or BM25 keyword stores).  Results from the different stores are
+   combined with Reciprocal Rank Fusion (see :ref:`hybrid-retrieval`).
 
 4. **Answer** -- the chat model generates an answer from the
    retrieved context, citing its sources.
@@ -79,24 +81,142 @@ orchestrator from ``klea_utils``.
 
    The RAG pipeline visualised as a LangGraph state machine.
 
-Domains and vector stores
--------------------------
+Domains and stores
+------------------
 
 Domains are the organising unit of Klea RAG:
 
 * A **domain** bundles related knowledge and configuration
   (e.g. "NeuroML documentation", "My project's internal docs").
-* Each domain has one or more **vector stores** containing the
-  embedded chunks.
+* Each domain has one or more **stores** containing the chunks:
+  **vector stores** (dense embedding similarity) and/or **BM25 keyword
+  stores** (classic lexical search).
 * The classifier uses the domain's *description* to decide where a
   query should go.
 * Domains can also have **MCP servers** attached, giving the LLM
   access to live tools (e.g. a validation server, a database query
   tool).
 
+Each store's ``name`` in the config must exactly match the
+``--collection`` name used when the store was created with
+``klea-stores-create``, and its ``path`` must match the location the
+chunks were written to.  Retrieval looks stores up by name, so a
+mismatch silently returns no results.  For local Chroma stores the
+``path`` points at the store folder; the database file inside it is
+always named ``chroma.sqlite3`` (see
+:doc:`../tutorials/create-and-use-rag`).  Chroma collections created by
+``klea-stores-create`` use **cosine** HNSW distance, so the vector-store
+relevance score is a cosine similarity (and the retrieval
+``score_threshold`` reads as a minimum cosine similarity).
+
 This means one RAG server can simultaneously serve completely
 different knowledge areas -- the classifier routes queries to the
 right domain automatically.
+
+.. _hybrid-retrieval:
+
+Hybrid retrieval (vector + BM25)
+--------------------------------
+
+Each domain can configure ``vector_stores``, ``bm25_stores``, both, or
+neither.  BM25 provides a classic keyword search that complements
+dense embedding similarity: exact names, symbols, and terminology that
+a semantic search might miss are surfaced by the lexical match.
+
+When a domain configures both, every query runs against all of the
+domain's stores and the results are combined with **Reciprocal Rank
+Fusion** (RRF): a document is scored by its rank within each store's
+result list (``1 / (60 + rank)``), so results from the different stores
+are merged without comparing their raw scores (cosine similarity and
+BM25 scores are not on the same scale).  Duplicate chunks are removed
+and the top ``k`` references are kept.
+
+The original per-source scores are preserved in each document's
+``_source_scores`` metadata, so the answer LLM sees e.g. both the
+vector-store similarity and the BM25 score, labelled by source.
+
+These per-source scores are informational context, not a comparable
+ranking.  The vector-store score is a cosine similarity in ``[0, 1]``
+(1 = most similar to the query), while the BM25 score is a raw keyword
+relevance value on an unbounded scale (higher = more matching terms).
+The two are on different scales, so a BM25 value of e.g. ``5.1`` does
+not mean the chunk is "better" than one with a vector-store score of
+``0.68``.  Documents are ordered by the RRF rank fusion above, never by
+comparing these raw values.
+
+To create a BM25 store alongside a vector store, pass
+``--bm25-store`` to ``klea-stores-create`` (see
+:doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``
+entry to the domain config pointing at the written corpus file.
+
+.. _metadata-extraction:
+
+Bibliographic metadata extraction
+---------------------------------
+
+When documents are chunked, Klea automatically tries to populate the
+per-file ``DEFAULT`` entry of ``metadata-map.template.json`` with
+bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
+pre-population aid: the researcher reviews and corrects the values
+before storing, rather than filling the metadata map in from scratch.
+
+Multiple URLs are written as separate keys (``url_1``, ``url_2``, ...);
+each ``url*`` key is shown as its own reference in retrieval results and
+passed to the answer LLM.  A non-numeric key suffix becomes its display
+label: rename ``url_1`` to ``url_orcid`` in the template and the
+reference panel shows ``orcid: <url>``.  When a DOI is found, the
+``DEFAULT`` entry also gets a ``url_doi`` key derived from it
+(``https://doi.org/<doi>``).
+
+The extraction runs a tiered cascade, most authoritative first; each
+tier only fills fields the tiers above it have not already set:
+
+* ``doi-service`` -- a DOI discovered anywhere in the document is
+  resolved via Crossref, OpenAlex and Semantic Scholar.  The three APIs
+  are queried in round-robin order to spread load, falling back to the
+  others when one is rate-limited, and results are cached to disk so
+  re-ingests never re-query.  The resolved record's title, authors,
+  year, venue and DOI override everything below.
+* ``pdf-info`` -- the PDF Info dict (title, authors, keywords), read
+  with pypdfium2.  Often empty: many publishers ship no bibliographic
+  fields in the PDF.
+* ``docling`` -- the free structured signals from Docling's layout
+  model: the title item, the origin mimetype/URI, and the hyperlinks on
+  text items.
+* ``layout-regex`` -- regex over the focused first-page header region
+  (the top fraction of page one, selected via the layout bounding
+  boxes).
+* ``regex`` -- regex over the first ~3000 characters of the document.
+
+Two internal keys are added to each file's ``DEFAULT`` entry:
+
+* ``_metadata_complete`` -- ``True`` only when a full DOI record (title
+  + authors + year) or a full PDF Info dict (title + author + keywords)
+  was obtained; ``False`` means the researcher should review the entry.
+* ``_sources`` -- the tiers that contributed at least one field, in
+  precedence order (e.g. ``["doi-service", "regex"]``).
+
+These keys are internal: they guide the researcher reviewing the
+template, and are never shown to the answer LLM.
+
+DOI resolution uses the APIs' polite pool when ``KLEA_INGEST_MAILTO``
+is set to an email address (higher rate limits).  It is skipped
+entirely when no DOI is found in the document.  Optical character
+recognition (OCR), which slows the conversion of text-based PDFs
+considerably, can be disabled with ``klea-stores-create --no-ocr`` (see
+`Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_
+for details).
+
+Docling selects the inference accelerator automatically (CUDA, MPS, or
+CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
+cannot run the Triton-compiled layout model.  Set the ``DOCLING_DEVICE``
+environment variable to ``cpu`` in that case (optionally raising
+``DOCLING_NUM_THREADS`` above the default of 4 to use more CPU cores);
+see :doc:`../tutorials/create-and-use-rag` for a worked example.
+
+See :doc:`../api/utils/biblio` for the Python API and
+:doc:`../tutorials/create-and-use-rag` for the ``chunk`` / ``store``
+workflow.
 
 .. seealso::
 

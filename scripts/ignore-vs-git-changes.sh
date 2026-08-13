@@ -10,20 +10,27 @@
 # example
 #
 #
-VECTOR_STORES_DIR="vector_stores"
+#
+
+mapfiles -d $'\0' VECTOR_STORES_DIR < <(find . -name "vector*" -type d -print0)
 
 ignore () {
-    pushd "$VECTOR_STORES_DIR" || exit 1
-        find . -type f -print -execdir git update-index --assume-unchanged '{}' \;
-    popd || exit 1
+    for folder in "${VECTOR_STORES_DIR[@]}"
+    do
+        pushd "$folder" || exit 1
+            find . -type f -print -execdir git update-index --assume-unchanged '{}' \;
+        popd || exit 1
+    done
     echo > "VECTOR_STORES_IGNORED"
-
 }
 
 unignore () {
-    pushd "$VECTOR_STORES_DIR" || exit 1
-        find . -type f -print -execdir git update-index --no-assume-unchanged '{}' \;
-    popd || exit 1
+    for folder in "${VECTOR_STORES_DIR[@]}"
+    do
+        pushd "$folder" || exit 1
+            find . -type f -print -execdir git update-index --no-assume-unchanged '{}' \;
+        popd || exit 1
+    done
     rm -f "VECTOR_STORES_IGNORED"
 }
 

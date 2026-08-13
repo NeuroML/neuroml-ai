@@ -3,9 +3,9 @@ Welcome to Klea
 
 Knowledge vaLidated Expert AI Assistant for Neuroscience.
 
-Klea is a suite of AI tools for Neuroscience.  It provides a generic
-RAG pipeline, an AI-assisted coding workflow system, and MCP servers
-for modelling and analysis.
+Klea is a suite of AI tools for Neuroscience.  It provides a general
+purpose agent with coding capabilities, a generic RAG pipeline, and
+MCP servers for modelling and analysis.
 
 Architecture
 ------------
@@ -21,16 +21,16 @@ The project is organised as a monorepo with four installable packages:
      - Purpose
    * - ``utils_pkg``
      - ``klea_utils``
-     - ``klea-vs-create``
+     - ``klea-stores-create``
      - Shared utilities, vector store management, base graph classes
    * - ``rag_pkg``
      - ``klea_rag``
      - ``klea-rag``, ``klea-rag-serve``
      - Generic RAG pipeline with multi-domain support
-   * - ``code_pkg``
-     - ``klea_code``
-     - ``klea-code``, ``klea-code-serve``
-     - AI-assisted coding and workflow system
+   * - ``agent_pkg``
+     - ``klea_agent``
+     - ``klea``, ``klea-serve``
+     - General purpose agent with coding capabilities
    * - ``mcp_pkg``
      - ``neuroml_mcp``
      - ``nml-mcp``
@@ -41,6 +41,10 @@ provides configurable LLM setup (with runtime model switching), vector
 store abstraction (Chroma / PGVector / Qdrant), and the
 :class:`~klea_utils.graph.base.BaseLangGraph` orchestrator framework.
 Web interfaces are available via NiceGUI (primary) and Streamlit.
+
+``klea_agent`` is the main application: a general purpose agent that can
+also code.  ``klea_rag`` is an additional component, primarily consumed by
+``klea_agent`` as a retrieval/RAG service.
 
 Prototype Deployments
 ---------------------

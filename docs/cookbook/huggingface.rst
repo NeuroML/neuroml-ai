@@ -57,7 +57,7 @@ is to fork the existing template and customise it.
 
    Remove the example stores under ``vector-stores/`` and add your own
    ChromaDB databases.  See :doc:`../tutorials/create-and-use-rag` for a
-   step-by-step guide on creating vector stores with ``klea-vs-create``.
+   step-by-step guide on creating vector stores with ``klea-stores-create``.
 
    .. note::
 
@@ -80,6 +80,7 @@ is to fork the existing template and customise it.
           "general": {
               "default_k": 5,
               "k_max": 10,
+              "max_refs_size": 20000,
               "non_domain_chat": true
           },
           "domains": {
@@ -104,6 +105,9 @@ is to fork the existing template and customise it.
    settings (``default_k``, ``k_max``, ``k_inc``) with their own
    per-store values, e.g. a store covering a large corpus can set
    ``"default_k": 10, "k_max": 25, "k_inc": 5`` on its entry.
+   ``general.max_refs_size`` bounds the total number of reference
+   characters serialized into the answer LLM's context, independent of
+   the per-store ``k`` settings.
 
    See :doc:`../tutorials/create-and-use-rag` for a full explanation of
    the configuration schema.
@@ -148,6 +152,13 @@ is to fork the existing template and customise it.
    The template uses ``nml-mcp`` (the NeuroML MCP server) by default.
    If you do not need NeuroML-specific tools, replace it with your own
    MCP server or remove the line entirely.
+
+   .. note::
+
+      ``klea-rag web`` (and ``klea-rag cli``) auto-start a server on the
+      local machine when none is running.  In this container the backend
+      is started explicitly with ``klea-rag-serve`` above, so the
+      frontend's readiness probe simply reuses it.
 
    The ``--title`` flag sets the heading shown in the browser tab and
    the NiceGUI page header.  Other flags such as ``--subtitle`` and
@@ -256,7 +267,8 @@ Troubleshooting
 **Space runs out of memory.**
     The free ``cpu-basic`` tier has limited RAM.  Reduce ``k_max`` in
     ``klea_rag.json``, use smaller embedding models, or upgrade to a
-    paid hardware tier on HuggingFace.
+    paid hardware tier on HuggingFace.  Reducing ``max_refs_size`` also
+    shrinks the reference context sent to the answer LLM.
 
 **Container crashes on startup.**
     Check the Space logs for Python tracebacks.  Common causes: a typo in

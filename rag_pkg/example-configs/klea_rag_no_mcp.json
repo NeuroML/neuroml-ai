@@ -14,10 +14,16 @@
             "vector_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs_bge-m3.db",
+                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs",
                     "default_k": 10,
                     "k_max": 20,
                     "k_inc": 5
+                }
+            ],
+            "bm25_stores": [
+                {
+                    "name": "nml-docs",
+                    "path": "../../deployments/huggingface/vector-stores/nml-docs/bm25.pkl"
                 }
             ]
         }

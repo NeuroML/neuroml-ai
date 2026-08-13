@@ -1,6 +1,10 @@
 UI — NiceGUI
 ============
 
+.. automodule:: klea_utils.ui.web.nicegui.app
+   :members:
+   :show-inheritance:
+
 .. automodule:: klea_utils.ui.web.nicegui.runner
    :members:
    :show-inheritance:
@@ -14,5 +18,9 @@ UI — NiceGUI
    :show-inheritance:
 
 .. automodule:: klea_utils.ui.web.nicegui.state
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.ui.web.nicegui.parser
    :members:
    :show-inheritance:

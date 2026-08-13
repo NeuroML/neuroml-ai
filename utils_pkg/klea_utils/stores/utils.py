@@ -9,11 +9,206 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import re
+import unicodedata
 from pathlib import Path
 
 from langchain_core.documents import Document
 
-_INTERNAL_META_KEYS = {"file_name", "source_path", "file_hash", "headings"}
+#: Metadata key holding each document's original per-source scores (e.g.
+#: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.
+SOURCE_SCORES_KEY = "_source_scores"
+
+#: HNSW distance space used for Chroma collections created by Klea.  Cosine
+#: makes the vector-store relevance scores true cosine similarities
+#: (``1 - cosine_distance``), so a ``score_threshold`` reads as a minimum
+#: cosine similarity.
+CHROMA_HNSW_SPACE = "cosine"
+
+#: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a
+#: source's result list contributes ``1 / (RRF_K + r)`` to its fused score.
+RRF_K = 60
+
+#: Per-document character overhead attributed by :func:`truncate_reference_material`
+#: for the serialized markup that wraps each reference in the LLM context
+#: (``### Document N/M: [file] headings (relevance: ...)`` plus the optional
+#: metadata line).  Approximate; the page content dominates in practice.
+REF_DOC_OVERHEAD = 200
+
+_INTERNAL_META_KEYS = {
+    "file_name",
+    "file_hash",
+    "headings",
+    SOURCE_SCORES_KEY,
+    # Bibliographic extraction provenance (see klea_utils/biblio).  These
+    # guide the researcher reviewing metadata-map.template.json but carry
+    # no meaning for the answer LLM, so they are never serialized to it.
+    "_metadata_complete",
+    "_sources",
+}
+
+#: No-break space variants mapped to a regular space by :func:`normalize_text`
+#: (NFKC also folds these, but the explicit mapping keeps the intent visible).
+_NO_BREAK_SPACES = "\u00a0\u2007\u202f"
+
+#: Zero-width / invisible characters stripped by :func:`normalize_text`.
+#: ``\ufeff`` is the byte-order mark emitted at the start of extracted text;
+#: ``\u200e``/``\u200f`` are bidi marks; ``\ufe00``-``\ufe0f`` are variation
+#: selectors.
+_ZERO_WIDTH_CHARS = "\ufeff\u200b\u200c\u200d\u200e\u200f\u2060\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f"
+
+
+def normalize_text(text: str) -> str:
+    """Normalise free text for consistent indexing and retrieval.
+
+    Document conversion (e.g. Docling's PDF extraction) embeds
+    typographic artifacts that hurt search: soft hyphens (``\\u00ad``)
+    split words mid-token, no-break / zero-width characters distort
+    embeddings and BM25 keyword matching, and ligatures / full-width
+    forms / superscripts / typographic spaces tokenise differently from
+    their plain equivalents.  This strips or maps them so that indexed
+    chunks and retrieval queries share the same plain-text form.
+
+    The final pass uses NFKC compatibility composition, which (unlike NFC)
+    also folds ligatures (``\\ufb01`` -> "fi"), full-width forms
+    (``\\uff21`` -> "A"), superscripts (``\\u00b2`` -> "2"), typographic
+    spaces (en/em/thin/ideographic), and the non-breaking hyphen
+    (``\\u2011`` -> ``\\u2010``).  Typographic em/en dashes are kept
+    unchanged.
+
+    :param text: Raw text, possibly containing typographic artifacts
+    :returns: Normalised plain text
+    """
+    # Soft hyphen: an invisible line-break hint; dropping it rejoins the
+    # split word (e.g. "multi-\\u00adscale" -> "multi-scale").
+    text = text.replace("\u00ad", "")
+    # No-break space variants -> regular space.
+    for ch in _NO_BREAK_SPACES:
+        text = text.replace(ch, " ")
+    # Byte-order mark and zero-width characters carry no meaning.
+    for ch in _ZERO_WIDTH_CHARS:
+        text = text.replace(ch, "")
+    # NFKC: canonical + compatibility composition (ligatures, full-width
+    # forms, superscripts, typographic spaces; see docstring).
+    text = unicodedata.normalize("NFKC", text)
+    # Collapse repeated horizontal whitespace and trim.
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
+def rrf_merge(
+    result_sets: list[tuple[str, list[tuple[Document, float]]]],
+    num_refs_max: int | None = None,
+) -> list[tuple[Document, float]]:
+    """Fuse per-source retrieval results with Reciprocal Rank Fusion.
+
+    Scores from different retrievers (e.g. cosine similarity vs BM25) are not
+    comparable, so each document is scored purely by its rank within each
+    source's result list.  The original per-source scores are preserved in
+    each document's :data:`SOURCE_SCORES_KEY` metadata for display.
+
+    :param result_sets: List of ``(source_label, results)`` pairs, where each
+        *results* is a list of ``(document, score)`` tuples already ranked by
+        its source
+    :param num_refs_max: Maximum number of documents to return, or ``None``
+        to return every fused document.  Callers that want to bound the
+        context fed to an LLM should cap by characters via
+        :func:`truncate_reference_material` instead of by document count.
+    :returns: Documents ordered by RRF score, deduplicated by content, capped
+        at *num_refs_max* when set
+    """
+    rrf_scores: dict[str, float] = {}
+    doc_by_key: dict[str, Document] = {}
+
+    for source_label, results in result_sets:
+        for rank, (doc, score) in enumerate(results, start=1):
+            key = doc.page_content
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (RRF_K + rank)
+            if key not in doc_by_key:
+                doc_by_key[key] = doc
+                doc.metadata[SOURCE_SCORES_KEY] = {}
+            # Cast to Python floats: BM25 and vector-store scores are numpy
+            # scalars (np.float64/np.float32).  The scores are persisted in
+            # doc metadata, which ends up inside the graph state; LangGraph's
+            # msgpack checkpoint serializer cannot encode numpy scalars, so
+            # plain floats keep the state checkpoint-serializable.
+            doc_by_key[key].metadata[SOURCE_SCORES_KEY][source_label] = float(score)
+
+    merged = sorted(
+        ((doc_by_key[key], rrf) for key, rrf in rrf_scores.items()),
+        key=lambda tup: tup[1],
+        reverse=True,
+    )
+    if num_refs_max is None:
+        return merged
+    return merged[:num_refs_max]
+
+
+def truncate_reference_material(
+    reference_material: dict[str, list[tuple[Document, float]]],
+    max_chars: int,
+) -> dict[str, list[tuple[Document, float]]]:
+    """Truncate reference material to a global character budget.
+
+    The RRF merge orders documents by fused rank but does not bound how
+    much context the answer LLM receives; that is what this function does.
+    Documents are consumed in RRF order per domain (domains in their dict
+    order), counting ``len(page_content)`` plus the per-document
+    serialization overhead (:data:`REF_DOC_OVERHEAD`), until the budget is
+    exhausted.  The first document that crosses the budget is still
+    included, so a single large chunk never silently yields empty context.
+
+    :param reference_material: ``{domain: [(doc, score), ...]}`` in RRF order
+    :param max_chars: Total character budget across all domains
+    :returns: New mapping with the same domain keys, lists truncated to the
+        budget
+    """
+    budgeted: dict[str, list[tuple[Document, float]]] = {}
+    total = 0
+    crossed = False
+    for domain, docs in reference_material.items():
+        domain_docs: list[tuple[Document, float]] = []
+        for doc, score in docs:
+            size = len(doc.page_content) + REF_DOC_OVERHEAD
+            if total + size > max_chars:
+                if crossed:
+                    break
+                crossed = True
+            domain_docs.append((doc, score))
+            total += size
+        budgeted[domain] = domain_docs
+    return budgeted
+
+
+def format_source_scores(doc: Document, precision: int = 2) -> str | None:
+    """Format a document's original per-source scores for display.
+
+    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata
+    :param precision: Number of decimal places per score
+    :returns: Joined string like ``"vector store 0.87, BM25 3.21"``, or
+        ``None`` if the document has no per-source scores
+    """
+    source_scores = doc.metadata.get(SOURCE_SCORES_KEY)
+    if not source_scores:
+        return None
+    return ", ".join(f"{k} {v:.{precision}f}" for k, v in source_scores.items())
+
+
+def _format_score_str(doc: Document, score: float) -> str:
+    """Format a document's relevance scores for prompt context.
+
+    Shows the original per-source scores (e.g. ``vector store 0.8723,
+    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM
+    can interpret scores from different retrievers.  Falls back to the
+    single relevance score for documents without per-source info.
+
+    :param doc: Document to format
+    :param score: Relevance score for *doc*
+    :returns: Score string to append to a document heading
+    """
+    source_scores = format_source_scores(doc, precision=4)
+    if source_scores:
+        return f" (relevance: {source_scores})"
+    return f" (relevance score: {score:.4f})"
 
 
 def serialize_vs_retrieval(
@@ -26,7 +221,7 @@ def serialize_vs_retrieval(
 
     - ``headings``: list of heading hierarchy (most specific last)
     - ``file_name``: source filename
-    - ``source_path``: full path to source file
+    - ``_source_scores``: optional per-retriever scores (from the RRF merge)
     - Optional custom keys from the ``--metadata-map`` (e.g., ``url``)
 
     :param reference_material: Dict mapping query/domain to list of (doc, score) tuples
@@ -43,7 +238,7 @@ def serialize_vs_retrieval(
             if file_name:
                 heading_str = f"[{file_name}] {heading_str}"
 
-            score_str = f" (relevance score: {score:.4f})"
+            score_str = _format_score_str(r, score)
             serialized += (
                 f"\n### Document {ctr}/{len(sorted_refs)}: {heading_str}{score_str}\n"
             )
@@ -75,8 +270,23 @@ def instantiate_vector_store(
     Qdrant and PGVector the flag is a no-op --- collections are created
     on first write.
 
+    For ChromaDB, ``location`` must point at the store folder.  Chroma
+    always stores its database as ``<folder>/chroma.sqlite3`` and the
+    filename is not configurable, so a path pointing at an existing file
+    (even the ``chroma.sqlite3`` itself) is rejected.  The collection
+    ``name`` selects which collection within the store file is
+    addressed: a single ChromaDB store file can hold multiple
+    collections, so reusing an existing folder with a new collection
+    name creates a new collection in it.
+
+    New Chroma collections are created with the :data:`CHROMA_HNSW_SPACE`
+    HNSW distance space (cosine).  The configuration is only applied at
+    collection creation; loading an existing collection keeps its own
+    distance space.
+
     :param path: URI-style string with scheme prefix
-        (e.g. ``"chroma:/path/to/dir"``, ``"qdrant:http://localhost:6333"``,
+        (e.g. ``"chroma:/path/to/dir"``,
+        ``"qdrant:http://localhost:6333"``,
         ``"pgvector:postgresql://localhost/db"``)
     :param name: Collection name for the vector store
     :param embeddings: Embedding function to use
@@ -110,6 +320,16 @@ def instantiate_vector_store(
                 store_dir = Path.cwd() / store_dir
                 logger.debug(f"Store path made absolute relative to cwd: {store_dir}")
 
+            # Chroma always stores its database in <folder>/chroma.sqlite3
+            # (the filename is not configurable), so a store is addressed
+            # by its folder, never by the database file.
+            if store_dir.is_file():
+                raise FileNotFoundError(
+                    f"'{store_dir}' is a file, not a folder. Chroma stores "
+                    f"its database in a folder as 'chroma.sqlite3'; pass the "
+                    f"folder path instead (e.g. 'chroma:{store_dir.parent}')"
+                )
+
             if create:
                 store_dir.mkdir(parents=True, exist_ok=True)
             else:
@@ -134,6 +354,7 @@ def instantiate_vector_store(
                 collection_name=name,
                 embedding_function=embeddings,
                 client_settings=settings,
+                collection_configuration={"hnsw": {"space": CHROMA_HNSW_SPACE}},
             )
 
         case "qdrant":

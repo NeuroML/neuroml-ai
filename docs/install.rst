@@ -96,28 +96,82 @@ Usage::
 
    pip install klea_rag[full]
 
-klea-code (WIP: coming soon) and neuroml-mcp (from source)
-----------------------------------------------------------
+klea (WIP: coming soon) and neuroml-mcp (from source)
+------------------------------------------------------
 
-``klea-code`` is under active development and not yet ready for general use.
+``klea`` is under active development and not yet ready for general use.
 ``neuroml-mcp`` is also in active development.  Neither is on PyPI.
 To install them, clone the repository and follow the
 :doc:`development workflow <contributing>`.
 
+PyTorch / CUDA (optional)
+-------------------------
+
+No Klea package declares PyTorch as a direct dependency, and the correct
+torch build depends on your GPU hardware: newer CUDA builds drop kernel
+support for older GPUs.  torch is, however, installed transitively by
+the document-ingestion extra (``ingest`` -> docling ->
+``docling-slim[standard]`` -> ``torch`` + ``torchvision``), which the
+``full``/``test``/``dev`` extras all include.  That transitive build is
+unpinned and comes from the default index, so it may lack kernels for
+your GPU; docling's OCR/layout processing then falls back to the CPU
+instead of using the GPU.
+
+If you want a GPU-accelerated build, install it yourself -- see
+:file:`requirements-torch.txt` in the repository root for the full
+guide, pinned install commands, and a verified example.  Install the
+pinned ``torch`` + ``torchvision`` pair (from the same CUDA index)
+*before* the Klea requirements: an installed torch that satisfies
+docling's ``torch>=2.2.2,<3.0.0`` is left untouched by the installers.
+If a wrong build is already present, force-reinstall the pair instead
+(see the file).
+
+The short version:
+
+.. list-table::
+   :header-rows: 1
+
+   * - GPU compute capability
+     - CUDA build to use
+   * - 6.0/6.1 (Pascal) and 7.0/7.5 (Volta/Turing)
+     - ``cu126`` or ``cu128`` (CUDA 12.8 or earlier)
+   * - 8.0+ (Ampere, Ada, Hopper, Blackwell)
+     - Any recent build (``cu129``, ``cu130``, ...)
+
+Check your capability with ``torch.cuda.get_device_capability(0)`` and
+install the ``torch``/``torchvision`` pair with the full pin so the
+package manager cannot pick a different CUDA suffix::
+
+   uv pip install "torch==<version>+cu126" "torchvision==<version>+cu126" \
+       --extra-index-url https://download.pytorch.org/whl/cu126
+
+``torchvision`` must come from the same CUDA index as ``torch``; a
+mismatch installs silently but breaks ``import torchvision`` at runtime.
+
+To verify the installed build actually computes on your GPU, run
+``python scripts/test_torch.py`` from the repository root.  It runs a
+real CUDA compute op; ``python -m torch.utils.collect_env`` only prints
+a snapshot and reports CUDA as available even when the build lacks
+kernels for your GPU.
+
+PyTorch wheels bundle their own CUDA runtime, so a system CUDA toolkit
+is not required to run torch.  It is only needed to compile CUDA
+extensions yourself, and it must match the wheel's CUDA version.
+
 Configuration
 -------------
 
-Both the RAG and Code packages load configuration from:
+Both the RAG and Agent packages load configuration from:
 
 1. An env file (``k=v`` format):
 
    * ``KLEA_RAG_ENV_FILE`` or ``rag.env`` for the RAG system
-   * ``KLEA_CODE_ENV_FILE`` or ``klea_code.env`` for the Code system
+   * ``KLEA_AGENT_ENV_FILE`` or ``klea_agent.env`` for the Agent system
 
 2. A JSON configuration file referenced inside the env file.
 
    * ``rag_pkg/example-configs/klea_rag.json`` or a copy you customise
-   * ``code_pkg/mcp.json`` for Code MCP server configuration
+   * ``agent_pkg/mcp.json`` for Agent MCP server configuration
 
 Example env file::
 
@@ -163,3 +217,63 @@ Model names are prefixed according to their provider:
 Guard models follow the same format.  The guard node is optional --
 set ``KLEA_RAG_GUARD_MODEL`` to an empty value to skip safety
 screening entirely.
+
+Logging
+-------
+
+Each Klea application writes its logs to a rotating file (1 MB per file,
+5 backups) inside its platform user-data directory:
+
+* Linux: ``~/.local/share/<app>/<app>.log``
+* macOS: ``~/Library/Application Support/<app>/<app>.log``
+* Windows: ``%LOCALAPPDATA%\<app>\<app>.log``
+
+The file captures DEBUG output for the Klea packages and third-party
+libraries, while the console shows INFO for Klea and INFO-or-above for
+third-party libraries.  Each CLI uses its own ``<app>`` name:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Application
+     - Log file name
+   * - ``klea-rag`` (RAG server / graph)
+     - ``klea-rag/klea-rag.log``
+   * - ``klea-rag`` TUI client
+     - ``klea-rag-tui/klea-rag-tui.log``
+   * - ``klea-rag`` web client
+     - ``klea-rag-web/klea-rag-web.log``
+   * - ``klea`` (Agent server / graph)
+     - ``klea/klea.log``
+   * - ``klea`` TUI client
+     - ``klea-tui/klea-tui.log``
+   * - ``klea`` web client
+     - ``klea-web/klea-web.log``
+   * - ``nml-mcp`` (MCP server)
+     - ``nml_mcp/nml_mcp.log``
+
+``klea-stores-create`` logs to the console only.
+
+Web client user storage
+-----------------------
+
+The NiceGUI web clients (``klea-rag web``, ``klea web``) keep a small
+per-browser-session identity file so that a returning browser is linked
+back to the same user.  The files are written to a ``.nicegui/`` directory
+relative to the working directory the web client is launched from (not the
+platform user-data directory) and are named
+``storage-user-<session-id>.json``.
+
+Each file stores only a pointer to server-side state::
+
+    {"user_id": "...", "dark_mode": false, "chat_id": "..."}
+
+The chat history itself lives in the server's session store
+(``~/.local/share/<app>/sessions.db``) and is not duplicated here.
+
+These files are **never deleted automatically**.  NiceGUI prunes stale
+sessions from its in-memory store but leaves the JSON files on disk, so
+they accumulate over time and survive server restarts.  Deleting the
+``.nicegui/`` directory while no web client is running is safe: the next
+page load simply mints a fresh ``user_id`` (existing chats under the old
+id are then not shown in that browser).

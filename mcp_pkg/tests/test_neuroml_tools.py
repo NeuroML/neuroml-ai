@@ -21,7 +21,7 @@ from neuroml_mcp.tools.neuroml_tools import (
 logger = logging.getLogger(__name__)
 
 
-class MockContext(object):
+class MockContext:
     """Test stub replacing fastmcp.Context"""
 
     def __init__(self):

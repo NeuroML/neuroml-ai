@@ -19,7 +19,8 @@ from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
-from klea_utils.stores.config import VectorStoresConfig
+from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
 
 from .config import AppConfig, AppEnv
@@ -58,9 +59,6 @@ class RAG(BaseLangGraph):
     ):
         """Initialise"""
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
-
-        # total number of reference documents
-        self.num_refs_max = 10
 
     @override
     def _setup_models(self) -> None:
@@ -120,7 +118,9 @@ class RAG(BaseLangGraph):
         domain_vs = {}
         domain_ms = {}
         for d, inf in domains.items():
-            domain_vs[d] = inf.model_dump(include={"vector_stores", "description"})
+            domain_vs[d] = inf.model_dump(
+                include={"vector_stores", "bm25_stores", "description"}
+            )
 
             # flat config for mcp client initialization
             domain_ms.update(inf.model_dump(include={"mcp_servers"})["mcp_servers"])
@@ -129,10 +129,11 @@ class RAG(BaseLangGraph):
         self.logger.debug(f"{domain_ms = }")
 
         # set up configs
-        self.stores_config = VectorStoresConfig(domains=domain_vs)
+        self.retriever_config = RetrieverConfig(domains=domain_vs)
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
         self.k_inc = self.app_config.general.k_inc
+        self.max_refs_size = self.app_config.general.max_refs_size
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
 
         # store per-domain MCP configs for domain-aware tool descriptions
@@ -253,11 +254,16 @@ class RAG(BaseLangGraph):
             self._refuse_answer_node.label, self._refuse_answer_node.execute
         )
 
+        # All configured retrievers (vector stores and/or BM25 stores)
+        retrievers: list[BaseKleaRetriever] = [
+            r for r in (self.stores, self.bm25_stores) if r is not None
+        ]
+
         self._retrieve_info_node = RetrieveInfoNode(
             logger=self.logger,
             label="Retrieving information",
-            stores=self.stores,
-            num_refs_max=self.num_refs_max,
+            retrievers=retrievers,
+            max_refs_size=self.max_refs_size,
         )
         self.workflow.add_node(
             self._retrieve_info_node.label, self._retrieve_info_node.execute
@@ -284,7 +290,7 @@ class RAG(BaseLangGraph):
         self._route_evaluator_node = RouteEvaluator(
             logger=self.logger,
             label="Routing evaluation",
-            stores=self.stores,
+            retrievers=retrievers,
             max_retrieval_attempts=self.app_config.general.max_retrieval_attempts,
             max_rewrite_attempts=self.app_config.general.max_rewrite_attempts,
             fallback_to_training_data=self.app_config.general.fallback_to_training_data,
@@ -377,6 +383,7 @@ class RAG(BaseLangGraph):
                 "rewrite_answer": self._generate_answer_from_context_node.label,
                 "modify_query": self._generate_retrieval_query_node.label,
                 "fallback": self._answer_general_node.label,
+                "best_effort": self._answer_user_node.label,
                 "undefined": self._ask_user_for_clarification_node.label,
             },
         )

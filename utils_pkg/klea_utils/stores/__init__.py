@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vector stores sub-package
+Stores sub-package
 
 File: klea_utils/stores/__init__.py
 

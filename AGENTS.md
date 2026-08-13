@@ -9,7 +9,7 @@ workflow, git conventions, session-log guidelines, and CLI patterns that must be
 followed. Do not proceed until you have read every section below.
 
 Multi-package Python project (setuptools + `setup.cfg`). Each `*_pkg/` is a
-separate installable; `code_pkg` and `rag_pkg` depend on `utils_pkg`.
+separate installable; `agent_pkg` and `rag_pkg` depend on `utils_pkg`.
 
 ## Workflow
 
@@ -34,9 +34,13 @@ Verification in step 2 covers:
 | Dir | Package name | CLI entry |
 |-----|-------------|-----------|
 | `utils_pkg/` | `klea_utils` | -- (shared lib) |
-| `code_pkg/` | `klea_code` | `klea-code` |
+| `agent_pkg/` | `klea_agent` | `klea`, `klea-serve` |
 | `rag_pkg/` | `klea_rag` | `klea-rag`, `klea-rag-serve` |
 | `mcp_pkg/` | `neuroml_mcp` | `nml-mcp` |
+
+`klea_agent` is the main application: a general purpose agent with coding
+capabilities.  `klea_rag` is primarily consumed by `klea_agent` (as a
+retrieval/RAG service).
 
 Each has its own `AGENTS.md` with architecture details -- refer to those for
 package-specific commands, node layout, and conventions.
@@ -51,11 +55,16 @@ uv pip install -r requirements-dev.txt
 bash scripts/run_tests.sh        # pytest -v -n auto in each *_pkg/tests
 
 # Single package test
+# NOTE: pytest must be run from within a package directory, never from the
+# repo root. Each package's pyproject.toml sets asyncio_mode="auto" (and
+# mcp_pkg adds -n 1); a root-level run skips that config, so async tests and
+# fixtures error out. Only bash scripts/run_tests.sh is meant to be run from
+# the repo root.
 cd mcp_pkg && pytest -v          # uses -n 1 (mcp tools are asyncio)
 cd utils_pkg && pytest -v
 
-# Run only tests that do NOT need an LLM
-pytest -m "not localonly"
+# Run only tests that do NOT need an LLM (from within a package)
+cd utils_pkg && pytest -m "not localonly"
 
 # Lint + format
 ruff check . --fix
@@ -64,6 +73,15 @@ ruff check . --select I --fix    # import sorting
 
 # Type check
 ty
+
+# Docs build
+uv pip install -r requirements-docs.txt   # installs sphinx + furo + sphinxcontrib-typer
+cd docs && make html                       # builds to docs/_build/html
+
+# NOTE: the docs build needs sphinxcontrib-typer, which is only present if
+# requirements-docs.txt is installed.  Without it, `make html` falls back to
+# the system sphinx (which lacks the extension) and the `.. typer::` CLI
+# reference pages fail to build.
 
 # Pre-commit (CI gate)
 pre-commit run --all-files
@@ -79,8 +97,8 @@ pre-commit run --all-files
 
 ## Config & env loading
 
-Both `KleaCode` and `RAG` orchestrators load configuration via:
-1. An env file (`k=v` format, path from `KLEA_CODE_ENV_FILE` / `KLEA_RAG_ENV_FILE` or default `klea_code.env` / `rag.env`)
+Both `KleaAgent` and `RAG` orchestrators load configuration via:
+1. An env file (`k=v` format, path from `KLEA_AGENT_ENV_FILE` / `KLEA_RAG_ENV_FILE` or default `klea_agent.env` / `rag.env`)
 2. A JSON config file referenced inside the env file
 
 `ty.toml` adds `extra-paths` for all four packages so type-checking resolves
@@ -88,8 +106,12 @@ cross-package imports.
 
 ## Testing quirks
 
-- Tests marked `localonly` require an LLM -- skipped in CI.
-- `utils_pkg/tests/test_stores.py` reads `VS_TEST_CONFIG` env var (default `vector-stores-tests.json`).
+- Tests marked `localonly` require an LLM (and, for some, docling/HF model
+  downloads).  They are NOT filtered out of the suite: `scripts/run_tests.sh`
+  and CI run them against the models CI pulls (ollama `qwen3:0.6b` + `bge-m3`),
+  and they self-skip only when the connection to the model backend fails.  Use
+  `pytest -m "not localonly"` locally for a quick run without an LLM.
+- `utils_pkg/tests/test_stores_retrieval.py` reads `STORES_TEST_CONFIG` env var (default `stores-tests.json`).
 - MCP tests are asyncio + single-process; do **not** run with `-n auto` (uses `addopts = -n 1` in `pyproject.toml`).
 - All packages ignore `F403` and `F405` in ruff.
 
@@ -99,6 +121,9 @@ Copyright format: `# Copyright 2026 Ankur Sinha <sanjay DOT ankur AT gmail DOT c
 (`mcp_pkg` additionally requires `#!/usr/bin/env python3` shebang on every `.py` file.)
 
 MCP tool auto-discovery: any function ending `_tool` is registered.
+
+MCP server support + tool description guidance (docstring-first convention,
+length/style, reusable template): `docs/concepts/mcp.rst`.
 
 `BaseLangGraph` lives at `utils_pkg/klea_utils/graph/base.py` -- shared
 setup -> MCP client -> vector stores -> compile graph template method.
@@ -110,6 +135,10 @@ Vector stores use URI-style paths: `chroma:/path/to/dir`, `qdrant:http://...`,
 
 `.agents/YYYY-MM-DD.md` logs previous work (see `.agents/Readme.md` for template).
 Read previous logs at session start; write one at session end.
+
+Every log must record the authoring agent **and the model in use** (e.g.
+`**Authoring agent:** opencode`, `**Model:** deepseek-v4-flash`).  This keeps
+model attribution accurate when comparing outcomes across sessions.
 
 Keep logs high-level -- decisions, architecture changes, outcomes only.
 Git log has the step-by-step edits. Omit routine work.
@@ -124,7 +153,7 @@ Git log has the step-by-step edits. Omit routine work.
 ## Versioning
 
 - Version is tracked in each package's ``setup.cfg`` (``version`` field).
-- ``klea_utils`` and ``klea_rag`` are published to PyPI; ``klea_code`` and
+- ``klea_utils`` and ``klea_rag`` are published to PyPI; ``klea_agent`` and
   ``neuroml_mcp`` are not yet published.
 - Pre-1.0 (0.x.y) releases: bump minor for new features, patch for bug fixes.
 - When cutting a release:
@@ -132,10 +161,16 @@ Git log has the step-by-step edits. Omit routine work.
   2. The OIDC trusted publisher workflow builds and publishes to PyPI
 - After a release, bump to the next dev version in ``setup.cfg``.
 - ``CHANGELOG.md`` is kept at the repo root, covering all packages.
+  Entries are concise (one short bullet per user-visible change, no
+  implementation detail), grouped as ``Breaking changes`` (first) /
+  ``Added`` / ``Changed`` / ``Fixed`` / ``Dependencies``.
 
 ## File conventions
 
-- Use ASCII-only text. No unicode dashes, arrows, ellipsis, or emoticons.
+- Use ASCII-only text in code and documentation. No unicode dashes, arrows,
+  ellipsis, or emoticons.  Generated data files (e.g.
+  `metadata-map.template.json`, `.klea-cache/`) are exempt: they are UTF-8
+  and may legitimately contain accented characters.
 - Preserve existing comments (TODOs, FIXMEs, notes, etc.) -- never remove or
   edit comments that are unrelated to the immediate change being made.
 

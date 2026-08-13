@@ -12,7 +12,7 @@ import asyncio
 import logging
 from dataclasses import asdict
 from textwrap import dedent
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 from cachetools import TTLCache
@@ -99,20 +99,18 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
 async def dummy_tool(astring: str) -> str:
     """Return the input string in a sentence (testing tool only).
 
-    This is a dummy tool used only for unit testing and debugging.
-    It simply returns the input string in a formatted sentence.
+    Use this tool to test and debug the MCP tool infrastructure.
 
-    Do NOT use in production workflows - this tool provides no real functionality.
+    Use when:
+    - Unit testing the tool server or the tool picker.
+
+    Do not use for:
+    - Any real task - this tool provides no real functionality.
+
+    Example: dummy_tool("hello")
 
     Args:
-        astring: Any string to be echoed back
-
-    Returns:
-        The input string formatted as "I got {astring}"
-
-    Example:
-        result = dummy_tool("hello")
-        # Returns: "I got hello"
+        astring: Any string to be echoed back.
     """
     return f"I got {astring}"
 
@@ -123,50 +121,27 @@ async def dummy_tool(astring: str) -> str:
 def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
     """Create a new blank NeuroML model template.
 
-    Use this tool to generate a starting template for NeuroML models.
-    This creates the basic structure that you can then customize with
-    cells, networks, and simulations.
+    Use this tool to generate a starting template for NeuroML models, which
+    you can then customize with cells, networks, and simulations.
 
-    Common use cases:
-    - Starting a new NeuroML project
-    - Creating a template for educational models
-    - Generating boilerplate for complex networks
+    Use when:
+    - Starting a new NeuroML project and need boilerplate to build on.
+    - You need a minimal model structure to extend.
 
-    Do NOT use for:
-    - Reading existing NeuroML files (use file reading tools)
-    - Validating existing models (use validation tools)
-    - Running simulations (use simulation tools)
+    Do not use for:
+    - Reading existing NeuroML files (use the file reading tools instead).
+    - Validating or simulating models (use the validation and simulation
+      tools instead).
+
+    Example: create_new_NeuroML_model_tool("MyNeuralNetwork")
 
     Args:
-        model_name: Name for the NeuroML model. Will be used as the network ID.
-                  Spaces will be automatically removed for XML compatibility.
-                  Defaults to "NeuroMLModel" if not specified.
+        model_name: Name for the NeuroML model. Will be used as the network
+            ID. Spaces are automatically removed for XML compatibility.
+            Defaults to "NeuroMLModel" if not specified.
 
     Returns:
-        String containing Python code template that:
-        - Imports necessary NeuroML utilities
-        - Creates a NeuroMLDocument
-        - Adds a Network with the specified name
-        - Is ready for further customization
-
-    Example:
-        # Create a basic model template
-        template = create_new_NeuroML_model_tool("MyNeuralNetwork")
-
-        # Result can be executed with run_python_code_tool()
-        # to create the actual NeuroML document structure
-
-    Template structure:
-    The generated code will create:
-    - A NeuroMLDocument with unique ID
-    - A Network with the specified model_name
-    - Proper imports and setup for further development
-
-    Next steps after using this tool:
-    1. Execute the generated code with run_python_code_tool()
-    2. Add cells, populations, and projections to the network
-    3. Define simulation parameters
-    4. Export to NeuroML XML format
+        String containing the Python code template to execute.
     """
     model_name = model_name.replace(" ", "")
 
@@ -184,79 +159,31 @@ def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
 
 
 @tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"testing", "neuroml"}))
-async def run_lems_simulation(lems_file: str) -> Dict[str, Any]:
-    """Execute a LEMS simulation using pynml and jLEMS simulator.
+async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
+    """Execute a LEMS simulation using pynml and the jLEMS simulator.
 
-    Use this tool to run NeuroML simulation files and generate results.
-    This is the standard way to execute LEMS (Low Entropy Model Specification)
+    Use this tool to run NeuroML simulation files and generate results. This
+    is the standard way to execute LEMS (Low Entropy Model Specification)
     simulations for NeuroML models.
 
-    Common use cases:
-    - Running NeuroML model simulations
-    - Testing model behavior with different parameters
-    - Generating simulation outputs (traces, plots)
-    - Validating model dynamics
+    Use when:
+    - You need to run a NeuroML/LEMS simulation and get its output.
+    - You need to test model behaviour under different parameters.
 
-    Do NOT use for:
-    - Creating LEMS files (use NeuroML generation tools)
-    - Running other types of simulations (use specific tools)
-    - Analyzing results (use data analysis tools)
+    Do not use for:
+    - Creating LEMS files (use the model generation tools instead).
+    - Analysing results (use the data analysis tools instead).
 
-    Prerequisites:
-    - The LEMS file must exist and be valid XML
-    - pynml must be installed in the environment
-    - jLEMS simulator must be available
-    - All referenced NeuroML files must be accessible
+    Example: run_lems_simulation("LEMS_NML2_Ex9_Dynamics.xml")
 
     Args:
-        lems_file: Path to the LEMS simulation XML file. Can be relative or absolute.
-                  Must be a valid LEMS file that references existing NeuroML models.
-                  File extension should typically be .xml.
+        lems_file: Path to the LEMS simulation XML file. Can be relative or
+            absolute, must be valid XML, and should reference existing
+            NeuroML models. The extension should typically be .xml.
 
     Returns:
-        Dictionary with simulation execution results:
-        - stdout: Simulation output, including progress messages and results
-        - stderr: Error messages, warnings, or debug information
-        - returncode: 0 for successful simulation, non-zero for errors
-        - data: Additional metadata (execution time, resource usage, etc.)
-
-    Examples:
-        # Run a basic simulation
-        result = await run_lems_simulation("LEMS_NML2_Ex9_Dynamics.xml")
-
-        # Run simulation in subdirectory
-        result = await run_lems_simulation("./simulations/basic_sim.xml")
-
-        # Check if simulation was successful
-        if result["returncode"] == 0:
-            print("Simulation completed successfully")
-            print(f"Output: {result['stdout']}")
-        else:
-            print(f"Simulation failed: {result['stderr']}")
-
-    Simulation process:
-    1. Validates LEMS file syntax
-    2. Loads referenced NeuroML models
-    3. Executes simulation with specified parameters
-    4. Generates output files (traces, plots, reports)
-    5. Returns execution results
-
-    Expected outputs:
-    - Simulation traces in specified format
-    - Log files (if configured in LEMS)
-    - Performance metrics
-    - Error details (if simulation fails)
-
-    Error handling:
-    - Invalid LEMS XML will cause syntax errors
-    - Missing NeuroML files will cause import errors
-    - Simulation runtime errors appear in stderr
-    - Check returncode for overall success/failure status
-
-    Performance notes:
-    - Large simulations may take significant time
-    - Memory usage depends on model complexity and duration
-    - Consider limiting simulation scope for testing
+        Dict with simulation results: stdout, stderr, returncode (0 for
+        success), and data (execution time, resource usage, etc.).
     """
     command_args = ["pynml", lems_file]
     request = RunCommand(command=command_args)
@@ -274,24 +201,28 @@ async def run_lems_simulation(lems_file: str) -> Dict[str, Any]:
 async def get_models_from_neuromldb_tool(
     ctx: Context, search_query: str, num: int = 3, download: bool = False
 ) -> dict[str, Any]:
-    """Use this tool to search and optionally obtain cell and ion channel
-    models from the NeuroML model database, NeuroML-DB.
+    """Search and optionally download cell and ion channel models from NeuroML-DB.
 
-    Common use cases:
-    - Finding example cell and channel models
-    - Downloading cell and channel models for use
+    Use this tool when you need example cell or ion channel models, or want
+    to download models for local use.
+
+    Use when:
+    - Finding example cell and ion channel models.
+    - Downloading models for use in your project.
+
+    Do not use for:
+    - Creating or editing NeuroML models (use the model template tool instead).
+    - Running simulations (use the simulation tools instead).
+
+    Example: get_models_from_neuromldb(search_query="cerebellum", download=True)
 
     Args:
         search_query: search term for querying NeuroML-DB. Must be non-empty.
         num: number of search results to get (clamped to 1-20).
-        download: set to true to also download the models
+        download: set to true to also download the models.
 
     Returns:
-        Dictionary of model information with metadata and model content
-
-    Examples:
-        # Find and download cerebellar models
-        cerebellar_models = get_models_from_neuromldb(search_query="cerebellum", download=True)
+        Dictionary of model information with metadata and model content.
     """
     if not search_query or not search_query.strip():
         return {"Error": "search_query must be a non-empty string"}
@@ -375,38 +306,34 @@ async def get_repositories_from_open_source_brain_tool(
     search_models: bool = True,
     num: int = 5,
 ) -> dict[str, Any]:
-    """Use this tool to search the Open Source Brain (v2) neuroscience platform
-    (https://v2.opensourcebrain.org) for model and data sources.
+    """Search the Open Source Brain (v2) platform for model and data repositories.
 
-    These projects/repositories are indexed from selected archival platforms
-    (like GitHub, DANDI Archive, FigShare) and contain computational models
-    (implemented in NeuroML, NEURON, NetPyNE, Brian, and other simulators) and
-    experimental data (often electrophysiological experimental data stored in
-    the NeuroData Without Borders (NWB) format).
+    Use this tool to find neuroscience projects and repositories indexed from
+    archival platforms (GitHub, DANDI Archive, FigShare), containing
+    computational models (NeuroML, NEURON, NetPyNE, Brian, etc.) and
+    experimental data (often NWB). Results include the URLs to the projects'
+    file storage locations, which can be passed to other tools to download
+    files.
 
-    These repositories also contain the URLs to the file storage location for
-    the projects, and these can be passed to other tools to download files.
+    Use when:
+    - Finding neuroscience models or data by topic.
+    - Locating repository URLs to download files from.
 
-    Common use cases:
-    - Finding neuroscience data
-    - Finding neuroscience modelS
+    Do not use for:
+    - Directly downloading files (use the download tools instead).
+    - Searching NeuroML-DB for cell models (use the NeuroML-DB search tool).
+
+    Example: get_repositories_from_open_source_brain_tool(search_query="cerebellum")
 
     Args:
-        search_query: search term for querying Open Source Brain. Must be non-empty.
-        search_data: true if data related repositories should be searched
-        search_models: true if modelling related repositories should be searched
+        search_query: search term for querying Open Source Brain. Must be
+            non-empty.
+        search_data: true if data related repositories should be searched.
+        search_models: true if modelling related repositories should be searched.
         num: number of search results to get (clamped to 1-20).
 
     Returns:
-        Dictionary of repository information
-
-    Examples:
-        # Find cerebellar models on Open Source Brain
-        cerebellar_models = get_repositories_from_open_source_brain_tool(search_query="cerebellum", search_models=True, search_data=False)
-        # Find mouse data on Open Source Brain
-        mouse_data = get_repositories_from_open_source_brain_tool(search_query="mouse", search_data=True, search_models=False)
-        # Find data and models related to the cortex on Open Source Brain
-        cortical_repositories = get_repositories_from_open_source_brain_tool(search_query="cortex", search_data=True, search_models=True)
+        Dictionary of repository information.
     """
     search_query = search_query.strip()
     if not search_query:

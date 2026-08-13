@@ -76,7 +76,8 @@ async def run_repl(
                     break
 
         output = error_msg or full_response
-        print(f"{app_prefix} (AI) >>> {output}")
+        label = "(ERROR)" if error_msg else "(AI)"
+        print(f"{app_prefix} {label} >>> {output}")
         print("\n" + "-" * 40 + "\n")
 
     if single_query:

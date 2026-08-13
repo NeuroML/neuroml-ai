@@ -44,7 +44,6 @@ pytest -v
 ### Package Structure
 ```
 klea_utils/
-├── api.py          # Legacy API utilities (validate_url, check_api_is_ready)
 ├── api/            # FastAPI app factory and endpoint routers
 │   ├── app.py      # make_app() -- FastAPI factory with lifespan (graph + session store)
 │   ├── chat.py     # /query/stream SSE endpoint for streaming graph execution
@@ -56,8 +55,6 @@ klea_utils/
 │   ├── sessions.py # chat session CRUD (list, rename, delete)
 │   ├── sse.py      # SSE streaming client (async gen for NiceGUI/TUI, sync for Streamlit)
 │   └── utils.py    # URL validation, API readiness check
-├── cli/            # Shared CLI infrastructure
-│   └── parser.py   # make_parser() -- standard argparse for all frontends
 ├── errors.py       # Custom exception classes
 ├── graph/          # LangGraph orchestrator base
 │   └── base.py     # BaseLangGraph abstract class (setup, run, compile template)
@@ -78,14 +75,18 @@ klea_utils/
 ├── stores/         # Vector store management
 │   ├── config.py   # Pydantic models for store configuration
 │   ├── ingestion.py # Document ingestion pipeline (chunking, embedding, storage)
-│   ├── retrieval.py # Retrieval from configured backends
+│   ├── retrieval/  # Retriever managers
+│   │   ├── base.py # BaseKleaRetriever -- shared k-tracking and store loading
+│   │   ├── vs.py   # VSRetriever -- vector store retrieval
+│   │   └── bm25.py # BM25RetrieverManager -- BM25 keyword retrieval
 │   └── utils.py    # Shared store helpers
 ├── tools.py        # MCP CallToolResult helpers (textualize content blocks)
 ├── ui/             # User interface frontends
 │   ├── tui/        # Textual/TUI chat client (repl.py)
-│   ├── vs_create.py # CLI for vector store creation (klea-vs-create)
+│   ├── stores_create.py # CLI for store creation (klea-stores-create)
 │   └── web/        # Web frontends
-│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config)
+│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config;
+│       │             #   parser.py -- argparse for the app.py entry point)
 │       └── streamlit/ # Streamlit web UI
 ```
 

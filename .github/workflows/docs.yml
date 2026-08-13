@@ -5,7 +5,7 @@ on:
     branches: [development, main]
     paths:
       - 'docs/**'
-      - 'code_pkg/**'
+      - 'agent_pkg/**'
       - 'rag_pkg/**'
       - 'utils_pkg/**'
       - 'mcp_pkg/**'

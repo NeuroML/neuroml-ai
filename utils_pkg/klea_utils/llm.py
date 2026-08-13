@@ -237,6 +237,22 @@ def content_to_str(
     return str(content)
 
 
+def format_alert(text: str, level: str = "warning") -> str:
+    """Wrap *text* as a GitHub-style markdown alert (e.g. ``> [!WARNING]``).
+
+    Multi-line text is prefixed per line so the whole thing stays inside the
+    blockquote.  Renderers with the markdown2 ``alerts`` extra (the NiceGUI
+    speech bubbles) show it as a styled callout; others fall back to a plain
+    blockquote.
+
+    :param text: Alert body text
+    :param level: Alert level (note, tip, important, warning, caution)
+    :returns: Markdown alert blockquote
+    """
+    body = text.strip().replace("\n", "\n> ")
+    return f"> [!{level.upper()}]\n> {body}"
+
+
 def prompt_value_to_messages(prompt: PromptValue) -> list[dict]:
     """Convert a ``PromptValue`` to a clean list of message dicts.
 
@@ -310,6 +326,18 @@ def get_token_limit_param(provider: str) -> str:
     output tokens: Ollama uses ``num_predict``, while HuggingFace's
     ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)
     and other OpenAI-compatible providers all use ``max_tokens``.
+
+    .. note:: Known benign warning
+
+       When Klea resolves ``max_tokens`` for HuggingFace, the inner
+       ``HuggingFaceEndpoint`` constructed by ``ChatHuggingFace.from_model_id``
+       (which declares ``max_new_tokens``, not ``max_tokens``) logs
+       ``WARNING! max_tokens is not default parameter`` and shuffles it
+       into ``model_kwargs``.  This is a false positive: the limit is still
+       delivered correctly as ``max_tokens`` to ``InferenceClient.chat_completion``
+       via the outer ``ChatHuggingFace``, which is the parameter the
+       HuggingFace Inference API actually accepts.  Do not "fix" it by
+       switching to ``max_new_tokens`` here.
 
     :param provider: Klea provider id (``huggingface``, ``ollama``, ...)
     :returns: The token parameter name to send in the invoke config.

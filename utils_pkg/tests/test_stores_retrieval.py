@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test vector store related code.
+Test store retrieval code.
 
 File: tests/test_stores_retrieval.py
 
@@ -14,15 +14,22 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import json
 import logging
 import os
+import pickle
+import tempfile
 import unittest
+from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from klea_utils.stores.config import (
+    BM25StoreInfo,
     PerDomainConfig,
+    RetrieverConfig,
     VectorStoreInfo,
-    VectorStoresConfig,
 )
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
+from klea_utils.stores.retrieval.vs import VSRetriever
+from langchain_core.documents import Document
 from ollama import ResponseError
 
 
@@ -42,7 +49,7 @@ class TestStores(unittest.TestCase):
 
     def _make_retriever(self) -> VSRetriever:
         """Build a retriever with a per-store configured and a fallback store."""
-        vs_config = VectorStoresConfig(
+        config = RetrieverConfig(
             domains={
                 "NeuroML": PerDomainConfig(
                     vector_stores=[
@@ -59,7 +66,7 @@ class TestStores(unittest.TestCase):
             }
         )
         retriever = VSRetriever(
-            vs_config=vs_config,
+            config=config,
             logger=logging.getLogger("test_stores"),
             embedding_model="dummy",
             default_k=5,
@@ -72,7 +79,7 @@ class TestStores(unittest.TestCase):
     def test_per_store_resolution(self):
         """Per-store k settings resolve with a fall back to the global values."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
 
         # "big" has its own per-store settings
         self.assertEqual(retriever._default_k_for(big), 2)
@@ -87,7 +94,7 @@ class TestStores(unittest.TestCase):
     def test_retrieve_uses_per_store_k(self):
         """retrieve() passes each store its own current k."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
         big_fake = FakeStore()
         small_fake = FakeStore()
         big.loaded_object = big_fake
@@ -102,7 +109,7 @@ class TestStores(unittest.TestCase):
     def test_inc_k_loaded_only_and_capped(self):
         """inc_k() only touches loaded stores, capped per-store at k_max."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
 
         # only load "big"; "small" stays unloaded
         big.loaded_object = FakeStore()
@@ -123,10 +130,35 @@ class TestStores(unittest.TestCase):
         self.assertEqual(retriever._current_k("NeuroML", small), 6)
         self.assertEqual(retriever._current_k("NeuroML", big), 4)
 
+    def test_can_inc_k_reports_capacity_without_mutating(self):
+        """can_inc_k() reports room to grow k but never changes any k value."""
+        retriever = self._make_retriever()
+        big, small = retriever.config.domains["NeuroML"].vector_stores
+
+        # only load "big"; "small" stays unloaded
+        big.loaded_object = FakeStore()
+
+        # big (2, k_max=4, k_inc=2) has room; nothing is mutated
+        self.assertTrue(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", big), 2)
+
+        # big at k_max and no other loaded store: no room, still no mutation
+        retriever.inc_k()
+        self.assertFalse(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", big), 4)
+
+        # an unloaded store with room does not count
+        self.assertNotIn(("NeuroML", "small"), retriever._k)
+
+        # loading small makes can_inc_k() true again (5 -> 6 within k_max=10)
+        small.loaded_object = FakeStore()
+        self.assertTrue(retriever.can_inc_k())
+        self.assertEqual(retriever._current_k("NeuroML", small), 5)
+
     def test_reset_k(self):
         """reset_k() restores loaded stores to their per-store defaults."""
         retriever = self._make_retriever()
-        big, small = retriever.vs_config.domains["NeuroML"].vector_stores
+        big, small = retriever.config.domains["NeuroML"].vector_stores
         big.loaded_object = FakeStore()
         small.loaded_object = FakeStore()
 
@@ -140,27 +172,149 @@ class TestStores(unittest.TestCase):
         self.assertEqual(retriever._current_k("NeuroML", small), 5)
 
     def test_retrieval(self):
-        """Test retrieval"""
+        """Test retrieval from the configured vector and BM25 stores."""
         try:
-            vs_config_file = os.environ.get("VS_TEST_CONFIG", None)
-            assert vs_config_file
-            with open(vs_config_file, "r") as f:
+            stores_config_file = os.environ.get(
+                "STORES_TEST_CONFIG", "stores-tests.json"
+            )
+            with open(stores_config_file, "r") as f:
                 config = json.load(f)
-            print(config)
-            vs_config = VectorStoresConfig(**config)
-
             logger = logging.getLogger("test_stores")
-            stores = VSRetriever(
-                vs_config=vs_config,
+            retriever_config = RetrieverConfig(**config)
+
+            vector_stores = VSRetriever(
+                config=retriever_config,
                 logger=logger,
                 embedding_model="ollama:bge-m3:latest",
             )
-            stores.setup()
-            stores.retrieve("NeuroML", "NeuroML community")
+            vector_stores.setup()
+            vs_results = vector_stores.retrieve("NeuroML", "NeuroML community")
+            self.assertIsNotNone(vs_results)
+            logger.info(f"Vector store retrieval returned {len(vs_results)} documents")
+
+            bm25_stores = BM25RetrieverManager(
+                config=retriever_config,
+                logger=logger,
+            )
+            bm25_stores.setup()
+            bm25_results = bm25_stores.retrieve("NeuroML", "NeuroML community")
+            self.assertIsNotNone(bm25_results)
+            logger.info(f"BM25 retrieval returned {len(bm25_results)} documents")
         except ResponseError as e:
             pytest.skip(str(e))
         except ConnectionError as e:
             pytest.skip(str(e))
+
+
+class TestBM25Retriever(unittest.TestCase):
+    """Test the BM25 retriever manager with a small in-memory corpus."""
+
+    CORPUS: ClassVar[list[Document]] = [
+        Document(
+            page_content="NeuroML is a language for computational neuroscience models.",
+            metadata={"file_name": "a.md"},
+        ),
+        Document(
+            page_content="The Hodgkin-Huxley model describes action "
+            "potential generation.",
+            metadata={"file_name": "b.md"},
+        ),
+        Document(
+            page_content="LTP is long-term potentiation of synaptic strength.",
+            metadata={"file_name": "c.md"},
+        ),
+    ]
+
+    def setUp(self):
+        self.logger = logging.getLogger("test_bm25")
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.tmpdir_path = Path(self.tmpdir.name)
+        self.corpus_path = self.tmpdir_path / "corpus.pkl"
+        with open(self.corpus_path, "wb") as f:
+            pickle.dump(self.CORPUS, f)
+        self.logger.info(
+            f"Wrote BM25 corpus with {len(self.CORPUS)} docs to {self.corpus_path}"
+        )
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def _make_manager(self, store_path: str | None = None) -> BM25RetrieverManager:
+        config = RetrieverConfig(
+            domains={
+                "NeuroML": PerDomainConfig(
+                    bm25_stores=[
+                        BM25StoreInfo(
+                            name="nml",
+                            path=store_path or str(self.corpus_path),
+                            default_k=2,
+                            k_max=4,
+                            k_inc=1,
+                        )
+                    ]
+                )
+            }
+        )
+        return BM25RetrieverManager(
+            config=config,
+            logger=self.logger,
+            default_k=5,
+            k_max=10,
+            k_inc=1,
+        )
+
+    def test_retrieve_ranks_and_returns_scores(self):
+        """retrieve() returns ranked documents with scores."""
+        manager = self._make_manager()
+
+        res = manager.retrieve("NeuroML", "Hodgkin Huxley action potential")
+        self.logger.info(
+            f"query: 'Hodgkin Huxley action potential'"
+            f"\nresults: {[(d.metadata['file_name'], round(float(s), 3)) for d, s in res]}"
+        )
+
+        self.assertTrue(res)
+        self.assertEqual(res[0][0].metadata["file_name"], "b.md")
+        for _, score in res:
+            self.assertGreater(score, 0)
+
+    def test_retrieve_drops_zero_score_docs(self):
+        """Documents with no term overlap (zero score) are dropped."""
+        manager = self._make_manager()
+
+        res = manager.retrieve("NeuroML", "zzzz qqqqqq")
+        self.logger.info(f"no-overlap query returned {len(res)} documents")
+
+        self.assertEqual(res, [])
+
+    def test_missing_corpus_warns_and_skips(self):
+        """A missing corpus file is skipped with a warning, not a crash."""
+        missing_path = str(self.tmpdir_path / "nope.pkl")
+        self.logger.info(f"store path (does not exist): {missing_path}")
+        manager = self._make_manager(store_path=missing_path)
+
+        res = manager.retrieve("NeuroML", "anything")
+        self.logger.info(f"missing-corpus query returned {len(res)} documents")
+
+        self.assertEqual(res, [])
+
+    def test_inc_k_and_reset_k(self):
+        """inc_k()/reset_k() adjust the retrieval depth of loaded stores."""
+        manager = self._make_manager()
+        store = manager.config.domains["NeuroML"].bm25_stores[0]
+
+        # inc_k() only touches loaded stores, so load first
+        manager.load("NeuroML")
+        self.assertEqual(manager._current_k("NeuroML", store), 2)
+        self.logger.info(f"default k: {manager._current_k('NeuroML', store)}")
+
+        self.assertTrue(manager.inc_k())
+        self.assertEqual(manager._current_k("NeuroML", store), 3)
+        self.logger.info(f"k after inc_k(): {manager._current_k('NeuroML', store)}")
+
+        manager.reset_k()
+        self.assertEqual(manager._current_k("NeuroML", store), 2)
+        self.logger.info(f"k after reset_k(): {manager._current_k('NeuroML', store)}")
 
 
 if __name__ == "__main__":

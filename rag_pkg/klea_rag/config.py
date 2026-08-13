@@ -29,17 +29,24 @@ class GeneralConfig(BaseModel):
 
     ``default_k``, ``k_max``, and ``k_inc`` are the graph-wide fallbacks
     applied to vector stores that do not define their own per-store values.
+    ``k_max`` caps how many candidates each store fetches per retrieval pass
+    and, once reached, pushes the evaluator loop to reformulate the query.
+    ``max_refs_size`` is the character budget for the reference material
+    actually fed to the answer LLM, independent of ``k``.
     """
 
     default_k: int = 5
     k_max: int = 10
     k_inc: int = 1
+    # char budget for the reference material serialized into the LLM context
+    # (see klea_utils.stores.utils.truncate_reference_material)
+    max_refs_size: int = 20000
     # TODO: unused---what is this for?
     pre_prompt: str = ""
     non_domain_chat: bool = True
     fallback_to_training_data: bool = True
     fallback_warning: str = ""
-    max_retrieval_attempts: int = 2
+    max_retrieval_attempts: int = 5
     max_rewrite_attempts: int = 1
 
 

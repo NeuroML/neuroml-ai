@@ -70,9 +70,10 @@ Step 2: Create a vector store
 
 .. code-block:: bash
 
-   klea-vs-create build <folder-of-files> \\
+   klea-stores-create build <folder-of-files> \\
        --collection my-docs \\
-       --store chroma:/path/to/my-store.db
+       --store chroma:/path/to/my-store \\
+       --bm25-store /path/to/my-bm25-corpus.pkl
 
 The ``build`` command runs the full pipeline:
 
@@ -89,14 +90,46 @@ The ``build`` command runs the full pipeline:
 Flags explained:
 
 * ``--collection`` / ``-n`` -- the collection name inside the store
-  (e.g. ``my-docs``).
-* ``--store`` / ``-s`` -- the vector store URI; ``chroma:/path`` creates a
-  persistent Chroma database at that location.
+  (e.g. ``my-docs``).  This must match the ``name`` of the store's
+  ``vector_stores`` / ``bm25_stores`` entry in the RAG config file
+  (e.g. ``klea.json``) -- retrieval looks stores up by name, so a
+  mismatch silently returns no results.
+* ``--store`` / ``-s`` -- the vector store URI (e.g. ``chroma:/path``).
+  For Chroma, point at the store *folder*; the database file inside it
+  is always named ``chroma.sqlite3`` (the filename is not
+  configurable).  A folder that does not exist yet is created.  Because
+  one Chroma store file can hold several collections, the
+  ``--collection`` name selects which collection within that file is
+  used.
+* ``--bm25-store`` -- path to write the combined chunked documents to a
+  single pickle file that can be used as a BM25 keyword store.  Defaults
+  to ``<collection>.pkl`` in the current directory (always written); you
+  can move the file afterwards and point the config at its new location.
 * ``--model`` / ``-m`` -- embedding model (default ``ollama:bge-m3:latest``).
 * ``--max-tokens`` -- maximum tokens per chunk (default 450).
+* ``--ocr`` / ``--no-ocr`` -- whether to perform optical character
+  recognition (OCR, see `Wikipedia
+  <https://en.wikipedia.org/wiki/Optical_character_recognition>`_)
+  during PDF conversion (default: on).  Keep it on for scanned/
+  image-based PDFs; pass ``--no-ocr`` for text-based PDFs to speed up
+  conversion considerably.
 * ``--force`` / ``-f`` -- re-process all files even if previously cached.
 
-Re-running ``klea-vs-create build`` on the same directory is safe --
+Docling's inference accelerator is configured through environment
+variables rather than CLI flags.  By default it auto-detects the best
+available device, but GPUs whose CUDA capability is below 7.0 (e.g. a
+Quadro P1000) fail the Triton compiler used for the layout model.  Force
+Docling to the CPU in that case:
+
+.. code-block:: bash
+
+   DOCLING_DEVICE=cpu DOCLING_NUM_THREADS=16 klea-stores-create build \\
+       <folder-of-files> --collection my-docs --store chroma:/path/to/my-store
+
+``DOCLING_NUM_THREADS`` (default 4) sets the CPU threads used for model
+inference; ``OMP_NUM_THREADS`` is honoured as an alternative.
+
+Re-running ``klea-stores-create build`` on the same directory is safe --
 it skips files whose content has not changed and skips chunks whose
 hashes already exist in the store (idempotent).  Adding new files to
 the source directory and re-running adds only the new content
@@ -106,8 +139,9 @@ The source directory will contain a ``.klea-cache/`` folder after the
 first run.  This caches converted chunks so subsequent runs skip the
 expensive Docling conversion.
 
-The vector store directory (the path you passed to ``--store``) will
-also have been created with the ``chroma.sqlite3`` database inside it.
+The vector store folder will also have been created, with the
+``chroma.sqlite3`` database inside it.  Later runs point ``--store`` at
+the same folder; the file is always named ``chroma.sqlite3``.
 
 Step 3: Configure the RAG system
 ---------------------------------
@@ -130,6 +164,7 @@ vector store to a domain:
        "general": {
         "default_k": 5,
         "k_max": 10,
+        "max_refs_size": 20000,
            "non_domain_chat": true,
            "fallback_to_training_data": true
        },
@@ -139,7 +174,13 @@ vector store to a domain:
                "vector_stores": [
                    {
                        "name": "my-docs",
-                       "path": "chroma:/path/to/my-store.db"
+                       "path": "chroma:/path/to/my-store"
+                   }
+               ],
+               "bm25_stores": [
+                   {
+                       "name": "my-docs-bm25",
+                       "path": "/path/to/my-bm25-corpus.pkl"
                    }
                ]
            }
@@ -150,9 +191,18 @@ The ``general`` section controls retrieval behaviour:
 
 * ``default_k`` -- number of documents to retrieve per query.  This is the
   graph-wide default; individual vector stores can override it (see below).
-* ``k_max`` -- maximum ``k`` when the evaluator requests more context.
+* ``k_max`` -- maximum number of candidates a store may fetch per retrieval
+  pass.  Once every store has reached its cap, the evaluator loop stops
+  pulling more of the same query and reformulates it instead.  ``k_max``
+  does not bound what reaches the answer LLM -- that is
+  ``max_refs_size``'s job.
 * ``k_inc`` -- how much ``k`` is increased by each time the evaluator
   requests more information.
+* ``max_refs_size`` -- total character budget for the reference material
+  serialized into the answer LLM's context (across all domains).  The
+  best-ranked chunks are kept up to this budget, so raising ``default_k``
+  or ``k_max`` surfaces more chunks only while there is budget left --
+  useful when chunks are small and more of them help.
 * ``non_domain_chat`` -- whether to fall back to the LLM's training data
   for questions that do not match any domain.
 * ``fallback_to_training_data`` -- whether to let the LLM answer from its
@@ -161,6 +211,23 @@ The ``general`` section controls retrieval behaviour:
 Each entry under ``domains`` defines a knowledge area with one or more
 vector stores.  The ``description`` helps the classifier route queries
 to the right domain.
+
+A store's ``name`` must exactly match the ``--collection`` name passed
+to ``klea-stores-create``, and its ``path`` must match what was passed
+to ``--store`` (for a vector store) or the location of the written BM25
+corpus pickle.  Retrieval looks stores up by name, so a mismatch means
+the store is never queried.
+
+A domain can also list ``bm25_stores``.  Each ``bm25_stores`` entry's
+``path`` points to a combined corpus pickle written by
+``klea-stores-create --bm25-store`` (or ``klea-stores-create store
+--bm25-store``).  If you did not pass ``--bm25-store``, the corpus was
+written to ``<collection>.pkl`` in the directory you ran the command
+from; it can be moved anywhere before it is referenced here.  When both
+are configured, retrieval queries the vector stores and the BM25 stores
+and combines the results with Reciprocal Rank Fusion -- exact
+name/symbol matches from BM25 complement the semantic matches from the
+vector stores.
 
 Vector stores can override the retrieval settings independently.  Stores
 that set their own ``default_k``, ``k_max``, and ``k_inc`` use those
@@ -173,7 +240,8 @@ cover corpora of very different sizes:
        "general": {
            "default_k": 5,
            "k_max": 10,
-           "k_inc": 1
+           "k_inc": 1,
+           "max_refs_size": 20000
        },
        "domains": {
            "MyDomain": {
@@ -181,14 +249,14 @@ cover corpora of very different sizes:
                "vector_stores": [
                    {
                        "name": "large-corpus",
-                       "path": "chroma:/path/to/large-store.db",
+                       "path": "chroma:/path/to/large-store",
                        "default_k": 10,
                        "k_max": 25,
                        "k_inc": 5
                    },
                    {
                        "name": "small-corpus",
-                       "path": "chroma:/path/to/small-store.db"
+                       "path": "chroma:/path/to/small-store"
                    }
                ]
            }
@@ -201,6 +269,11 @@ inherits the ``general`` settings (5, capped at 10, stepping by 1).  The
 dynamic ``k_inc``/``k_max`` adjustments only apply to stores that are
 already loaded, so a store only grows once it has been queried once.
 
+After the retrievers are queried, the fused results are truncated to the
+global ``max_refs_size`` character budget, so ``k``/``k_max`` control how
+many candidates are fetched while ``max_refs_size`` controls how much of
+them reaches the answer LLM.
+
 .. seealso::
 
    :doc:`../install` for details on HuggingFace, OpenAI, and other
@@ -208,6 +281,12 @@ already loaded, so a store only grows once it has been queried once.
 
 Step 4: Start the RAG server
 -----------------------------
+
+For local single-user use this step is optional: the client commands in
+Step 5 start a server on the local machine automatically when none is
+already running.  Run ``klea-rag-serve serve`` instead when you want a
+persistent backend, for example to share one server between several
+clients or to run it in a separate terminal:
 
 .. code-block:: bash
 
@@ -223,7 +302,13 @@ and compiles the LangGraph pipeline.  Once ready, check it is alive:
 A ``200 OK`` response means the system is ready to accept queries.
 
 Step 5: Query the RAG
-----------------------
+---------------------
+
+The client commands below use ``http://127.0.0.1:8005`` by default.
+If no server is running there, they start one on the local machine for
+the session and stop it when they exit; if a server is already running
+(for example from Step 4) they reuse it.  Pointing ``--server`` at a
+remote host connects without starting anything.
 
 Single-query mode is the quickest way to test:
 
@@ -248,8 +333,8 @@ For a graphical interface, launch the NiceGUI web UI:
 The web UI uses NiceGUI and requires the ``[nicegui]`` extra, while the
 CLI mode has no extra dependencies.
 
-Both methods connect to the running server at ``http://127.0.0.1:8005``
-by default.  Use ``--server`` to point at a different address.
+Both methods use the server at ``http://127.0.0.1:8005`` by default.
+Use ``--server`` to point at a different address.
 
 Going further
 --------------
@@ -258,9 +343,15 @@ Once the basic pipeline works, here are natural next steps:
 
 **Metadata enrichment**
    Add source URLs or other metadata to retrieved chunks.  First run
-   ``klea-vs-create chunk`` to generate a ``metadata-map.template.json``,
-   fill in the values, then ``klea-vs-create store --metadata-map <file>``.
-   See ``klea-vs-create --help`` for examples.
+   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``.
+   Each file's ``DEFAULT`` entry is pre-filled automatically with
+   bibliographic metadata (title, authors, keywords, DOI, URL) where it
+   could be extracted -- see :doc:`../concepts/rag` for the extraction
+   cascade.  Review and correct the values (check the
+   ``_metadata_complete`` flag), then ``klea-stores-create store
+   --metadata-map <file>``.  See ``klea-stores-create --help`` for
+   examples.  The metadata-map file may live inside the source directory:
+   it and the generated template are excluded from ingestion.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model
@@ -277,9 +368,17 @@ Once the basic pipeline works, here are natural next steps:
    in ``rag_pkg/example-configs/klea_rag.json``.
 
 **Separate chunk-and-store workflow**
-   Use ``klea-vs-create chunk`` to convert and cache without writing
-   to a store, then ``klea-vs-create store`` later.  This lets you
+   Use ``klea-stores-create chunk`` to convert and cache without writing
+   to a store, then ``klea-stores-create store`` later.  This lets you
    inspect the chunks and edit the metadata map before embedding.
+
+**Hybrid keyword retrieval**
+   Add a BM25 store alongside a vector store: run
+   ``klea-stores-create store --bm25-store /path/to/corpus.pkl`` and add a
+   ``bm25_stores`` entry to the domain config.  Retrieval then fuses
+   semantic and lexical matches with Reciprocal Rank Fusion, which helps
+   with exact names, symbols, and terminology.  See :doc:`../concepts/rag`
+   for details.
 
 Troubleshooting
 ---------------
@@ -299,15 +398,17 @@ Troubleshooting
 **Queries return empty or irrelevant results**
    Increase ``default_k`` in the JSON config.  Verify the vector store
    path and collection name match.  Check that your source files are in
-   a format Docling supports.
+   a format Docling supports.  If raising ``default_k``/``k_max`` does
+   not bring in more useful chunks, confirm ``max_refs_size`` is large
+   enough to fit them.
 
 .. seealso::
 
-   * :doc:`../cli/klea-vs-create` -- full CLI reference for vector store
+   * :doc:`../cli/klea-stores-create` -- full CLI reference for vector store
      creation
    * :doc:`../cli/klea-rag-serve` -- server CLI reference
    * :doc:`../cli/klea-rag` -- client CLI reference
-   * :class:`~klea_utils.stores.ingestion.VSBuilder` -- Python API for
+   * :class:`~klea_utils.stores.ingestion.StoresBuilder` -- Python API for
      ingestion
-   * :class:`~klea_utils.stores.retrieval.VSRetriever` -- Python API for
-     retrieval
+   * :class:`~klea_utils.stores.retrieval.vs.VSRetriever` -- Python API for
+      retrieval

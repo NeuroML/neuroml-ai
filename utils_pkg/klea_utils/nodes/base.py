@@ -34,6 +34,7 @@ from ..llm import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     add_memory_to_prompt,
     classify_llm_invocation_error,
+    content_to_str,
     get_provider_allowed_fields,
     get_token_limit_param,
     is_output_truncated,
@@ -53,6 +54,57 @@ MAX_TRUNCATION_RETRIES = 2
 
 #: Floor for the reserved output window when shrinking it on overflow.
 MIN_OUTPUT_TOKENS = 64
+
+
+def _schema_to_example(schema: dict[str, Any]) -> Any:
+    """Generate a placeholder example value from a JSON schema fragment.
+
+    Walks a JSON Schema fragment (as produced by
+    ``convert_to_json_schema``) and returns a placeholder value for each
+    type, so the prompt can show the model a concrete instance to imitate
+    instead of the abstract schema definition (which invites the model to
+    echo the schema back verbatim instead of producing an instance).
+
+    :param schema: JSON Schema fragment (a ``{"type": ...}`` dict)
+    :returns: A placeholder value matching the schema's type
+    """
+    if schema.get("enum"):
+        return schema["enum"][0]
+    match schema.get("type"):
+        case "string":
+            return "text"
+        case "integer" | "number":
+            return 0
+        case "boolean":
+            return True
+        case "array":
+            return [_schema_to_example(schema.get("items", {}))]
+        case "object":
+            return {
+                key: _schema_to_example(value)
+                for key, value in schema.get("properties", {}).items()
+            }
+        case _:
+            return None
+
+
+def _is_empty_result(result: Any, schema: type[BaseModel] | None = None) -> bool:
+    """Return True if *result* carries no usable content.
+
+    A structured output that parsed to an all-default instance (the model
+    echoed the schema back instead of producing an instance) compares equal
+    to a freshly-constructed default; a non-structured response is empty
+    when its content is blank.  Used to flag silently-degraded LLM output.
+
+    :param result: Processed output from :meth:`BaseLLMNode._process_output`
+    :param schema: The node's output schema, or ``None`` for non-structured
+    :returns: True when nothing usable was produced
+    """
+    if schema is not None:
+        return isinstance(result, schema) and result == schema()
+    if isinstance(result, AIMessage):
+        return not content_to_str(result.content).strip()
+    return False
 
 
 class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
@@ -379,7 +431,18 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             return output
 
     def _process_output(self, output: AIMessage | dict[str, Any]) -> Any:
-        """Common output processing with error handling"""
+        """Common output processing with error handling.
+
+        NOTE: structured output is best-effort.  A model can return a valid
+        JSON object that is not an instance of the schema (e.g. it echoes the
+        schema definition back, or returns only defaults); the parser then
+        yields an all-default instance without any ``parsing_error``.  An
+        empty result here is therefore a possible failure mode, not a normal
+        "the model had nothing to say" response.  The prompt (example instance
+        + directive) reduces the odds; if empty results recur for a model,
+        revisit the prompt/model rather than expecting a loud invocation
+        error.
+        """
         result: TSchema | AIMessage | None = None
         schema = self.output_schema
 
@@ -415,6 +478,12 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
                 f"No output schema. Returning unprocessed output: {result}"
             )
 
+        if _is_empty_result(result, self.output_schema):
+            self.logger.warning(
+                f"Empty LLM output from {self.label}: nothing usable was "
+                f"produced (all-default structured result or blank message)"
+            )
+
         return result
 
     def _invoke_prompt(
@@ -425,28 +494,57 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         self.logger.debug(f"{prompt =}")
         return prompt
 
+    def _format_output_schema_prompt(self) -> str:
+        """Return the ``Output schema (strict)`` prompt block.
+
+        The raw JSON Schema (``title``/``type``/``properties``) invites
+        models to echo the schema definition back instead of producing an
+        instance (the observed failure mode), so the prompt shows a
+        sanitized schema (top-level ``title``/``description`` dropped), an
+        explicit directive, and a generated example instance.
+
+        :returns: Prompt text describing the required JSON output
+        """
+        schema = {
+            key: value
+            for key, value in self.output_schema_json.items()
+            if key not in ("title", "description")
+        }
+        example = _schema_to_example(self.output_schema_json)
+        return dedent(
+            f"""
+            ## Output schema (strict)
+
+            Respond in JSON following this schema:
+
+            {json.dumps(schema).replace("{", "{{").replace("}", "}}")}
+
+            The response must be a JSON object like this example (replace
+            the placeholder values with real content):
+
+            {json.dumps(example).replace("{", "{{").replace("}", "}}")}
+
+            Do not output the schema definition itself, or the
+            'title'/'type'/'properties' keys.
+            """
+        )
+
     def _get_system_prompt(self, state: BaseModel) -> str:
         """Load system prompt from file, optionally adding memory summary and output schema."""
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
+
+        if self.memory:
+            memory_addition = self._get_memory_addition(state)
+            system_prompt += memory_addition
 
         if self.output_schema:
             # we pass this as part of the prompt because not all models/end
             # points support passing schemas separately, or respect `with
             # structured output`.  This is the safest, most general way of
             # doing it.
-            system_prompt += dedent(
-                f"""
-                ## Output schema (strict)
-
-                Respond in JSON following this schema:
-
-                {json.dumps(self.output_schema_json).replace("{", "{{").replace("}", "}}")}
-                """
-            )
-
-        if self.memory:
-            memory_addition = self._get_memory_addition(state)
-            system_prompt += memory_addition
+            # Appended last so it is the instruction closest to the human
+            # query (recency), maximizing adherence to the JSON format.
+            system_prompt += self._format_output_schema_prompt()
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt

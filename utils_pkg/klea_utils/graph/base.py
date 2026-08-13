@@ -16,7 +16,6 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from textwrap import dedent
 from typing import Any, Literal, final
 
 from fastmcp import Client
@@ -28,13 +27,15 @@ from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
 from platformdirs import PlatformDirs
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.paths import init_dir
-from klea_utils.stores.config import VectorStoresConfig
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
+from klea_utils.stores.retrieval.vs import VSRetriever
+from klea_utils.tools import build_tool_description, clean_tool_meta
 
 # Per-request context variable carrying per-session model overrides (api_key,
 # model, provider, etc.).  Set by the API layer before graph.ainvoke() and
@@ -144,8 +145,9 @@ class BaseLangGraph(ABC):
         self.mcp_client: Client | None = None
         self.mcp_tools: list[Tool] | None = None
 
-        self.stores_config: VectorStoresConfig | None = None
+        self.retriever_config: RetrieverConfig | None = None
         self.stores: VSRetriever | None = None
+        self.bm25_stores: BM25RetrieverManager | None = None
         # Graph-wide fallback retrieval settings.  Individual vector stores
         # may override these in the config with their own default_k / k_max /
         # k_inc values.
@@ -233,45 +235,34 @@ class BaseLangGraph(ABC):
                 num_servers += len(list(config.mcpServers.keys()))
 
         for domain, server_names in domain_servers.items():
-            ctr = 0
             domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
                 if "dummy" in t.name:
                     continue
                 # tools will be prefixed with server names
-                if num_servers > 1:
-                    if not any(t.name.startswith(s + "_") for s in server_names):
-                        continue
+                if num_servers > 1 and not any(
+                    t.name.startswith(s + "_") for s in server_names
+                ):
+                    continue
                 # otherwise, there's only one server
-                ctr += 1
-                tool_description = dedent(f"""
-                    ## {ctr}.  {t.name}
-
-                    ### Description
-
-                    {t.description}
-
-                    """)
-                if t.inputSchema:
-                    tool_description += dedent(f"""
-                        ### Parameters
-
-                        {t.inputSchema.get("properties")}
-
-                        """)
+                # Klea expects MCP tools to follow the docstring-first
+                # convention (summary + Use when / Do not use for bullets +
+                # one example; params via Args:), see build_tool_description
+                # and docs/concepts/mcp.rst.
                 domain_tools_info[t.name] = ToolInfo(
                     title=t.title,
-                    description=tool_description,
-                    meta=t.meta,
+                    description=build_tool_description(t),
+                    meta=clean_tool_meta(t.meta),
                 )
             self.tools_info[domain] = domain_tools_info
+        self.logger.debug(f"{self.tools_info = }")
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
         emb = self.llm_models.get("embedding")
-        if self.stores_config and emb and emb.model_name:
+        if self.retriever_config and emb and emb.model_name:
             self.stores = VSRetriever(
-                vs_config=self.stores_config,
+                config=self.retriever_config,
                 logger=self.logger,
                 embedding_model=emb.model_name,
                 default_k=self.default_k,
@@ -287,10 +278,27 @@ class BaseLangGraph(ABC):
 
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(list[Literal[tuple(all_domains)]], "undefined"),
+                query_domains=(
+                    list[Literal[tuple(all_domains)]],
+                    Field(default=["undefined"], validate_default=True),
+                ),
             )
         else:
             self.logger.warning("No vector stores configured.")
+
+        # BM25 keyword stores need no embedding model, so build them whenever
+        # any domain configures bm25_stores.
+        if self.retriever_config and any(
+            domain.bm25_stores for domain in self.retriever_config.domains.values()
+        ):
+            self.bm25_stores = BM25RetrieverManager(
+                config=self.retriever_config,
+                logger=self.logger,
+                default_k=self.default_k,
+                k_max=self.k_max,
+                k_inc=self.k_inc,
+            )
+            self.logger.info(f"BM25 stores loaded: {self.bm25_stores.domains}")
 
     def _export_graph_png(self, filename: str) -> None:
         """Export the LangGraph as a Mermaid PNG diagram.
@@ -316,7 +324,7 @@ class BaseLangGraph(ABC):
     def _configure_resources(self) -> None:
         """Configure vector stores and MCP servers
 
-        Subclasses should implement this to populate ``self.stores_config``,
+        Subclasses should implement this to populate ``self.retriever_config``,
         ``self.mcp_config``, and ``self.domain_mcp_configs``, which will be used
         to create the vector store class, mcp client, and per-domain tool descriptions.
         """

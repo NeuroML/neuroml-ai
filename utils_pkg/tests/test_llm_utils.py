@@ -11,7 +11,25 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import unittest
 
 import pytest
-from klea_utils.llm import parse_model_name, split_output_by_section
+from klea_utils.llm import format_alert, parse_model_name, split_output_by_section
+
+
+def test_format_alert_wraps_in_warning_blockquote():
+    """format_alert emits a GitHub-style warning alert blockquote."""
+    result = format_alert("something to verify")
+    assert result == "> [!WARNING]\n> something to verify"
+
+
+def test_format_alert_prefixes_multiline_body():
+    """Multi-line alert bodies keep every line inside the blockquote."""
+    result = format_alert("line one\nline two")
+    assert result == "> [!WARNING]\n> line one\n> line two"
+
+
+def test_format_alert_supports_level():
+    """The alert level can be customised (e.g. note)."""
+    result = format_alert("heads up", level="note")
+    assert result == "> [!NOTE]\n> heads up"
 
 
 @pytest.mark.parametrize(
