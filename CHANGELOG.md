@@ -40,6 +40,18 @@
   material sent to the answer LLM is now bounded by total characters
   instead of a fixed 10-document cap, so raising `k` surfaces more chunks
   up to the character budget.
+- Shared MCP tool implementations in `klea_utils` (`web_fetch`,
+  `list_files`) that any app can wrap into FastMCP tools, plus shared
+  tool-registration helpers (`klea_utils.mcp.registry`) and an aiohttp
+  session lifespan (`make_http_session_lifespan`); new `[mcp]` extra
+  (`aiohttp[speedups]`, `beautifulsoup4`). `klea_agent`'s bundled tools
+  server and `neuroml_mcp` both use them.
+
+### Changed
+
+- `neuroml_mcp` and `klea_agent` register their tools through the shared
+  `klea_utils.mcp.registry` (`tool_meta` / `register_tools`) instead of
+  package-local copies; bundled tool names now carry the `_tool` suffix.
 
 ### Fixed
 
