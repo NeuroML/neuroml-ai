@@ -17,14 +17,14 @@ from typing import Any
 import aiohttp
 from cachetools import TTLCache
 from fastmcp import Context
+from klea_utils.mcp.registry import tool_meta
+from klea_utils.mcp.schemas import ToolInfo
 from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
 )
-
-from ..utils import ToolInfo, tool_meta
 
 # set the implementation for development
 from .sandbox import nml_mcp_sandbox

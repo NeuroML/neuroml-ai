@@ -23,11 +23,11 @@ async def create_server(port: int = 8542):
     # Keep at function level so --help on the containing typer app stays fast.
     from fastmcp import FastMCP
     from fastmcp_docs import FastMCPDocs
+    from klea_utils.mcp.registry import register_tools
     from starlette.requests import Request
     from starlette.responses import JSONResponse, PlainTextResponse
 
     from neuroml_mcp.tools import code_tools, neuroml_tools
-    from neuroml_mcp.utils import register_tools
 
     from .app_lifespan import app_lifespan
 

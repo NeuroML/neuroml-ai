@@ -14,11 +14,12 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any
 
+from klea_utils.mcp.registry import tool_meta
+from klea_utils.mcp.schemas import ToolInfo
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
 
-from ..utils import ToolInfo, tool_meta
 from .sandbox import nml_mcp_sandbox
 
 # set the implementation for development
