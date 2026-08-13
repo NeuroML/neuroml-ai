@@ -346,7 +346,9 @@
         <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
         <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;JSON file keyed by source filename; each file entry maps &quot;</span>
-        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback). &quot;</span>
+        <span class="s2">&quot;If not given, build generates metadata-map.template.json from the &quot;</span>
+        <span class="s2">&quot;extraction and uses it without a review step&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
@@ -563,7 +565,9 @@
         <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
         <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;JSON file keyed by source filename; each file entry maps &quot;</span>
-        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback). &quot;</span>
+        <span class="s2">&quot;Defaults to metadata-map.template.json in the source &quot;</span>
+        <span class="s2">&quot;directory; required when no template exists&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
@@ -618,7 +622,7 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoresBuilder</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">,</span> <span class="n">StoresBuilder</span>
 
         <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
             <span class="n">embedding_model</span><span class="o">=</span><span class="n">embedding_model</span><span class="p">,</span>
@@ -631,9 +635,17 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="n">metadata_map</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
-            <span class="n">metadata_map</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="n">metadata_map</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">_resolve_metadata_map</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">metadata_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># store is the review-driven path: it consumes the template a</span>
+            <span class="c1"># prior chunk run wrote (or an explicit --metadata-map), so a</span>
+            <span class="c1"># missing map here is a misconfiguration, not a silent fallback.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No metadata map found for </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">. Run &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;klea-stores-create chunk&#39; to generate &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> in the source directory, or pass &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;--metadata-map.&quot;</span>
+            <span class="p">)</span>
 
         <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span>
             <span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="o">=</span><span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span>

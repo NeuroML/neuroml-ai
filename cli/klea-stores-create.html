@@ -427,7 +427,14 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                                 chains to metadata │
 │                                                 dicts (with        │
 │                                                 per-file DEFAULT   │
-│                                                 fallback)          │
+│                                                 fallback). If not  │
+│                                                 given, build       │
+│                                                 generates          │
+│                                                 metadata-map.temp… │
+│                                                 from the           │
+│                                                 extraction and     │
+│                                                 uses it without a  │
+│                                                 review step        │
 │    --bm25-store                        TEXT     Write the combined │
 │                                                 document corpus to │
 │                                                 this path for BM25 │
@@ -576,7 +583,13 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                                 chains to metadata │
 │                                                 dicts (with        │
 │                                                 per-file DEFAULT   │
-│                                                 fallback)          │
+│                                                 fallback).         │
+│                                                 Defaults to        │
+│                                                 metadata-map.temp… │
+│                                                 in the source      │
+│                                                 directory;         │
+│                                                 required when no   │
+│                                                 template exists    │
 │    --bm25-store                        TEXT     Write the combined │
 │                                                 document corpus to │
 │                                                 this path for BM25 │

@@ -343,7 +343,7 @@
 <span class="sd">    1. ``doi-service`` -- a DOI discovered by any tier below is resolved</span>
 <span class="sd">       via Crossref/OpenAlex/Semantic Scholar (round-robin across calls,</span>
 <span class="sd">       fallback on rate limits, disk-cached).  Its title, authors, year,</span>
-<span class="sd">       venue and DOI override everything else.  Skipped when *resolver*</span>
+<span class="sd">       journal and DOI override everything else.  Skipped when *resolver*</span>
 <span class="sd">       is ``None``.</span>
 <span class="sd">    2. ``pdf-info`` -- the PDF Info dict (title, authors, keywords, doi,</span>
 <span class="sd">       url), read with pypdfium2.  Local and fast, but often empty: many</span>
@@ -360,7 +360,7 @@
 <span class="sd">       first-page footer.</span>
 
 <span class="sd">    **Output** -- a flat dict of non-empty fields (``title``,</span>
-<span class="sd">    ``authors``, ``keywords``, ``year``, ``venue``, ``doi``, ``url``,</span>
+<span class="sd">    ``authors``, ``keywords``, ``year``, ``journal``, ``doi``, ``url``,</span>
 <span class="sd">    ``source_type``, ``source_url``, ``urls``) plus two internal keys:</span>
 
 <span class="sd">    - ``_metadata_complete`` -- ``True`` only when a full DOI record</span>
@@ -549,7 +549,7 @@
         <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
         <span class="s2">&quot;authors&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="p">,</span>
         <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="p">,</span>
-        <span class="s2">&quot;venue&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">venue</span><span class="p">,</span>
+        <span class="s2">&quot;journal&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">journal</span><span class="p">,</span>
         <span class="s2">&quot;doi&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">doi</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[],</span> <span class="s2">&quot;&quot;</span><span class="p">)}</span>

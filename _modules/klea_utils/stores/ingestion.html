@@ -309,6 +309,35 @@
 <span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">&quot;.klea-cache&quot;</span>
 <span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;metadata-map.template.json&quot;</span>
 
+<span class="c1">#: Metadata keys that are always stored in the vector store, together with</span>
+<span class="c1">#: the bibliographic fields produced by the extraction cascade</span>
+<span class="c1">#: (``title``, ``authors``, ``keywords``, ``year``, ``journal``, ``doi``).</span>
+<span class="c1">#: Any ``url*`` key (``url``, ``url_1``, ``url_doi``, ...) is also always</span>
+<span class="c1">#: stored.  This whitelist documents the guaranteed stored schema; *presence*</span>
+<span class="c1">#: of the cascade fields is determined by the metadata map (whose</span>
+<span class="c1">#: researcher-curated keys pass through unmodified).  See</span>
+<span class="c1">#: :func:`_apply_store_metadata_policy`.</span>
+<span class="n">ALWAYS_STORED_METADATA_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;file_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;headings&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;authors&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;keywords&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;year&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;journal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;doi&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1">#: Metadata keys that are never stored.  Provenance keys from the biblio</span>
+<span class="c1">#: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,</span>
+<span class="c1">#: ``_sources``, ``_source_scores``) are also always dropped.  These guide</span>
+<span class="c1">#: the researcher reviewing ``metadata-map.template.json`` but carry no</span>
+<span class="c1">#: meaning in a store.  See :func:`_apply_store_metadata_policy`.</span>
+<span class="n">STORE_DROPPED_METADATA_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;source_path&quot;</span><span class="p">,</span> <span class="s2">&quot;source_type&quot;</span><span class="p">,</span> <span class="s2">&quot;source_url&quot;</span><span class="p">})</span>
+
 
 <div class="viewcode-block" id="StoresBuilder">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder">[docs]</a>
@@ -391,7 +420,14 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Full pipeline: chunk documents and write them to a vector store.</span>
 
-<span class="sd">        Convenience wrapper around :meth:`chunk_all` + :meth:`store_all`.</span>
+<span class="sd">        One-shot quick start around :meth:`chunk_all` + :meth:`store_all`.</span>
+<span class="sd">        When no *metadata_map_path* is given, the map is generated in the</span>
+<span class="sd">        chunk phase from the extracted bibliographic metadata (and written to</span>
+<span class="sd">        ``metadata-map.template.json``, exactly as :meth:`write_heading_template`</span>
+<span class="sd">        does) and consumed in the store phase -- so ``build`` works without a</span>
+<span class="sd">        prior ``chunk``, at the cost of no review step.  For the review-driven</span>
+<span class="sd">        flow (``chunk``, edit the template, ``store``), pass the map</span>
+<span class="sd">        explicitly or let ``store`` auto-fall back to the template.</span>
 
 <span class="sd">        :param source_dir: Path to a directory containing source documents</span>
 <span class="sd">        :param store_uri: Vector store URI (e.g. ``chroma:/path``)</span>
@@ -411,11 +447,29 @@
 
         <span class="n">metadata_map</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
-            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
+            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata_map</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map_path</span><span class="p">)</span>
 
-        <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="p">)</span>
+        <span class="n">results</span><span class="p">,</span> <span class="n">file_headings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metadata_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># One-shot quick start: no --metadata-map was given, so generate</span>
+            <span class="c1"># the template from what was just chunked (exactly as the chunk</span>
+            <span class="c1"># command would) and consume it -- the same fold and missing-file</span>
+            <span class="c1"># behaviour as the chunk -&gt; store workflow, just without a review</span>
+            <span class="c1"># step in between.  The template file is written too, so it can</span>
+            <span class="c1"># be reviewed and re-stored later.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_heading_template</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
+            <span class="n">template_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">template_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">store_uri</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">bm25_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ingestion complete for collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
 
@@ -517,6 +571,14 @@
                 <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_map</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No metadata map entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Add a &#39;</span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; entry (a DEFAULT entry &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;is enough) to the metadata map; run &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;&#39;klea-stores-create chunk&#39; to regenerate the &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;template.&quot;</span>
+                    <span class="p">)</span>
                 <span class="n">resolved_count</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                     <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata</span><span class="p">(</span>
@@ -525,7 +587,7 @@
                         <span class="n">metadata_map</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
-                        <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+                        <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_apply_store_metadata_policy</span><span class="p">(</span><span class="n">meta</span><span class="p">))</span>
                         <span class="n">resolved_count</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">if</span> <span class="n">resolved_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
@@ -860,6 +922,51 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded metadata map with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_metadata_map</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the metadata map to use for ingestion.</span>
+
+<span class="sd">        An explicit *metadata_map_path* always wins.  Otherwise, when the</span>
+<span class="sd">        source directory contains the generated</span>
+<span class="sd">        ``metadata-map.template.json``, it is used as an auto-fallback (its</span>
+<span class="sd">        per-file ``DEFAULT`` entries are pre-filled with extracted</span>
+<span class="sd">        bibliographic metadata).  Returns ``None`` when neither exists --</span>
+<span class="sd">        :meth:`build` then generates a map from what ``chunk`` produced,</span>
+<span class="sd">        while the ``store`` CLI aborts (``store`` is expected to consume the</span>
+<span class="sd">        template a prior ``chunk`` wrote).</span>
+
+<span class="sd">        Raises ``ValueError`` when the resolved map is empty (``{}``): an</span>
+<span class="sd">        empty map carries no metadata at all and is almost certainly a</span>
+<span class="sd">        mistake, even when passed explicitly with ``--metadata-map``.</span>
+
+<span class="sd">        :param source_path: Resolved source directory path</span>
+<span class="sd">        :param metadata_map_path: Explicit metadata map path, or ``None``</span>
+<span class="sd">        :returns: Loaded metadata map, or ``None`` when no map exists</span>
+<span class="sd">        :raises ValueError: If the resolved map is empty</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">map_source</span> <span class="o">=</span> <span class="n">metadata_map_path</span>
+        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
+            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">template</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No --metadata-map given; auto-falling back to </span><span class="si">{</span><span class="n">template</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">map_source</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">map_source</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata_map</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;The metadata map from </span><span class="si">{</span><span class="n">map_source</span><span class="si">}</span><span class="s2"> has no entries. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Add one entry per source file (a DEFAULT entry is &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;enough) before storing.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">metadata_map</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_metadata</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1115,22 +1222,51 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;xxh64:</span><span class="si">{</span><span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_store_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy of *metadata* without values Chroma rejects on upsert.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_apply_store_metadata_policy</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *metadata* with internal and provenance keys removed.</span>
 
-<span class="sd">    Chroma requires metadata list values to be non-empty and does not</span>
-<span class="sd">    accept ``None``.  The chunk cache deliberately keeps ``headings: []``</span>
-<span class="sd">    as an explicit &quot;no headings found&quot; marker, so the empty list (and any</span>
-<span class="sd">    other empty/``None`` value) is dropped only here, at storage time, on</span>
-<span class="sd">    a copy -- the source documents (and the BM25 corpus) keep their</span>
-<span class="sd">    metadata intact.</span>
+<span class="sd">    The stored-metadata key policy is a whitelist + metadata-map</span>
+<span class="sd">    pass-through: the always-stored keys</span>
+<span class="sd">    (:data:`ALWAYS_STORED_METADATA_KEYS` plus any ``url*`` key) and</span>
+<span class="sd">    whatever the researcher put in the metadata map are kept, while</span>
+<span class="sd">    ``_``-prefixed internal keys and the provenance keys in</span>
+<span class="sd">    :data:`STORE_DROPPED_METADATA_KEYS` are dropped.  Applied both when the</span>
+<span class="sd">    metadata map is folded into chunks (:meth:`StoresBuilder.chunk_all`) and</span>
+<span class="sd">    as a final gate in :func:`_sanitize_store_metadata`.</span>
 
 <span class="sd">    :param metadata: Document metadata dict</span>
-<span class="sd">    :returns: Copy of *metadata* with empty-list and ``None`` values removed</span>
+<span class="sd">    :returns: Copy of *metadata* without internal/provenance keys</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">)</span>
+    <span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_store_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy of *metadata* ready for a vector-store upsert.</span>
+
+<span class="sd">    Two filters are applied, each on a copy:</span>
+
+<span class="sd">    1. **Key policy** (:func:`_apply_store_metadata_policy`) -- drops</span>
+<span class="sd">       ``_``-prefixed internal keys and provenance keys, so nothing leaks</span>
+<span class="sd">       into the store no matter how it entered the chunk metadata.</span>
+<span class="sd">    2. **Value sanitization** -- Chroma rejects empty-list and ``None``</span>
+<span class="sd">       values on upsert.  The chunk cache deliberately keeps ``headings:</span>
+<span class="sd">       []`` as an explicit &quot;no headings found&quot; marker, so the empty list</span>
+<span class="sd">       (and any other empty/``None`` value) is dropped here, at storage</span>
+<span class="sd">       time, on a copy -- the source documents (and the BM25 corpus) keep</span>
+<span class="sd">       their metadata intact.</span>
+
+<span class="sd">    :param metadata: Document metadata dict</span>
+<span class="sd">    :returns: Copy of *metadata* without internal/provenance keys and</span>
+<span class="sd">        without empty-list / ``None`` values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">_apply_store_metadata_policy</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">filtered</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="p">[]</span>
     <span class="p">}</span>
 

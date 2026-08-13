@@ -446,7 +446,7 @@ resolved via Crossref, OpenAlex and Semantic Scholar.  The three APIs
 are queried in round-robin order to spread load, falling back to the
 others when one is rate-limited, and results are cached to disk so
 re-ingests never re-query.  The resolved record’s title, authors,
-year, venue and DOI override everything below.</p></li>
+year, journal and DOI override everything below.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pdf-info</span></code> – the PDF Info dict (title, authors, keywords), read
 with pypdfium2.  Often empty: many publishers ship no bibliographic
 fields in the PDF.</p></li>

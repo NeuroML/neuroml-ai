@@ -176,7 +176,7 @@ tier only fills fields the tiers above it have not already set:
   are queried in round-robin order to spread load, falling back to the
   others when one is rate-limited, and results are cached to disk so
   re-ingests never re-query.  The resolved record's title, authors,
-  year, venue and DOI override everything below.
+  year, journal and DOI override everything below.
 * ``pdf-info`` -- the PDF Info dict (title, authors, keywords), read
   with pypdfium2.  Often empty: many publishers ship no bibliographic
   fields in the PDF.

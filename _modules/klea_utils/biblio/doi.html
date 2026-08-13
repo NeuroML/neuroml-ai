@@ -320,7 +320,7 @@
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">authors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">year</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">venue</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">journal</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">abstract</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">doi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
@@ -391,7 +391,7 @@
         <span class="n">title</span><span class="o">=</span><span class="p">(</span><span class="n">titles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">titles</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
         <span class="n">authors</span><span class="o">=</span><span class="n">authors</span><span class="p">,</span>
         <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">,</span>
-        <span class="n">venue</span><span class="o">=</span><span class="p">(</span><span class="n">container</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">container</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">journal</span><span class="o">=</span><span class="p">(</span><span class="n">container</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">container</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
         <span class="n">abstract</span><span class="o">=</span><span class="n">_strip_tags</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;abstract&quot;</span><span class="p">)),</span>
         <span class="n">doi</span><span class="o">=</span><span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DOI&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span>
@@ -411,7 +411,7 @@
         <span class="n">title</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">),</span>
         <span class="n">authors</span><span class="o">=</span><span class="n">authors</span><span class="p">,</span>
         <span class="n">year</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;publication_year&quot;</span><span class="p">),</span>
-        <span class="n">venue</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display_name&quot;</span><span class="p">),</span>
+        <span class="n">journal</span><span class="o">=</span><span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display_name&quot;</span><span class="p">),</span>
         <span class="n">abstract</span><span class="o">=</span><span class="n">_reconstruct_inverted_index</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;abstract_inverted_index&quot;</span><span class="p">)),</span>
         <span class="n">doi</span><span class="o">=</span><span class="n">normalize_doi</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">raw_doi</span><span class="p">))</span> <span class="k">if</span> <span class="n">raw_doi</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span>
@@ -425,7 +425,7 @@
         <span class="n">title</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">),</span>
         <span class="n">authors</span><span class="o">=</span><span class="n">authors</span><span class="p">,</span>
         <span class="n">year</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">),</span>
-        <span class="n">venue</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;venue&quot;</span><span class="p">),</span>
+        <span class="n">journal</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;venue&quot;</span><span class="p">),</span>
         <span class="n">abstract</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;abstract&quot;</span><span class="p">),</span>
         <span class="n">doi</span><span class="o">=</span><span class="n">external</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DOI&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span>
