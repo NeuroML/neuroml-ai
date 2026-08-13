@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
-import aiohttp
+import httpx
 import pytest
 import pytest_asyncio
 from neuroml_mcp.tools.neuroml_tools import (
@@ -32,18 +32,18 @@ class MockContext:
 
 
 @pytest_asyncio.fixture
-async def aiohttp_ctx():
-    async with aiohttp.ClientSession() as ses:
+async def http_ctx():
+    async with httpx.AsyncClient() as ses:
         ctx = MockContext()
-        ctx.set_state("aiohttp_session", ses)
+        ctx.set_state("http_session", ses)
         yield ctx
 
 
 @pytest.mark.asyncio
-async def test_get_models_from_neuromldb_download(aiohttp_ctx):
+async def test_get_models_from_neuromldb_download(http_ctx):
     model = "NMLCL000595"
     res = await get_models_from_neuromldb(
-        ctx=aiohttp_ctx, search_query=model, num=1, download=True
+        ctx=http_ctx, search_query=model, num=1, download=True
     )
     logger.debug(f"{res = }")
     assert len(res) == 1
@@ -58,10 +58,10 @@ async def test_get_models_from_neuromldb_download(aiohttp_ctx):
 
 
 @pytest.mark.asyncio
-async def test_get_models_from_neuromldb_nodownload(aiohttp_ctx):
+async def test_get_models_from_neuromldb_nodownload(http_ctx):
     model = "NMLCL000595"
     res = await get_models_from_neuromldb(
-        ctx=aiohttp_ctx, search_query=model, num=1, download=False
+        ctx=http_ctx, search_query=model, num=1, download=False
     )
     logger.debug(f"{res = }")
     assert len(res) == 1
@@ -75,11 +75,11 @@ async def test_get_models_from_neuromldb_nodownload(aiohttp_ctx):
 
 
 @pytest.mark.asyncio
-async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
+async def test_get_repositories_from_open_source_brain(http_ctx):
     # Test basic functionality with a simple search
     search_term = "cerebellum"
     res = await get_repositories_from_open_source_brain(
-        ctx=aiohttp_ctx,
+        ctx=http_ctx,
         search_query=search_term,
         search_data=True,
         search_models=True,
@@ -96,11 +96,11 @@ async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
 
 
 @pytest.mark.asyncio
-async def test_get_repositories_from_open_source_brain_no_results(aiohttp_ctx):
+async def test_get_repositories_from_open_source_brain_no_results(http_ctx):
     # Test with a search term that likely won't return results
     search_term = "nonexistent_search_term_12345"
     res = await get_repositories_from_open_source_brain(
-        ctx=aiohttp_ctx,
+        ctx=http_ctx,
         search_query=search_term,
         search_data=True,
         search_models=True,

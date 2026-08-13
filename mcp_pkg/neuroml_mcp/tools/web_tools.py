@@ -12,7 +12,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-import aiohttp
+import httpx
 from klea_utils.paths import get_cache_dir
 from tenacity import (
     retry,
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 @retry(
     wait=wait_random_exponential(multiplier=1, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
+    retry=retry_if_exception_type((httpx.HTTPError, asyncio.TimeoutError)),
     reraise=True,
 )
 async def _download_file_by_content(
@@ -40,14 +40,16 @@ async def _download_file_by_content(
     Note that since this overwrites, this should not be exposed directly as a tool.
     Use a wrapper around this.
     """
-    r = await session.get(url, params=params, timeout=timeout, ssl=False)
-    async with r:
-        if r.ok:
-            file_contents = await r.text()
-            with open(file_path, "w") as f:
-                f.write(file_contents)
-            logger.info(f"File saved to {file_path}")
-            return file_path
+    response = await session.get(
+        url, params=params, timeout=timeout, follow_redirects=True
+    )
+    if response.is_success:
+        file_contents = response.text
+        with open(file_path, "w") as f:
+            f.write(file_contents)
+        logger.info(f"File saved to {file_path}")
+        return file_path
+    logger.warning(f"Failed to download {url}: HTTP {response.status_code}")
     return None
 
 
