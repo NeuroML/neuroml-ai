@@ -293,12 +293,13 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnyUrl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">PydanticValidationError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tenacity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">AsyncRetrying</span><span class="p">,</span>
-    <span class="n">retry_if_exception_type</span><span class="p">,</span>
+    <span class="n">retry_if_exception</span><span class="p">,</span>
     <span class="n">stop_after_attempt</span><span class="p">,</span>
     <span class="n">stop_after_delay</span><span class="p">,</span>
     <span class="n">wait_random_exponential</span><span class="p">,</span>
@@ -317,8 +318,14 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_make_retryer</span><span class="p">(</span><span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncRetrying</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an ``AsyncRetrying`` that retries transient API call errors.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_retryer_httpx</span><span class="p">(</span>
+    <span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncRetrying</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an ``AsyncRetrying`` that retries transient httpx errors.</span>
+
+<span class="sd">    Retries transient httpx failures: connection errors, read errors,</span>
+<span class="sd">    timeouts, and HTTP 5xx/429 responses.  Other 4xx client errors are not</span>
+<span class="sd">    retried.</span>
 
 <span class="sd">    :param attempts: If set, bound the number of probe attempts.  Takes</span>
 <span class="sd">        precedence over *timeout* (useful for fast single-shot probes).</span>
@@ -328,6 +335,20 @@
 <span class="sd">        up on prematurely.</span>
 <span class="sd">    :returns: A configured :class:`tenacity.AsyncRetrying` instance</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Import lazily so importing this module never requires httpx.</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_retryable</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">TimeoutError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">TransportError</span><span class="p">)):</span>
+            <span class="c1"># asyncio.TimeoutError for client-side total timeouts;</span>
+            <span class="c1"># httpx.TransportError covers ConnectError/ReadError/ReadTimeout.</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPStatusError</span><span class="p">):</span>
+            <span class="c1"># 429 (rate limit) and 5xx (server side) are transient; other</span>
+            <span class="c1"># 4xx are client mistakes and should not be retried.</span>
+            <span class="k">return</span> <span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">429</span> <span class="ow">or</span> <span class="n">exc</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">500</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
     <span class="k">if</span> <span class="n">attempts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">stop</span> <span class="o">=</span> <span class="n">stop_after_attempt</span><span class="p">(</span><span class="n">attempts</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
@@ -335,20 +356,16 @@
     <span class="k">return</span> <span class="n">AsyncRetrying</span><span class="p">(</span>
         <span class="n">wait</span><span class="o">=</span><span class="n">wait_random_exponential</span><span class="p">(</span><span class="n">multiplier</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
         <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span>
-        <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception_type</span><span class="p">(</span>
-            <span class="p">(</span>
-                <span class="n">httpx</span><span class="o">.</span><span class="n">ConnectError</span><span class="p">,</span>
-                <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPStatusError</span><span class="p">,</span>
-                <span class="n">httpx</span><span class="o">.</span><span class="n">ReadError</span><span class="p">,</span>
-                <span class="n">httpx</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">,</span>
-            <span class="p">)</span>
-        <span class="p">),</span>
+        <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception</span><span class="p">(</span><span class="n">_is_retryable</span><span class="p">),</span>
         <span class="n">reraise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
 
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_ready</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;GET the health endpoint and return its JSON, raising on non-2xx.&quot;&quot;&quot;</span>
+    <span class="c1"># Deferred so importing this module never requires httpx.</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+
     <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
         <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
@@ -368,7 +385,7 @@
 <span class="sd">    :param timeout: Total wall-clock seconds to keep probing when</span>
 <span class="sd">        *attempts* is unset</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">retryer</span> <span class="o">=</span> <span class="n">_make_retryer</span><span class="p">(</span><span class="n">attempts</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+    <span class="n">retryer</span> <span class="o">=</span> <span class="n">_make_retryer_httpx</span><span class="p">(</span><span class="n">attempts</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
     <span class="k">return</span> <span class="k">await</span> <span class="n">retryer</span><span class="p">(</span><span class="n">_get_ready</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span></div>
 
 </pre></div>

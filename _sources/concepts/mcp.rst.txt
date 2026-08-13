@@ -59,7 +59,7 @@ tools, and stores per-domain metadata.  The tool picker node then selects
 the tools relevant to the current query, and the selected tools are
 called during graph execution.  When several MCP servers are configured,
 fastmcp prefixes tool names with the server name (e.g.
-``NeuroML_list_files_tool``) so tools from different servers stay
+``NeuroML_list_files``) so tools from different servers stay
 distinct; Klea keeps these prefixed names unchanged.
 
 Writing tools for Klea
@@ -89,7 +89,7 @@ Example:
 .. code-block:: python
 
    @tool_meta(ToolInfo(title="Find models on NeuroML-db"))
-   async def get_models_from_neuromldb_tool(
+   async def get_models_from_neuromldb(
        search_query: str, num: int = 3, download: bool = False
    ) -> dict:
        """Search and optionally download cell and ion channel models from
@@ -119,11 +119,12 @@ Example:
        """
        ...
 
-Tool functions must end with ``_tool`` for automatic registration (see
-``neuroml_mcp.utils.register_tools``), and carry ``@tool_meta(ToolInfo(
-title=..., tags=...))`` metadata.  Validation constraints (e.g.
-``Field(min_length=1)``) may be added to parameter annotations and are
-preserved in the schema.
+Tool functions are registered by the ``@tool_meta`` decoration (see
+``klea_utils.mcp.registry.register_tools``): any ``@tool_meta(ToolInfo(
+title=..., tags=...))``-decorated function in a registered module becomes
+a tool named after the function.  Helper functions without the decoration
+are ignored.  Validation constraints (e.g. ``Field(min_length=1)``) may be
+added to parameter annotations and are preserved in the schema.
 
 Tool description length and style
 ---------------------------------
@@ -209,5 +210,5 @@ and keep the whole block to roughly 100-250 tokens:
 
 Use generic role references ("use the file reading tool") rather than
 exact tool names in the "Do not use for" pointers, because fastmcp
-prefixes tool names with the server name (``NeuroML_list_files_tool``) and
+prefixes tool names with the server name (``NeuroML_list_files``) and
 those prefixes vary between deployments.
