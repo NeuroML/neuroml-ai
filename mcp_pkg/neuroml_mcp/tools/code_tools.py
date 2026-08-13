@@ -11,14 +11,15 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from dataclasses import asdict
-from pathlib import Path
 from typing import Annotated, Any
 
+from klea_utils.mcp.registry import tool_meta
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.tools.list_files import list_files as list_files_impl
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
 
-from ..utils import ToolInfo, tool_meta
 from .sandbox import nml_mcp_sandbox
 
 # set the implementation for development
@@ -26,7 +27,7 @@ sbox = nml_mcp_sandbox
 
 
 @tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
-async def dummy_code_tool(
+async def dummy_code(
     astring: str,
 ) -> str:
     """Return the input string in a sentence (testing tool only).
@@ -39,7 +40,7 @@ async def dummy_code_tool(
     Do not use for:
     - Any real task - this tool provides no real functionality.
 
-    Example: dummy_code_tool("hello")
+    Example: dummy_code("hello")
 
     Args:
         astring: String to be echoed back.
@@ -48,7 +49,7 @@ async def dummy_code_tool(
 
 
 @tool_meta(ToolInfo(title="List files and directories", tags={"testing"}))
-async def list_files_tool(
+async def list_files(
     path: Annotated[str, Field(min_length=1)],
     max_depth: int | None = None,
     # LLMs are trained on shell style globs, so they insist on using space
@@ -73,7 +74,7 @@ async def list_files_tool(
     - Reading the contents of a file (use the file reading tool instead).
     - Running commands or scripts (use the code execution tool instead).
 
-    Example: list_files_tool(path=".", pattern="*.py", recursive=True)
+    Example: list_files(path=".", pattern="*.py", recursive=True)
 
     Args:
         path: Directory path to list. Must be relative to the current working
@@ -90,56 +91,19 @@ async def list_files_tool(
         Dict with the matching files, an error message (if any), and a
         truncated flag.
     """
-    the_path = Path(path)
-    truncated = "False"
-    error = ""
-    files: list[dict[str, Any]] = []
-    paths: list[Path] = []
-
-    if ".." in path:
-        return {
-            "files": [],
-            "truncated": "False",
-            "error": "Path contains '..', exiting.",
-        }
-
-    patterns = pattern.split()
-    patterns = list(set(patterns))
-
-    try:
-        for p in patterns:
-            if recursive:
-                paths.extend(list(the_path.rglob(p)))
-            else:
-                paths.extend(list(the_path.glob(p)))
-
-        if len(paths) > max_results:
-            truncated = "True"
-
-        for f in paths[:max_results]:
-            ftype = "file"
-            if f.is_dir():
-                ftype = "directory"
-            if f.is_symlink():
-                ftype = "link"
-            files.append(
-                {
-                    "path": str(f),
-                    "type": ftype,
-                    "modified time": f.stat().st_mtime,
-                    "size": f.stat().st_size,
-                }
-            )
-    except Exception as e:
-        error = e.__str__()
-
-    result = {"files": files, "error": error, "truncated": truncated}
-
-    return result
+    return list_files_impl(
+        path=path,
+        max_depth=max_depth,
+        pattern=pattern,
+        include_files=include_files,
+        include_directories=include_directories,
+        recursive=recursive,
+        max_results=max_results,
+    )
 
 
 @tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
-async def run_python_code_tool(
+async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
 ) -> dict[str, Any]:
     """Execute Python code in a sandboxed environment.
@@ -155,7 +119,7 @@ async def run_python_code_tool(
     - Simple file operations (use the file tools instead).
     - Long-running or interactive programs (the sandbox rejects these).
 
-    Example: run_python_code_tool("import numpy; print('numpy version:', numpy.__version__)")
+    Example: run_python_code("import numpy; print('numpy version:', numpy.__version__)")
 
     Args:
         code: Complete Python code to execute. Must be valid Python syntax

@@ -14,9 +14,13 @@ from dataclasses import asdict
 from textwrap import dedent
 from typing import Any
 
-import aiohttp
+import httpx
 from cachetools import TTLCache
 from fastmcp import Context
+from klea_utils.mcp.registry import tool_meta
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.tools.download_file import download_file_to_cache
+from klea_utils.paths import get_cache_dir
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -24,12 +28,11 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from ..utils import ToolInfo, tool_meta
+from ..utils import NML_MCP_DIRS
 
 # set the implementation for development
 from .sandbox import nml_mcp_sandbox
 from .sandbox.sandbox import RunCommand
-from .web_tools import _download_file_to_cache_by_content
 
 sbox = nml_mcp_sandbox
 
@@ -37,8 +40,8 @@ logger = logging.getLogger(__name__)
 
 
 MAX_RESULTS = 20
-SEARCH_TIMEOUT = aiohttp.ClientTimeout(total=30)
-XML_DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(total=60)
+SEARCH_TIMEOUT = httpx.Timeout(30)
+XML_DOWNLOAD_TIMEOUT = httpx.Timeout(60)
 
 # Cache for search results (2 hour TTL, max 100 entries)
 NEUROMLDB_SEARCH_CACHE: TTLCache[str, Any] = TTLCache(maxsize=100, ttl=7200)
@@ -49,35 +52,45 @@ NEUROMLDB_XML_CACHE: TTLCache[str, Any] = TTLCache(maxsize=100, ttl=7200)
 # OSBv2 cache
 OSBv2_SEARCH_CACHE: TTLCache[str, Any] = TTLCache(maxsize=100, ttl=7200)
 
+#: Dedicated httpx client for neuroml-db.org requests.
+#:
+#: neuroml-db.org serves an incomplete certificate chain that system CA
+#: stores cannot verify ("unable to verify the first certificate"), so this
+#: client disables TLS verification for that endpoint only.  This keeps the
+#: shared lifespan session (used by web_fetch and the OSB tools) at full
+#: verification.  TODO: re-test neuroml-db.org against the shared session
+#: (verify=True) from time to time and drop this dedicated client once their
+#: certificate chain is fixed.
+NMLDB_CLIENT = httpx.AsyncClient(verify=False)
+
 
 @retry(
     wait=wait_random_exponential(multiplier=1, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
+    retry=retry_if_exception_type((httpx.HTTPError, asyncio.TimeoutError)),
     reraise=True,
 )
 async def _search_neuromldb(session, url, query):
     """Search NeuroML-DB with retry logic."""
-    r = await session.get(
+    response = await session.get(
         url,
         params={"q": query},
         timeout=SEARCH_TIMEOUT,
-        ssl=False,
-        raise_for_status=True,
+        follow_redirects=True,
     )
-    async with r:
-        return await r.json(content_type=None)
+    response.raise_for_status()
+    return response.json()
 
 
 @retry(
     wait=wait_random_exponential(multiplier=1, max=10),
     stop=stop_after_attempt(3),
-    retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
+    retry=retry_if_exception_type((httpx.HTTPError, asyncio.TimeoutError)),
     reraise=True,
 )
 async def _search_osbv2_repos(session, url, query, content_types, user_id, max_num):
     """Search NeuroML-DB with retry logic."""
-    r = await session.get(
+    response = await session.get(
         url,
         params={
             "q": query,
@@ -87,16 +100,15 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
             "per_page": max_num,
         },
         timeout=SEARCH_TIMEOUT,
-        ssl=False,
-        raise_for_status=True,
+        follow_redirects=True,
     )
-    logger.debug(f"{r.request_info = }")
-    async with r:
-        return await r.json(content_type=None)
+    logger.debug(f"{response.request = }")
+    response.raise_for_status()
+    return response.json()
 
 
 @tool_meta(ToolInfo(title="Echo text", tags={"testing", "neuroml"}))
-async def dummy_tool(astring: str) -> str:
+async def dummy(astring: str) -> str:
     """Return the input string in a sentence (testing tool only).
 
     Use this tool to test and debug the MCP tool infrastructure.
@@ -107,7 +119,7 @@ async def dummy_tool(astring: str) -> str:
     Do not use for:
     - Any real task - this tool provides no real functionality.
 
-    Example: dummy_tool("hello")
+    Example: dummy("hello")
 
     Args:
         astring: Any string to be echoed back.
@@ -118,7 +130,7 @@ async def dummy_tool(astring: str) -> str:
 @tool_meta(
     ToolInfo(title="Create a NeuroML model template", tags={"testing", "neuroml"})
 )
-def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
+def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     """Create a new blank NeuroML model template.
 
     Use this tool to generate a starting template for NeuroML models, which
@@ -133,7 +145,7 @@ def create_new_NeuroML_model_tool(model_name: str = "NeuroMLModel") -> str:
     - Validating or simulating models (use the validation and simulation
       tools instead).
 
-    Example: create_new_NeuroML_model_tool("MyNeuralNetwork")
+    Example: create_new_NeuroML_model("MyNeuralNetwork")
 
     Args:
         model_name: Name for the NeuroML model. Will be used as the network
@@ -198,7 +210,7 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
         tags={"testing", "neuroml", "neuroml-db"},
     )
 )
-async def get_models_from_neuromldb_tool(
+async def get_models_from_neuromldb(
     ctx: Context, search_query: str, num: int = 3, download: bool = False
 ) -> dict[str, Any]:
     """Search and optionally download cell and ion channel models from NeuroML-DB.
@@ -229,12 +241,6 @@ async def get_models_from_neuromldb_tool(
 
     num = max(1, min(num, MAX_RESULTS))
 
-    session: aiohttp.ClientSession = ctx.lifespan_context["aiohttp_session"]
-    logger.debug(f"{session = }")
-
-    if session is None:
-        return {"Error": "NeuroML-DB session not initialized"}
-
     neuromldb_search_url = "http://neuroml-db.org/api/search"
     neuromldb_model_url = "http://neuroml-db.org/model_info?model_id="
     neuromldb_model_xml_url = "https://neuroml-db.org/render_xml_file"
@@ -247,7 +253,9 @@ async def get_models_from_neuromldb_tool(
         res = NEUROMLDB_SEARCH_CACHE[search_query]
     else:
         try:
-            res = await _search_neuromldb(session, neuromldb_search_url, search_query)
+            res = await _search_neuromldb(
+                NMLDB_CLIENT, neuromldb_search_url, search_query
+            )
             NEUROMLDB_SEARCH_CACHE[search_query] = res
         except Exception as e:
             error_text = f"Error searching NeuroML-DB: {e.__class__.__name__}: {e}"
@@ -270,12 +278,13 @@ async def get_models_from_neuromldb_tool(
                 mcopy["resource"] = NEUROMLDB_XML_CACHE[model_id]
             else:
                 try:
-                    xml_path = await _download_file_to_cache_by_content(
-                        session,
+                    xml_path = await download_file_to_cache(
+                        NMLDB_CLIENT,
                         neuromldb_model_xml_url,
+                        cache_dir=get_cache_dir(NML_MCP_DIRS),
+                        file_name=f"{model_id}.xml",
                         params={"modelID": model_id},
                         timeout=XML_DOWNLOAD_TIMEOUT,
-                        disk_file_name=f"{model_id}.xml",
                     )
                     if xml_path is not None:
                         NEUROMLDB_XML_CACHE[model_id] = xml_path
@@ -299,7 +308,7 @@ async def get_models_from_neuromldb_tool(
         tags={"testing", "neuroml", "neuroml-db"},
     )
 )
-async def get_repositories_from_open_source_brain_tool(
+async def get_repositories_from_open_source_brain(
     ctx: Context,
     search_query: str,
     search_data: bool = True,
@@ -323,7 +332,7 @@ async def get_repositories_from_open_source_brain_tool(
     - Directly downloading files (use the download tools instead).
     - Searching NeuroML-DB for cell models (use the NeuroML-DB search tool).
 
-    Example: get_repositories_from_open_source_brain_tool(search_query="cerebellum")
+    Example: get_repositories_from_open_source_brain(search_query="cerebellum")
 
     Args:
         search_query: search term for querying Open Source Brain. Must be
@@ -342,7 +351,7 @@ async def get_repositories_from_open_source_brain_tool(
 
     num = max(1, min(num, MAX_RESULTS))
 
-    session: aiohttp.ClientSession = ctx.lifespan_context["aiohttp_session"]
+    session: httpx.AsyncClient = ctx.lifespan_context["http_session"]
     if session is None:
         return {"Error": "OSB session not initialized"}
 

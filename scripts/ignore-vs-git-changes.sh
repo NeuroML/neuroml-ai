@@ -12,7 +12,9 @@
 #
 #
 
-mapfiles -d $'\0' VECTOR_STORES_DIR < <(find . -name "vector*" -type d -print0)
+mapfile -d $'\0' VECTOR_STORES_DIR < <(find . -name "vector*" -type d -print0)
+
+echo "${VECTOR_STORES_DIR}"
 
 ignore () {
     for folder in "${VECTOR_STORES_DIR[@]}"

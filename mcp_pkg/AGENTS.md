@@ -75,7 +75,8 @@ neuroml_mcp/
 - Sandbox isolation for code execution
 
 ### Tool Development
-- Tools must be functions ending with `_tool` suffix
+- Tools are functions decorated with `@tool_meta(ToolInfo(...))`; the
+  function name becomes the tool name (a `_tool` suffix is optional)
 - Use `@context.require()` decorator for dependencies
 - Return structured data (dicts, Pydantic models) rather than raw strings
 - **Docstring-first convention (Klea's expectation):** the tool's LLM-facing
@@ -125,11 +126,12 @@ from neuroml_mcp.utils import register_all_tools
 ```
 
 ### Naming Conventions
-- **Functions**: snake_case with descriptive names (`create_new_NeuroML_model_tool`)
+- **Functions**: snake_case with descriptive names (`create_new_NeuroML_model`)
 - **Classes**: PascalCase (`LocalSandbox`, `RunCommand`)
 - **Variables**: snake_case (`tool_context`, `sandbox_manager`)
 - **Constants**: UPPER_CASE (`DEFAULT_TIMEOUT`, `MAX_RETRIES`)
-- **Tool functions**: Must end with `_tool` suffix for auto-discovery
+- **Tool functions**: Marked with `@tool_meta` for auto-discovery (the
+  `_tool` suffix is a naming convention, not a requirement)
 - **Private functions**: Prefix with underscore (`_internal_helper`)
 
 ### Async/Await Patterns
