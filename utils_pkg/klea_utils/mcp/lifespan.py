@@ -38,7 +38,9 @@ def make_http_session_lifespan(session_key: str = "http_session"):
     async def _http_session_lifespan(server):
         logger.debug("Creating shared httpx session")
         http_session = httpx.AsyncClient(
-            limits=_SESSION_LIMITS, timeout=httpx.Timeout(30.0)
+            limits=_SESSION_LIMITS,
+            timeout=httpx.Timeout(30.0),
+            http2=True,
         )
         try:
             yield {session_key: http_session}

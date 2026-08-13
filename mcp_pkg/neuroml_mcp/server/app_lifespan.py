@@ -32,7 +32,7 @@ async def app_lifespan(server):
 
     # add more sessions here as required
     http_session = httpx.AsyncClient(
-        limits=_SESSION_LIMITS, timeout=httpx.Timeout(30.0)
+        limits=_SESSION_LIMITS, timeout=httpx.Timeout(30.0), http2=True
     )
     init_cache_dir()
 
