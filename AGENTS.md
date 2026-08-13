@@ -133,7 +133,9 @@ Vector stores use URI-style paths: `chroma:/path/to/dir`, `qdrant:http://...`,
 
 ## Session continuity
 
-`.agents/YYYY-MM-DD.md` logs previous work (see `.agents/Readme.md` for template).
+`.agents/YYYY-MM-DD-HHMM.md` logs previous work, where HHMM is the time the
+session started (24h) -- separate files per session avoid merge conflicts when
+multiple sessions run the same day (see `.agents/Readme.md` for template).
 Read previous logs at session start; write one at session end.
 
 Every log must record the authoring agent **and the model in use** (e.g.

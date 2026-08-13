@@ -7,7 +7,7 @@ Directory for storing summaries from chats with coding agents for future context
 Based on Claude Code's session memory structure.
 
 ```markdown
-# Session: YYYY-MM-DD
+# Session: YYYY-MM-DD-HHMM
 
 **Authoring agent:** <agent-name>
 **Model:** <model name or id>
@@ -34,7 +34,12 @@ Any other relevant context for future agents
 
 ## Naming Convention
 
-Session files should be named with the date:
+Session files should be named with the date and start time (24h):
 ```
-YYYY-MM-DD.md
+YYYY-MM-DD-HHMM.md
 ```
+
+The timestamp is the time the session started. Multiple sessions on the same
+day get separate files; a later session can merge earlier ones for that day
+into a single `YYYY-MM-DD.md` file if desired, keeping each session's log
+separate until then. Existing combined logs remain named `YYYY-MM-DD.md`.
