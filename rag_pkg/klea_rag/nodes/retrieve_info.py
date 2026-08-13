@@ -105,6 +105,8 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 retriever.inc_k()
 
         # Retrieve from all retrievers for all domains
+        metadata_filter = state.retrieval_query.to_metadata_filter()
+        self.logger.debug(f"{metadata_filter = }")
         for domain_name in state.query_domains:
             # Skip undefined domain
             if domain_name == "undefined":
@@ -113,7 +115,11 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
             result_sets = [
                 (
                     retriever.source_label,
-                    retriever.retrieve(domain_name=domain_name, query=cleaned_query),
+                    retriever.retrieve(
+                        domain_name=domain_name,
+                        query=cleaned_query,
+                        metadata_filter=metadata_filter,
+                    ),
                 )
                 for retriever in self.retrievers
             ]

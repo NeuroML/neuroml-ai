@@ -27,9 +27,11 @@ class FakeRetriever:
         self.inc_count = 0
         self.reset_count = 0
         self.queries: list[str] = []
+        self.filters: list[dict | None] = []
 
-    def retrieve(self, domain_name, query):
+    def retrieve(self, domain_name, query, metadata_filter=None):
         self.queries.append(query)
+        self.filters.append(metadata_filter)
         return self.results
 
     def can_inc_k(self):
@@ -169,6 +171,45 @@ async def test_execute_normalizes_retrieval_query():
     expected = "multi-scale modeling in neuroscience"
     assert r1.queries == [expected]
     assert r2.queries == [expected]
+
+
+async def test_execute_passes_metadata_filter_to_retrievers():
+    """The generated metadata filter reaches every retriever."""
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    r2 = FakeRetriever([(_doc("content"), 1.0)], name="BM25")
+    node = _make_node([r1, r2])
+
+    state = RAGState(
+        query="motor cortex",
+        query_domains=["NeuroML"],
+        retrieval_query=RetrievalQueryOutput(
+            search_query="motor cortex",
+            journal="nature",
+            year_from=2020,
+            year_to=2025,
+        ),
+    )
+    await node.execute(state)
+
+    expected = {"year": {"$gte": 2020, "$lte": 2025}, "journal": "nature"}
+    logger.info(f"filters seen by retrievers: {r1.filters}")
+    assert r1.filters == [expected]
+    assert r2.filters == [expected]
+
+
+async def test_execute_no_metadata_filter_is_none():
+    """Without filter fields, retrievers receive metadata_filter=None."""
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    node = _make_node([r1])
+
+    state = RAGState(
+        query="q",
+        query_domains=["NeuroML"],
+        retrieval_query=RetrievalQueryOutput(search_query="q"),
+    )
+    await node.execute(state)
+
+    assert r1.filters == [None]
 
 
 async def test_execute_labels_url_keys_in_display():
