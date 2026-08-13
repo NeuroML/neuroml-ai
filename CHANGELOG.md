@@ -36,6 +36,10 @@
   streaming endpoint (`/query/stream`) with per-node progress consumed
   by the CLI and Streamlit frontends.
 - API and UI code consolidated into shared `klea_utils` routers.
+- `max_refs_size` config option (default 20000 chars): the reference
+  material sent to the answer LLM is now bounded by total characters
+  instead of a fixed 10-document cap, so raising `k` surfaces more chunks
+  up to the character budget.
 
 ### Fixed
 
@@ -43,6 +47,9 @@
 - `AnswerGeneral` / `GenerateRetrievalQuery` handle list-form content
   blocks from newer langchain-ollama.
 - `ToolsCaller` no longer emits a stream event when pre-exec checks skip.
+- `k` was increased twice per `retrieve_more_info` cycle (the router and
+  the retrieval node both incremented it); it is now increased once per
+  cycle, at retrieval.
 
 ---
 

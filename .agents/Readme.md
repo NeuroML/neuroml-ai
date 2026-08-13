@@ -10,6 +10,7 @@ Based on Claude Code's session memory structure.
 # Session: YYYY-MM-DD
 
 **Authoring agent:** <agent-name>
+**Model:** <model name or id>
 
 ## Objective
 Brief 1-2 sentence overview of what was discussed/accomplished.

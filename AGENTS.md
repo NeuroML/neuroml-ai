@@ -136,6 +136,10 @@ Vector stores use URI-style paths: `chroma:/path/to/dir`, `qdrant:http://...`,
 `.agents/YYYY-MM-DD.md` logs previous work (see `.agents/Readme.md` for template).
 Read previous logs at session start; write one at session end.
 
+Every log must record the authoring agent **and the model in use** (e.g.
+`**Authoring agent:** opencode`, `**Model:** deepseek-v4-flash`).  This keeps
+model attribution accurate when comparing outcomes across sessions.
+
 Keep logs high-level -- decisions, architecture changes, outcomes only.
 Git log has the step-by-step edits. Omit routine work.
 
