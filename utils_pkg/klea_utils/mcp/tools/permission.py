@@ -12,11 +12,9 @@ import logging
 import os
 from pathlib import Path
 
+from klea_utils.mcp.errors import PermissionDeniedError
+
 logger = logging.getLogger(__name__)
-
-
-class PermissionDeniedError(PermissionError):
-    """Raised when a tool is denied access to a path."""
 
 
 # TODO (deferred): replace the hard boundary check with a full permission

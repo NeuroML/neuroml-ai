@@ -14,7 +14,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from klea_utils.mcp.tools.permission import PermissionDeniedError, check_path_access
+from klea_utils.mcp.errors import PermissionDeniedError
+from klea_utils.mcp.tools.permission import check_path_access
 
 logger = logging.getLogger(__name__)
 

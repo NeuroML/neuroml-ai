@@ -14,7 +14,8 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from klea_utils.mcp.tools.permission import PermissionDeniedError, check_path_access
+from klea_utils.mcp.errors import DocumentConversionError, PermissionDeniedError
+from klea_utils.mcp.tools.permission import check_path_access
 from klea_utils.mcp.tools.web_fetch import _html_to_text
 
 logger = logging.getLogger(__name__)
@@ -71,14 +72,6 @@ _CONVERT_CACHE_LOCK = threading.Lock()
 #: Cached result of probing whether the anydoc library is importable:
 #: ``True``/``False`` once known, ``None`` before the first probe.
 _ANYDOC_AVAILABLE: bool | None = None
-
-
-class _ConversionError(Exception):
-    """Raised when the anydoc library cannot convert a document.
-
-    Carries a user-facing message that :func:`read_file` reports through its
-    ``error`` result field.
-    """
 
 
 def read_file(
@@ -204,7 +197,7 @@ def read_file(
             "truncated": False,
             "error": "anydoc is not installed; cannot convert this file type",
         }
-    except _ConversionError as exc:
+    except DocumentConversionError as exc:
         logger.warning(f"Could not convert {path}: {exc}")
         return {
             "path": str(the_path),
@@ -307,7 +300,7 @@ def _converted_text(path: Path) -> str:
 
     :param path: Document file to convert.
     :returns: Converted Markdown text.
-    :raises _ConversionError: when the file cannot be converted.
+    :raises DocumentConversionError: when the file cannot be converted.
     """
     stat = path.stat()
     key = (str(path), stat.st_mtime_ns, stat.st_size)
@@ -335,7 +328,7 @@ def _to_markdown(data: bytes, suffix: str) -> str:
     :param suffix: File extension, used to name signature-less formats
         (e.g. CSV) that content detection cannot identify.
     :returns: Markdown text.
-    :raises _ConversionError: when anydoc cannot convert the file.
+    :raises DocumentConversionError: when anydoc cannot convert the file.
     """
     # Lazy: anydoc is a Rust binary extension.  Importing it at module level
     # would load it even for servers that never read office/PDF documents,
@@ -354,6 +347,6 @@ def _to_markdown(data: bytes, suffix: str) -> str:
         return anydoc.to_markdown_bytes(data)
     except anydoc.ConvertError as exc:
         logger.warning(f"anydoc could not convert file: {exc}")
-        raise _ConversionError(
+        raise DocumentConversionError(
             f"Could not convert file to text: {type(exc).__name__}: {exc}"
         ) from exc

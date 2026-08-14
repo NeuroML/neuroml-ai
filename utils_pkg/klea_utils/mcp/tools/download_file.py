@@ -15,7 +15,8 @@ from typing import Any
 import httpx
 
 from klea_utils.api.utils import _make_retryer_httpx
-from klea_utils.mcp.tools.permission import PermissionDeniedError, check_path_access
+from klea_utils.mcp.errors import PermissionDeniedError
+from klea_utils.mcp.tools.permission import check_path_access
 from klea_utils.mcp.tools.session import SessionLike
 
 logger = logging.getLogger(__name__)
