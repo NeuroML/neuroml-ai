@@ -670,7 +670,7 @@ retrieval across multiple stores within a domain.</p>
 <p>Each BM25 store is a pickled corpus of chunked documents written by
 <a class="reference internal" href="#klea_utils.stores.ingestion.StoresBuilder.write_bm25_store" title="klea_utils.stores.ingestion.StoresBuilder.write_bm25_store"><code class="xref py py-class docutils literal notranslate"><span class="pre">write_bm25_store</span></code></a>.
 Stores are loaded lazily per domain: the corpus is unpickled and used
-to build a <code class="xref py py-class docutils literal notranslate"><span class="pre">langchain_community.retrievers.BM25Retriever</span></code>, which
+to build a <code class="xref py py-class docutils literal notranslate"><span class="pre">klea_utils.stores.langchain_bm25</span></code>, which
 is queried with BM25 keyword scoring.</p>
 <p>A store whose corpus file is missing is skipped with a warning, so a
 misconfigured domain degrades gracefully instead of failing retrieval.</p>

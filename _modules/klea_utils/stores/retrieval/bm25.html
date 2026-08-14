@@ -300,6 +300,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.langchain_bm25</span><span class="w"> </span><span class="kn">import</span> <span class="n">BM25Retriever</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseKleaRetriever</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PerDomainConfig</span><span class="p">,</span> <span class="n">RetrieverConfig</span>
@@ -319,7 +320,7 @@
 <span class="sd">    Each BM25 store is a pickled corpus of chunked documents written by</span>
 <span class="sd">    :class:`~klea_utils.stores.ingestion.StoresBuilder.write_bm25_store`.</span>
 <span class="sd">    Stores are loaded lazily per domain: the corpus is unpickled and used</span>
-<span class="sd">    to build a :class:`langchain_community.retrievers.BM25Retriever`, which</span>
+<span class="sd">    to build a :class:`klea_utils.stores.langchain_bm25`, which</span>
 <span class="sd">    is queried with BM25 keyword scoring.</span>
 
 <span class="sd">    A store whose corpus file is missing is skipped with a warning, so a</span>
@@ -373,13 +374,9 @@
 
 <span class="sd">        :param path: Path to the pickled document corpus</span>
 <span class="sd">        :param name: Store name from the configuration</span>
-<span class="sd">        :returns: A :class:`langchain_community.retrievers.BM25Retriever`,</span>
+<span class="sd">        :returns: A :class:`klea_utils.stores.langchain_bm25.BM25Retriever`,</span>
 <span class="sd">            or ``None`` if the corpus file is missing</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Lazy: importing langchain_community pulls in the whole integration</span>
-        <span class="c1"># package, which is heavy.  Only needed when a BM25 store is actually</span>
-        <span class="c1"># configured, so defer the import to first load.</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_community.retrievers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BM25Retriever</span>
 
         <span class="n">corpus_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">corpus_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
