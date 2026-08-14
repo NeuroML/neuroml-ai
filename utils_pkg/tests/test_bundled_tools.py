@@ -464,7 +464,7 @@ def test_list_files_basic(tmp_path):
     (tmp_path / "b.md").write_text("")
     (tmp_path / "sub").mkdir()
 
-    result = list_files(path=str(tmp_path), pattern="*")
+    result = list_files(path=str(tmp_path), pattern="*", project_root=str(tmp_path))
 
     logger.debug(f"{len(result['files']) = }")
     logger.debug(f"{result['error'] = }")
@@ -481,7 +481,12 @@ def test_list_files_recursive(tmp_path):
     (tmp_path / "sub").mkdir()
     (tmp_path / "sub" / "c.py").write_text("")
 
-    result = list_files(path=str(tmp_path), pattern="*.py", recursive=True)
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*.py",
+        recursive=True,
+        project_root=str(tmp_path),
+    )
 
     logger.debug(f"{len(result['files']) = }")
     logger.debug(f"{result['error'] = }")
@@ -495,13 +500,133 @@ def test_list_files_truncates(tmp_path):
     for i in range(5):
         (tmp_path / f"f{i}.txt").write_text("")
 
-    result = list_files(path=str(tmp_path), pattern="*.txt", max_results=2)
+    result = list_files(
+        path=str(tmp_path), pattern="*.txt", max_results=2, project_root=str(tmp_path)
+    )
 
     logger.debug(f"{len(result['files']) = }")
     logger.debug(f"{result['truncated'] = }")
 
     assert len(result["files"]) == 2
     assert result["truncated"] == "True"
+
+
+def test_list_files_max_depth(tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "a" / "b").mkdir()
+    (tmp_path / "a" / "b" / "c.py").write_text("")
+    (tmp_path / "a" / "top.py").write_text("")
+
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*.py",
+        recursive=True,
+        max_depth=1,
+        project_root=str(tmp_path),
+    )
+    names = {f["path"].split("/")[-1] for f in result["files"]}
+    logger.debug(f"max_depth=1: {names = }")
+    assert names == set()
+
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*.py",
+        recursive=True,
+        max_depth=2,
+        project_root=str(tmp_path),
+    )
+    names = {f["path"].split("/")[-1] for f in result["files"]}
+    logger.debug(f"max_depth=2: {names = }")
+    assert "top.py" in names
+    assert "c.py" not in names
+
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*.py",
+        recursive=True,
+        max_depth=3,
+        project_root=str(tmp_path),
+    )
+    names = {f["path"].split("/")[-1] for f in result["files"]}
+    logger.debug(f"max_depth=3: {names = }")
+    assert "top.py" in names
+    assert "c.py" in names
+
+
+def test_list_files_include_directories(tmp_path):
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "f.py").write_text("")
+
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*",
+        include_directories=False,
+        project_root=str(tmp_path),
+    )
+    names = {f["path"].split("/")[-1] for f in result["files"]}
+    logger.debug(f"{names = }")
+    assert "f.py" in names
+    assert "sub" not in names
+
+
+def test_list_files_include_files(tmp_path):
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "f.py").write_text("")
+
+    result = list_files(
+        path=str(tmp_path),
+        pattern="*",
+        include_files=False,
+        project_root=str(tmp_path),
+    )
+    names = {f["path"].split("/")[-1] for f in result["files"]}
+    logger.debug(f"{names = }")
+    assert "sub" in names
+    assert "f.py" not in names
+
+
+def test_list_files_symlink_not_recursed(tmp_path):
+    (tmp_path / "real").mkdir()
+    (tmp_path / "real" / "target.py").write_text("")
+    (tmp_path / "link").symlink_to(tmp_path / "real", target_is_directory=True)
+
+    result = list_files(
+        path=str(tmp_path), pattern="*", recursive=True, project_root=str(tmp_path)
+    )
+    logger.debug(f"{result['files'] = }")
+    by_path = {f["path"].split("/")[-1]: f for f in result["files"]}
+    assert by_path["link"]["type"] == "link"
+    assert by_path["real"]["type"] == "directory"
+    assert "target.py" in by_path  # reached via the real dir, not the link
+    assert not any(str(f["path"]).endswith("link/target.py") for f in result["files"])
+
+    result = list_files(
+        path=str(tmp_path), pattern="*", include_files=False, project_root=str(tmp_path)
+    )
+    by_path = {f["path"].split("/")[-1]: f for f in result["files"]}
+    logger.debug(f"{by_path = }")
+    assert by_path["link"]["type"] == "link"
+    assert by_path["real"]["type"] == "directory"
+    assert "target.py" not in by_path
+
+
+def test_list_files_denied_outside_project(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "secret"
+    outside.mkdir()
+    (outside / "s.txt").write_text("s")
+    result = list_files(path=str(outside), pattern="*", project_root=str(root))
+    logger.debug(f"{result = }")
+    assert result["files"] == []
+    assert "denied" in result["error"].lower()
+
+
+def test_list_files_denied_absolute_escape(tmp_path):
+    result = list_files(path="/etc", pattern="*", project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["files"] == []
+    assert "denied" in result["error"].lower()
 
 
 class TestResolveUserAgents:
