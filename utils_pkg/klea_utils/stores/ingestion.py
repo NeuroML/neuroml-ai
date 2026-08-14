@@ -19,39 +19,13 @@ from langchain_core.documents import Document
 
 from ..biblio.extract import Resolver, extract_metadata, extract_metadata_from_text
 from ..llm import setup_embedding
+from .metadata import (
+    STORE_DROPPED_METADATA_KEYS,
+)
 from .utils import instantiate_vector_store, normalize_text
 
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
-
-#: Metadata keys that are always stored in the vector store, together with
-#: the bibliographic fields produced by the extraction cascade
-#: (``title``, ``authors``, ``keywords``, ``year``, ``journal``, ``doi``).
-#: Any ``url*`` key (``url``, ``url_1``, ``url_doi``, ...) is also always
-#: stored.  This whitelist documents the guaranteed stored schema; *presence*
-#: of the cascade fields is determined by the metadata map (whose
-#: researcher-curated keys pass through unmodified).  See
-#: :func:`_apply_store_metadata_policy`.
-ALWAYS_STORED_METADATA_KEYS = frozenset(
-    {
-        "file_name",
-        "file_hash",
-        "headings",
-        "title",
-        "authors",
-        "keywords",
-        "year",
-        "journal",
-        "doi",
-    }
-)
-
-#: Metadata keys that are never stored.  Provenance keys from the biblio
-#: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,
-#: ``_sources``, ``_source_scores``) are also always dropped.  These guide
-#: the researcher reviewing ``metadata-map.template.json`` but carry no
-#: meaning in a store.  See :func:`_apply_store_metadata_policy`.
-STORE_DROPPED_METADATA_KEYS = frozenset({"source_path", "source_type", "source_url"})
 
 
 class StoresBuilder:

@@ -228,6 +228,21 @@ def chunk(
         f"{source_path / TEMPLATE_FILE_NAME} -- fill in per-heading entries, "
         "then run 'klea-stores-create store' with --metadata-map"
     )
+    logger.info("Metadata map summary:")
+    try:
+        import json
+
+        from klea_utils.stores.map_lint import (
+            format_metadata_lint_report,
+            lint_metadata_map,
+        )
+
+        map_path = source_path / TEMPLATE_FILE_NAME
+        with open(map_path) as f:
+            data = json.load(f)
+        print(format_metadata_lint_report(lint_metadata_map(data)))
+    except Exception as e:
+        logger.warning(f"Could not lint metadata map: {e}")
 
 
 @app.command()
@@ -369,6 +384,60 @@ def store(
         logger.info(f"Done -- collection '{collection_name}' is ready")
     except typer.Exit:
         raise
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command()
+def map_lint(
+    source_dir: str = typer.Argument(
+        help="Directory containing the metadata map (uses "
+        "metadata-map.template.json unless --metadata-map is given)"
+    ),
+    metadata_map_path: str = typer.Option(
+        None,
+        "--metadata-map",
+        "-M",
+        help="Explicit metadata-map JSON file to lint, instead of the "
+        "template in SOURCE_DIR",
+    ),
+):
+    """Report issues in a metadata map so it can be reviewed efficiently.
+
+    Runs only deterministic checks (missing fields, suspicious titles or
+    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,
+    placeholder counts) -- no LLM is needed.  Useful after editing the
+    map by hand, and printed automatically at the end of 'chunk'.
+    """
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
+
+    try:
+        import json
+        from pathlib import Path
+
+        from klea_utils.stores.ingestion import TEMPLATE_FILE_NAME
+        from klea_utils.stores.map_lint import (
+            format_metadata_lint_report,
+            lint_metadata_map,
+        )
+
+        source_path = Path(source_dir).resolve()
+        if not source_path.is_dir():
+            raise FileNotFoundError(f"Source directory not found: {source_path}")
+
+        if metadata_map_path:
+            map_path = Path(metadata_map_path)
+        else:
+            map_path = source_path / TEMPLATE_FILE_NAME
+        if not map_path.is_file():
+            raise FileNotFoundError(f"Metadata map not found: {map_path}")
+
+        with open(map_path) as f:
+            data = json.load(f)
+        report = lint_metadata_map(data)
+        print(format_metadata_lint_report(report))
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
