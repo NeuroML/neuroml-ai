@@ -95,6 +95,14 @@
   keeps the file's authors/year/journal.
 - Orphaned `.klea-cache` entries (whose source file no longer exists)
   are now auto-pruned on every `chunk`/`store`/`build` run.
+- `klea-stores-create store` is now cache-only: it no longer converts
+  files on the fly (conversion settings `--max-tokens` and `--ocr`
+  were removed; `chunk` owns them).  Run `chunk` (or `build`) first so
+  every file is cached; `store --force` re-stores files whose hash is
+  already in the store (e.g. after editing the metadata map).
+  Internally, cache loading + metadata-map folding were extracted from
+  `chunk_all` into a shared `_fold_metadata_map` helper and a dedicated
+  cache-only `_load_and_fold_results` path used by `store`.
 
 ---
 
