@@ -31,6 +31,12 @@ ALWAYS_STORED_METADATA_KEYS = MACHINE_SET_METADATA_KEYS | frozenset(
     }
 )
 
+#: Bibliographic fields that every chunk of a source file is expected to
+#: share (they come from the file's DEFAULT metadata map entry).  When
+#: serializing reference material, these are emitted once per source file
+#: rather than repeated on every chunk.
+SHARED_DOC_METADATA_KEYS = ALWAYS_STORED_METADATA_KEYS - MACHINE_SET_METADATA_KEYS
+
 #: Metadata keys that are never stored.  Provenance keys from the biblio
 #: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,
 #: ``_sources``, ``_source_scores``) are also always dropped.  These guide

@@ -698,8 +698,13 @@ class StoresBuilder:
         """Resolve a metadata dict for a chunk using the per-file metadata map.
 
         Looks up the file in the map, then matches the heading chain
-        from most specific to least specific.  Falls back to
-        ``DEFAULT`` for that file.
+        from most specific to least specific.  The first non-empty
+        matching heading entry is merged over ``DEFAULT`` (gap-fill:
+        heading-specific keys win, ``DEFAULT`` fills everything else),
+        so a heading that only sets e.g. a ``url`` still inherits the
+        file's authors/year/journal.  An entry that matches a heading
+        but is empty (a ``{}`` placeholder the user did not fill in)
+        falls through to the next heading, and finally to ``DEFAULT``.
 
         :param file_name: Source filename to look up in the map
         :param headings: Heading hierarchy for the chunk (most specific
@@ -711,6 +716,7 @@ class StoresBuilder:
         file_map = metadata_map.get(file_name)
         if file_map is None:
             return None
+        fallback = file_map.get("DEFAULT")
         if headings:
             # NOTE: only individual headings are matched here, never the
             # full heading chain (e.g. "A > B").  The metadata map keys
@@ -722,9 +728,21 @@ class StoresBuilder:
             # progressively shorter suffixes.
             for heading in reversed(headings):
                 if heading in file_map:
-                    self.logger.debug(f"Resolved metadata for {file_name}: '{heading}'")
-                    return file_map[heading]
-        fallback = file_map.get("DEFAULT")
+                    matched = file_map[heading]
+                    if matched:
+                        merged = {**(fallback or {}), **matched}
+                        self.logger.debug(
+                            f"Resolved metadata for {file_name}: '{heading}' "
+                            f"(merged over DEFAULT)"
+                        )
+                        return merged
+                    # Empty placeholder the user left unfilled; keep
+                    # looking (fall through to DEFAULT) rather than
+                    # returning metadata that strips the DEFAULT values.
+                    self.logger.debug(
+                        f"Empty metadata entry for {file_name}: "
+                        f"'{heading}'; falling through"
+                    )
         if fallback:
             self.logger.debug(f"Resolved DEFAULT metadata for {file_name}")
         return fallback

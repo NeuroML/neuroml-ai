@@ -866,6 +866,142 @@ class TestIngestion:
         )
         assert meta == {"topic": "nml"}
 
+    def test_resolve_metadata_empty_heading_falls_through_to_default(self):
+        """An empty heading placeholder must not strip the DEFAULT metadata."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Introduction"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback", "year": 2020},
+                    "Introduction": {},
+                }
+            },
+        )
+        assert meta == {"topic": "fallback", "year": 2020}
+
+    def test_resolve_metadata_empty_heading_falls_to_later_heading(self):
+        """Empty headings fall through to a more specific (later) match."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro", "Methods", "Results"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Intro": {},
+                    "Methods": {},
+                    "Results": {"topic": "results"},
+                }
+            },
+        )
+        assert meta == {"topic": "results"}
+
+    def test_resolve_metadata_empty_everything_returns_default(self):
+        """When every matching heading is empty, DEFAULT is returned."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Intro": {},
+                }
+            },
+        )
+        assert meta == {"topic": "fallback"}
+
+    def test_resolve_metadata_filled_heading_beats_empty_default(self):
+        """A filled heading entry wins over an empty DEFAULT."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Intro": {"url": "https://example.com/intro"},
+                }
+            },
+        )
+        assert meta == {"url": "https://example.com/intro"}
+
+    def test_resolve_metadata_all_empty_returns_empty_dict(self):
+        """When the file exists but has no metadata anywhere, return {}."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Intro": {},
+                }
+            },
+        )
+        assert meta == {}
+
+    def test_resolve_metadata_merges_heading_url_over_default(self):
+        """A heading that only sets url keeps the DEFAULT bibliographic fields."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Introduction"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {
+                        "authors": ["A. Sinha"],
+                        "year": 2020,
+                        "journal": "eLife",
+                    },
+                    "Introduction": {"url": "https://example.com/intro"},
+                }
+            },
+        )
+        assert meta == {
+            "authors": ["A. Sinha"],
+            "year": 2020,
+            "journal": "eLife",
+            "url": "https://example.com/intro",
+        }
+
+    def test_resolve_metadata_heading_overrides_default_field(self):
+        """A heading-specific key wins over the DEFAULT value for that key."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Methods"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"url": "https://example.com/paper"},
+                    "Methods": {"url": "https://example.com/methods"},
+                }
+            },
+        )
+        assert meta == {"url": "https://example.com/methods"}
+
+    def test_resolve_metadata_merge_only_for_first_nonempty_heading(self):
+        """Empty headings fall through before the merge happens."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro", "Methods"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"authors": ["A. Sinha"], "year": 2020},
+                    "Intro": {},
+                    "Methods": {"url": "https://example.com/methods"},
+                }
+            },
+        )
+        assert meta == {
+            "authors": ["A. Sinha"],
+            "year": 2020,
+            "url": "https://example.com/methods",
+        }
+
     @pytest.mark.localonly
     def test_chunk_all_errors_when_file_missing_from_map(self):
         """chunk_all raises when a source file has no metadata map entry.

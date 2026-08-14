@@ -14,17 +14,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from klea_utils.stores.metadata import (
-    ALWAYS_STORED_METADATA_KEYS,
-    MACHINE_SET_METADATA_KEYS,
-)
+from klea_utils.stores.metadata import SHARED_DOC_METADATA_KEYS
 
 logger = logging.getLogger(__name__)
 
 #: Core bibliographic fields a complete DEFAULT entry should carry -- the
-#: always-stored schema minus the keys the pipeline sets itself.  Derived
-#: (not duplicated) so a change to the stored schema is picked up here.
-CORE_FIELDS = tuple(sorted(ALWAYS_STORED_METADATA_KEYS - MACHINE_SET_METADATA_KEYS))
+#: shared document fields every chunk inherits.  Derived (not duplicated)
+#: so a change to the stored schema is picked up here.
+CORE_FIELDS = tuple(sorted(SHARED_DOC_METADATA_KEYS))
 
 #: DEFAULT entries with more than this many ``url*`` keys almost certainly
 #: picked up reference URLs during extraction (a paper typically carries a
