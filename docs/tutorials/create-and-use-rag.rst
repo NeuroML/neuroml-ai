@@ -137,7 +137,10 @@ the source directory and re-running adds only the new content
 
 The source directory will contain a ``.klea-cache/`` folder after the
 first run.  This caches converted chunks so subsequent runs skip the
-expensive Docling conversion.
+expensive Docling conversion.  Each ``chunk``/``store``/``build`` run
+automatically prunes cache entries whose source file no longer exists
+(e.g. renamed or removed files), so the cache always mirrors the source
+directory and ``--force`` regenerates it cleanly.
 
 The vector store folder will also have been created, with the
 ``chroma.sqlite3`` database inside it.  Later runs point ``--store`` at
@@ -351,7 +354,11 @@ Once the basic pipeline works, here are natural next steps:
    ``_metadata_complete`` flag), then ``klea-stores-create store
    --metadata-map <file>``.  See ``klea-stores-create --help`` for
    examples.  The metadata-map file may live inside the source directory:
-   it and the generated template are excluded from ingestion.
+   it and the generated template are excluded from ingestion.  Run
+   ``klea-stores-create map-lint <dir>`` any time (or read the summary
+   printed after ``chunk``) for a quick, LLM-free health check of the map
+   -- it flags missing fields, suspicious titles/DOIs, year/filename
+   mismatches, and other issues to fix before storing.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model

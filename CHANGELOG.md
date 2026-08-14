@@ -39,6 +39,10 @@
   DOI services, PDF Info, Docling, regex tiers) pre-fills the `DEFAULT`
   entries of `metadata-map.template.json`; `KLEA_INGEST_MAILTO` opts
   into DOI polite pools; `--no-ocr` speeds up text-based PDFs.
+- `klea-stores-create map-lint <dir>`: LLM-free health checks on the
+  metadata map (missing fields, suspicious titles/DOIs, year/filename
+  mismatches, stale `venue` keys, excess `url*` keys, placeholder
+  counts), printed automatically at the end of `chunk`.
 - `klea_agent` is now the main application (general-purpose agent with
   coding capabilities); `klea_rag` is consumed by it.
 - Configurable model system (per-node `model_defaults`, dynamic provider
@@ -70,6 +74,11 @@
   package-local copies; tools are discovered by their `@tool_meta`
   decoration (function name is the tool name) rather than a `_tool` name
   suffix.
+- Reference material is serialized grouped by source file: shared
+  bibliographic metadata (authors, year, journal, ...) is emitted once
+  per file with chunks numbered beneath, each carrying its own inline
+  relevance score; `serialize_vs_retrieval` renamed
+  `serialize_reference_material`.
 
 ### Fixed
 
@@ -80,6 +89,12 @@
 - `k` was increased twice per `retrieve_more_info` cycle (the router and
   the retrieval node both incremented it); it is now increased once per
   cycle, at retrieval.
+- Empty `{}` heading placeholders in the metadata map no longer strip
+  the `DEFAULT` metadata from matching chunks; per-heading entries are
+  merged over `DEFAULT` (gap-fill), so a heading that sets only a `url`
+  keeps the file's authors/year/journal.
+- Orphaned `.klea-cache` entries (whose source file no longer exists)
+  are now auto-pruned on every `chunk`/`store`/`build` run.
 
 ---
 
