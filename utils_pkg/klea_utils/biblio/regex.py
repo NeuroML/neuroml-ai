@@ -120,6 +120,54 @@ def _scan_doi(text: str) -> str | None:
     return None
 
 
+def _sanitize_doi(doi: str) -> str | None:
+    """Return a valid DOI from a possibly-garbled match, or ``None``.
+
+    A DOI is ``10.<registrant>/<suffix>`` where the suffix contains no
+    further ``/``.  URL-based matches often drag in a trailing path
+    (e.g. ``10.1073/pnas.2201699120/-/DCSupplemental``) and text matches
+    can carry markdown/URL continuation junk (e.g. ``](https...``) or be
+    truncated by whitespace Docling inserted mid-DOI; this keeps only
+    the ``prefix/suffix`` part.  Returns ``None`` when *doi* is not a
+    well-formed DOI after sanitizing.
+    """
+    cleaned = _rstrip_punct(doi)
+    match = DOI_RE.match(cleaned)
+    if not match:
+        return None
+    candidate = match.group(0)
+    # Bound the suffix at markdown/URL continuations and trailing
+    # punctuation, then strip a trailing URL path (a valid DOI suffix
+    # has no further slash).
+    candidate = re.split(r"[\])}\s]", candidate, maxsplit=1)[0]
+    candidate = candidate.rstrip(".,;:)]}")
+    parts = candidate.split("/", 1)
+    if len(parts) == 2 and "/" in parts[1]:
+        candidate = parts[0] + "/" + parts[1].split("/", 1)[0]
+    return candidate or None
+
+
+def _scan_dois(text: str) -> list[str]:
+    """Return all distinct DOI candidates found in *text*.
+
+    Unlike :func:`_scan_doi`, which returns a single match, this returns
+    every DOI-like match (sanitized and deduplicated) so the extraction
+    cascade can try candidates in order instead of trusting the first
+    match, which may be a broken or journal-level DOI.
+
+    :param text: Text to scan
+    :returns: Deduplicated list of sanitized DOI strings
+    """
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    for match in DOI_RE.finditer(text):
+        doi = _sanitize_doi(match.group(0))
+        if doi and doi not in seen_set:
+            seen_set.add(doi)
+            seen.append(doi)
+    return seen
+
+
 def _scan_url(text: str) -> str | None:
     """Return a URL from a labeled line (URL:, Website:, ...)."""
     match = _URL_LABELED_RE.search(text)

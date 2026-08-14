@@ -46,6 +46,18 @@ class _StubResolver:
         return self.record
 
 
+class _ByDoiResolver:
+    """Resolver stub returning a record per DOI (defaults to None)."""
+
+    def __init__(self, records: dict[str, BiblioRecord]):
+        self.records = records
+        self.calls: list[str] = []
+
+    def resolve(self, doi: str) -> BiblioRecord | None:
+        self.calls.append(doi)
+        return self.records.get(doi)
+
+
 def _make_doc(
     title: str | None = None,
     header_texts: tuple[str, ...] = (),
@@ -199,6 +211,95 @@ def test_layout_region_doi_is_resolved():
 
     assert resolver.calls == ["10.2345/def.6789"]
     assert result["doi"] == "10.1234/abc.5678"
+
+
+def test_journal_level_primary_doi_falls_back_to_paper_candidate():
+    """A journal-level DOI (no authors) falls back to the paper DOI."""
+    journal_rec = BiblioRecord(
+        title="Proceedings of the National Academy of Sciences", authors=[]
+    )
+    paper_rec = BiblioRecord(
+        title="The synaptic organization in the C. elegans neural network",
+        authors=["Rotem Ruach", "Nir Ratner"],
+        year=2023,
+        doi="10.1073/pnas.2201699120",
+    )
+    resolver = _ByDoiResolver(
+        {"10.1073/pnas": journal_rec, "10.1073/pnas.2201699120": paper_rec}
+    )
+
+    doc = _make_doc(
+        title="T",
+        body_texts=(
+            "doi:10.1073/pnas. 2201699120/-/DCSupplemental",
+            "The synaptic organization",
+        ),
+    )
+    # Simulate the docling hyperlink that carries the clean paper DOI.
+    from pydantic import AnyUrl
+
+    doc.add_text(
+        text="Supplemental",
+        label=DocItemLabel.TEXT,
+        hyperlink=AnyUrl(
+            "https://www.pnas.org/lookup/suppl/doi:10.1073/pnas.2201699120/-/DCSupplemental"
+        ),
+    )
+    result = extract_metadata(doc, "paper.pdf", resolver=resolver)
+    logger.info(f"fallback result: {result}")
+
+    # Primary journal-level DOI tried first, then the paper candidate.
+    assert resolver.calls[0] == "10.1073/pnas"
+    assert "10.1073/pnas.2201699120" in resolver.calls
+    assert result["authors"] == ["Rotem Ruach", "Nir Ratner"]
+    assert result["doi"] == "10.1073/pnas.2201699120"
+
+
+def test_valid_primary_doi_wins_without_extra_candidates():
+    """A working primary DOI is used and extra candidates are not tried."""
+    resolver = _ByDoiResolver({"10.1234/abc.5678": RESOLVED})
+
+    doc = _make_doc(
+        title="T",
+        body_texts=(
+            "DOI: 10.1234/abc.5678",
+            "A reference: 10.9999/other.0000",
+        ),
+    )
+    result = extract_metadata(doc, "paper.pdf", resolver=resolver)
+    logger.info(f"primary-wins result: {result}")
+
+    # Primary resolves with authors -> no fallback candidates tried.
+    assert resolver.calls == ["10.1234/abc.5678"]
+    assert result["authors"] == ["Jane Doe", "John Smith"]
+
+
+def test_primary_resolves_without_authors_falls_back_to_candidates():
+    """When the primary resolves to a record without authors, candidates are tried."""
+    primary_rec = BiblioRecord(title="Journal Title", authors=[])
+    paper_rec = BiblioRecord(
+        title="A paper found via a url candidate",
+        authors=["A. Author"],
+        year=2020,
+        doi="10.1111/cand.9999",
+    )
+    resolver = _ByDoiResolver(
+        {"10.2222/primary": primary_rec, "10.1111/cand.9999": paper_rec}
+    )
+
+    doc = _make_doc(
+        title="T",
+        body_texts=(
+            "DOI: 10.2222/primary",
+            "see https://doi.org/10.1111/cand.9999 for details",
+        ),
+    )
+    result = extract_metadata(doc, "paper.pdf", resolver=resolver)
+    logger.info(f"no-authors-primary result: {result}")
+
+    assert resolver.calls[0] == "10.2222/primary"
+    assert "10.1111/cand.9999" in resolver.calls
+    assert result["authors"] == ["A. Author"]
 
 
 def test_missing_everything():

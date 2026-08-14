@@ -131,6 +131,41 @@ def test_scan_limit_truncates_authors_but_not_keywords():
     assert "authors" not in result
 
 
+def test_scan_dois_returns_all_deduped():
+    """_scan_dois returns every distinct DOI, not just the first."""
+    from klea_utils.biblio.regex import _scan_dois
+
+    text = (
+        "one 10.1073/pnas.2201699120 then "
+        "10.1073/pnas.2201699120 again and 10.1016/j.cell.2018.12.024"
+    )
+    assert _scan_dois(text) == [
+        "10.1073/pnas.2201699120",
+        "10.1016/j.cell.2018.12.024",
+    ]
+
+
+def test_scan_dois_strips_trailing_url_path():
+    """A DOI dragged out of a URL drops its trailing path."""
+    from klea_utils.biblio.regex import _scan_dois
+
+    url = (
+        "https://www.pnas.org/lookup/suppl/doi:10.1073/pnas.2201699120/-/DCSupplemental"
+    )
+    assert _scan_dois(url) == ["10.1073/pnas.2201699120"]
+
+
+def test_sanitize_doi_handles_garbled_and_invalid():
+    """_sanitize_doi keeps only well-formed prefix/suffix DOIs."""
+    from klea_utils.biblio.regex import _sanitize_doi
+
+    assert _sanitize_doi("10.1073/pnas.2201699120/-/DCSupplemental") == (
+        "10.1073/pnas.2201699120"
+    )
+    assert _sanitize_doi("10.1073/pnas.") == "10.1073/pnas"
+    assert _sanitize_doi("not a doi") is None
+
+
 if __name__ == "__main__":
     import pytest
 
