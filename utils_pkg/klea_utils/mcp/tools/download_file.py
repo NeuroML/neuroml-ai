@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 
 from klea_utils.api.utils import _make_retryer_httpx
+from klea_utils.mcp.tools.permission import PermissionDeniedError, check_path_access
 from klea_utils.mcp.tools.session import SessionLike
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ async def download_file(
     params: dict[str, Any] | None = None,
     timeout: float | httpx.Timeout = 30.0,
     retries: int = 3,
+    project_root: str | None = None,
 ) -> Path | None:
     """Download a URL to *file_path* (overwriting) and return the path.
 
@@ -37,7 +39,8 @@ async def download_file(
 
     Transient failures (timeouts, connection errors, HTTP 5xx/429) are
     retried with exponential backoff.  Returns ``None`` when the download
-    fails (non-2xx response, or no session available).
+    fails (non-2xx response, no session available, or the target path is
+    denied by the permission check).
 
     :param session: HTTP session to use for the request.  ``None`` when no
         session is available.
@@ -46,6 +49,8 @@ async def download_file(
     :param params: Optional query parameters for the request.
     :param timeout: Request timeout in seconds.
     :param retries: Number of attempts for transient failures.
+    :param project_root: Boundary directory for the permission check.
+        Defaults to the current working directory.
     :returns: The written :class:`Path`, or ``None`` on failure.
     """
     logger.debug(
@@ -54,11 +59,18 @@ async def download_file(
         f"{file_path = }\n"
         f"{params = }\n"
         f"{timeout = }\n"
-        f"{retries = }"
+        f"{retries = }\n"
+        f"{project_root = }"
     )
 
     if session is None:
         logger.warning(f"No HTTP session available for: {url}")
+        return None
+
+    try:
+        check_path_access(file_path, project_root)
+    except PermissionDeniedError:
+        logger.warning(f"Permission denied for {file_path}")
         return None
 
     async def _do_download() -> Path | None:
@@ -100,7 +112,9 @@ async def download_file_to_cache(
     """Download a URL into *cache_dir* as *file_name* and return the path.
 
     Convenience wrapper around :func:`download_file` for callers that keep a
-    per-app cache directory (see ``klea_utils.paths.get_cache_dir``).
+    per-app cache directory (see ``klea_utils.paths.get_cache_dir``).  The
+    permission boundary is *cache_dir* itself: this helper may write inside
+    it and nowhere else.
 
     :param session: HTTP session to use for the request.  ``None`` when no
         session is available.
@@ -120,4 +134,7 @@ async def download_file_to_cache(
         params=params,
         timeout=timeout,
         retries=retries,
+        # The cache helper's boundary is its own cache directory: it may
+        # write anywhere inside it, and nowhere else.
+        project_root=str(cache_dir),
     )

@@ -417,7 +417,10 @@ class TestDownloadFile:
         session = _FakeSession(response=fake)
         target = tmp_path / "out.txt"
         result = await download_file(
-            session=session, url="https://example.com/f.txt", file_path=target
+            session=session,
+            url="https://example.com/f.txt",
+            file_path=target,
+            project_root=str(tmp_path),
         )
         assert result == target
         assert target.read_text() == "file body"
@@ -432,7 +435,10 @@ class TestDownloadFile:
         fake = _FakeResponse("missing", status=404, content_type="text/plain")
         session = _FakeSession(response=fake)
         result = await download_file(
-            session=session, url="https://example.com/f.txt", file_path=tmp_path / "x"
+            session=session,
+            url="https://example.com/f.txt",
+            file_path=tmp_path / "x",
+            project_root=str(tmp_path),
         )
         assert result is None
         assert not (tmp_path / "x").exists()
@@ -450,6 +456,21 @@ class TestDownloadFile:
         assert result is not None
         assert result == cache_dir / "f.txt"
         assert result.read_text() == "cached body"
+
+    async def test_download_file_denied_outside_project(self, tmp_path):
+        fake = _FakeResponse("file body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside.txt"
+        result = await download_file(
+            session=session,
+            url="https://example.com/f.txt",
+            file_path=outside,
+            project_root=str(root),
+        )
+        assert result is None
+        assert not outside.exists()
 
 
 def test_list_files_rejects_dotdot():
