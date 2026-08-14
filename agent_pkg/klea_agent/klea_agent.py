@@ -18,6 +18,7 @@ from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
+from klea_utils.nodes.summarise_memory import SummariseMemoryNode
 from langgraph.graph import END, START, StateGraph
 
 from klea_agent.nodes.answer_user import AnswerUser
@@ -56,12 +57,13 @@ class KleaAgent(BaseLangGraph):
         """Initialise"""
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
+    @override
     def _setup_models(self) -> None:
         """Set up the LLM chat model
 
         A single ``_ConfigurableModel`` is shared across all roles.  Per-role
-        ``model_name`` provides the default that ``_build_invoke_config``
-        uses when no override is active.
+        ``model_name`` provides the default that ``_invoke_llm`` uses when no
+        override is active.  The guard role is not modifiable per request.
         """
         from klea_utils.llm import LLMModel
 
@@ -81,6 +83,7 @@ class KleaAgent(BaseLangGraph):
             "guard": LLMModel(
                 instance=model,
                 model_name=self.app_env.guard_model,
+                modifiable=False,
                 provider_defaults=self._provider_defaults_for_role("guard"),
             ),
         }
@@ -204,6 +207,18 @@ class KleaAgent(BaseLangGraph):
             self._answer_user_node.label, self._answer_user_node.execute
         )
 
+        if self.memory:
+            self._summarise_history_node = SummariseMemoryNode(
+                logger=self.logger,
+                label="Summarizing history",
+                llm_models=self.llm_models,
+                summarisation_threshold=10,
+            )
+            self.workflow.add_node(
+                self._summarise_history_node.label,
+                self._summarise_history_node.execute,
+            )
+
         self.workflow.add_edge(START, self._init_graph_state_node.label)
         self.workflow.add_edge(
             self._init_graph_state_node.label, self._guard_node.label
@@ -256,7 +271,14 @@ class KleaAgent(BaseLangGraph):
                 "completed": self._answer_user_node.label,
             },
         )
-        self.workflow.add_edge(self._answer_user_node.label, END)
+        if self.memory:
+            self.workflow.add_edge(
+                self._answer_user_node.label,
+                self._summarise_history_node.label,
+            )
+            self.workflow.add_edge(self._summarise_history_node.label, END)
+        else:
+            self.workflow.add_edge(self._answer_user_node.label, END)
         self.workflow.add_edge(self._decline_to_answer_node.label, END)
 
         if self.checkpointer:
