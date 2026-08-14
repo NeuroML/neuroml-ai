@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
+import httpx
 import pytest
 from fastmcp import Client
 from klea_agent.tools.bundled import bundle_server
@@ -27,16 +28,28 @@ class MockContext:
 
 
 class _FakeResponse:
-    def __init__(self, text, status=200, content_type="text/html"):
-        self.status = status
-        self.headers = {"Content-Type": content_type}
-        self._text = text
+    """Minimal httpx-like response used to drive :func:`web_fetch`."""
 
-    async def text(self) -> str:
-        return self._text
+    def __init__(self, body, status=200, content_type="text/html"):
+        self.status_code = status
+        self.headers = {"content-type": content_type}
+        self._body = body.encode("utf-8") if isinstance(body, str) else body
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            request = httpx.Request("GET", "http://example.com")
+            response = httpx.Response(
+                self.status_code, request=request, content=self._body
+            )
+            raise httpx.HTTPStatusError(
+                f"HTTP {self.status_code}", request=request, response=response
+            )
+
+    async def aiter_bytes(self):
+        yield self._body
 
 
-class _FakeGetCM:
+class _FakeStreamCM:
     def __init__(self, response=None, error=None):
         self._response = response
         self._error = error
@@ -55,8 +68,8 @@ class _FakeSession:
         self._response = response
         self._error = error
 
-    def get(self, url, **kwargs):
-        return _FakeGetCM(response=self._response, error=self._error)
+    def stream(self, method, url, **kwargs):
+        return _FakeStreamCM(response=self._response, error=self._error)
 
 
 @pytest.mark.asyncio
@@ -83,7 +96,7 @@ async def test_web_fetch_with_session():
         "<html><body><h1>Hello</h1><script>x()</script></body></html>",
         content_type="text/html; charset=utf-8",
     )
-    ctx = MockContext(aiohttp_session=_FakeSession(response=fake))
+    ctx = MockContext(http_session=_FakeSession(response=fake))
     result = await web_fetch(ctx=ctx, url="https://example.com")
     logger.debug(f"{result = }")
     assert result["status_code"] == 200
