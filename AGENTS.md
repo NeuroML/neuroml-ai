@@ -176,6 +176,19 @@ Git log has the step-by-step edits. Omit routine work.
 - Preserve existing comments (TODOs, FIXMEs, notes, etc.) -- never remove or
   edit comments that are unrelated to the immediate change being made.
 
+## HTTP conventions
+
+- Prefer httpx for all HTTP client code. aiohttp has been removed across the
+  repo and must not be reintroduced.
+- Use the shared session helpers in `klea_utils` (`klea_utils/api/utils.py`
+  `_make_retryer_httpx`, `klea_utils/mcp/lifespan.py`) rather than rolling
+  per-module retry/backoff logic.
+- Shared MCP tool implementations live in `klea_utils/mcp/tools/`; apps wrap
+  them into FastMCP tools and pass their httpx session via the lifespan
+  context (key `http_session`, see `klea_utils.mcp.lifespan`). Tool tests use
+  httpx-shaped fakes implementing the `SessionLike` protocol
+  (`stream`/`get`).
+
 ## CLI conventions
 
 - Heavy imports (orchestrators, vector store backends, LLM libraries) must be

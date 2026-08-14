@@ -57,11 +57,18 @@
   instead of a fixed 10-document cap, so raising `k` surfaces more chunks
   up to the character budget.
 - Shared MCP tool implementations in `klea_utils` (`web_fetch`,
-  `list_files`) that any app can wrap into FastMCP tools, plus shared
-  tool-registration helpers (`klea_utils.mcp.registry`) and an aiohttp
-  session lifespan (`make_http_session_lifespan`); new `[mcp]` extra
-  (`aiohttp[speedups]`, `beautifulsoup4`). `klea_agent`'s bundled tools
-  server and `neuroml_mcp` both use them.
+  `list_files`, `download_file`) that any app can wrap into FastMCP
+  tools, plus shared tool-registration helpers
+  (`klea_utils.mcp.registry`) and an httpx session lifespan
+  (`make_http_session_lifespan`); new `[mcp]` extra (`httpx[http2]`,
+  `beautifulsoup4`). `klea_agent`'s bundled tools server and
+  `neuroml_mcp` both use them.
+- `web_fetch` hardened: status-aware retries, 5 MB download cap
+  (separate from the character cap), safe decoding, SSRF guard,
+  browser User-Agent rotation (daily-refreshed from an upstream list
+  with an honest-client fallback) and a Cloudflare-challenge retry.
+- `download_file` / `download_file_to_cache` shared implementations for
+  downloading URLs to disk with transient-error retries.
 
 ### Changed
 
@@ -70,6 +77,9 @@
   package-local copies; tools are discovered by their `@tool_meta`
   decoration (function name is the tool name) rather than a `_tool` name
   suffix.
+- HTTP stack consolidated on httpx: aiohttp removed everywhere; shared
+  sessions use HTTP/2 (`http2=True`) with tuned connection limits; a
+  single `_make_retryer_httpx` helper backs the bundled tools.
 
 ### Fixed
 
