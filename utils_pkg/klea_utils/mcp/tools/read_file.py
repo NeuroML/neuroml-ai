@@ -73,6 +73,14 @@ _CONVERT_CACHE_LOCK = threading.Lock()
 _ANYDOC_AVAILABLE: bool | None = None
 
 
+class _ConversionError(Exception):
+    """Raised when the anydoc library cannot convert a document.
+
+    Carries a user-facing message that :func:`read_file` reports through its
+    ``error`` result field.
+    """
+
+
 def read_file(
     path: str,
     offset: int = 1,
@@ -196,6 +204,17 @@ def read_file(
             "truncated": False,
             "error": "anydoc is not installed; cannot convert this file type",
         }
+    except _ConversionError as exc:
+        logger.warning(f"Could not convert {path}: {exc}")
+        return {
+            "path": str(the_path),
+            "content": "",
+            "line_start": 1,
+            "line_end": 0,
+            "total_lines": 0,
+            "truncated": False,
+            "error": str(exc),
+        }
 
     lines = content.splitlines()
     total_lines = len(lines)
@@ -287,7 +306,8 @@ def _converted_text(path: Path) -> str:
     locked.
 
     :param path: Document file to convert.
-    :returns: Converted Markdown text, or an error message on failure.
+    :returns: Converted Markdown text.
+    :raises _ConversionError: when the file cannot be converted.
     """
     stat = path.stat()
     key = (str(path), stat.st_mtime_ns, stat.st_size)
@@ -314,7 +334,8 @@ def _to_markdown(data: bytes, suffix: str) -> str:
     :param data: Raw file content.
     :param suffix: File extension, used to name signature-less formats
         (e.g. CSV) that content detection cannot identify.
-    :returns: Markdown text, or an error message when conversion fails.
+    :returns: Markdown text.
+    :raises _ConversionError: when anydoc cannot convert the file.
     """
     # Lazy: anydoc is a Rust binary extension.  Importing it at module level
     # would load it even for servers that never read office/PDF documents,
@@ -333,4 +354,6 @@ def _to_markdown(data: bytes, suffix: str) -> str:
         return anydoc.to_markdown_bytes(data)
     except anydoc.ConvertError as exc:
         logger.warning(f"anydoc could not convert file: {exc}")
-        return f"Could not convert file to text: {type(exc).__name__}: {exc}"
+        raise _ConversionError(
+            f"Could not convert file to text: {type(exc).__name__}: {exc}"
+        ) from exc
