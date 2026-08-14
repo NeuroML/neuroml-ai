@@ -20,9 +20,12 @@ DOI_RE = re.compile(r"\b10\.\d{4,9}/[^\s,;]+")
 #: Loose URL pattern.
 URL_RE = re.compile(r"https?://[^\s,;]+")
 
-#: Labeled keyword list header (Keywords:, Key words:, ...).
+#: Labeled keyword list header.  Accepts an optional colon and the list
+#: on the same line or the following line, since publishers format these
+#: in several ways (e.g. ``Keywords: a, b``, ``KEYWORDS`` then the list,
+#: ``Keywords :`` then the list on the next line).
 _KEYWORDS_RE = re.compile(
-    r"(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:\s*(.+)$"
+    r"(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:?\s*(.+)$"
 )
 #: Labeled author list header, without the bare "By:" variant.
 _AUTHORS_LABELED_RE = re.compile(r"(?im)^\s*authors?\s*\(?s?\)?\s*:\s*(.{3,500})$")
@@ -37,6 +40,12 @@ _URL_LABELED_RE = re.compile(r"(?im)^\s*(?:url|website|homepage|webpage)\s*:\s*(
 #: (authors, keywords, DOI, URL) live on the first page, so scanning the
 #: whole document is unnecessary and would raise false-positive noise.
 DEFAULT_SCAN_LIMIT = 3000
+
+#: Keyword headers can sit well below the author/DOI region (e.g. after an
+#: abstract), so keywords are scanned over a wider window than the other
+#: fields, which stay at :data:`DEFAULT_SCAN_LIMIT` to avoid false
+#: positives on prose deeper in the document.
+KEYWORD_SCAN_LIMIT = 8000
 
 
 def extract_regex_metadata(
@@ -59,7 +68,9 @@ def extract_regex_metadata(
     scan_text = text[:limit]
 
     result: dict[str, Any] = {}
-    keywords = _scan_keywords(scan_text)
+    # Keywords are scanned over their own wider window (they can sit below
+    # the abstract); the other fields stay within *limit*.
+    keywords = _scan_keywords(text[:KEYWORD_SCAN_LIMIT])
     if keywords:
         result["keywords"] = keywords
     authors = _scan_authors(scan_text)
@@ -76,7 +87,11 @@ def extract_regex_metadata(
 
 
 def _scan_keywords(text: str) -> list[str]:
-    """Return the keyword list from a labeled keyword header, if any."""
+    """Return the keyword list from a labeled keyword header, if any.
+
+    Accepts ``Keywords: a, b``, ``KEYWORDS`` with the list on the next
+    line, and ``Keywords :`` with the list on the next line.
+    """
     match = _KEYWORDS_RE.search(text)
     if not match:
         return []

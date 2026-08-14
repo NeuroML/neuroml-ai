@@ -30,6 +30,47 @@ def test_keywords_label_variants():
         assert result["keywords"] == ["alpha", "beta"], label
 
 
+def test_keywords_no_colon_same_line():
+    """A 'Keywords' label without a colon, list on the same line."""
+    text = "Keywords Agentic AI, Systems biology, Foundational models"
+    result = extract_regex_metadata(text)
+    assert result["keywords"] == [
+        "Agentic AI",
+        "Systems biology",
+        "Foundational models",
+    ]
+
+
+def test_keywords_uppercase_no_colon_next_line():
+    """Uppercase KEYWORDS with the list on the following line."""
+    text = "some preamble text.\nKEYWORDS\nC. elegans, connectome\nbody text"
+    result = extract_regex_metadata(text)
+    assert result["keywords"] == ["C. elegans", "connectome"]
+
+
+def test_keywords_colon_next_line():
+    """Keywords : with the list on the following line."""
+    text = (
+        "intro.\nKeywords :\nC. elegans, Connectome, Bilateral symmetry\n2 Introduction"
+    )
+    result = extract_regex_metadata(text)
+    assert result["keywords"] == ["C. elegans", "Connectome", "Bilateral symmetry"]
+
+
+def test_keywords_beyond_default_scan_limit():
+    """Keywords past the 3000-char default limit are still found."""
+    text = "x" * 3500 + "\nKeywords: worm, NeuroML"
+    result = extract_regex_metadata(text)
+    assert result["keywords"] == ["worm", "NeuroML"]
+
+
+def test_keywords_in_prose_not_matched():
+    """A prose sentence mentioning keywords is not treated as a list."""
+    text = "We studied keywords in this paper and found the results informative."
+    result = extract_regex_metadata(text)
+    assert "keywords" not in result
+
+
 def test_authors_labeled():
     """A labeled Author(s): line is split into names."""
     text = "Author(s): Ankur Sinha, Padraig Gleeson"
@@ -80,10 +121,14 @@ def test_missing_fields_return_empty_dict():
     assert extract_regex_metadata(text) == {}
 
 
-def test_scan_limit_truncates():
-    """Only the first `limit` characters are scanned."""
-    text = ("x" * 3000) + "\nKeywords: hidden"
-    assert extract_regex_metadata(text) == {}
+def test_scan_limit_truncates_authors_but_not_keywords():
+    """Authors are capped at `limit`; keywords use their own wider window."""
+    text = ("x" * 3000) + "\nKeywords: worm\nAuthor(s): Hidden"
+    result = extract_regex_metadata(text)
+    # Keywords have a dedicated, wider scan window...
+    assert result["keywords"] == ["worm"]
+    # ...while the author header sits beyond the default limit.
+    assert "authors" not in result
 
 
 if __name__ == "__main__":

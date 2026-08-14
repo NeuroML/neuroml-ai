@@ -27,6 +27,54 @@ from .utils import instantiate_vector_store, normalize_text
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
 
+#: Heading texts that are never a real document title.  When the title
+#: extraction falls back to the filename stem, the first chunk heading is
+#: used as a title fallback instead -- but journal banners and section
+#: labels (e.g. ``Review``, ``Highlights``, ``DOI:``) are not titles, so
+#: they are skipped.  Lowercased for comparison.
+_TITLE_SKIP_HEADINGS = frozenset(
+    {
+        "review",
+        "research",
+        "research article",
+        "highlights",
+        "abstract",
+        "author summary",
+        "summary",
+        "introduction",
+        "doi:",
+        "doi",
+        "editorial",
+        "front matter",
+        "correspondence",
+        "*for correspondence:",
+    }
+)
+
+
+def _first_heading_title(docs: list[Document]) -> str | None:
+    """Return the first chunk heading that looks like a title, or ``None``.
+
+    Scans *docs* in document order for the first non-empty heading chain
+    and returns its first element, skipping headings that are journal
+    banners or section labels (see :data:`_TITLE_SKIP_HEADINGS`).  This
+    is a fallback for documents whose title Docling's layout model does
+    not label as a ``TITLE`` item (e.g. some conference preprints), used
+    only when the extraction cascade falls back to the filename stem.
+
+    :param docs: Chunked documents in document order
+    :returns: First heading that looks like a title, or ``None``
+    """
+    for doc in docs:
+        headings = doc.metadata.get("headings") or []
+        if not headings:
+            continue
+        candidate = headings[0].strip()
+        if candidate.lower() in _TITLE_SKIP_HEADINGS:
+            continue
+        return candidate
+    return None
+
 
 class StoresBuilder:
     """Build stores from a directory of source documents.
@@ -927,6 +975,23 @@ class StoresBuilder:
             pdf_path=str(file_path) if file_path.suffix.lower() == ".pdf" else None,
             resolver=resolver,
         )
+
+        # Fall back to the first chunk heading when the cascade produced
+        # only the filename stem (the merge tiers' last resort).  The
+        # chunker's heading detection is layout-aware and often recovers
+        # the real title (e.g. conference preprints) where Docling did not
+        # label a TITLE item.  See _first_heading_title.
+        if not extracted.get("title") or extracted["title"] == Path(file_path).stem:
+            heading_title = _first_heading_title(docs)
+            if heading_title:
+                self.logger.debug(
+                    f"Title fallback for {file_path.name}: "
+                    f"using first chunk heading {heading_title!r}"
+                )
+                extracted["title"] = heading_title
+                sources = extracted.setdefault("_sources", [])
+                if "chunk-heading" not in sources:
+                    sources.append("chunk-heading")
 
         return docs, extracted
 

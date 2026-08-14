@@ -20,6 +20,7 @@ from klea_utils.stores.ingestion import (
     StoresBuilder,
     _apply_store_metadata_policy,
     _ensure_doi_url,
+    _first_heading_title,
     _normalize_extracted_metadata,
     _sanitize_store_metadata,
     _split_url_list,
@@ -316,10 +317,12 @@ class TestConvertAndChunkNormalization:
         from types import SimpleNamespace
 
         # Skip the real biblio cascade; it operates on a Docling document
-        # we are not building here.
+        # we are not building here.  A real title is returned so the
+        # chunk-heading title fallback does not engage (it has its own
+        # dedicated test).
         monkeypatch.setattr(
             "klea_utils.stores.ingestion.extract_metadata",
-            lambda *args, **kwargs: {},
+            lambda *args, **kwargs: {"title": "A real extracted title"},
         )
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -356,7 +359,7 @@ class TestConvertAndChunkNormalization:
 
         docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
 
-        assert extracted == {}
+        assert extracted == {"title": "A real extracted title"}
         assert docs[0].page_content == "multi-scale modeling in neuroscience"
         assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
         assert docs[1].page_content == "plain content"
@@ -377,7 +380,7 @@ class TestConvertAndChunkNormalization:
 
         monkeypatch.setattr(
             "klea_utils.stores.ingestion.extract_metadata",
-            lambda *args, **kwargs: {},
+            lambda *args, **kwargs: {"title": "A real extracted title"},
         )
 
         def _doc_chunk(text: str, headings: list[str] | None) -> DocChunk:
@@ -423,10 +426,138 @@ class TestConvertAndChunkNormalization:
 
         docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
 
-        assert extracted == {}
+        assert extracted == {"title": "A real extracted title"}
         assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
         assert docs[1].page_content == "no heading chunk"
         assert docs[1].metadata["headings"] == []
+
+    def test_convert_and_chunk_title_fallback_uses_first_heading(self, monkeypatch):
+        """When the cascade falls back to the stem, the first chunk heading is used."""
+        from types import SimpleNamespace
+
+        # Empty extraction -> title missing -> chunk-heading fallback engages.
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk._text
+
+        chunker = _FakeChunker(
+            [
+                _FakeChunk(
+                    "CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS",
+                    ["CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS"],
+                ),
+                _FakeChunk("abstract text", ["ABSTRACT"]),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(
+            Path("MiTuraga2022.pdf"), resolver=None
+        )
+
+        assert extracted["title"] == "CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS"
+        assert "chunk-heading" in extracted["_sources"]
+
+    def test_convert_and_chunk_title_fallback_skips_labels(self, monkeypatch):
+        """Label headings (DOI:, Highlights) are skipped for the title fallback."""
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk._text
+
+        chunker = _FakeChunker(
+            [
+                _FakeChunk("citation text", []),
+                _FakeChunk("doi text", ["DOI:"]),
+                _FakeChunk(
+                    "Potential role of a ventral nerve cord",
+                    [
+                        "Potential role of a ventral nerve cord central pattern generator"
+                    ],
+                ),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(
+            Path("Olivares2017.pdf"), resolver=None
+        )
+
+        assert (
+            extracted["title"]
+            == "Potential role of a ventral nerve cord central pattern generator"
+        )
+
+
+class TestFirstHeadingTitle:
+    """_first_heading_title falls back to the first non-label heading."""
+
+    def _docs(self, *heading_lists):
+        docs = []
+        for heads in heading_lists:
+            docs.append(
+                Document(
+                    page_content="content",
+                    metadata={"headings": heads} if heads else {},
+                )
+            )
+        return docs
+
+    def test_uses_first_non_empty_heading(self):
+        assert (
+            _first_heading_title(
+                self._docs([], ["DOI:"], ["Potential role of a ventral nerve cord"])
+            )
+            == "Potential role of a ventral nerve cord"
+        )
+
+    def test_skips_label_headings(self):
+        assert _first_heading_title(
+            self._docs(["Highlights"], ["ABSTRACT"], ["Real Title"])
+        ) == ("Real Title")
+
+    def test_no_headings_returns_none(self):
+        assert _first_heading_title(self._docs([], [])) is None
+
+    def test_all_labels_returns_none(self):
+        assert _first_heading_title(self._docs(["Review"], ["DOI:"])) is None
 
 
 class TestIngestion:
