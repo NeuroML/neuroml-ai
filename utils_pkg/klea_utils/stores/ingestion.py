@@ -219,8 +219,16 @@ class StoresBuilder:
         file_headings: dict[str, dict[str, Any]] = {}
         total = len(files)
 
+        # Hashes of every source file found (whether or not it converts
+        # successfully below).  Used to prune cache entries whose hash no
+        # longer matches a source file (e.g. renamed/removed files or
+        # legacy entries from a previous pipeline), so the cache always
+        # mirrors the source directory.
+        current_hashes: set[str] = set()
+
         for ctr, file_path in enumerate(files, 1):
             file_hash = _hash_file(file_path)
+            current_hashes.add(file_hash)
 
             docs = None
             extracted: dict[str, Any] = {}
@@ -326,6 +334,8 @@ class StoresBuilder:
             file_headings[file_path.name] = file_entry
 
             results.append((file_hash, docs, file_path))
+
+        self._prune_cache(source_path, current_hashes)
 
         # The resolver's HTTP client is left for the process to clean up;
         # ingestion is a one-shot CLI run.
@@ -508,6 +518,46 @@ class StoresBuilder:
         """
         safe_hash = file_hash.replace(":", "_")
         return self._cache_dir(source_dir) / f"{safe_hash}.pkl"
+
+    def _prune_cache(self, source_dir: Path, current_hashes: set[str]) -> None:
+        """Remove cache entries whose hash matches no current source file.
+
+        Cache entries are keyed by the xxhash of their source file, so an
+        entry whose hash is not in *current_hashes* can never be a future
+        cache hit (the source file was renamed, removed, or changed, or
+        the entry predates a pipeline change).  Called after every
+        :meth:`chunk_all` run so the cache always mirrors the source
+        directory and users never need to clean it by hand.
+
+        Only ``*.pkl`` chunk-cache files are touched; other cache files
+        (e.g. ``doi-cache.json``) are left alone.
+
+        :param source_dir: Resolved source directory path
+        :param current_hashes: xxhash digests of all source files found
+            during this run (including files that failed to convert)
+        """
+        cache_dir = self._cache_dir(source_dir)
+        if not cache_dir.is_dir():
+            return
+        pruned: list[Path] = []
+        for path in cache_dir.glob("*.pkl"):
+            if path.name not in {
+                self._cache_path(source_dir, file_hash).name
+                for file_hash in current_hashes
+            }:
+                try:
+                    path.unlink()
+                    pruned.append(path)
+                except OSError as exc:
+                    self.logger.warning(
+                        f"Could not remove stale cache entry {path}: {exc}"
+                    )
+        if pruned:
+            self.logger.info(
+                f"Pruned {len(pruned)} stale cache entr{'y' if len(pruned) == 1 else 'ies'} "
+                f"from {cache_dir}"
+            )
+            self.logger.debug(f"Pruned: {[p.name for p in pruned]}")
 
     def _save_to_cache(
         self,

@@ -440,6 +440,51 @@ class TestIngestion:
     def teardown_method(self):
         self.tmpdir.cleanup()
 
+    def test_prune_cache_removes_orphans_keeps_current(self):
+        """Prune removes entries whose hash matches no current file."""
+        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir.mkdir()
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        current = "xxh64:abcdef1234567890"
+        for name in (
+            "xxh64_abcdef1234567890.pkl",  # matches a current file
+            "xxh64_deadbeefdeadbeef.pkl",  # orphan (renamed/removed file)
+            "xxh64_0123456789abcdef.pkl",  # orphan (changed file)
+        ):
+            (cache_dir / name).write_bytes(b"stale")
+        # Non-chunk-cache files must be left untouched.
+        doi_cache = cache_dir / "doi-cache.json"
+        doi_cache.write_text('{"10.1234/test": {}}')
+        unrelated = cache_dir / "readme.txt"
+        unrelated.write_text("not cache data")
+
+        builder._prune_cache(self.tmpdir_path, {current})
+
+        assert (cache_dir / "xxh64_abcdef1234567890.pkl").exists()
+        assert not (cache_dir / "xxh64_deadbeefdeadbeef.pkl").exists()
+        assert not (cache_dir / "xxh64_0123456789abcdef.pkl").exists()
+        assert doi_cache.exists()
+        assert unrelated.exists()
+
+    def test_prune_cache_no_cache_dir_is_noop(self):
+        """Prune on a source dir without a cache directory does nothing."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._prune_cache(self.tmpdir_path, {"xxh64:abcdef1234567890"})
+
+    def test_prune_cache_all_current_keeps_everything(self):
+        """No entries are removed when every cache file is current."""
+        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir.mkdir()
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        current = {"xxh64:abc", "xxh64:def"}
+        for name in ("xxh64_abc.pkl", "xxh64_def.pkl"):
+            (cache_dir / name).write_bytes(b"ok")
+
+        builder._prune_cache(self.tmpdir_path, current)
+
+        assert (cache_dir / "xxh64_abc.pkl").exists()
+        assert (cache_dir / "xxh64_def.pkl").exists()
+
     @pytest.mark.localonly
     def test_build_chroma(self):
         """Test building a chroma store from a source directory."""
