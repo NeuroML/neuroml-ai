@@ -1,0 +1,84 @@
+# MCP tool permissions: current state, limits, and options
+
+Status: research/design note.  Updates to this note should be reflected in
+the permission layer as it evolves.
+
+## Current state
+
+`klea_utils.mcp.tools.permission` provides `check_path_access(path,
+project_root=None)` and `PermissionDeniedError`.  It is an author-side
+defense layer:
+
+- `path` is allowed only when it resolves inside `project_root` (default:
+  the current working directory).  Both sides are fully resolved first, so
+  `..` traversal and symlink escapes outside the boundary are caught.
+- Every Klea-authored tool that reads or writes the filesystem must gate
+  its path arguments through `check_path_access` and return a clear,
+  non-halting error on denial:
+  - `list_files` (`klea_utils/mcp/tools/list_files.py`) -- takes
+    `project_root`.
+  - `download_file` (`klea_utils/mcp/tools/download_file.py`) -- takes
+    `project_root`.
+  - `download_file_to_cache` scopes its boundary to its own cache
+    directory, so per-app cache helpers keep working unmodified.
+- The stub cannot be bypassed by asking the user: there is no approval
+  mechanism yet.  See the deferred TODO in `permission.py` and the kanban
+  ticket.
+
+## The author-side limit
+
+The in-tool check only protects tools we write.  A third-party MCP server
+runs its own code with its own privileges; Klea cannot inspect or bound
+the paths it touches.  For servers we do not author there is no way to
+enforce path-level permissions from inside the tool.
+
+## What opencode does (external MCP tools)
+
+Reference: the opencode repository
+(`/home/asinha/Documents/02_Code/01_others/opencode`, checked out around
+2026-08).
+
+opencode does *not* inspect tool arguments.  Instead it applies a
+client-side, per-tool-call permission policy that works for any server:
+
+- Every external MCP tool is wrapped so its execution first runs a
+  permission request keyed on the tool name (`server_tool`), see
+  `packages/opencode/src/session/tools.ts` (around the
+  `ctx.ask({ permission: key, ... })` call).
+- The ruleset matches permission rules (allow / deny / ask) against the
+  tool name, with wildcards (`tool-server_*`).  The default action when no
+  rule matches is `ask`: an interactive user prompt with "once" and
+  "always" replies.  "always" is remembered as an allow-rule for the
+  session.  See `packages/opencode/src/permission/index.ts`.
+- MCP tools denied by config are hidden from the model entirely
+  (visibility filtering), so the system prompt only advertises allowed
+  tools.
+
+Key consequence: opencode's gate is *"may this tool be invoked at all"*,
+never *"may it touch path X"*.  The user's approval is only as informed as
+the tool description and their own understanding of the server.  A user
+who approves a filesystem tool has granted it access to whatever paths the
+server process can reach, and "always" turns one careless approval into a
+session-wide pass.  The prompt is a consent mechanism, not a path
+confinement guarantee.
+
+## Options for Klea
+
+1. **In-tool path checks (current)** -- path-aware and stricter than
+   opencode's name-based gate, but only for tools we author.  Keep this as
+   the author-side layer.
+2. **Client-side tool-call policy layer** -- opencode-style allow / deny /
+   ask per tool (and, where the tool declares it, per path), evaluated at
+   the call site (e.g. in the agent's tool-caller node) before dispatching
+   to the MCP server.  This is the deferred permission service on the
+   kanban board and works regardless of who wrote the server.  It still
+   relies on user judgment for tools whose descriptions undersell their
+   reach.
+3. **OS-level sandboxing** -- run third-party MCP servers (or the whole
+   agent) in a container / bubblewrap / chroot with only the project
+   directory mounted.  This is the only hard boundary for servers we do
+   not author, and it is orthogonal to options 1 and 2.
+
+Recommended posture: 1 + 2 together, document the trust model, and advise
+sandboxing for third-party servers.  In all cases, connecting to a server
+means trusting its author: never connect to a server you do not trust.

@@ -131,6 +131,11 @@ setup -> MCP client -> vector stores -> compile graph template method.
 Vector stores use URI-style paths: `chroma:/path/to/dir`, `qdrant:http://...`,
 `pgvector:postgresql://...`.
 
+Internal development notes (design research, decisions, TODO context) live in
+`devdocs/` (see `devdocs/README.md`).  Keep work-in-progress notes out of the
+public `docs/` site; update `docs/` and `CHANGELOG.md` only when the work is
+implemented.
+
 ## Session continuity
 
 `.agents/YYYY-MM-DD-HHMM.md` logs previous work, where HHMM is the time the
@@ -188,6 +193,17 @@ Git log has the step-by-step edits. Omit routine work.
   context (key `http_session`, see `klea_utils.mcp.lifespan`). Tool tests use
   httpx-shaped fakes implementing the `SessionLike` protocol
   (`stream`/`get`).
+
+## Permissions conventions
+
+- Every tool that reads or writes the filesystem must gate its path
+  arguments through `klea_utils.mcp.tools.permission.check_path_access`
+  with an explicit boundary (`project_root`, default cwd) and return a
+  clear, non-halting error on denial.  Self-contained helpers with their
+  own containment (e.g. `download_file_to_cache`) use that as the
+  boundary.
+- The in-tool check is author-side: it does not protect against third-party
+  MCP servers.  Full discussion and options: `devdocs/mcp-permissions.md`.
 
 ## CLI conventions
 
