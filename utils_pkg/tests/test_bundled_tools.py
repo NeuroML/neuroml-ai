@@ -11,14 +11,17 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import json
 import logging
 import os
+import sys
 import time
 
 import httpx
 import klea_utils.api.utils as api_utils
 import pytest
+from klea_utils.mcp.tools import read_file as read_file_module
 from klea_utils.mcp.tools import web_fetch as web_fetch_module
 from klea_utils.mcp.tools.download_file import download_file, download_file_to_cache
 from klea_utils.mcp.tools.list_files import list_files
+from klea_utils.mcp.tools.read_file import read_file
 from klea_utils.mcp.tools.web_fetch import web_fetch
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,10 @@ class _FakeResponse:
     @property
     def text(self) -> str:
         return self._body.decode("utf-8", errors="replace")
+
+    @property
+    def content(self) -> bytes:
+        return self._body
 
     async def aiter_bytes(self):
         yield self._body
@@ -472,6 +479,77 @@ class TestDownloadFile:
         assert result is None
         assert not outside.exists()
 
+    async def test_download_file_sends_honest_ua(self, tmp_path):
+        fake = _FakeResponse("file body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "out.txt"
+        result = await download_file(
+            session=session,
+            url="https://example.com/f.txt",
+            file_path=target,
+            project_root=str(tmp_path),
+        )
+        assert result == target
+        assert len(session.calls) == 1
+        _, _, kwargs = session.calls[0]
+        ua = kwargs["headers"]["User-Agent"]
+        logger.debug(f"{ua = }")
+        assert ua.startswith("klea-web-fetch/")
+
+    async def test_download_file_writes_binary(self, tmp_path):
+        body = b"%PDF-1.4\n%binary content\x00\x01\x02\n"
+        fake = _FakeResponse(body, status=200, content_type="application/pdf")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "doc.pdf"
+        result = await download_file(
+            session=session,
+            url="https://example.com/doc.pdf",
+            file_path=target,
+            project_root=str(tmp_path),
+        )
+        assert result == target
+        assert target.read_bytes() == body
+
+    async def test_download_file_ssrf_denied(self, tmp_path):
+        session = _FakeSession(response=_FakeResponse("x", status=200))
+        target = tmp_path / "out.txt"
+        result = await download_file(
+            session=session,
+            url="http://127.0.0.1/secret",
+            file_path=target,
+            project_root=str(tmp_path),
+        )
+        assert result is None
+        assert session.calls == []
+        assert not target.exists()
+
+    async def test_download_file_ssrf_allowed_internal(self, tmp_path):
+        fake = _FakeResponse("file body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "out.txt"
+        result = await download_file(
+            session=session,
+            url="http://127.0.0.1/f.txt",
+            file_path=target,
+            project_root=str(tmp_path),
+            allow_internal_hosts=True,
+        )
+        assert result == target
+        assert len(session.calls) == 1
+        assert target.read_text() == "file body"
+
+    async def test_download_file_to_cache_ssrf_denied(self, tmp_path):
+        session = _FakeSession(response=_FakeResponse("x", status=200))
+        cache_dir = tmp_path / "cache"
+        result = await download_file_to_cache(
+            session=session,
+            url="http://127.0.0.1/secret",
+            cache_dir=cache_dir,
+            file_name="f.txt",
+        )
+        assert result is None
+        assert session.calls == []
+
 
 def test_list_files_rejects_dotdot():
     result = list_files(path="..")
@@ -648,6 +726,149 @@ def test_list_files_denied_absolute_escape(tmp_path):
     logger.debug(f"{result = }")
     assert result["files"] == []
     assert "denied" in result["error"].lower()
+
+
+def _write_lines(tmp_path, name, n):
+    f = tmp_path / name
+    f.write_text("\n".join(f"line {i}" for i in range(1, n + 1)))
+    return f
+
+
+def test_read_file_paging(tmp_path):
+    f = _write_lines(tmp_path, "t.txt", 10)
+    result = read_file(str(f), offset=1, limit=5, project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == (
+        "1: line 1\n2: line 2\n3: line 3\n4: line 4\n5: line 5"
+    )
+    assert result["line_start"] == 1
+    assert result["line_end"] == 5
+    assert result["total_lines"] == 10
+    assert result["truncated"] is True
+    assert result["error"] == ""
+
+    result = read_file(str(f), offset=6, limit=5, project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == (
+        "6: line 6\n7: line 7\n8: line 8\n9: line 9\n10: line 10"
+    )
+    assert result["line_start"] == 6
+    assert result["line_end"] == 10
+    assert result["truncated"] is False
+
+
+def test_read_file_offset_past_eof(tmp_path):
+    f = _write_lines(tmp_path, "t.txt", 3)
+    result = read_file(str(f), offset=50, limit=5, project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert result["line_start"] == 50
+    assert result["line_end"] == 49
+    assert result["total_lines"] == 3
+    assert result["truncated"] is False
+
+
+def test_read_file_html_strips(tmp_path):
+    f = tmp_path / "page.html"
+    f.write_text(
+        "<html><body><h1>Title</h1><script>x()</script><p>Body</p></body></html>"
+    )
+    result = read_file(str(f), project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == "1: Title\n2: Body"
+    assert "<h1>" not in result["content"]
+    assert result["error"] == ""
+
+
+def test_read_file_char_cap(tmp_path):
+    f = _write_lines(tmp_path, "t.txt", 1000)
+    result = read_file(str(f), max_chars=100, project_root=str(tmp_path))
+    logger.debug(f"{len(result['content']) = }")
+    assert result["truncated"] is True
+    assert len(result["content"]) <= 100
+
+
+def test_read_file_denied_outside_project(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.write_text("s")
+    result = read_file(str(outside), project_root=str(root))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert "denied" in result["error"].lower()
+
+
+def test_read_file_missing_file(tmp_path):
+    result = read_file(str(tmp_path / "nope.txt"), project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert "not a file" in result["error"].lower()
+
+
+def test_read_file_too_large(tmp_path):
+    f = _write_lines(tmp_path, "t.txt", 5)
+    result = read_file(str(f), max_bytes=10, project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert "too large" in result["error"].lower()
+
+
+def test_read_file_csv_converts(tmp_path):
+    pytest.importorskip("anydoc")
+    f = tmp_path / "c.csv"
+    f.write_text("a,b\n1,2\n")
+    result = read_file(str(f), project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert "| a | b |" in result["content"]
+    assert result["error"] == ""
+
+
+def test_read_file_conversion_error_in_error_field(tmp_path):
+    pytest.importorskip("anydoc")
+    f = tmp_path / "bad.pdf"
+    f.write_bytes(b"\xff\xfe junk")
+    result = read_file(str(f), project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert "MalformedError" in result["error"]
+
+
+def test_read_file_anydoc_not_installed(tmp_path, monkeypatch):
+    f = tmp_path / "doc.pdf"
+    f.write_bytes(b"%PDF-1.4 junk")
+    monkeypatch.setitem(sys.modules, "anydoc", None)
+    monkeypatch.setattr(read_file_module, "_ANYDOC_AVAILABLE", None)
+    result = read_file(str(f), project_root=str(tmp_path))
+    logger.debug(f"{result = }")
+    assert result["content"] == ""
+    assert "anydoc is not installed" in result["error"]
+
+
+def test_read_file_cache_avoids_reconversion(tmp_path, monkeypatch):
+    pytest.importorskip("anydoc")
+    f = tmp_path / "c.csv"
+    f.write_text("a,b\n1,2\n")
+    calls = {"n": 0}
+    original = read_file_module._to_markdown
+
+    def counting(data, suffix):
+        calls["n"] += 1
+        return original(data, suffix)
+
+    monkeypatch.setattr(read_file_module, "_to_markdown", counting)
+    read_file(str(f), offset=1, limit=1, project_root=str(tmp_path))
+    read_file(str(f), offset=2, limit=1, project_root=str(tmp_path))
+    logger.debug(f"conversions after two paged reads = {calls['n']}")
+    assert calls["n"] == 1
+
+    f.write_text("a,b\n3,4\n")
+    # Ensure a distinct mtime so the cache key changes even if the size is
+    # identical.
+    os.utime(f, (time.time() + 10, time.time() + 10))
+    read_file(str(f), project_root=str(tmp_path))
+    logger.debug(f"conversions after edit = {calls['n']}")
+    assert calls["n"] == 2
 
 
 class TestResolveUserAgents:

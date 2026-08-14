@@ -18,6 +18,8 @@ from klea_utils.api.utils import _make_retryer_httpx
 from klea_utils.mcp.errors import PermissionDeniedError
 from klea_utils.mcp.tools.permission import check_path_access
 from klea_utils.mcp.tools.session import SessionLike
+from klea_utils.mcp.tools.ssrf import check_ssrf
+from klea_utils.mcp.tools.web_fetch import _honest_user_agent
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ async def download_file(
     timeout: float | httpx.Timeout = 30.0,
     retries: int = 3,
     project_root: str | None = None,
+    allow_internal_hosts: bool = False,
 ) -> Path | None:
     """Download a URL to *file_path* (overwriting) and return the path.
 
@@ -38,10 +41,15 @@ async def download_file(
     context (see klea_utils.mcp.lifespan).  Note that since this overwrites,
     this should not be exposed directly as a tool; use a wrapper around this.
 
+    The request carries an honest User-Agent and is subject to the shared
+    SSRF guard (refusing private/loopback hosts unless
+    *allow_internal_hosts* is set).  The raw response body is written as
+    bytes, so binary files (PDFs, office documents) survive intact.
+
     Transient failures (timeouts, connection errors, HTTP 5xx/429) are
     retried with exponential backoff.  Returns ``None`` when the download
-    fails (non-2xx response, no session available, or the target path is
-    denied by the permission check).
+    fails (non-2xx response, no session available, an SSRF denial, or the
+    target path is denied by the permission check).
 
     :param session: HTTP session to use for the request.  ``None`` when no
         session is available.
@@ -52,6 +60,8 @@ async def download_file(
     :param retries: Number of attempts for transient failures.
     :param project_root: Boundary directory for the permission check.
         Defaults to the current working directory.
+    :param allow_internal_hosts: Skip the SSRF guard (requests to loopback,
+        private, link-local, or reserved addresses).
     :returns: The written :class:`Path`, or ``None`` on failure.
     """
     logger.debug(
@@ -61,12 +71,19 @@ async def download_file(
         f"{params = }\n"
         f"{timeout = }\n"
         f"{retries = }\n"
-        f"{project_root = }"
+        f"{project_root = }\n"
+        f"{allow_internal_hosts = }"
     )
 
     if session is None:
         logger.warning(f"No HTTP session available for: {url}")
         return None
+
+    if not allow_internal_hosts:
+        ssrf_error = check_ssrf(url)
+        if ssrf_error is not None:
+            logger.warning(f"SSRF guard blocked {url}: {ssrf_error}")
+            return None
 
     try:
         check_path_access(file_path, project_root)
@@ -78,6 +95,7 @@ async def download_file(
         response = await session.get(
             url,
             params=params,
+            headers={"User-Agent": _honest_user_agent()},
             timeout=timeout,
             follow_redirects=True,
         )
@@ -89,7 +107,7 @@ async def download_file(
             return None
         target = Path(file_path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(response.text)
+        target.write_bytes(response.content)
         logger.info(f"Saved downloaded file to {target}")
         return target
 
@@ -109,6 +127,7 @@ async def download_file_to_cache(
     params: dict[str, Any] | None = None,
     timeout: float | httpx.Timeout = 30.0,
     retries: int = 3,
+    allow_internal_hosts: bool = False,
 ) -> Path | None:
     """Download a URL into *cache_dir* as *file_name* and return the path.
 
@@ -125,6 +144,8 @@ async def download_file_to_cache(
     :param params: Optional query parameters for the request.
     :param timeout: Request timeout in seconds.
     :param retries: Number of attempts for transient failures.
+    :param allow_internal_hosts: Skip the SSRF guard (requests to loopback,
+        private, link-local, or reserved addresses).
     :returns: The written :class:`Path`, or ``None`` on failure.
     """
     target = Path(cache_dir) / file_name
@@ -138,4 +159,5 @@ async def download_file_to_cache(
         # The cache helper's boundary is its own cache directory: it may
         # write anywhere inside it, and nowhere else.
         project_root=str(cache_dir),
+        allow_internal_hosts=allow_internal_hosts,
     )

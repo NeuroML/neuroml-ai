@@ -25,6 +25,7 @@ class SessionLike(Protocol):
         url: str,
         *,
         params: Any | None = None,
+        headers: Any | None = None,
         timeout: Any = None,
         follow_redirects: bool = False,
     ) -> Any: ...
