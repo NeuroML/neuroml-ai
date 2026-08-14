@@ -310,6 +310,14 @@
 <li><p>Submit a pull request targeting the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch.</p></li>
 <li><p>Address review feedback if any.</p></li>
 </ol>
+<p>Only pick up issues tagged with the <code class="docutils literal notranslate"><span class="pre">help</span> <span class="pre">wanted</span></code> label
+(<a class="reference external" href="https://github.com/NeuroML/neuroklea/issues?q=is%3Aissue+state%3Aopen+label%3A%22help+wanted%22">https://github.com/NeuroML/neuroklea/issues?q=is%3Aissue+state%3Aopen+label%3A%22help+wanted%22</a>);
+other issues are planned or internal work.  Before starting on an issue,
+comment on it first to check its status, and keep any discussion on the
+issue itself so it remains the single place for discussion.</p>
+<p>All contributors are acknowledged via the all-contributors specification
+(<a class="reference external" href="https://allcontributors.org/">https://allcontributors.org/</a>), so contributions of any kind are welcome
+and tracked on the project <code class="docutils literal notranslate"><span class="pre">Readme</span></code>.</p>
 </section>
 <section id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
@@ -360,7 +368,9 @@ coding assistants.  While it is fine to use AI for development, it is
 expected that the human reviews every line of code before submitting PRs.
 PRs that are AI only and have not been checked by humans will not be
 accepted.  All AI assistance must be clearly noted in the PR
-description.</p>
+description – the PR template (<code class="docutils literal notranslate"><span class="pre">.github/PULL_REQUEST_TEMPLATE.md</span></code>)
+requires you to confirm manual review of all AI-generated code and to
+name the AI agent(s) used.</p>
 </section>
 <section id="pull-requests">
 <h2>Pull requests<a class="headerlink" href="#pull-requests" title="Link to this heading">¶</a></h2>
@@ -369,6 +379,10 @@ description.</p>
 <li><p>Keep changes focused – one logical change per PR.</p></li>
 <li><p>Ensure CI passes (lint, typecheck, tests).</p></li>
 <li><p>Include a conventional commit message with issue numbers when applicable.</p></li>
+<li><p>Follow the PR template (<code class="docutils literal notranslate"><span class="pre">.github/PULL_REQUEST_TEMPLATE.md</span></code>); its
+checklist covers the branch target, tests, CI, commit message
+guidelines (<a class="reference external" href="https://chris.beams.io/git-commit">https://chris.beams.io/git-commit</a>) and conventional commits
+(<a class="reference external" href="https://www.conventionalcommits.org/en/v1.0.0/">https://www.conventionalcommits.org/en/v1.0.0/</a>).</p></li>
 </ul>
 </section>
 </section>
