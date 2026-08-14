@@ -69,6 +69,11 @@
   with an honest-client fallback) and a Cloudflare-challenge retry.
 - `download_file` / `download_file_to_cache` shared implementations for
   downloading URLs to disk with transient-error retries.
+- `read_file` shared MCP tool implementation: converts documents
+  (PDF/Office/EPUB/CSV via anydoc, HTML via BeautifulSoup) and plain text
+  files to text with paged, line-numbered output (`offset`/`limit`,
+  `line_start`/`line_end`/`total_lines`); document conversion results are
+  cached per process.  Adds `firecrawl-anydoc` to the `[mcp]` extra.
 
 ### Changed
 
@@ -77,6 +82,9 @@
   package-local copies; tools are discovered by their `@tool_meta`
   decoration (function name is the tool name) rather than a `_tool` name
   suffix.
+- `download_file` now sends an honest User-Agent and refuses internal and
+  private hosts by default (shared SSRF guard, shared with `web_fetch`;
+  `allow_internal_hosts` opts out).
 - HTTP stack consolidated on httpx: aiohttp removed everywhere; shared
   sessions use HTTP/2 (`http2=True`) with tuned connection limits; a
   single `_make_retryer_httpx` helper backs the bundled tools.
@@ -90,6 +98,8 @@
 - `k` was increased twice per `retrieve_more_info` cycle (the router and
   the retrieval node both incremented it); it is now increased once per
   cycle, at retrieval.
+- `download_file` no longer corrupts binary downloads by writing them
+  decoded as text; the raw response body is saved as bytes.
 
 ---
 

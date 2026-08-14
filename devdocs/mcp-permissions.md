@@ -25,6 +25,19 @@ defense layer:
   mechanism yet.  See the deferred TODO in `permission.py` and the kanban
   ticket.
 
+## Network safety (SSRF) for outbound tools
+
+Outbound HTTP tools (`web_fetch`, `download_file`) share an SSRF guard in
+`klea_utils.mcp.tools.ssrf` (`check_ssrf`, `is_private_or_reserved`):
+requests to loopback, private, link-local, reserved, or multicast
+addresses are refused unless the caller passes `allow_internal_hosts=True`.
+
+Known best-effort limitation (accepted for now): the guard checks only the
+*initial* URL.  An httpx client that follows redirects
+(`follow_redirects=True`) could still be redirected onto an internal host
+after the check.  If this ever needs hardening, follow redirects manually
+and re-check each hop.
+
 ## The author-side limit
 
 The in-tool check only protects tools we write.  A third-party MCP server
