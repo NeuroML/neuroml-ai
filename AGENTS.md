@@ -180,6 +180,9 @@ Git log has the step-by-step edits. Omit routine work.
   and may legitimately contain accented characters.
 - Preserve existing comments (TODOs, FIXMEs, notes, etc.) -- never remove or
   edit comments that are unrelated to the immediate change being made.
+- Custom error classes: cross-package errors live in `klea_utils/errors.py`;
+  subpackage-specific errors go in a `<subpackage>/errors.py` module (e.g.
+  `klea_utils/mcp/errors.py`), not defined inline in tool modules.
 
 ## HTTP conventions
 
