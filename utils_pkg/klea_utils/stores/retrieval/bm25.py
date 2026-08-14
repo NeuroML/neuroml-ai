@@ -15,6 +15,7 @@ from typing import Any, override
 
 from langchain_core.documents import Document
 
+from klea_utils.stores.langchain_bm25 import BM25Retriever
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 
 from ..config import PerDomainConfig, RetrieverConfig
@@ -32,7 +33,7 @@ class BM25RetrieverManager(BaseKleaRetriever):
     Each BM25 store is a pickled corpus of chunked documents written by
     :class:`~klea_utils.stores.ingestion.StoresBuilder.write_bm25_store`.
     Stores are loaded lazily per domain: the corpus is unpickled and used
-    to build a :class:`langchain_community.retrievers.BM25Retriever`, which
+    to build a :class:`klea_utils.stores.langchain_bm25`, which
     is queried with BM25 keyword scoring.
 
     A store whose corpus file is missing is skipped with a warning, so a
@@ -86,13 +87,9 @@ class BM25RetrieverManager(BaseKleaRetriever):
 
         :param path: Path to the pickled document corpus
         :param name: Store name from the configuration
-        :returns: A :class:`langchain_community.retrievers.BM25Retriever`,
+        :returns: A :class:`klea_utils.stores.langchain_bm25.BM25Retriever`,
             or ``None`` if the corpus file is missing
         """
-        # Lazy: importing langchain_community pulls in the whole integration
-        # package, which is heavy.  Only needed when a BM25 store is actually
-        # configured, so defer the import to first load.
-        from langchain_community.retrievers import BM25Retriever
 
         corpus_path = Path(path)
         if not corpus_path.is_file():
