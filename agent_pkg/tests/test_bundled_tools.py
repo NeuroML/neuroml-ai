@@ -105,11 +105,12 @@ async def test_web_fetch_with_session():
 
 
 @pytest.mark.asyncio
-async def test_list_files(tmp_path):
+async def test_list_files(tmp_path, monkeypatch):
     (tmp_path / "a.py").write_text("")
     (tmp_path / "b.md").write_text("")
+    monkeypatch.chdir(tmp_path)
 
-    result = await list_files(path=str(tmp_path), pattern="*")
+    result = await list_files(path=".", pattern="*")
     logger.debug(f"{result = }")
 
     names = {f["path"].split("/")[-1] for f in result["files"]}
