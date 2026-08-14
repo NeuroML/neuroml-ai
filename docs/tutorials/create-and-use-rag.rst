@@ -378,6 +378,12 @@ Once the basic pipeline works, here are natural next steps:
    Use ``klea-stores-create chunk`` to convert and cache without writing
    to a store, then ``klea-stores-create store`` later.  This lets you
    inspect the chunks and edit the metadata map before embedding.
+   ``store`` is cache-only: every file must already have been converted
+   by ``chunk``, and it never converts on the fly.  Adding new files to
+   the source directory means re-running ``chunk`` (which is incremental
+   and converts only the new files) and then ``store``.  Re-running
+   ``store`` after editing the metadata map skips files whose hash is
+   already stored -- pass ``--force`` to re-store them.
 
 **Hybrid keyword retrieval**
    Add a BM25 store alongside a vector store: run

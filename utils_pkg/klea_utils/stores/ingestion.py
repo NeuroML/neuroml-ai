@@ -221,6 +221,11 @@ class StoresBuilder:
         automatically-extracted bibliographic metadata (see
         :func:`~klea_utils.biblio.extract.extract_metadata`).
 
+        The metadata map is folded into the chunks via
+        :meth:`_fold_metadata_map`.  The cache-only ``store`` command
+        does not call this -- it uses :meth:`_load_and_fold_results`,
+        which loads cached chunks without converting.
+
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment,
             or ``None``
@@ -309,31 +314,7 @@ class StoresBuilder:
                 )
 
             if metadata_map:
-                if file_path.name not in metadata_map:
-                    raise ValueError(
-                        f"No metadata map entry for {file_path.name}. "
-                        f"Add a '{file_path.name}' entry (a DEFAULT entry "
-                        f"is enough) to the metadata map; run "
-                        f"'klea-stores-create chunk' to regenerate the "
-                        f"template."
-                    )
-                resolved_count = 0
-                for doc in docs:
-                    meta = self._resolve_metadata(
-                        file_path.name,
-                        doc.metadata.get("headings"),
-                        metadata_map,
-                    )
-                    if meta:
-                        doc.metadata.update(_apply_store_metadata_policy(meta))
-                        resolved_count += 1
-                if resolved_count == 0:
-                    self.logger.warning(
-                        f"No metadata resolved for {file_path.name} from the "
-                        f"metadata map. Check that the map is keyed by the "
-                        f"source filename and that the chunk headings (or a "
-                        f"DEFAULT entry) provide metadata."
-                    )
+                self._fold_metadata_map(file_path, docs, metadata_map)
 
             normalized_default = _normalize_extracted_metadata(extracted)
             if normalized_default != extracted:
@@ -362,6 +343,103 @@ class StoresBuilder:
         # The resolver's HTTP client is left for the process to clean up;
         # ingestion is a one-shot CLI run.
         return results, file_headings
+
+    def _fold_metadata_map(
+        self,
+        file_path: Path,
+        docs: list[Document],
+        metadata_map: dict[str, dict[str, Any]],
+    ) -> None:
+        """Apply the per-file metadata map to *docs* (in place).
+
+        Raises when *file_path* has no entry in the map, and warns when
+        no chunk resolves metadata from it.  Shared by :meth:`chunk_all`
+        (convert path) and :meth:`_load_and_fold_results` (cache-only
+        store path) so both fold the map identically.
+
+        :param file_path: Source file whose chunks are being enriched
+        :param docs: Chunked documents for the file (mutated in place)
+        :param metadata_map: Per-file metadata map keyed by source filename
+        """
+        if file_path.name not in metadata_map:
+            raise ValueError(
+                f"No metadata map entry for {file_path.name}. "
+                f"Add a '{file_path.name}' entry (a DEFAULT entry "
+                f"is enough) to the metadata map; run "
+                f"'klea-stores-create chunk' to regenerate the "
+                f"template."
+            )
+        resolved_count = 0
+        for doc in docs:
+            meta = self._resolve_metadata(
+                file_path.name,
+                doc.metadata.get("headings"),
+                metadata_map,
+            )
+            if meta:
+                doc.metadata.update(_apply_store_metadata_policy(meta))
+                resolved_count += 1
+        if resolved_count == 0:
+            self.logger.warning(
+                f"No metadata resolved for {file_path.name} from the "
+                f"metadata map. Check that the map is keyed by the "
+                f"source filename and that the chunk headings (or a "
+                f"DEFAULT entry) provide metadata."
+            )
+
+    def _load_and_fold_results(
+        self,
+        source_path: Path,
+        metadata_map: dict[str, dict[str, Any]] | None,
+    ) -> list[tuple[str, list[Document], Path]]:
+        """Load cached chunks and fold the metadata map into them.
+
+        Cache-only: every source file must already have a cache entry
+        (run ``klea-stores-create chunk`` or ``build`` first).  A file
+        with no cache entry raises ``ValueError`` instead of being
+        converted on the fly.  This is the cache-only path used by the
+        ``store`` command; ``chunk`` and ``build`` convert on the fly
+        via :meth:`chunk_all` instead.
+
+        :param source_path: Resolved source directory path
+        :param metadata_map: Metadata map for heading-based enrichment
+        :returns: List of ``(file_hash, docs, file_path)`` tuples ready
+            for :meth:`store_all`
+        :raises ValueError: When a source file has no cache entry
+        """
+        files = self._find_files(source_path)
+        self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
+
+        results: list[tuple[str, list[Document], Path]] = []
+        for ctr, file_path in enumerate(files, 1):
+            file_hash = _hash_file(file_path)
+            cached = self._load_from_cache(source_path, file_hash)
+            if cached is None:
+                raise ValueError(
+                    f"No cache entry for {file_path.name}. The cache-only "
+                    f"store command requires every file to be converted "
+                    f"first; run 'klea-stores-create chunk' (or 'build') "
+                    f"to convert it."
+                )
+            docs, _ = cached
+            self.logger.debug(
+                f"Using cached chunks for: {file_path.name} ({ctr}/{len(files)})"
+            )
+
+            for doc in docs:
+                doc.metadata.update(
+                    {
+                        "file_hash": file_hash,
+                        "file_name": file_path.name,
+                    }
+                )
+
+            if metadata_map:
+                self._fold_metadata_map(file_path, docs, metadata_map)
+
+            results.append((file_hash, docs, file_path))
+
+        return results
 
     def store_all(
         self,

@@ -271,17 +271,6 @@ def store(
         "-m",
         help="Embedding model identifier",
     ),
-    max_tokens: int = typer.Option(
-        450, "--max-tokens", help="Maximum tokens per chunk (for files not yet cached)"
-    ),
-    ocr: bool = typer.Option(
-        True,
-        "--ocr/--no-ocr",
-        help="Whether to perform optical character recognition (OCR) "
-        "during PDF conversion (default: on). Keep for scanned/image "
-        "PDFs; disable for text-based PDFs to speed up conversion "
-        "significantly",
-    ),
     metadata_map_path: str = typer.Option(
         None,
         "--metadata-map",
@@ -308,15 +297,21 @@ def store(
         "per-request overhead on very large corpora",
     ),
     force: bool = typer.Option(
-        False, "--force", "-f", help="Re-process all files even if unchanged"
+        False,
+        "--force",
+        "-f",
+        help="Re-store files even if their hash is already in the store "
+        "(e.g. after editing the metadata map). Does not reconvert: "
+        "files must already be cached by 'chunk'",
     ),
 ):
     """Write cached document chunks to a vector store.
 
-    Reads previously cached chunks from ``<source_dir>/.klea-cache/``,
-    optionally applies a metadata map (per-file format), and writes
-    them to the vector store.  Unseen files are converted and chunked
-    on the fly.
+    Cache-only: every source file must already have a cache entry (run
+    ``klea-stores-create chunk`` first).  Reads the cached chunks from
+    ``<source_dir>/.klea-cache/``, applies the metadata map, and writes
+    them to the vector store.  Conversion settings (OCR, max tokens)
+    belong to ``chunk``; ``store`` never converts on the fly.
 
     The ``--bm25-store`` option (default ``<collection>.pkl`` in the
     current directory) writes the combined chunked documents to a single
@@ -349,8 +344,6 @@ def store(
         builder = StoresBuilder(
             embedding_model=embedding_model,
             logger=logger,
-            max_tokens=max_tokens,
-            do_ocr=ocr,
             embed_batch_size=embed_batch_size,
         )
         source_path = Path(source_dir).resolve()
@@ -369,9 +362,7 @@ def store(
                 f"--metadata-map."
             )
 
-        results, _ = builder.chunk_all(
-            source_path, metadata_map=metadata_map, force=force
-        )
+        results = builder._load_and_fold_results(source_path, metadata_map)
         if not results:
             logger.error(
                 f"No files were successfully chunked from "

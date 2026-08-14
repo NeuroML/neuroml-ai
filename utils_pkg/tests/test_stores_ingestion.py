@@ -1154,6 +1154,53 @@ class TestIngestion:
         with pytest.raises(ValueError, match="test.md"):
             builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
 
+    def test_load_and_fold_results_raises_on_uncached_file(self):
+        """_load_and_fold_results refuses to load a file with no cache entry."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with pytest.raises(ValueError, match="test.md.*cache"):
+            builder._load_and_fold_results(self.tmpdir_path, None)
+
+    def test_load_and_fold_results_succeeds_when_all_cached(self):
+        """_load_and_fold_results passes when every file is already cached."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Populate the cache first (chunk_all converts on the fly).
+        builder.chunk_all(self.tmpdir_path)
+
+        results = builder._load_and_fold_results(self.tmpdir_path, None)
+        assert len(results) == 1
+        assert results[0][2].name == "test.md"
+
+    def test_load_and_fold_results_applies_metadata_map(self):
+        """_load_and_fold_results folds the metadata map into cached chunks."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        builder.chunk_all(self.tmpdir_path)
+
+        metadata_map = {"test.md": {"DEFAULT": {"year": 2020, "journal": "J"}}}
+        results = builder._load_and_fold_results(self.tmpdir_path, metadata_map)
+        assert len(results) == 1
+        for doc in results[0][1]:
+            assert doc.metadata["year"] == 2020
+            assert doc.metadata["journal"] == "J"
+
+    def test_chunk_all_still_converts_on_the_fly(self):
+        """chunk_all converts on the fly when no cache entry exists."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        results, _ = builder.chunk_all(self.tmpdir_path)
+        assert len(results) == 1
+        assert (self.tmpdir_path / ".klea-cache").is_dir()
+
     @pytest.mark.localonly
     def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
         """chunk_all warns when a map entry exists but resolves no metadata.
