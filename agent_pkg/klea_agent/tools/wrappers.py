@@ -39,7 +39,7 @@ async def web_fetch(
     Example:
         web_fetch(url="https://example.com")
     """
-    session = ctx.lifespan_context.get("aiohttp_session")
+    session = ctx.lifespan_context.get("http_session")
     return await web_fetch_impl(
         session=session,
         url=url,
