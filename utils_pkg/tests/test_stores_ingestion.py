@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 from klea_utils.stores.ingestion import (
+    CACHE_DIR_NAME,
     TEMPLATE_FILE_NAME,
     StoresBuilder,
     _apply_store_metadata_policy,
@@ -573,7 +574,7 @@ class TestIngestion:
 
     def test_prune_cache_removes_orphans_keeps_current(self):
         """Prune removes entries whose hash matches no current file."""
-        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
         cache_dir.mkdir()
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         current = "xxh64:abcdef1234567890"
@@ -604,7 +605,7 @@ class TestIngestion:
 
     def test_prune_cache_all_current_keeps_everything(self):
         """No entries are removed when every cache file is current."""
-        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
         cache_dir.mkdir()
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         current = {"xxh64:abc", "xxh64:def"}
@@ -818,7 +819,7 @@ class TestIngestion:
     def test_cache_load_handles_legacy_format(self):
         """Legacy plain-list cache entries load with empty extraction."""
         doc = Document(page_content="Legacy.", metadata={})
-        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
         cache_dir.mkdir()
         with open(cache_dir / "xxh64_legacy.pkl", "wb") as f:
             pickle.dump([doc], f)
@@ -891,7 +892,8 @@ class TestIngestion:
         """An explicit metadata-map path beats the template fallback."""
         explicit = self.tmpdir_path / "explicit.json"
         explicit.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "explicit"}}}))
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -901,7 +903,8 @@ class TestIngestion:
 
     def test_resolve_metadata_map_falls_back_to_template(self):
         """Without an explicit path, the template map is used when present."""
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -929,7 +932,8 @@ class TestIngestion:
 
     def test_resolve_metadata_map_errors_on_empty_template(self):
         """An empty template map is treated the same as no map at all."""
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -959,7 +963,12 @@ class TestIngestion:
             }
 
         def _fake_store_all(
-            results, store_uri, collection_name, force=False, bm25_path=None
+            results,
+            store_uri,
+            collection_name,
+            source_dir,
+            force=False,
+            bm25_path=None,
         ):
             nonlocal captured_store
             captured_store = True
@@ -979,8 +988,9 @@ class TestIngestion:
         assert passed_maps[1] is not None
         assert passed_maps[1]["test.md"]["DEFAULT"]["journal"] == "Journal of X"
         assert captured_store is True
-        # The template was written so it can be reviewed for a later store.
-        assert (self.tmpdir_path / TEMPLATE_FILE_NAME).is_file()
+        # The template was written to the cache folder so it can be reviewed
+        # for a later store.
+        assert (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).is_file()
 
     def test_resolve_metadata_matches_normalized_headings(self):
         """_resolve_metadata matches normalized chunk headings to map keys."""
@@ -1199,7 +1209,7 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         results, _ = builder.chunk_all(self.tmpdir_path)
         assert len(results) == 1
-        assert (self.tmpdir_path / ".klea-cache").is_dir()
+        assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
 
     @pytest.mark.localonly
     def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
@@ -1301,7 +1311,8 @@ class TestIngestion:
     def test_write_heading_template_preserves_existing_when_empty(self):
         """An empty chunk run must not clobber an existing template."""
         existing = {"paper.pdf": {"DEFAULT": {"title": "T"}}}
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps(existing))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -1328,7 +1339,7 @@ class TestIngestion:
             self.tmpdir_path,
         )
 
-        text = (self.tmpdir_path / TEMPLATE_FILE_NAME).read_text()
+        text = (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).read_text()
         assert "B\u00f3ris Marin" in text
         assert "\\u00f3" not in text
         assert json.loads(text)["paper.pdf"]["DEFAULT"]["authors"] == [
@@ -1340,7 +1351,7 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         builder.write_heading_template({}, self.tmpdir_path)
 
-        assert not (self.tmpdir_path / TEMPLATE_FILE_NAME).exists()
+        assert not (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).exists()
 
     def test_build_raises_when_nothing_chunked(self, monkeypatch):
         """build() fails loudly instead of storing nothing and reporting done."""
@@ -1351,8 +1362,15 @@ class TestIngestion:
             builder.build(str(self.tmpdir_path), "chroma:/tmp/x", "c")
 
     def test_find_files_excludes_template(self):
-        """The generated template is not treated as an ingestible file."""
-        (self.tmpdir_path / TEMPLATE_FILE_NAME).write_text("{}")
+        """The generated template in .klea-cache/ is not ingestible.
+
+        The template now lives in the cache folder, which _find_files
+        skips wholesale; a stray template in the source dir would be an
+        unsupported extension anyway.
+        """
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
+        template.write_text("{}")
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         assert builder._find_files(self.tmpdir_path) == []
 
@@ -1386,9 +1404,16 @@ class TestIngestion:
         class FakeStore:
             def __init__(self):
                 self.added: list[Document] = []
+                self.dropped = False
 
             def add_documents(self, docs):
                 self.added.extend(docs)
+
+            def delete_collection(self):
+                self.dropped = True
+
+            def delete(self, ids=None, **kwargs):
+                pass
 
         fake = FakeStore()
         monkeypatch.setattr(
@@ -1411,10 +1436,13 @@ class TestIngestion:
             [("xxh64:abc", [doc], Path("a.md"))],
             "chroma:/tmp/x",
             "col",
+            self.tmpdir_path,
             force=True,
         )
 
+        assert fake.dropped is True
         assert len(fake.added) == 1
+        assert fake.added[0].id == "a.md:0"
         meta = fake.added[0].metadata
         assert "headings" not in meta
         assert "extra" not in meta
@@ -1433,9 +1461,17 @@ class TestIngestion:
         class FakeStore:
             def __init__(self):
                 self.calls: list[int] = []
+                self.added_ids: list[str] = []
 
             def add_documents(self, docs):
                 self.calls.append(len(docs))
+                self.added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                pass
 
         fake = FakeStore()
         monkeypatch.setattr(
@@ -1461,13 +1497,202 @@ class TestIngestion:
                 [("xxh64:abc", docs, Path("a.md"))],
                 "chroma:/tmp/x",
                 "col",
+                self.tmpdir_path,
                 force=True,
             )
 
         assert fake.calls == [4, 4, 2]
+        assert fake.added_ids == [f"a.md:{i}" for i in range(10)]
         assert "Stored 4/10 chunks (40%) from a.md" in caplog.text
         assert "Stored 8/10 chunks (80%) from a.md" in caplog.text
         assert "Added 10 chunks from a.md (1/1)" in caplog.text
+
+    def test_manifest_round_trip(self):
+        """The store manifest is written and reloaded."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = {
+            "version": 1,
+            "collection": "col",
+            "files": {"a.md": {"file_hash": "xxh64:abc", "num_chunks": 2}},
+        }
+        builder._save_manifest(self.tmpdir_path, "col", manifest)
+
+        loaded = builder._load_manifest(self.tmpdir_path, "col")
+        assert loaded == manifest
+
+    def test_manifest_missing_is_fresh(self):
+        """A missing manifest yields an empty file mapping."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"] == {}
+
+    def test_manifest_corrupt_is_fresh(self):
+        """A corrupt manifest is ignored and treated as fresh."""
+        path = self.tmpdir_path / CACHE_DIR_NAME / "col.manifest.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("not json")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"] == {}
+
+    def test_store_all_incremental_skips_unchanged(self, monkeypatch):
+        """Unchanged files (hash matches manifest) are skipped."""
+        calls: list[int] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                calls.append(len(docs))
+
+            def delete(self, ids=None, **kwargs):
+                calls.append(-len(ids or []))
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Pre-seed the manifest: a.md already stored with this hash.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"a.md": {"file_hash": "xxh64:abc", "num_chunks": 2}},
+            },
+        )
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        assert calls == []
+
+    def test_store_all_incremental_replaces_changed(self, monkeypatch):
+        """A changed file has its old chunk IDs deleted, then is re-added."""
+        deleted: list[list[str]] = []
+        added_ids: list[str] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                added_ids.extend(d.id for d in docs)
+
+            def delete(self, ids=None, **kwargs):
+                deleted.append(ids or [])
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Manifest says a.md had 3 chunks with the old hash.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"a.md": {"file_hash": "xxh64:old", "num_chunks": 3}},
+            },
+        )
+
+        docs = [
+            Document(page_content=f"x{i}", metadata={"file_name": "a.md"})
+            for i in range(2)
+        ]
+        builder.store_all(
+            [("xxh64:new", docs, Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        # Old IDs 0..2 deleted, then the two new chunks added.
+        assert deleted == [["a.md:0", "a.md:1", "a.md:2"]]
+        assert added_ids == ["a.md:0", "a.md:1"]
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"]["a.md"] == {"file_hash": "xxh64:new", "num_chunks": 2}
+
+    def test_store_all_no_force_never_prunes_absent_files(self, monkeypatch):
+        """Files in the manifest but absent from the source are left alone."""
+        deleted: list[list[str]] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                deleted.append(ids or [])
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Manifest knows about removed.md, but it is not in the results.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"removed.md": {"file_hash": "xxh64:r", "num_chunks": 5}},
+            },
+        )
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        # a.md added; removed.md untouched.
+        assert deleted == []
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert "removed.md" in manifest["files"]
+
+    def test_store_all_force_drops_and_rebuilds(self, monkeypatch):
+        """--force drops the collection and re-stores every file."""
+        dropped = []
+        added_ids: list[str] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                dropped.append(True)
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+            force=True,
+        )
+
+        assert dropped == [True]
+        assert added_ids == ["a.md:0"]
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"]["a.md"] == {"file_hash": "xxh64:abc", "num_chunks": 1}
 
 
 if __name__ == "__main__":

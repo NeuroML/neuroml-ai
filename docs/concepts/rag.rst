@@ -176,9 +176,10 @@ Bibliographic metadata extraction
 ---------------------------------
 
 When documents are chunked, Klea automatically tries to populate the
-per-file ``DEFAULT`` entry of ``metadata-map.template.json`` with
-bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
-pre-population aid: the researcher reviews and corrects the values
+per-file ``DEFAULT`` entry of ``metadata-map.template.json`` (written to
+the source directory's ``.klea-cache/``) with bibliographic metadata
+(title, authors, keywords, DOI, URL).  This is a pre-population aid: the
+researcher copies the template out, reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.
 
 Multiple URLs are written as separate keys (``url_1``, ``url_2``, ...);

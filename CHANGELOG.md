@@ -108,11 +108,21 @@
 - `klea-stores-create store` is now cache-only: it no longer converts
   files on the fly (conversion settings `--max-tokens` and `--ocr`
   were removed; `chunk` owns them).  Run `chunk` (or `build`) first so
-  every file is cached; `store --force` re-stores files whose hash is
-  already in the store (e.g. after editing the metadata map).
+  every file is cached.
   Internally, cache loading + metadata-map folding were extracted from
   `chunk_all` into a shared `_fold_metadata_map` helper and a dedicated
   cache-only `_load_and_fold_results` path used by `store`.
+- `store` is now incremental via a per-collection store manifest
+  (`.klea-cache/<collection>.manifest.json`): unchanged files are
+  skipped, changed files have their old chunk IDs deleted and are
+  re-added in place, and files absent from the source are never pruned.
+  Chunk IDs are deterministic (`<file_name>:<chunk_index>`).  `store
+  --force` drops the whole collection and rebuilds it (portable across
+  backends via a `drop_collection` dispatch helper), which fixes the
+  previous `--force` duplicate-on-re-add behaviour.
+- `metadata-map.template.json` is now generated into
+  `<source_dir>/.klea-cache/` instead of the source directory; copy it
+  out to review and pass the reviewed copy via `--metadata-map`.
 
 ---
 

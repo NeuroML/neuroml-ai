@@ -454,3 +454,35 @@ def instantiate_vector_store(
                 f"Unknown vector store scheme '{scheme}'. "
                 f"Supported: chroma, qdrant, pgvector"
             )
+
+
+def drop_collection(store, store_path: str, collection_name: str) -> None:
+    """Drop a vector store collection (portable across backends).
+
+    Used by ``store --force`` to replace a collection wholesale, since
+    documents within a collection cannot be updated in place portably.
+    Chroma and PGVector expose ``delete_collection`` on their LangChain
+    wrapper; Qdrant's wrapper does not, so its raw client is used
+    instead.
+
+    :param store: Instantiated LangChain vector store
+    :param store_path: Store URI (``scheme:location``)
+    :param collection_name: Collection name to drop
+    :raises ValueError: When the scheme is missing or unknown
+    """
+    scheme, sep, _ = store_path.partition(":")
+    if not sep:
+        raise ValueError(
+            f"Invalid vector store path '{store_path}': expected format "
+            f"'scheme:location' (e.g. 'chroma:/path/to/store')"
+        )
+    match scheme.lower():
+        case "chroma" | "pgvector":
+            store.delete_collection()
+        case "qdrant":
+            store._client.delete_collection(collection_name)
+        case _:
+            raise ValueError(
+                f"Unsupported vector store scheme '{scheme}' for collection "
+                f"drop. Supported: chroma, qdrant, pgvector"
+            )

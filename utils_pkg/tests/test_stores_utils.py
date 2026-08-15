@@ -13,6 +13,7 @@ import logging
 import pytest
 from klea_utils.stores.utils import (
     REF_DOC_OVERHEAD,
+    drop_collection,
     format_source_scores,
     instantiate_vector_store,
     rrf_merge,
@@ -22,6 +23,51 @@ from klea_utils.stores.utils import (
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
+
+
+def test_drop_collection_chroma_and_pgvector_use_wrapper():
+    """Chroma/PGVector drop via the wrapper's delete_collection."""
+
+    class _Store:
+        def __init__(self):
+            self.dropped = False
+
+        def delete_collection(self):
+            self.dropped = True
+
+    store = _Store()
+    drop_collection(store, "chroma:/path", "col")
+    assert store.dropped is True
+
+    store = _Store()
+    drop_collection(store, "pgvector:postgresql://host/db", "col")
+    assert store.dropped is True
+
+
+def test_drop_collection_qdrant_uses_raw_client():
+    """Qdrant drops via its raw client (no wrapper delete_collection)."""
+
+    class _Store:
+        collection_name = "col"
+
+        def __init__(self):
+            self.dropped = None
+            self._client = type(
+                "_C",
+                (),
+                {"delete_collection": lambda self, n: setattr(store, "dropped", n)},
+            )()
+
+    store = _Store()
+    drop_collection(store, "qdrant:http://localhost:6333", "col")
+    assert store.dropped == "col"
+
+
+def test_drop_collection_unknown_scheme():
+    """An unknown scheme raises ValueError."""
+    store = type("_Store", (), {"delete_collection": lambda self: None})()
+    with pytest.raises(ValueError, match="Unsupported"):
+        drop_collection(store, "nope:/path", "col")
 
 
 class _FakeEmbeddings:

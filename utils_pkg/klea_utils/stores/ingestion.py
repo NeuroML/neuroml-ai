@@ -22,7 +22,7 @@ from ..llm import setup_embedding
 from .metadata import (
     STORE_DROPPED_METADATA_KEYS,
 )
-from .utils import instantiate_vector_store, normalize_text
+from .utils import drop_collection, instantiate_vector_store, normalize_text
 
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
@@ -195,7 +195,7 @@ class StoresBuilder:
             # be reviewed and re-stored later.
             self.write_heading_template(file_headings, source_path)
             template_map = self._load_metadata_map(
-                str(source_path / TEMPLATE_FILE_NAME)
+                str(self._cache_dir(source_path) / TEMPLATE_FILE_NAME)
             )
             results, _ = self.chunk_all(source_path, template_map, force=False)
             if not results:
@@ -203,7 +203,14 @@ class StoresBuilder:
                     f"No files were successfully chunked from {source_path}"
                 )
 
-        self.store_all(results, store_uri, collection_name, force, bm25_path)
+        self.store_all(
+            results,
+            store_uri,
+            collection_name,
+            source_path,
+            force=force,
+            bm25_path=bm25_path,
+        )
         self.logger.info(f"Ingestion complete for collection '{collection_name}'")
 
     def chunk_all(
@@ -446,27 +453,43 @@ class StoresBuilder:
         results: list[tuple[str, list[Document], Path]],
         store_uri: str,
         collection_name: str,
+        source_dir: Path,
         force: bool = False,
         bm25_path: str | None = None,
     ) -> None:
         """Write chunked documents to a vector store.
 
-        Initialises the embedding model on first call if not already
-        done.  Skips files whose hash is already present in the store
-        (unless ``force`` is ``True``).  Optionally also writes the
-        combined document corpus for BM25 retrieval.
+        Incremental by default: a store manifest
+        (``<source_dir>/.klea-cache/<collection>.manifest.json``) records
+        which files are in the collection and how many chunks each has,
+        so unchanged files are skipped, changed files have their old
+        chunk IDs deleted and are re-added, and new files are added.
+        Files absent from the source directory are left untouched
+        (never pruned).
+
+        With ``force`` the whole collection is dropped and rebuilt from
+        scratch (see :func:`klea_utils.stores.utils.drop_collection`),
+        then the manifest is rewritten.  This is the portable way to
+        update a collection, since documents within a collection cannot
+        be updated in place across all backends.
+
+        Chunk IDs are deterministic (``<file_name>:<chunk_index>``) so
+        deletion by ID works on every backend.
 
         :param results: List of ``(file_hash, docs, file_path)`` tuples
             from :meth:`chunk_all`
         :param store_uri: Vector store URI
         :param collection_name: Collection name for the store
-        :param force: Re-store all files even if already indexed
+        :param source_dir: Resolved source directory (for the manifest)
+        :param force: Drop the collection and re-store everything
         :param bm25_path: Optional path to write the combined BM25 corpus to
         """
         if self.embeddings is None:
             self.logger.info(f"Initialising embedding model ({self.embedding_model})")
             self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert store_uri and collection_name
+
+        manifest = self._load_manifest(source_dir, collection_name)
 
         self.logger.info(f"Opening vector store '{collection_name}' at {store_uri}")
         store = instantiate_vector_store(
@@ -477,16 +500,44 @@ class StoresBuilder:
             create=True,
         )
 
+        if force:
+            self.logger.info(f"Force: dropping collection '{collection_name}'")
+            drop_collection(store, store_uri, collection_name)
+            store = instantiate_vector_store(
+                store_uri,
+                collection_name,
+                self.embeddings,
+                self.logger,
+                create=True,
+            )
+            manifest = {"version": 1, "collection": collection_name, "files": {}}
+
+        raw_files = manifest.get("files")
+        if not isinstance(raw_files, dict):
+            raw_files = {}
+            manifest["files"] = raw_files
+        manifest_files: dict[str, Any] = raw_files
         total = len(results)
         for ctr, (file_hash, docs, file_path) in enumerate(results, 1):
-            if not force:
-                existing = store.get(where={"file_hash": file_hash})
-                if existing and existing["ids"]:
-                    self.logger.debug(
-                        f"Skipping already indexed file: "
-                        f"{file_path.name} ({ctr}/{total})"
-                    )
-                    continue
+            file_name = file_path.name
+            known: dict[str, Any] | None = manifest_files.get(file_name)
+
+            if not force and known and known.get("file_hash") == file_hash:
+                self.logger.debug(
+                    f"Skipping unchanged file: {file_name} ({ctr}/{total})"
+                )
+                continue
+
+            # A changed file: drop its previously-stored chunk IDs first
+            # (deterministic ``file_name:idx``), so re-adding updates in
+            # place and a shrunken file leaves no stale rows behind.
+            if known:
+                old_chunks = known.get("num_chunks", 0)
+                old_ids = [f"{file_name}:{i}" for i in range(old_chunks)]
+                store.delete(ids=old_ids)
+                self.logger.debug(
+                    f"Deleted {len(old_ids)} previously stored chunks for {file_name}"
+                )
 
             # Chroma rejects empty-list and None metadata values on upsert.
             # The cache keeps ``headings: []`` as an explicit "no headings
@@ -497,8 +548,9 @@ class StoresBuilder:
                 Document(
                     page_content=doc.page_content,
                     metadata=_sanitize_store_metadata(doc.metadata),
+                    id=f"{file_name}:{idx}",
                 )
-                for doc in docs
+                for idx, doc in enumerate(docs)
             ]
             # Embed in batches: a single ``add_documents`` call embeds every
             # chunk in one request (Ollama sends all texts at once), which can
@@ -513,12 +565,17 @@ class StoresBuilder:
                 if pct >= last_pct + 10:
                     last_pct = pct
                     self.logger.info(
-                        f"Stored {done}/{num_docs} chunks ({pct}%) from "
-                        f"{file_path.name}"
+                        f"Stored {done}/{num_docs} chunks ({pct}%) from {file_name}"
                     )
             self.logger.info(
-                f"Added {num_docs} chunks from {file_path.name} ({ctr}/{total})"
+                f"Added {num_docs} chunks from {file_name} ({ctr}/{total})"
             )
+            manifest_files[file_name] = {
+                "file_hash": file_hash,
+                "num_chunks": num_docs,
+            }
+
+        self._save_manifest(source_dir, collection_name, manifest)
 
         if bm25_path:
             self.write_bm25_store(results, bm25_path)
@@ -565,6 +622,13 @@ class StoresBuilder:
         unique heading chain found in that file.  The user fills in the
         ``{}`` with their metadata key-value pairs.
 
+        The template is written into the source directory's cache folder
+        (``<source_dir>/.klea-cache/metadata-map.template.json``), the
+        same place the chunk cache and ``doi-cache.json`` live.  To
+        review it, copy it out (e.g. to ``metadata-map.json``), edit,
+        and pass the copy to ``klea-stores-create store
+        --metadata-map <path>``.
+
         Refuses to write when *file_headings* is empty (no files were
         chunked): an existing template is preserved rather than clobbered
         with an empty one.
@@ -572,9 +636,9 @@ class StoresBuilder:
         :param file_headings: ``{file_name: {"DEFAULT": {},
             "heading > heading": {}, ...}, ...}`` from :meth:`chunk_all`
         :param source_dir: Resolved source directory path (template is
-            written alongside it)
+            written into its cache folder)
         """
-        out_path = source_dir / TEMPLATE_FILE_NAME
+        out_path = self._cache_dir(source_dir) / TEMPLATE_FILE_NAME
         if not file_headings:
             if out_path.is_file():
                 self.logger.warning(
@@ -585,6 +649,7 @@ class StoresBuilder:
                 f"No files chunked and no existing template at {out_path}"
             )
             return
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         # ensure_ascii=False keeps accented characters (e.g. "B\u00f3ris")
         # as literal UTF-8 in the file, so the human editing the template
         # can see exactly what text a heading/author contains.
@@ -604,6 +669,68 @@ class StoresBuilder:
         :returns: Path to ``<source_dir>/.klea-cache/``
         """
         return source_dir / CACHE_DIR_NAME
+
+    def _manifest_path(self, source_dir: Path, collection_name: str) -> Path:
+        """Return the store manifest path for a collection.
+
+        The manifest records which files (and how many chunks each) are
+        in a collection, so ``store`` can do incremental updates without
+        querying the vector store (which is not portable across
+        backends).  It lives in the source directory's cache folder
+        alongside the chunk cache and ``doi-cache.json``.
+
+        :param source_dir: Resolved source directory path
+        :param collection_name: Collection name for the store
+        :returns: Path to ``<cache_dir>/<collection>.manifest.json``
+        """
+        return self._cache_dir(source_dir) / f"{collection_name}.manifest.json"
+
+    def _load_manifest(self, source_dir: Path, collection_name: str) -> dict[str, Any]:
+        """Load the store manifest, tolerating a missing or corrupt file.
+
+        A missing manifest (first store, or a store created before
+        manifests existed) yields an empty manifest so all files are
+        treated as new.
+
+        :param source_dir: Resolved source directory path
+        :param collection_name: Collection name for the store
+        :returns: Manifest dict with a ``files`` mapping of
+            ``{file_name: {"file_hash": str, "num_chunks": int}}``
+        """
+        path = self._manifest_path(source_dir, collection_name)
+        empty: dict[str, Any] = {
+            "version": 1,
+            "collection": collection_name,
+            "files": {},
+        }
+        if not path.is_file():
+            return empty
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            self.logger.warning(f"Could not read store manifest {path}: {e}")
+            return empty
+        if not isinstance(data, dict) or not isinstance(data.get("files"), dict):
+            self.logger.warning(f"Malformed store manifest {path}; ignoring")
+            return empty
+        return data
+
+    def _save_manifest(
+        self,
+        source_dir: Path,
+        collection_name: str,
+        manifest: dict,
+    ) -> None:
+        """Write the store manifest to disk, tolerating failures."""
+        path = self._manifest_path(source_dir, collection_name)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w") as f:
+                json.dump(manifest, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+        except OSError as e:
+            self.logger.warning(f"Could not write store manifest {path}: {e}")
 
     def _cache_path(self, source_dir: Path, file_hash: str) -> Path:
         """Return the cache file path for a given file hash.
@@ -799,7 +926,7 @@ class StoresBuilder:
         if metadata_map_path:
             metadata_map = self._load_metadata_map(metadata_map_path)
         else:
-            template = source_path / TEMPLATE_FILE_NAME
+            template = self._cache_dir(source_path) / TEMPLATE_FILE_NAME
             if not template.is_file():
                 return None
             self.logger.info(
@@ -900,8 +1027,6 @@ class StoresBuilder:
             if not f.is_file():
                 continue
             if CACHE_DIR_NAME in f.parts:
-                continue
-            if f.name == TEMPLATE_FILE_NAME:
                 continue
             if (
                 self._metadata_map_path is not None
