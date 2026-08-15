@@ -356,6 +356,15 @@ registrant prefix and a slash.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.biblio.regex.KEYWORD_SCAN_LIMIT">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.biblio.regex.</span></span><span class="sig-name descname"><span class="pre">KEYWORD_SCAN_LIMIT</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">8000</span></span><a class="headerlink" href="#klea_utils.biblio.regex.KEYWORD_SCAN_LIMIT" title="Link to this definition">¶</a></dt>
+<dd><p>Keyword headers can sit well below the author/DOI region (e.g. after an
+abstract), so keywords are scanned over a wider window than the other
+fields, which stay at <a class="reference internal" href="#klea_utils.biblio.regex.DEFAULT_SCAN_LIMIT" title="klea_utils.biblio.regex.DEFAULT_SCAN_LIMIT"><code class="xref py py-data docutils literal notranslate"><span class="pre">DEFAULT_SCAN_LIMIT</span></code></a> to avoid false
+positives on prose deeper in the document.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.biblio.regex.URL_RE">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.biblio.regex.</span></span><span class="sig-name descname"><span class="pre">URL_RE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile('https?://[^\\s,;]+')</span></span><a class="headerlink" href="#klea_utils.biblio.regex.URL_RE" title="Link to this definition">¶</a></dt>
 <dd><p>Loose URL pattern.</p>
@@ -457,7 +466,9 @@ no service could resolve it.</p>
 <dd><p>Normalise a DOI by stripping common URL/prefix wrappers.</p>
 <p><code class="docutils literal notranslate"><span class="pre">https://doi.org/10.x/y</span></code>, <code class="docutils literal notranslate"><span class="pre">http://dx.doi.org/10.x/y</span></code> and
 <code class="docutils literal notranslate"><span class="pre">doi:</span> <span class="pre">10.x/y</span></code> all become <code class="docutils literal notranslate"><span class="pre">10.x/y</span></code>.  Trailing punctuation is
-removed.</p>
+removed, and a trailing URL path after the DOI suffix is stripped
+(a valid DOI suffix contains no <code class="docutils literal notranslate"><span class="pre">/</span></code>, e.g. the path in
+<code class="docutils literal notranslate"><span class="pre">10.1073/pnas.2201699120/-/DCSupplemental</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>doi</strong> – DOI string, possibly wrapped in a URL or prefix</p>
@@ -711,6 +722,7 @@ and <code class="docutils literal notranslate"><span class="pre">_sources</span>
 <li><a class="reference internal" href="#module-klea_utils.biblio.regex">Regex extraction</a><ul>
 <li><a class="reference internal" href="#klea_utils.biblio.regex.DEFAULT_SCAN_LIMIT"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SCAN_LIMIT</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.biblio.regex.DOI_RE"><code class="docutils literal notranslate"><span class="pre">DOI_RE</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.biblio.regex.KEYWORD_SCAN_LIMIT"><code class="docutils literal notranslate"><span class="pre">KEYWORD_SCAN_LIMIT</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.biblio.regex.URL_RE"><code class="docutils literal notranslate"><span class="pre">URL_RE</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.biblio.regex.extract_regex_metadata"><code class="docutils literal notranslate"><span class="pre">extract_regex_metadata()</span></code></a></li>
 </ul>

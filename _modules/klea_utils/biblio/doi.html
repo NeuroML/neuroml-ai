@@ -333,7 +333,9 @@
 
 <span class="sd">    ``https://doi.org/10.x/y``, ``http://dx.doi.org/10.x/y`` and</span>
 <span class="sd">    ``doi: 10.x/y`` all become ``10.x/y``.  Trailing punctuation is</span>
-<span class="sd">    removed.</span>
+<span class="sd">    removed, and a trailing URL path after the DOI suffix is stripped</span>
+<span class="sd">    (a valid DOI suffix contains no ``/``, e.g. the path in</span>
+<span class="sd">    ``10.1073/pnas.2201699120/-/DCSupplemental``).</span>
 
 <span class="sd">    :param doi: DOI string, possibly wrapped in a URL or prefix</span>
 <span class="sd">    :returns: Normalised DOI, or ``&quot;&quot;`` when *doi* is empty</span>
@@ -344,7 +346,13 @@
     <span class="n">value</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
         <span class="sa">r</span><span class="s2">&quot;^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span></div>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span>
+    <span class="c1"># A valid DOI is ``10.&lt;registrant&gt;/&lt;suffix&gt;``; anything after the</span>
+    <span class="c1"># second slash is a URL path, not part of the DOI.</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="n">value</span></div>
 
 
 

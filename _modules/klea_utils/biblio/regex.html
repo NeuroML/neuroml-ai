@@ -305,9 +305,12 @@
 <span class="c1">#: Loose URL pattern.</span>
 <span class="n">URL_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;https?://[^\s,;]+&quot;</span><span class="p">)</span>
 
-<span class="c1">#: Labeled keyword list header (Keywords:, Key words:, ...).</span>
+<span class="c1">#: Labeled keyword list header.  Accepts an optional colon and the list</span>
+<span class="c1">#: on the same line or the following line, since publishers format these</span>
+<span class="c1">#: in several ways (e.g. ``Keywords: a, b``, ``KEYWORDS`` then the list,</span>
+<span class="c1">#: ``Keywords :`` then the list on the next line).</span>
 <span class="n">_KEYWORDS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-    <span class="sa">r</span><span class="s2">&quot;(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:\s*(.+)$&quot;</span>
+    <span class="sa">r</span><span class="s2">&quot;(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:?\s*(.+)$&quot;</span>
 <span class="p">)</span>
 <span class="c1">#: Labeled author list header, without the bare &quot;By:&quot; variant.</span>
 <span class="n">_AUTHORS_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?im)^\s*authors?\s*\(?s?\)?\s*:\s*(.{3,500})$&quot;</span><span class="p">)</span>
@@ -322,6 +325,12 @@
 <span class="c1">#: (authors, keywords, DOI, URL) live on the first page, so scanning the</span>
 <span class="c1">#: whole document is unnecessary and would raise false-positive noise.</span>
 <span class="n">DEFAULT_SCAN_LIMIT</span> <span class="o">=</span> <span class="mi">3000</span>
+
+<span class="c1">#: Keyword headers can sit well below the author/DOI region (e.g. after an</span>
+<span class="c1">#: abstract), so keywords are scanned over a wider window than the other</span>
+<span class="c1">#: fields, which stay at :data:`DEFAULT_SCAN_LIMIT` to avoid false</span>
+<span class="c1">#: positives on prose deeper in the document.</span>
+<span class="n">KEYWORD_SCAN_LIMIT</span> <span class="o">=</span> <span class="mi">8000</span>
 
 
 <div class="viewcode-block" id="extract_regex_metadata">
@@ -346,7 +355,9 @@
     <span class="n">scan_text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span>
 
     <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">keywords</span> <span class="o">=</span> <span class="n">_scan_keywords</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span>
+    <span class="c1"># Keywords are scanned over their own wider window (they can sit below</span>
+    <span class="c1"># the abstract); the other fields stay within *limit*.</span>
+    <span class="n">keywords</span> <span class="o">=</span> <span class="n">_scan_keywords</span><span class="p">(</span><span class="n">text</span><span class="p">[:</span><span class="n">KEYWORD_SCAN_LIMIT</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">keywords</span><span class="p">:</span>
         <span class="n">result</span><span class="p">[</span><span class="s2">&quot;keywords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">keywords</span>
     <span class="n">authors</span> <span class="o">=</span> <span class="n">_scan_authors</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span>
@@ -364,7 +375,11 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_keywords</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the keyword list from a labeled keyword header, if any.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the keyword list from a labeled keyword header, if any.</span>
+
+<span class="sd">    Accepts ``Keywords: a, b``, ``KEYWORDS`` with the list on the next</span>
+<span class="sd">    line, and ``Keywords :`` with the list on the next line.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_KEYWORDS_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
@@ -391,6 +406,54 @@
     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_rstrip_punct</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
     <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_doi</span><span class="p">(</span><span class="n">doi</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a valid DOI from a possibly-garbled match, or ``None``.</span>
+
+<span class="sd">    A DOI is ``10.&lt;registrant&gt;/&lt;suffix&gt;`` where the suffix contains no</span>
+<span class="sd">    further ``/``.  URL-based matches often drag in a trailing path</span>
+<span class="sd">    (e.g. ``10.1073/pnas.2201699120/-/DCSupplemental``) and text matches</span>
+<span class="sd">    can carry markdown/URL continuation junk (e.g. ``](https...``) or be</span>
+<span class="sd">    truncated by whitespace Docling inserted mid-DOI; this keeps only</span>
+<span class="sd">    the ``prefix/suffix`` part.  Returns ``None`` when *doi* is not a</span>
+<span class="sd">    well-formed DOI after sanitizing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cleaned</span> <span class="o">=</span> <span class="n">_rstrip_punct</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">DOI_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># Bound the suffix at markdown/URL continuations and trailing</span>
+    <span class="c1"># punctuation, then strip a trailing URL path (a valid DOI suffix</span>
+    <span class="c1"># has no further slash).</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[\])}\s]&quot;</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">candidate</span> <span class="ow">or</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_scan_dois</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all distinct DOI candidates found in *text*.</span>
+
+<span class="sd">    Unlike :func:`_scan_doi`, which returns a single match, this returns</span>
+<span class="sd">    every DOI-like match (sanitized and deduplicated) so the extraction</span>
+<span class="sd">    cascade can try candidates in order instead of trusting the first</span>
+<span class="sd">    match, which may be a broken or journal-level DOI.</span>
+
+<span class="sd">    :param text: Text to scan</span>
+<span class="sd">    :returns: Deduplicated list of sanitized DOI strings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen_set</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">DOI_RE</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+        <span class="n">doi</span> <span class="o">=</span> <span class="n">_sanitize_doi</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">doi</span> <span class="ow">and</span> <span class="n">doi</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_set</span><span class="p">:</span>
+            <span class="n">seen_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">seen</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_url</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>

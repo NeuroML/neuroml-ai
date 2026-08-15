@@ -517,7 +517,22 @@
         <span class="sa">f</span><span class="s2">&quot;Review/update the metadata map before storing: &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> -- fill in per-heading entries, &quot;</span>
         <span class="s2">&quot;then run &#39;klea-stores-create store&#39; with --metadata-map&quot;</span>
-    <span class="p">)</span></div>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Metadata map summary:&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.map_lint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">format_metadata_lint_report</span><span class="p">,</span>
+            <span class="n">lint_metadata_map</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">map_path</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not lint metadata map: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
@@ -549,17 +564,6 @@
         <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Embedding model identifier&quot;</span><span class="p">,</span>
     <span class="p">),</span>
-    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="mi">450</span><span class="p">,</span> <span class="s2">&quot;--max-tokens&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Maximum tokens per chunk (for files not yet cached)&quot;</span>
-    <span class="p">),</span>
-    <span class="n">ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">&quot;--ocr/--no-ocr&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Whether to perform optical character recognition (OCR) &quot;</span>
-        <span class="s2">&quot;during PDF conversion (default: on). Keep for scanned/image &quot;</span>
-        <span class="s2">&quot;PDFs; disable for text-based PDFs to speed up conversion &quot;</span>
-        <span class="s2">&quot;significantly&quot;</span><span class="p">,</span>
-    <span class="p">),</span>
     <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
@@ -586,15 +590,21 @@
         <span class="s2">&quot;per-request overhead on very large corpora&quot;</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-process all files even if unchanged&quot;</span>
+        <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-store files even if their hash is already in the store &quot;</span>
+        <span class="s2">&quot;(e.g. after editing the metadata map). Does not reconvert: &quot;</span>
+        <span class="s2">&quot;files must already be cached by &#39;chunk&#39;&quot;</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Write cached document chunks to a vector store.</span>
 
-<span class="sd">    Reads previously cached chunks from ``&lt;source_dir&gt;/.klea-cache/``,</span>
-<span class="sd">    optionally applies a metadata map (per-file format), and writes</span>
-<span class="sd">    them to the vector store.  Unseen files are converted and chunked</span>
-<span class="sd">    on the fly.</span>
+<span class="sd">    Cache-only: every source file must already have a cache entry (run</span>
+<span class="sd">    ``klea-stores-create chunk`` first).  Reads the cached chunks from</span>
+<span class="sd">    ``&lt;source_dir&gt;/.klea-cache/``, applies the metadata map, and writes</span>
+<span class="sd">    them to the vector store.  Conversion settings (OCR, max tokens)</span>
+<span class="sd">    belong to ``chunk``; ``store`` never converts on the fly.</span>
 
 <span class="sd">    The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the</span>
 <span class="sd">    current directory) writes the combined chunked documents to a single</span>
@@ -627,8 +637,6 @@
         <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
             <span class="n">embedding_model</span><span class="o">=</span><span class="n">embedding_model</span><span class="p">,</span>
             <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-            <span class="n">max_tokens</span><span class="o">=</span><span class="n">max_tokens</span><span class="p">,</span>
-            <span class="n">do_ocr</span><span class="o">=</span><span class="n">ocr</span><span class="p">,</span>
             <span class="n">embed_batch_size</span><span class="o">=</span><span class="n">embed_batch_size</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
@@ -647,9 +655,7 @@
                 <span class="sa">f</span><span class="s2">&quot;--metadata-map.&quot;</span>
             <span class="p">)</span>
 
-        <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span>
-            <span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="o">=</span><span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span>
-        <span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">_load_and_fold_results</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from &quot;</span>
@@ -662,6 +668,63 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done -- collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; is ready&quot;</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
         <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="map_lint">
+<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.map_lint">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">map_lint</span><span class="p">(</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing the metadata map (uses &quot;</span>
+        <span class="s2">&quot;metadata-map.template.json unless --metadata-map is given)&quot;</span>
+    <span class="p">),</span>
+    <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Explicit metadata-map JSON file to lint, instead of the &quot;</span>
+        <span class="s2">&quot;template in SOURCE_DIR&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Report issues in a metadata map so it can be reviewed efficiently.</span>
+
+<span class="sd">    Runs only deterministic checks (missing fields, suspicious titles or</span>
+<span class="sd">    DOIs, year/filename mismatches, stale &#39;venue&#39; keys, excess url* keys,</span>
+<span class="sd">    placeholder counts) -- no LLM is needed.  Useful after editing the</span>
+<span class="sd">    map by hand, and printed automatically at the end of &#39;chunk&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.map_lint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">format_metadata_lint_report</span><span class="p">,</span>
+            <span class="n">lint_metadata_map</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">map_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata map not found: </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">))</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>

@@ -429,6 +429,10 @@ Heading chains are collected per file for template generation.
 The per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> template entry is pre-filled with the
 automatically-extracted bibliographic metadata (see
 <a class="reference internal" href="biblio.html#klea_utils.biblio.extract.extract_metadata" title="klea_utils.biblio.extract.extract_metadata"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_metadata()</span></code></a>).</p>
+<p>The metadata map is folded into the chunks via
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_fold_metadata_map()</span></code>.  The cache-only <code class="docutils literal notranslate"><span class="pre">store</span></code> command
+does not call this – it uses <code class="xref py py-meth docutils literal notranslate"><span class="pre">_load_and_fold_results()</span></code>,
+which loads cached chunks without converting.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -850,11 +854,20 @@ at <em>num_refs_max</em> when set</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.stores.utils.serialize_vs_retrieval">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">serialize_vs_retrieval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#serialize_vs_retrieval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.serialize_vs_retrieval" title="Link to this definition">¶</a></dt>
-<dd><p>Serialize vector store retrieval results into text for use in prompt context.</p>
-<p>Documents are sorted by relevance score within each group.
-Uses Docling <code class="docutils literal notranslate"><span class="pre">HybridChunker</span></code> metadata format:</p>
+<dt class="sig sig-object py" id="klea_utils.stores.utils.serialize_reference_material">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">serialize_reference_material</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_material</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#serialize_reference_material"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.serialize_reference_material" title="Link to this definition">¶</a></dt>
+<dd><p>Serialize reference material into text for use in prompt context.</p>
+<p>Documents are grouped by their source file (<code class="docutils literal notranslate"><span class="pre">file_name</span></code> metadata)
+and each source file’s document-level metadata is emitted once, with
+the file’s chunks listed underneath.  The shared bibliographic
+fields (authors, year, journal, …) are identical on every chunk of
+a file, so they are listed once on the source header; a <code class="docutils literal notranslate"><span class="pre">url*</span></code> key
+is also hoisted to the header when the whole file shares the same
+value.  Per-chunk metadata that differs (e.g. a heading-specific
+<code class="docutils literal notranslate"><span class="pre">url</span></code>) is emitted inline so no chunk is misattributed.  Files are
+ordered by their best chunk’s relevance score; chunks within a file
+by score.</p>
+<p>Uses Docling <code class="docutils literal notranslate"><span class="pre">HybridChunker</span></code> metadata format:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">headings</span></code>: list of heading hierarchy (most specific last)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">file_name</span></code>: source filename</p></li>
@@ -1022,7 +1035,7 @@ budget</p>
 <li><a class="reference internal" href="#klea_utils.stores.utils.instantiate_vector_store"><code class="docutils literal notranslate"><span class="pre">instantiate_vector_store()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.rrf_merge"><code class="docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.stores.utils.serialize_vs_retrieval"><code class="docutils literal notranslate"><span class="pre">serialize_vs_retrieval()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.serialize_reference_material"><code class="docutils literal notranslate"><span class="pre">serialize_reference_material()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material"><code class="docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a></li>
 </ul>
 </li>

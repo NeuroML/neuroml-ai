@@ -299,9 +299,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Protocol</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.docling</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_docling_structured</span><span class="p">,</span> <span class="n">extract_layout_region</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.doi</span><span class="w"> </span><span class="kn">import</span> <span class="n">BiblioRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.doi</span><span class="w"> </span><span class="kn">import</span> <span class="n">BiblioRecord</span><span class="p">,</span> <span class="n">normalize_doi</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.pdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_pdf_info</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.regex</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_regex_metadata</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.regex</span><span class="w"> </span><span class="kn">import</span> <span class="n">_scan_dois</span><span class="p">,</span> <span class="n">extract_regex_metadata</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -404,7 +404,8 @@
     <span class="n">doi</span> <span class="o">=</span> <span class="n">_discover_doi</span><span class="p">(</span><span class="n">pdf_fields</span><span class="p">,</span> <span class="n">layout_regex</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;discovered </span><span class="si">{</span><span class="n">doi</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="n">record</span> <span class="o">=</span> <span class="n">_resolve_record</span><span class="p">(</span><span class="n">doi</span><span class="p">,</span> <span class="n">resolver</span><span class="p">)</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="n">_doi_candidates</span><span class="p">(</span><span class="n">full_text</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">)</span>
+    <span class="n">record</span> <span class="o">=</span> <span class="n">_resolve_record</span><span class="p">(</span><span class="n">doi</span><span class="p">,</span> <span class="n">resolver</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span>
 
     <span class="c1"># Most authoritative first.</span>
     <span class="n">tiers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -473,33 +474,105 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_record</span><span class="p">(</span><span class="n">doi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve *doi* via *resolver*, logging skipped/failed resolutions.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_record</span><span class="p">(</span>
+    <span class="n">doi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve *doi* via *resolver*, falling back to *candidates*.</span>
+
+<span class="sd">    The primary *doi* is tried first.  If it resolves to a record *with</span>
+<span class="sd">    authors* (a paper record), that is used.  Otherwise -- or when the</span>
+<span class="sd">    primary is missing -- the remaining *candidates* are tried in order</span>
+<span class="sd">    until one yields a record with authors.  If only author-less records</span>
+<span class="sd">    are found (e.g. a journal-level DOI like ``10.1073/pnas``), the first</span>
+<span class="sd">    resolved record is returned as a last resort, matching the old</span>
+<span class="sd">    behaviour.</span>
 
 <span class="sd">    Logs an informational message when a discovered DOI is not resolved</span>
 <span class="sd">    because no resolver was provided, and a warning when resolution is</span>
 <span class="sd">    attempted but fails.</span>
 
-<span class="sd">    :param doi: Discovered DOI, or ``None``</span>
+<span class="sd">    :param doi: Primary discovered DOI, or ``None``</span>
 <span class="sd">    :param resolver: Resolver, or ``None``</span>
+<span class="sd">    :param candidates: Additional DOI candidates to try when the primary</span>
+<span class="sd">        does not resolve to a paper record</span>
 <span class="sd">    :returns: Resolved record, or ``None``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">doi</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">resolver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> discovered but DOI resolution skipped (no resolver)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> discovered but DOI resolution skipped (no resolver)&quot;</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">record</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;resolved DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> via DOI services</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not resolve DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> (see DOI resolver logs)&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">record</span>
+
+    <span class="n">ordered</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
+        <span class="n">ordered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">candidates</span> <span class="ow">or</span> <span class="p">[]:</span>
+        <span class="k">if</span> <span class="n">candidate</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ordered</span><span class="p">:</span>
+            <span class="n">ordered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ordered</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">first_resolved</span><span class="p">:</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">ordered</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;trying DOI candidate </span><span class="si">{</span><span class="n">candidate</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not resolve DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (see DOI resolver logs)&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">first_resolved</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">first_resolved</span> <span class="o">=</span> <span class="n">record</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;resolved DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> via DOI services</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;using DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (record has authors)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">record</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;No DOI candidate resolved to a paper record; &quot;</span>
+        <span class="s2">&quot;falling back to the first resolved record&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">first_resolved</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_doi_candidates</span><span class="p">(</span><span class="n">full_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return deduplicated DOI candidates from text and docling URLs.</span>
+
+<span class="sd">    The primary DOI (from the labeled tiers) may be broken or a</span>
+<span class="sd">    journal-level stub; these additional candidates give the resolver</span>
+<span class="sd">    something to fall back to.  They come from two sources:</span>
+
+<span class="sd">    - every ``10.`` match in the document text (:func:`_scan_dois`), and</span>
+<span class="sd">    - DOIs embedded in the docling ``urls`` hyperlinks.</span>
+
+<span class="sd">    :param full_text: Joined document text</span>
+<span class="sd">    :param docling_info: Docling tier output (may carry a ``urls`` list)</span>
+<span class="sd">    :returns: Deduplicated list of sanitized DOI strings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">text_candidates</span> <span class="o">=</span> <span class="n">_scan_dois</span><span class="p">(</span><span class="n">full_text</span><span class="p">)</span>
+    <span class="n">url_candidates</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">candidate</span>
+        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="p">(</span><span class="n">docling_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">_scan_dois</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">text_candidates</span> <span class="o">+</span> <span class="n">url_candidates</span><span class="p">:</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize_doi</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">normalized</span> <span class="ow">and</span> <span class="n">normalized</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span>
+            <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">candidates</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_document_text</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>

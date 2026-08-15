@@ -326,10 +326,13 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Commands ─────────────────────────────────────────────────────────╮
-│ build  Full pipeline: chunk, embed, and write to a vector store.   │
-│ chunk  Chunk and cache documents without writing to a vector       │
-│        store.                                                      │
-│ store  Write cached document chunks to a vector store.             │
+│ build     Full pipeline: chunk, embed, and write to a vector       │
+│           store.                                                   │
+│ chunk     Chunk and cache documents without writing to a vector    │
+│           store.                                                   │
+│ store     Write cached document chunks to a vector store.          │
+│ map-lint  Report issues in a metadata map so it can be reviewed    │
+│           efficiently.                                             │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
@@ -512,10 +515,11 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
                                                                       
  Write cached document chunks to a vector store.                      
                                                                       
- Reads previously cached chunks from ``&lt;source_dir&gt;/.klea-cache/``,   
- optionally applies a metadata map (per-file format), and writes      
- them to the vector store.  Unseen files are converted and chunked    
- on the fly.                                                          
+ Cache-only: every source file must already have a cache entry (run   
+ ``klea-stores-create chunk`` first).  Reads the cached chunks from   
+ ``&lt;source_dir&gt;/.klea-cache/``, applies the metadata map, and writes  
+ them to the vector store.  Conversion settings (OCR, max tokens)     
+ belong to ``chunk``; ``store`` never converts on the fly.            
                                                                       
  The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
  current directory) writes the combined chunked documents to a single 
@@ -529,98 +533,93 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection        -n              TEXT     Collection name    │
-│                                                 for the vector     │
-│                                                 store. Must match  │
-│                                                 the &#39;name&#39; of the  │
-│                                                 corresponding      │
-│                                                 vector_stores/bm2… │
-│                                                 entry in the RAG   │
-│                                                 config file (e.g.  │
-│                                                 klea.json); a      │
-│                                                 different name on  │
-│                                                 an existing store  │
-│                                                 file creates a new │
-│                                                 collection         │
-│                                                 [required]         │
-│ *  --store             -s              TEXT     Vector store URI   │
-│                                                 (e.g.              │
-│                                                 chroma:/path/to/s… │
-│                                                 For local Chroma   │
-│                                                 stores, point at   │
-│                                                 the store folder:  │
-│                                                 the database file  │
-│                                                 inside it is       │
-│                                                 always named       │
-│                                                 chroma.sqlite3     │
-│                                                 [required]         │
-│    --model             -m              TEXT     Embedding model    │
-│                                                 identifier         │
-│                                                 [default:          │
-│                                                 ollama:bge-m3:lat… │
-│    --max-tokens                        INTEGER  Maximum tokens per │
-│                                                 chunk (for files   │
-│                                                 not yet cached)    │
-│                                                 [default: 450]     │
-│    --ocr                   --no-ocr             Whether to perform │
-│                                                 optical character  │
-│                                                 recognition (OCR)  │
-│                                                 during PDF         │
-│                                                 conversion         │
-│                                                 (default: on).     │
-│                                                 Keep for           │
-│                                                 scanned/image      │
-│                                                 PDFs; disable for  │
-│                                                 text-based PDFs to │
-│                                                 speed up           │
-│                                                 conversion         │
-│                                                 significantly      │
-│                                                 [default: ocr]     │
-│    --metadata-map      -M              TEXT     JSON file keyed by │
-│                                                 source filename;   │
-│                                                 each file entry    │
-│                                                 maps heading       │
-│                                                 chains to metadata │
-│                                                 dicts (with        │
-│                                                 per-file DEFAULT   │
-│                                                 fallback).         │
-│                                                 Defaults to        │
-│                                                 metadata-map.temp… │
-│                                                 in the source      │
-│                                                 directory;         │
-│                                                 required when no   │
-│                                                 template exists    │
-│    --bm25-store                        TEXT     Write the combined │
-│                                                 document corpus to │
-│                                                 this path for BM25 │
-│                                                 retrieval (a       │
-│                                                 pickle of all      │
-│                                                 chunked            │
-│                                                 documents).        │
-│                                                 Defaults to        │
-│                                                 &lt;collection&gt;.pkl   │
-│                                                 in the current     │
-│                                                 directory; the     │
-│                                                 file can be moved  │
-│                                                 after creation     │
-│                                                 [default:          │
-│                                                 (&lt;collection&gt;.pkl… │
-│    --embed-batch-size                  INTEGER  Number of chunks   │
-│                                                 embedded per store │
-│                                                 write call.        │
-│                                                 Smaller values     │
-│                                                 report progress    │
-│                                                 more frequently;   │
-│                                                 larger values      │
-│                                                 reduce per-request │
-│                                                 overhead on very   │
-│                                                 large corpora      │
-│                                                 [default: 256]     │
-│    --force             -f                       Re-process all     │
-│                                                 files even if      │
-│                                                 unchanged          │
-│    --help                                       Show this message  │
-│                                                 and exit.          │
+│ *  --collection        -n      TEXT     Collection name for the    │
+│                                         vector store. Must match   │
+│                                         the &#39;name&#39; of the          │
+│                                         corresponding              │
+│                                         vector_stores/bm25_stores  │
+│                                         entry in the RAG config    │
+│                                         file (e.g. klea.json); a   │
+│                                         different name on an       │
+│                                         existing store file        │
+│                                         creates a new collection   │
+│                                         [required]                 │
+│ *  --store             -s      TEXT     Vector store URI (e.g.     │
+│                                         chroma:/path/to/store).    │
+│                                         For local Chroma stores,   │
+│                                         point at the store folder: │
+│                                         the database file inside   │
+│                                         it is always named         │
+│                                         chroma.sqlite3             │
+│                                         [required]                 │
+│    --model             -m      TEXT     Embedding model identifier │
+│                                         [default:                  │
+│                                         ollama:bge-m3:latest]      │
+│    --metadata-map      -M      TEXT     JSON file keyed by source  │
+│                                         filename; each file entry  │
+│                                         maps heading chains to     │
+│                                         metadata dicts (with       │
+│                                         per-file DEFAULT           │
+│                                         fallback). Defaults to     │
+│                                         metadata-map.template.json │
+│                                         in the source directory;   │
+│                                         required when no template  │
+│                                         exists                     │
+│    --bm25-store                TEXT     Write the combined         │
+│                                         document corpus to this    │
+│                                         path for BM25 retrieval (a │
+│                                         pickle of all chunked      │
+│                                         documents). Defaults to    │
+│                                         &lt;collection&gt;.pkl in the    │
+│                                         current directory; the     │
+│                                         file can be moved after    │
+│                                         creation                   │
+│                                         [default:                  │
+│                                         (&lt;collection&gt;.pkl)]        │
+│    --embed-batch-size          INTEGER  Number of chunks embedded  │
+│                                         per store write call.      │
+│                                         Smaller values report      │
+│                                         progress more frequently;  │
+│                                         larger values reduce       │
+│                                         per-request overhead on    │
+│                                         very large corpora         │
+│                                         [default: 256]             │
+│    --force             -f               Re-store files even if     │
+│                                         their hash is already in   │
+│                                         the store (e.g. after      │
+│                                         editing the metadata map). │
+│                                         Does not reconvert: files  │
+│                                         must already be cached by  │
+│                                         &#39;chunk&#39;                    │
+│    --help                               Show this message and      │
+│                                         exit.                      │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create map-lint [OPTIONS] SOURCE_DIR              
+                                                                      
+ Report issues in a metadata map so it can be reviewed efficiently.   
+                                                                      
+ Runs only deterministic checks (missing fields, suspicious titles or 
+ DOIs, year/filename mismatches, stale &#39;venue&#39; keys, excess url*      
+ keys,                                                                
+ placeholder counts) -- no LLM is needed.  Useful after editing the   
+ map by hand, and printed automatically at the end of &#39;chunk&#39;.        
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    source_dir      TEXT  Directory containing the metadata map   │
+│                            (uses metadata-map.template.json unless │
+│                            --metadata-map is given)                │
+│                            [required]                              │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --metadata-map  -M      TEXT  Explicit metadata-map JSON file to   │
+│                               lint, instead of the template in     │
+│                               SOURCE_DIR                           │
+│ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>

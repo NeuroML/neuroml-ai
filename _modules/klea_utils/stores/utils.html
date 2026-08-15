@@ -300,6 +300,8 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
+
 <span class="c1">#: Metadata key holding each document&#39;s original per-source scores (e.g.</span>
 <span class="c1">#: ``{&quot;vector store&quot;: 0.87, &quot;BM25&quot;: 3.21}``), set by :func:`rrf_merge`.</span>
 <span class="n">SOURCE_SCORES_KEY</span> <span class="o">=</span> <span class="s2">&quot;_source_scores&quot;</span>
@@ -508,14 +510,24 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)&quot;</span>
 
 
-<div class="viewcode-block" id="serialize_vs_retrieval">
-<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.serialize_vs_retrieval">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">serialize_vs_retrieval</span><span class="p">(</span>
+<div class="viewcode-block" id="serialize_reference_material">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.serialize_reference_material">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">serialize_reference_material</span><span class="p">(</span>
     <span class="n">reference_material</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialize vector store retrieval results into text for use in prompt context.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialize reference material into text for use in prompt context.</span>
 
-<span class="sd">    Documents are sorted by relevance score within each group.</span>
+<span class="sd">    Documents are grouped by their source file (``file_name`` metadata)</span>
+<span class="sd">    and each source file&#39;s document-level metadata is emitted once, with</span>
+<span class="sd">    the file&#39;s chunks listed underneath.  The shared bibliographic</span>
+<span class="sd">    fields (authors, year, journal, ...) are identical on every chunk of</span>
+<span class="sd">    a file, so they are listed once on the source header; a ``url*`` key</span>
+<span class="sd">    is also hoisted to the header when the whole file shares the same</span>
+<span class="sd">    value.  Per-chunk metadata that differs (e.g. a heading-specific</span>
+<span class="sd">    ``url``) is emitted inline so no chunk is misattributed.  Files are</span>
+<span class="sd">    ordered by their best chunk&#39;s relevance score; chunks within a file</span>
+<span class="sd">    by score.</span>
+
 <span class="sd">    Uses Docling ``HybridChunker`` metadata format:</span>
 
 <span class="sd">    - ``headings``: list of heading hierarchy (most specific last)</span>
@@ -528,27 +540,71 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">serialized</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">sorted_refs</span> <span class="ow">in</span> <span class="n">reference_material</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">ctr</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;## </span><span class="si">{</span><span class="n">q</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">sorted_refs</span><span class="p">:</span>
-            <span class="n">headings</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])</span>
-            <span class="n">file_name</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="n">heading_str</span> <span class="o">=</span> <span class="s2">&quot; &gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="k">if</span> <span class="n">headings</span> <span class="k">else</span> <span class="s2">&quot;(no heading)&quot;</span>
-            <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
-                <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}</span><span class="s2">&quot;</span>
 
-            <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
-            <span class="n">serialized</span> <span class="o">+=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">### Document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sorted_refs</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-            <span class="n">custom_meta</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTERNAL_META_KEYS</span>
+        <span class="c1"># Group chunks by source file, keeping per-file best score for ordering.</span>
+        <span class="n">files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">sorted_refs</span><span class="p">:</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">))</span>
+
+        <span class="n">ordered_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">s</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">file_docs</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">file_docs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span> <span class="o">=</span> <span class="n">file_docs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Document-level metadata: the shared bibliographic fields</span>
+            <span class="c1"># (authors, year, journal, ...) come from the file&#39;s top chunk</span>
+            <span class="c1"># -- every chunk of the file carries the same values, so they</span>
+            <span class="c1"># are emitted once.  A url* key is promoted to the file level</span>
+            <span class="c1"># too when every chunk carries the identical value (the common</span>
+            <span class="c1"># case); otherwise it stays per-chunk below.</span>
+            <span class="n">file_meta</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
             <span class="p">}</span>
-            <span class="k">if</span> <span class="n">custom_meta</span><span class="p">:</span>
-                <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">custom_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="n">url_keys</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">url_key</span> <span class="ow">in</span> <span class="n">url_keys</span><span class="p">:</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_key</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span><span class="p">}</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="kc">None</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                    <span class="n">file_meta</span><span class="p">[</span><span class="n">url_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_key</span><span class="p">)</span>
+
+            <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">if</span> <span class="n">file_name</span> <span class="k">else</span> <span class="s2">&quot;(no file)&quot;</span>
+            <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span><span class="p">)</span>
+            <span class="n">serialized</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">### Source document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">file_meta</span><span class="p">:</span>
+                <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
                 <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="n">serialized</span> <span class="o">+=</span> <span class="n">r</span><span class="o">.</span><span class="n">page_content</span>
-            <span class="n">ctr</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">for</span> <span class="n">chunk_ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_docs</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="n">heading_str</span> <span class="o">=</span> <span class="s2">&quot; &gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="k">if</span> <span class="n">headings</span> <span class="k">else</span> <span class="s2">&quot;(no heading)&quot;</span>
+                <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
+                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Chunk </span><span class="si">{</span><span class="n">chunk_ctr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+                <span class="c1"># Chunk-level metadata: non-internal keys not already on the</span>
+                <span class="c1"># file level (shared bibliographic fields, and url keys the</span>
+                <span class="c1"># whole file shares).  A differing url (e.g. heading-specific)</span>
+                <span class="c1"># is emitted inline so no chunk is misattributed.</span>
+                <span class="n">chunk_meta</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTERNAL_META_KEYS</span>
+                    <span class="ow">and</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
+                    <span class="ow">and</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">object</span><span class="p">())</span> <span class="o">!=</span> <span class="n">v</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="n">chunk_meta</span><span class="p">:</span>
+                    <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chunk_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+                    <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;  Chunk metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">serialized</span> <span class="o">+=</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
 
     <span class="k">return</span> <span class="n">serialized</span></div>
 

@@ -304,39 +304,61 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..biblio.extract</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resolver</span><span class="p">,</span> <span class="n">extract_metadata</span><span class="p">,</span> <span class="n">extract_metadata_from_text</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_embedding</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span><span class="p">,</span> <span class="n">normalize_text</span>
 
 <span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">&quot;.klea-cache&quot;</span>
 <span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;metadata-map.template.json&quot;</span>
 
-<span class="c1">#: Metadata keys that are always stored in the vector store, together with</span>
-<span class="c1">#: the bibliographic fields produced by the extraction cascade</span>
-<span class="c1">#: (``title``, ``authors``, ``keywords``, ``year``, ``journal``, ``doi``).</span>
-<span class="c1">#: Any ``url*`` key (``url``, ``url_1``, ``url_doi``, ...) is also always</span>
-<span class="c1">#: stored.  This whitelist documents the guaranteed stored schema; *presence*</span>
-<span class="c1">#: of the cascade fields is determined by the metadata map (whose</span>
-<span class="c1">#: researcher-curated keys pass through unmodified).  See</span>
-<span class="c1">#: :func:`_apply_store_metadata_policy`.</span>
-<span class="n">ALWAYS_STORED_METADATA_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+<span class="c1">#: Heading texts that are never a real document title.  When the title</span>
+<span class="c1">#: extraction falls back to the filename stem, the first chunk heading is</span>
+<span class="c1">#: used as a title fallback instead -- but journal banners and section</span>
+<span class="c1">#: labels (e.g. ``Review``, ``Highlights``, ``DOI:``) are not titles, so</span>
+<span class="c1">#: they are skipped.  Lowercased for comparison.</span>
+<span class="n">_TITLE_SKIP_HEADINGS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span>
-        <span class="s2">&quot;file_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;headings&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;title&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;authors&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;keywords&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;year&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;journal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;review&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;research&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;research article&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;highlights&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;abstract&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;author summary&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;summary&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;introduction&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;doi:&quot;</span><span class="p">,</span>
         <span class="s2">&quot;doi&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;editorial&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;front matter&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;correspondence&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;*for correspondence:&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">)</span>
 
-<span class="c1">#: Metadata keys that are never stored.  Provenance keys from the biblio</span>
-<span class="c1">#: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,</span>
-<span class="c1">#: ``_sources``, ``_source_scores``) are also always dropped.  These guide</span>
-<span class="c1">#: the researcher reviewing ``metadata-map.template.json`` but carry no</span>
-<span class="c1">#: meaning in a store.  See :func:`_apply_store_metadata_policy`.</span>
-<span class="n">STORE_DROPPED_METADATA_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;source_path&quot;</span><span class="p">,</span> <span class="s2">&quot;source_type&quot;</span><span class="p">,</span> <span class="s2">&quot;source_url&quot;</span><span class="p">})</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_first_heading_title</span><span class="p">(</span><span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the first chunk heading that looks like a title, or ``None``.</span>
+
+<span class="sd">    Scans *docs* in document order for the first non-empty heading chain</span>
+<span class="sd">    and returns its first element, skipping headings that are journal</span>
+<span class="sd">    banners or section labels (see :data:`_TITLE_SKIP_HEADINGS`).  This</span>
+<span class="sd">    is a fallback for documents whose title Docling&#39;s layout model does</span>
+<span class="sd">    not label as a ``TITLE`` item (e.g. some conference preprints), used</span>
+<span class="sd">    only when the extraction cascade falls back to the filename stem.</span>
+
+<span class="sd">    :param docs: Chunked documents in document order</span>
+<span class="sd">    :returns: First heading that looks like a title, or ``None``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+        <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">headings</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">headings</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">_TITLE_SKIP_HEADINGS</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">return</span> <span class="n">candidate</span>
+    <span class="k">return</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="StoresBuilder">
@@ -491,6 +513,11 @@
 <span class="sd">        automatically-extracted bibliographic metadata (see</span>
 <span class="sd">        :func:`~klea_utils.biblio.extract.extract_metadata`).</span>
 
+<span class="sd">        The metadata map is folded into the chunks via</span>
+<span class="sd">        :meth:`_fold_metadata_map`.  The cache-only ``store`` command</span>
+<span class="sd">        does not call this -- it uses :meth:`_load_and_fold_results`,</span>
+<span class="sd">        which loads cached chunks without converting.</span>
+
 <span class="sd">        :param source_path: Resolved source directory path</span>
 <span class="sd">        :param metadata_map: Metadata map for heading-based enrichment,</span>
 <span class="sd">            or ``None``</span>
@@ -511,8 +538,16 @@
         <span class="n">file_headings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
 
+        <span class="c1"># Hashes of every source file found (whether or not it converts</span>
+        <span class="c1"># successfully below).  Used to prune cache entries whose hash no</span>
+        <span class="c1"># longer matches a source file (e.g. renamed/removed files or</span>
+        <span class="c1"># legacy entries from a previous pipeline), so the cache always</span>
+        <span class="c1"># mirrors the source directory.</span>
+        <span class="n">current_hashes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">file_hash</span> <span class="o">=</span> <span class="n">_hash_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+            <span class="n">current_hashes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file_hash</span><span class="p">)</span>
 
             <span class="n">docs</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -571,31 +606,7 @@
                 <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_map</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;No metadata map entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;Add a &#39;</span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; entry (a DEFAULT entry &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;is enough) to the metadata map; run &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;&#39;klea-stores-create chunk&#39; to regenerate the &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;template.&quot;</span>
-                    <span class="p">)</span>
-                <span class="n">resolved_count</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
-                    <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata</span><span class="p">(</span>
-                        <span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                        <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">),</span>
-                        <span class="n">metadata_map</span><span class="p">,</span>
-                    <span class="p">)</span>
-                    <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
-                        <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_apply_store_metadata_policy</span><span class="p">(</span><span class="n">meta</span><span class="p">))</span>
-                        <span class="n">resolved_count</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="n">resolved_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;No metadata resolved for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> from the &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;metadata map. Check that the map is keyed by the &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;source filename and that the chunk headings (or a &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;DEFAULT entry) provide metadata.&quot;</span>
-                    <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_fold_metadata_map</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
 
             <span class="n">normalized_default</span> <span class="o">=</span> <span class="n">_normalize_extracted_metadata</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">normalized_default</span> <span class="o">!=</span> <span class="n">extracted</span><span class="p">:</span>
@@ -619,10 +630,109 @@
 
             <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prune_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">current_hashes</span><span class="p">)</span>
+
         <span class="c1"># The resolver&#39;s HTTP client is left for the process to clean up;</span>
         <span class="c1"># ingestion is a one-shot CLI run.</span>
         <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">file_headings</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fold_metadata_map</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span>
+        <span class="n">metadata_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply the per-file metadata map to *docs* (in place).</span>
+
+<span class="sd">        Raises when *file_path* has no entry in the map, and warns when</span>
+<span class="sd">        no chunk resolves metadata from it.  Shared by :meth:`chunk_all`</span>
+<span class="sd">        (convert path) and :meth:`_load_and_fold_results` (cache-only</span>
+<span class="sd">        store path) so both fold the map identically.</span>
+
+<span class="sd">        :param file_path: Source file whose chunks are being enriched</span>
+<span class="sd">        :param docs: Chunked documents for the file (mutated in place)</span>
+<span class="sd">        :param metadata_map: Per-file metadata map keyed by source filename</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata_map</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No metadata map entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Add a &#39;</span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; entry (a DEFAULT entry &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;is enough) to the metadata map; run &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;klea-stores-create chunk&#39; to regenerate the &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;template.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">resolved_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata</span><span class="p">(</span>
+                <span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">),</span>
+                <span class="n">metadata_map</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">meta</span><span class="p">:</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_apply_store_metadata_policy</span><span class="p">(</span><span class="n">meta</span><span class="p">))</span>
+                <span class="n">resolved_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">resolved_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No metadata resolved for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> from the &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;metadata map. Check that the map is keyed by the &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;source filename and that the chunk headings (or a &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;DEFAULT entry) provide metadata.&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_and_fold_results</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">metadata_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load cached chunks and fold the metadata map into them.</span>
+
+<span class="sd">        Cache-only: every source file must already have a cache entry</span>
+<span class="sd">        (run ``klea-stores-create chunk`` or ``build`` first).  A file</span>
+<span class="sd">        with no cache entry raises ``ValueError`` instead of being</span>
+<span class="sd">        converted on the fly.  This is the cache-only path used by the</span>
+<span class="sd">        ``store`` command; ``chunk`` and ``build`` convert on the fly</span>
+<span class="sd">        via :meth:`chunk_all` instead.</span>
+
+<span class="sd">        :param source_path: Resolved source directory path</span>
+<span class="sd">        :param metadata_map: Metadata map for heading-based enrichment</span>
+<span class="sd">        :returns: List of ``(file_hash, docs, file_path)`` tuples ready</span>
+<span class="sd">            for :meth:`store_all`</span>
+<span class="sd">        :raises ValueError: When a source file has no cache entry</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_files</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> ingestible files in </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">file_hash</span> <span class="o">=</span> <span class="n">_hash_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;No cache entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. The cache-only &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;store command requires every file to be converted &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;first; run &#39;klea-stores-create chunk&#39; (or &#39;build&#39;) &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;to convert it.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">docs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cached</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;file_hash&quot;</span><span class="p">:</span> <span class="n">file_hash</span><span class="p">,</span>
+                        <span class="s2">&quot;file_name&quot;</span><span class="p">:</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_fold_metadata_map</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
+
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">results</span>
 
 <div class="viewcode-block" id="StoresBuilder.store_all">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.store_all">[docs]</a>
@@ -811,6 +921,46 @@
         <span class="n">safe_hash</span> <span class="o">=</span> <span class="n">file_hash</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">safe_hash</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prune_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">current_hashes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove cache entries whose hash matches no current source file.</span>
+
+<span class="sd">        Cache entries are keyed by the xxhash of their source file, so an</span>
+<span class="sd">        entry whose hash is not in *current_hashes* can never be a future</span>
+<span class="sd">        cache hit (the source file was renamed, removed, or changed, or</span>
+<span class="sd">        the entry predates a pipeline change).  Called after every</span>
+<span class="sd">        :meth:`chunk_all` run so the cache always mirrors the source</span>
+<span class="sd">        directory and users never need to clean it by hand.</span>
+
+<span class="sd">        Only ``*.pkl`` chunk-cache files are touched; other cache files</span>
+<span class="sd">        (e.g. ``doi-cache.json``) are left alone.</span>
+
+<span class="sd">        :param source_dir: Resolved source directory path</span>
+<span class="sd">        :param current_hashes: xxhash digests of all source files found</span>
+<span class="sd">            during this run (including files that failed to convert)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cache_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cache_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">return</span>
+        <span class="n">pruned</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">cache_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*.pkl&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+                <span class="k">for</span> <span class="n">file_hash</span> <span class="ow">in</span> <span class="n">current_hashes</span>
+            <span class="p">}:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+                    <span class="n">pruned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Could not remove stale cache entry </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+        <span class="k">if</span> <span class="n">pruned</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Pruned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span><span class="si">}</span><span class="s2"> stale cache entr</span><span class="si">{</span><span class="s1">&#39;y&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;ies&#39;</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">cache_dir</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pruned: </span><span class="si">{</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">pruned</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_to_cache</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span>
@@ -976,8 +1126,13 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve a metadata dict for a chunk using the per-file metadata map.</span>
 
 <span class="sd">        Looks up the file in the map, then matches the heading chain</span>
-<span class="sd">        from most specific to least specific.  Falls back to</span>
-<span class="sd">        ``DEFAULT`` for that file.</span>
+<span class="sd">        from most specific to least specific.  The first non-empty</span>
+<span class="sd">        matching heading entry is merged over ``DEFAULT`` (gap-fill:</span>
+<span class="sd">        heading-specific keys win, ``DEFAULT`` fills everything else),</span>
+<span class="sd">        so a heading that only sets e.g. a ``url`` still inherits the</span>
+<span class="sd">        file&#39;s authors/year/journal.  An entry that matches a heading</span>
+<span class="sd">        but is empty (a ``{}`` placeholder the user did not fill in)</span>
+<span class="sd">        falls through to the next heading, and finally to ``DEFAULT``.</span>
 
 <span class="sd">        :param file_name: Source filename to look up in the map</span>
 <span class="sd">        :param headings: Heading hierarchy for the chunk (most specific</span>
@@ -989,6 +1144,7 @@
         <span class="n">file_map</span> <span class="o">=</span> <span class="n">metadata_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">file_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">fallback</span> <span class="o">=</span> <span class="n">file_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
             <span class="c1"># NOTE: only individual headings are matched here, never the</span>
             <span class="c1"># full heading chain (e.g. &quot;A &gt; B&quot;).  The metadata map keys</span>
@@ -1000,9 +1156,21 @@
             <span class="c1"># progressively shorter suffixes.</span>
             <span class="k">for</span> <span class="n">heading</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">headings</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">heading</span> <span class="ow">in</span> <span class="n">file_map</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolved metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: &#39;</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
-                    <span class="k">return</span> <span class="n">file_map</span><span class="p">[</span><span class="n">heading</span><span class="p">]</span>
-        <span class="n">fallback</span> <span class="o">=</span> <span class="n">file_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DEFAULT&quot;</span><span class="p">)</span>
+                    <span class="n">matched</span> <span class="o">=</span> <span class="n">file_map</span><span class="p">[</span><span class="n">heading</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">matched</span><span class="p">:</span>
+                        <span class="n">merged</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="p">(</span><span class="n">fallback</span> <span class="ow">or</span> <span class="p">{}),</span> <span class="o">**</span><span class="n">matched</span><span class="p">}</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Resolved metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: &#39;</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">&#39; &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;(merged over DEFAULT)&quot;</span>
+                        <span class="p">)</span>
+                        <span class="k">return</span> <span class="n">merged</span>
+                    <span class="c1"># Empty placeholder the user left unfilled; keep</span>
+                    <span class="c1"># looking (fall through to DEFAULT) rather than</span>
+                    <span class="c1"># returning metadata that strips the DEFAULT values.</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Empty metadata entry for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">&#39;; falling through&quot;</span>
+                    <span class="p">)</span>
         <span class="k">if</span> <span class="n">fallback</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolved DEFAULT metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">fallback</span>
@@ -1187,6 +1355,23 @@
             <span class="n">pdf_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.pdf&quot;</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">resolver</span><span class="o">=</span><span class="n">resolver</span><span class="p">,</span>
         <span class="p">)</span>
+
+        <span class="c1"># Fall back to the first chunk heading when the cascade produced</span>
+        <span class="c1"># only the filename stem (the merge tiers&#39; last resort).  The</span>
+        <span class="c1"># chunker&#39;s heading detection is layout-aware and often recovers</span>
+        <span class="c1"># the real title (e.g. conference preprints) where Docling did not</span>
+        <span class="c1"># label a TITLE item.  See _first_heading_title.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">extracted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">extracted</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="p">:</span>
+            <span class="n">heading_title</span> <span class="o">=</span> <span class="n">_first_heading_title</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">heading_title</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Title fallback for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;using first chunk heading </span><span class="si">{</span><span class="n">heading_title</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="n">extracted</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">heading_title</span>
+                <span class="n">sources</span> <span class="o">=</span> <span class="n">extracted</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;_sources&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="k">if</span> <span class="s2">&quot;chunk-heading&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+                    <span class="n">sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;chunk-heading&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span>
 

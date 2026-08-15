@@ -424,6 +424,23 @@ comparing these raw values.</p>
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>), then add a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
 entry to the domain config pointing at the written corpus file.</p>
 </section>
+<section id="reference-material-for-the-answer-llm">
+<span id="reference-material"></span><h2>Reference material for the answer LLM<a class="headerlink" href="#reference-material-for-the-answer-llm" title="Link to this heading">¶</a></h2>
+<p>The fused retrieval results are handed to the answer LLM as
+<em>reference material</em>, grouped by source file.  Each file’s shared
+bibliographic metadata (authors, year, journal, DOI) is shown once on a
+“source document” header, and the file’s chunks are listed underneath,
+each carrying its own inline relevance score and numbered within the
+file.  Chunk-level metadata that differs from the file’s (e.g. a
+heading-specific URL) stays inline on the chunk.</p>
+<p>Grouping and scores are deliberately kept separate: chunks are ordered
+by their file’s best relevance score, so a low-scoring chunk in an
+early file can appear before a higher-scoring chunk in a later file.
+Every chunk therefore carries its own score, so position is never
+mistaken for relevance.  The exact serialized layout is described in
+the <a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.utils.serialize_reference_material" title="klea_utils.stores.utils.serialize_reference_material"><code class="xref py py-class docutils literal notranslate"><span class="pre">serialize_reference_material</span></code></a> API
+reference.</p>
+</section>
 <section id="bibliographic-metadata-extraction">
 <span id="metadata-extraction"></span><h2>Bibliographic metadata extraction<a class="headerlink" href="#bibliographic-metadata-extraction" title="Link to this heading">¶</a></h2>
 <p>When documents are chunked, Klea automatically tries to populate the
@@ -468,6 +485,14 @@ precedence order (e.g. <code class="docutils literal notranslate"><span class="p
 </ul>
 <p>These keys are internal: they guide the researcher reviewing the
 template, and are never shown to the answer LLM.</p>
+<p>When storing, each file’s <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> metadata is applied to every chunk,
+and per-heading entries are merged over it (heading-specific keys win,
+<code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> fills the rest).  An empty <code class="docutils literal notranslate"><span class="pre">{}</span></code> placeholder simply falls
+through to <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code>.  <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code> runs
+deterministic, LLM-free checks over the map (missing fields, suspicious
+titles or DOIs, year/filename mismatches, stale <code class="docutils literal notranslate"><span class="pre">venue</span></code> keys, excess
+<code class="docutils literal notranslate"><span class="pre">url*</span></code> keys) and is printed automatically after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>; re-run it
+after hand-editing the template.</p>
 <p>DOI resolution uses the APIs’ polite pool when <code class="docutils literal notranslate"><span class="pre">KLEA_INGEST_MAILTO</span></code>
 is set to an email address (higher rate limits).  It is skipped
 entirely when no DOI is found in the document.  Optical character
@@ -557,6 +582,7 @@ RAG system end to end</p></li>
 <li><a class="reference internal" href="#klea-s-architecture">Klea’s architecture</a></li>
 <li><a class="reference internal" href="#domains-and-stores">Domains and stores</a></li>
 <li><a class="reference internal" href="#hybrid-retrieval-vector-bm25">Hybrid retrieval (vector + BM25)</a></li>
+<li><a class="reference internal" href="#reference-material-for-the-answer-llm">Reference material for the answer LLM</a></li>
 <li><a class="reference internal" href="#bibliographic-metadata-extraction">Bibliographic metadata extraction</a></li>
 </ul>
 </li>
