@@ -67,8 +67,14 @@ def register_tools(mcp: FastMCP, modules: list[ModuleType]):
                 kwargs["title"] = metadata.title
             if metadata.tags is not None:
                 kwargs["tags"] = metadata.tags
-            if metadata.meta is not None:
-                kwargs["meta"] = metadata.meta
+            if metadata.meta is not None or metadata.checkpaths is not None:
+                # Fold checkpaths into the meta dict so it travels to clients
+                # on the MCP Tool's _meta field; the tool caller node reads it
+                # from there to gate path arguments before calling the tool.
+                tool_meta_dict = dict(metadata.meta or {})
+                if metadata.checkpaths is not None:
+                    tool_meta_dict["checkpaths"] = list(metadata.checkpaths)
+                kwargs["meta"] = tool_meta_dict
 
             mcp.tool(fn, **kwargs)
             logger.debug(f"Registered MCP tool: {fname}")

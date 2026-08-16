@@ -22,5 +22,9 @@ class ToolInfo(BaseModel):
     title: str | None = None
     # Categories used to group and filter tools.
     tags: set[str] | None = None
+    # Argument names that are filesystem paths and must pass
+    # check_path_access before the tool is invoked.  Read client-side by the
+    # tool caller node to gate tool calls before they reach the MCP server.
+    checkpaths: list[str] | None = None
     # Additional application-specific metadata.
     meta: dict[str, Any] | None = None
