@@ -305,6 +305,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">cast</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompt_values</span><span class="w"> </span><span class="kn">import</span> <span class="n">PromptValue</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatPromptTemplate</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.runnables</span><span class="w"> </span><span class="kn">import</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">RunnableConfig</span>
@@ -321,6 +322,7 @@
     <span class="n">classify_llm_invocation_error</span><span class="p">,</span>
     <span class="n">content_to_str</span><span class="p">,</span>
     <span class="n">get_provider_allowed_fields</span><span class="p">,</span>
+    <span class="n">get_recent_messages</span><span class="p">,</span>
     <span class="n">get_token_limit_param</span><span class="p">,</span>
     <span class="n">is_output_truncated</span><span class="p">,</span>
     <span class="n">load_prompt</span><span class="p">,</span>
@@ -417,7 +419,7 @@
         <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
         <span class="n">output_schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">num_history_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">num_history_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize with file-based prompt loading and memory support.</span>
 
@@ -426,14 +428,15 @@
 <span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
 <span class="sd">        :param output_schema: Pydantic schema for structured output</span>
 <span class="sd">        :param memory: Whether to append memory content to the system prompt</span>
-<span class="sd">        :param num_history_messages: Number of recent messages to include</span>
+<span class="sd">        :param num_history_chars: Character budget for the recent verbatim</span>
+<span class="sd">            history messages injected between the system and human prompts.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">llm_models</span><span class="p">,</span> <span class="n">output_schema</span><span class="o">=</span><span class="n">output_schema</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_prompt_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_prompt_registry_location</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_history_messages</span> <span class="o">=</span> <span class="n">num_history_messages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_history_chars</span> <span class="o">=</span> <span class="n">num_history_chars</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">prompt_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -816,8 +819,19 @@
 <span class="s2">            &quot;&quot;&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load system prompt from file, optionally adding memory summary and output schema.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load system prompt from file, optionally adding memory and schema.</span>
+
+<span class="sd">        When memory is enabled, returns a list of ``(&quot;system&quot;, text)`` plus</span>
+<span class="sd">        the recent conversation as real message objects (in interleaved</span>
+<span class="sd">        order), so ``_create_prompt_template`` can place them between the</span>
+<span class="sd">        system and human prompts.  Otherwise returns the system prompt text</span>
+<span class="sd">        as a plain string.</span>
+
+<span class="sd">        :param state: Graph state.</span>
+<span class="sd">        :returns: System prompt text, or a list of system text + history</span>
+<span class="sd">            message objects when memory is enabled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">system_prompt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_prompt_file</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prompt_prefix</span><span class="si">}</span><span class="s2">_system&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">:</span>
@@ -833,8 +847,29 @@
             <span class="c1"># query (recency), maximizing adherence to the JSON format.</span>
             <span class="n">system_prompt</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_output_schema_prompt</span><span class="p">()</span>
 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">:</span>
+            <span class="n">system_messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">)]</span>
+            <span class="n">system_messages</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_recent_memory_messages</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">system_messages</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">system_messages</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">system_prompt</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">system_prompt</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_recent_memory_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the recent verbatim history messages for the prompt.</span>
+
+<span class="sd">        The most recent human/ai messages, bounded by ``num_history_chars``,</span>
+<span class="sd">        are injected as real message objects between the system and human</span>
+<span class="sd">        prompts (instead of being flattened into the system prompt).</span>
+
+<span class="sd">        :param state: Graph state.</span>
+<span class="sd">        :returns: Ordered recent human/ai messages.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">get_recent_messages</span><span class="p">(</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_history_chars</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_human_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load human prompt from file.&quot;&quot;&quot;</span>
@@ -855,16 +890,31 @@
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_prompt_template</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">human_prompt</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">human_prompt</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChatPromptTemplate</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create ChatPromptTemplate with system and human messages.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_prompt</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create ChatPromptTemplate with system and human messages.</span>
+
+<span class="sd">        *system_prompt* may be a plain string (memory disabled) or a list of</span>
+<span class="sd">        ``(&quot;system&quot;, text)`` plus recent history message objects (memory</span>
+<span class="sd">        enabled); the human prompt is appended after it.</span>
+
+<span class="sd">        :param system_prompt: System prompt text or a system-side list</span>
+<span class="sd">            including recent history messages.</span>
+<span class="sd">        :param human_prompt: Human prompt text.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">system_messages</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[(</span><span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">system_prompt</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">system_prompt</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_messages</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">):</span>
             <span class="n">prompt_template</span> <span class="o">=</span> <span class="n">ChatPromptTemplate</span><span class="p">(</span>
-                <span class="p">[(</span><span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;human&quot;</span><span class="p">,</span> <span class="n">human_prompt</span><span class="p">)]</span>
+                <span class="p">[</span><span class="o">*</span><span class="n">system_messages</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;human&quot;</span><span class="p">,</span> <span class="n">human_prompt</span><span class="p">)]</span>
             <span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_prompt</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">):</span>
-            <span class="n">prompt_template</span> <span class="o">=</span> <span class="n">ChatPromptTemplate</span><span class="p">([(</span><span class="s2">&quot;system&quot;</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">)])</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_prompt</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_messages</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">):</span>
+            <span class="n">prompt_template</span> <span class="o">=</span> <span class="n">ChatPromptTemplate</span><span class="p">(</span><span class="n">system_messages</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_prompt</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">system_messages</span><span class="p">):</span>
             <span class="n">prompt_template</span> <span class="o">=</span> <span class="n">ChatPromptTemplate</span><span class="p">([(</span><span class="s2">&quot;human&quot;</span><span class="p">,</span> <span class="n">human_prompt</span><span class="p">)])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">PromptTemplateError</span><span class="p">(</span>
@@ -881,9 +931,7 @@
 <span class="sd">        The default implementation returns an empty string.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">add_memory_to_prompt</span><span class="p">(</span>
-            <span class="n">messages</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
             <span class="n">context_summary</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">context_summary</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
-            <span class="n">num_history_messages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_history_messages</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 </pre></div>

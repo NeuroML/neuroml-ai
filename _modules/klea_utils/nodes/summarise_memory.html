@@ -299,8 +299,18 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">content_to_str</span><span class="p">,</span> <span class="n">get_last_n_conversations</span><span class="p">,</span> <span class="n">split_output_by_section</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">content_to_str</span><span class="p">,</span>
+    <span class="n">get_last_n_conversations</span><span class="p">,</span>
+    <span class="n">get_recent_messages</span><span class="p">,</span>
+    <span class="n">split_output_by_section</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseLLMNode</span>
+
+<span class="c1">#: Default char budget for the recent verbatim window that is kept out of</span>
+<span class="c1">#: the summary.  Must match the base node&#39;s ``num_history_chars`` default so</span>
+<span class="c1">#: the verbatim window in prompts and the window excluded here stay aligned.</span>
+<span class="n">_DEFAULT_NUM_HISTORY_CHARS</span> <span class="o">=</span> <span class="mi">10_000</span>
 
 
 <div class="viewcode-block" id="SummariseMemoryNode">
@@ -310,7 +320,11 @@
     <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;max_output_tokens&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">}</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Node that summarises conversation history into a context summary.</span>
 
-<span class="sd">    Uses _pre_exec() to skip execution if there aren&#39;t enough recent messages.</span>
+<span class="sd">    Uses _pre_exec() to skip execution if there isn&#39;t enough *old*</span>
+<span class="sd">    conversation to summarise.  The most recent messages (within</span>
+<span class="sd">    ``num_history_chars``) form the verbatim window that the prompt</span>
+<span class="sd">    assembly injects as real messages, so this node only summarises history</span>
+<span class="sd">    up to that window -- the summary and the verbatim window never overlap.</span>
 <span class="sd">    Does NOT append the summary to messages -- it&#39;s metadata, not a turn.</span>
 
 <span class="sd">    Expects state to have the following fields:</span>
@@ -326,7 +340,8 @@
         <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span>
         <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-        <span class="n">summarisation_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">summarisation_threshold_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span><span class="p">,</span>
+        <span class="n">num_history_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_DEFAULT_NUM_HISTORY_CHARS</span><span class="p">,</span>
         <span class="n">memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the summarisation node.</span>
@@ -334,7 +349,12 @@
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
 <span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
-<span class="sd">        :param summarisation_threshold: Minimum number of messages before summarising</span>
+<span class="sd">        :param summarisation_threshold_chars: Minimum characters of old</span>
+<span class="sd">            conversation (before the recent verbatim window) before</span>
+<span class="sd">            summarising.  ``0`` summarises as soon as there is any old</span>
+<span class="sd">            history.</span>
+<span class="sd">        :param num_history_chars: Character budget for the recent verbatim</span>
+<span class="sd">            window kept out of the summary.</span>
 <span class="sd">        :param memory: Whether to include conversation history in the prompt</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
@@ -345,23 +365,33 @@
             <span class="n">memory</span><span class="o">=</span><span class="n">memory</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold</span> <span class="o">=</span> <span class="n">summarisation_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold_chars</span> <span class="o">=</span> <span class="n">summarisation_threshold_chars</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_history_chars</span> <span class="o">=</span> <span class="n">num_history_chars</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conversation</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_window_start</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Skip if not enough recent conversations to summarise.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">conversation</span><span class="p">,</span> <span class="n">human_messages</span><span class="p">,</span> <span class="n">ai_messages</span> <span class="o">=</span> <span class="n">get_last_n_conversations</span><span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Skip if not enough old conversation to summarise.&quot;&quot;&quot;</span>
+        <span class="n">recent</span> <span class="o">=</span> <span class="n">get_recent_messages</span><span class="p">(</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_history_chars</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_window_start</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conversation</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_last_n_conversations</span><span class="p">(</span>
             <span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
             <span class="n">state</span><span class="o">.</span><span class="n">summarised_till</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
-            <span class="kc">None</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_window_start</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">conversations_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">human_messages</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">ai_messages</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">conversations_num</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_window_start</span> <span class="o">&lt;=</span> <span class="n">state</span><span class="o">.</span><span class="n">summarised_till</span><span class="p">:</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No new history to summarise yet&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversation</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold_chars</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Not enough conversations to summarise yet: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">conversations_num</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Not enough conversation to summarise yet: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversation</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">summarisation_threshold_chars</span><span class="si">}</span><span class="s2"> chars&quot;</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">True</span>
@@ -379,10 +409,10 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract summary from raw AIMessage output.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current history summary is:</span><span class="se">\n</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-        <span class="n">thought</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">split_output_by_section</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s2">&quot;&lt;think&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;/think&gt;&quot;</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">split_output_by_section</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s2">&quot;&lt;think&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;/think&gt;&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">&quot;context_summary&quot;</span><span class="p">:</span> <span class="n">answer</span><span class="p">,</span>
-            <span class="s2">&quot;summarised_till&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">),</span>  <span class="c1"># type: ignore</span>
+            <span class="s2">&quot;summarised_till&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_window_start</span><span class="p">,</span>
         <span class="p">}</span>
 
     <span class="c1"># TODO: may need updating</span>

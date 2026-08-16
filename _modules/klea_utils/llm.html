@@ -304,7 +304,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">textwrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">dedent</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">cast</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">HumanMessage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">BaseMessage</span><span class="p">,</span> <span class="n">HumanMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.prompt_values</span><span class="w"> </span><span class="kn">import</span> <span class="n">PromptValue</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
@@ -1263,53 +1263,83 @@
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_last_n_conversations">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_last_n_conversations</span><span class="p">(</span>
     <span class="n">all_messages</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">HumanMessage</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">AIMessage</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get recent converstations between start and stop indices</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get recent conversations between start and stop indices.</span>
+
+<span class="sd">    Returns the conversation as a single text block (used as prompt/summary</span>
+<span class="sd">    input) along with the ordered ``BaseMessage`` objects, preserving the</span>
+<span class="sd">    interleaved user/assistant order of the original history.</span>
 
 <span class="sd">    :param all_messages: all the messages</span>
 <span class="sd">    :param start: start index</span>
 <span class="sd">    :param stop: stop index</span>
-<span class="sd">    :returns: (conversation, list of human messages, list of ai messages)</span>
+<span class="sd">    :returns: (conversation, ordered list of human/ai messages)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">conv_messages</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-        <span class="nb">filter</span><span class="p">(</span>
-            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">HumanMessage</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">)),</span>
-            <span class="n">all_messages</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">],</span>
-        <span class="p">)</span>
-    <span class="p">)</span>
-    <span class="n">human_messages</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">ai_messages</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">conv_messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">msg</span>
+        <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">all_messages</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="p">(</span><span class="n">HumanMessage</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">))</span>
+    <span class="p">]</span>
     <span class="n">conversation</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">conv_messages</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">HumanMessage</span><span class="p">):</span>
             <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="n">human_messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;: </span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="n">ai_messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">conversation</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">(</span>
-        <span class="n">conversation</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;{{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">,</span> <span class="s2">&quot;}}&quot;</span><span class="p">),</span>
-        <span class="n">human_messages</span><span class="p">,</span>
-        <span class="n">ai_messages</span><span class="p">,</span>
-    <span class="p">)</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">conversation</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;{{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">,</span> <span class="s2">&quot;}}&quot;</span><span class="p">),</span> <span class="n">conv_messages</span><span class="p">)</span></div>
 
 
 
-<span class="c1"># TODO: num_history_messages is currently part of the orchestrator, but nodes wont have access to it.</span>
+<div class="viewcode-block" id="get_recent_messages">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_recent_messages">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_recent_messages</span><span class="p">(</span>
+    <span class="n">messages</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">keep_at_least</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the most recent human/ai messages bounded by *max_chars*.</span>
+
+<span class="sd">    Walks backwards through *messages* (in their original interleaved order)</span>
+<span class="sd">    accumulating ``pretty_repr()`` length until *max_chars* would be</span>
+<span class="sd">    exceeded.  The first *keep_at_least* messages are always included, so</span>
+<span class="sd">    the latest exchange is never dropped even when it alone exceeds the</span>
+<span class="sd">    budget.</span>
+
+<span class="sd">    :param messages: All conversation messages.</span>
+<span class="sd">    :param max_chars: Maximum total characters of the returned window.</span>
+<span class="sd">    :param keep_at_least: Minimum number of messages to always include.</span>
+<span class="sd">    :returns: Ordered list of recent human/ai messages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">recent</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">messages</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="p">(</span><span class="n">HumanMessage</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">)):</span>
+            <span class="k">continue</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">keep_at_least</span> <span class="ow">and</span> <span class="n">total</span> <span class="o">+</span> <span class="n">length</span> <span class="o">&gt;</span> <span class="n">max_chars</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">recent</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="n">length</span>
+    <span class="n">recent</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2"> recent messages, </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> chars&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">recent</span></div>
+
+
+
 <div class="viewcode-block" id="add_memory_to_prompt">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.add_memory_to_prompt">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">add_memory_to_prompt</span><span class="p">(</span><span class="n">context_summary</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">num_history_messages</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add memory to system prompt.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_memory_to_prompt</span><span class="p">(</span><span class="n">context_summary</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add the context summary to the system prompt.</span>
 
-<span class="sd">    Adds the context summary and recent conversation</span>
+<span class="sd">    Returns a text block framing the previous-context summary.  Recent</span>
+<span class="sd">    conversation messages are no longer flattened into this block: they are</span>
+<span class="sd">    injected as real message objects by the node&#39;s prompt assembly (see</span>
+<span class="sd">    ``klea_utils.nodes.base``).</span>
 
-<span class="sd">    :param state: agent state</span>
-<span class="sd">    :returns: &quot;memory&quot; string to add to the system prompt</span>
-
+<span class="sd">    :param context_summary: Summary of the past conversation.</span>
+<span class="sd">    :returns: Prompt text block, or ``&quot;&quot;`` when there is no summary.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ret_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
@@ -1332,20 +1362,6 @@
 
 <span class="s2">        </span><span class="si">{</span><span class="n">context_summary</span><span class="si">}</span>
 
-<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
-
-    <span class="n">conversation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_last_n_conversations</span><span class="p">(</span>
-        <span class="n">messages</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">num_history_messages</span><span class="p">),</span> <span class="kc">None</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">conversation</span><span class="p">):</span>
-        <span class="n">ret_string</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">        ### Recent messages</span>
-
-<span class="s2">        Here are recent messages between the user and the assistant:</span>
-
-<span class="s2">        </span><span class="si">{</span><span class="n">conversation</span><span class="si">}</span>
-
-<span class="s2">        -----</span>
 <span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret_string</span><span class="p">):</span>

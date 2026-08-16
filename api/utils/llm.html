@@ -392,15 +392,18 @@ populated.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.llm.add_memory_to_prompt">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">add_memory_to_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_summary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_history_messages</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#add_memory_to_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.add_memory_to_prompt" title="Link to this definition">¶</a></dt>
-<dd><p>Add memory to system prompt.</p>
-<p>Adds the context summary and recent conversation</p>
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">add_memory_to_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_summary</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#add_memory_to_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.add_memory_to_prompt" title="Link to this definition">¶</a></dt>
+<dd><p>Add the context summary to the system prompt.</p>
+<p>Returns a text block framing the previous-context summary.  Recent
+conversation messages are no longer flattened into this block: they are
+injected as real message objects by the node’s prompt assembly (see
+<code class="docutils literal notranslate"><span class="pre">klea_utils.nodes.base</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> – agent state</p>
+<dd class="field-odd"><p><strong>context_summary</strong> – Summary of the past conversation.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>“memory” string to add to the system prompt</p>
+<dd class="field-even"><p>Prompt text block, or <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> when there is no summary.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -551,8 +554,11 @@ blockquote.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.llm.get_last_n_conversations">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">get_last_n_conversations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.messages.HumanMessage</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.messages.AIMessage</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#get_last_n_conversations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.get_last_n_conversations" title="Link to this definition">¶</a></dt>
-<dd><p>Get recent converstations between start and stop indices</p>
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">get_last_n_conversations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">all_messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.messages.BaseMessage</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#get_last_n_conversations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.get_last_n_conversations" title="Link to this definition">¶</a></dt>
+<dd><p>Get recent conversations between start and stop indices.</p>
+<p>Returns the conversation as a single text block (used as prompt/summary
+input) along with the ordered <code class="docutils literal notranslate"><span class="pre">BaseMessage</span></code> objects, preserving the
+interleaved user/assistant order of the original history.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -562,7 +568,7 @@ blockquote.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(conversation, list of human messages, list of ai messages)</p>
+<dd class="field-even"><p>(conversation, ordered list of human/ai messages)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -581,6 +587,29 @@ handle this at configuration time, not silently fall through.</p>
 <p>The caller should always include <code class="docutils literal notranslate"><span class="pre">{&quot;model&quot;,</span> <span class="pre">&quot;model_provider&quot;}</span></code> on
 top of the returned set since those are consumed by
 <code class="docutils literal notranslate"><span class="pre">_ConfigurableModel</span></code> before reaching the model constructor.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.llm.get_recent_messages">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.llm.</span></span><span class="sig-name descname"><span class="pre">get_recent_messages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_at_least</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.messages.BaseMessage</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/llm.html#get_recent_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.llm.get_recent_messages" title="Link to this definition">¶</a></dt>
+<dd><p>Return the most recent human/ai messages bounded by <em>max_chars</em>.</p>
+<p>Walks backwards through <em>messages</em> (in their original interleaved order)
+accumulating <code class="docutils literal notranslate"><span class="pre">pretty_repr()</span></code> length until <em>max_chars</em> would be
+exceeded.  The first <em>keep_at_least</em> messages are always included, so
+the latest exchange is never dropped even when it alone exceeds the
+budget.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>messages</strong> – All conversation messages.</p></li>
+<li><p><strong>max_chars</strong> – Maximum total characters of the returned window.</p></li>
+<li><p><strong>keep_at_least</strong> – Minimum number of messages to always include.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Ordered list of recent human/ai messages.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -821,6 +850,7 @@ within the total budget.</p></li>
 <li><a class="reference internal" href="#klea_utils.llm.format_alert"><code class="docutils literal notranslate"><span class="pre">format_alert()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.get_last_n_conversations"><code class="docutils literal notranslate"><span class="pre">get_last_n_conversations()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.get_provider_allowed_fields"><code class="docutils literal notranslate"><span class="pre">get_provider_allowed_fields()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.llm.get_recent_messages"><code class="docutils literal notranslate"><span class="pre">get_recent_messages()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.get_token_limit_param"><code class="docutils literal notranslate"><span class="pre">get_token_limit_param()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.is_output_truncated"><code class="docutils literal notranslate"><span class="pre">is_output_truncated()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.llm.load_prompt"><code class="docutils literal notranslate"><span class="pre">load_prompt()</span></code></a></li>

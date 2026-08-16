@@ -666,7 +666,9 @@
 
 <span class="sd">            info = self._get_info()</span>
 <span class="sd">            details = info.details.copy()</span>
-<span class="sd">            details[&quot;system_prompt&quot;] = self._last_system_prompt</span>
+<span class="sd">            # ``_last_system_prompt`` may be a list when the node keeps a</span>
+<span class="sd">            # verbatim memory window; use the formatted prompt instead.</span>
+<span class="sd">            details[&quot;input_prompt&quot;] = prompt_value_to_messages(self._last_prompt)</span>
 <span class="sd">            return NodeStreamData(summary=info.summary, details=details)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -725,13 +727,19 @@
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return system prompt for this node&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return system prompt for this node.</span>
+
+<span class="sd">        May return a list of ``(&quot;system&quot;, text)`` plus recent history</span>
+<span class="sd">        message objects (when the node keeps a verbatim memory window),</span>
+<span class="sd">        which ``_create_prompt_template`` places between the system and</span>
+<span class="sd">        human prompts.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_prompt_template</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">human_prompt</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">human_prompt</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChatPromptTemplate</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create ChatPromptTemplate for this node&quot;&quot;&quot;</span>
         <span class="o">...</span>
