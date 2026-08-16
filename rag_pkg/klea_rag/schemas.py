@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal
 from fastmcp.client.client import CallToolResult
 from klea_utils.graph.reducers import add_token_usage
 from klea_utils.graph.schemas import TokenUsage
+from klea_utils.mcp.schemas import ToolCallSchema
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 
@@ -30,19 +31,6 @@ class EvaluateAnswerSchema(BaseModel):
         "continue", "retrieve_more_info", "modify_query", "rewrite_answer", "undefined"
     ] = Field(default="undefined", validate_default=True)
     summary: str = ""
-
-
-class ToolCallSchema(BaseModel):
-    """Schema for tool call response."""
-
-    tool: str = ""
-    args: dict[str, Any] = Field(default_factory=dict)
-    reason: str = ""
-
-
-# For Tool Picker
-class ToolCallsSchema(BaseModel):
-    tool_calls: list[ToolCallSchema] = Field(default_factory=list)
 
 
 class RetrievalQueryOutput(BaseModel):

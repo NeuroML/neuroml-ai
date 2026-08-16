@@ -13,17 +13,10 @@ from typing import Annotated, Literal
 from fastmcp.client.client import CallToolResult
 from klea_utils.graph.reducers import add_token_usage
 from klea_utils.graph.schemas import TokenUsage
+from klea_utils.mcp.schemas import ToolCallSchema
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, Field
 from typing_extensions import Any
-
-
-class ToolCallSchema(BaseModel):
-    """Schema for tool call response."""
-
-    tool: str = ""
-    args: dict[str, Any] = Field(default_factory=dict)
-    reason: str = ""
 
 
 class CodeSchema(BaseModel):
@@ -104,3 +97,8 @@ class KleaAgentState(BaseModel):
     # index till which summarised
     summarised_till: int = 0
     message_for_user: str = ""
+
+    # selected tool calls and their results (one call per plan step, kept as
+    # a list to share the tool caller/picker nodes with RAG)
+    tool_calls: list[ToolCallSchema] = Field(default_factory=list)
+    tool_results: list[CallToolResult] = Field(default_factory=list)

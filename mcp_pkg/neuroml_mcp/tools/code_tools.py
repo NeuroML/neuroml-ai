@@ -48,7 +48,9 @@ async def dummy_code(
     return f"I got {astring}"
 
 
-@tool_meta(ToolInfo(title="List files and directories", tags={"testing"}))
+@tool_meta(
+    ToolInfo(title="List files and directories", tags={"testing"}, checkpaths=["path"])
+)
 async def list_files(
     path: Annotated[str, Field(min_length=1)],
     max_depth: int | None = None,

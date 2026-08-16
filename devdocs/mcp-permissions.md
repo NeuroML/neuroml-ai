@@ -21,9 +21,57 @@ defense layer:
     `project_root`.
   - `download_file_to_cache` scopes its boundary to its own cache
     directory, so per-app cache helpers keep working unmodified.
-- The stub cannot be bypassed by asking the user: there is no approval
-  mechanism yet.  See the deferred TODO in `permission.py` and the kanban
-  ticket.
+
+`check_tool_arguments_permissions(tool_meta, arguments, project_root)`
+(`klea_utils/mcp/tools/permission.py`) is the client-side counterpart: it
+reads the `checkpaths` key from a tool's MCP `meta` dict and checks each
+declared path argument without raising.  It never touches a server it does
+not control, so the gate is:
+
+- **Author-side (in-tool):** the checks above, run inside the tool
+  implementation.
+- **Client-side (pre-dispatch):** `klea_utils.mcp.dispatch.dispatch_tool_calls`
+  runs `check_tool_arguments_permissions` on every call before it reaches
+  the MCP server.  Denied calls never reach the server; they become a
+  synthetic, non-halting error result so the LLM can adapt.  The gate runs
+  in the shared `ToolsCallerNode` (`klea_utils/nodes/tools_caller.py`) used
+  by both Klea Agent and Klea RAG.
+
+Both agents/RAG are expected to run from the directory the user is working
+in, so the client-side gate uses `project_root=None` (the current working
+directory) by default -- the same boundary the in-tool checks default to,
+so the two layers agree.
+
+## Declaring which arguments are paths
+
+Tool authors mark path arguments declaratively on `ToolInfo`:
+
+```python
+@tool_meta(ToolInfo(..., checkpaths=["path"]))
+async def list_files(path: str, ...): ...
+```
+
+`register_tools` folds `checkpaths` into the tool's `meta` dict, which
+travels to clients on the MCP Tool's `_meta` field.  Tools that read or
+write the filesystem should also call `check_path_access` inside their
+implementation (the author-side layer).  Self-contained helpers with their
+own containment (e.g. `download_file_to_cache`, the sandboxed code
+execution tools) are not marked: their boundary is their own cache/sandbox,
+not the project root.
+
+## Standardised tool call state
+
+Both Klea Agent and Klea RAG use the shared `ToolCallSchema` /
+`ToolCallsSchema` from `klea_utils.mcp.schemas` and the same state fields:
+
+- `tool_calls: list[ToolCallSchema]` -- selected calls (written by the
+  shared `ToolsPicker`, `klea_utils/nodes/tools_picker.py`).
+- `tool_results: list[CallToolResult]` -- results (written by the shared
+  `ToolsCallerNode`).
+
+The shared picker/caller nodes are configured per app (prompt directory,
+`model_type`); the agent additionally passes a `post_dispatch` callback to
+mark its per-plan-step status.
 
 ## Network safety (SSRF) for outbound tools
 
@@ -77,16 +125,20 @@ confinement guarantee.
 
 ## Options for Klea
 
-1. **In-tool path checks (current)** -- path-aware and stricter than
+1. **In-tool path checks (implemented)** -- path-aware and stricter than
    opencode's name-based gate, but only for tools we author.  Keep this as
    the author-side layer.
-2. **Client-side tool-call policy layer** -- opencode-style allow / deny /
-   ask per tool (and, where the tool declares it, per path), evaluated at
-   the call site (e.g. in the agent's tool-caller node) before dispatching
-   to the MCP server.  This is the deferred permission service on the
-   kanban board and works regardless of who wrote the server.  It still
-   relies on user judgment for tools whose descriptions undersell their
-   reach.
+2. **Client-side tool-call policy layer (partially implemented)** --
+   opencode-style allow / deny / ask per tool (and, where the tool declares
+   it, per path), evaluated at the call site before dispatching to the MCP
+   server.  The *per-path* half is done: the shared `ToolsCallerNode` gates
+   calls through `dispatch_tool_calls` + `check_tool_arguments_permissions`
+   using each tool's `checkpaths` declaration, denying out-of-boundary paths
+   before they reach the server.  The *allow / deny / ask* ruleset and the
+   interactive user-approval loop (graph pause + TUI/web input, opencode
+   style) are still deferred -- see the TODO in `permission.py` and the
+   kanban board.  The client-side gate only applies to tools that declare
+   `checkpaths`; third-party servers that do not are not path-gated.
 3. **OS-level sandboxing** -- run third-party MCP servers (or the whole
    agent) in a container / bubblewrap / chroot with only the project
    directory mounted.  This is the only hard boundary for servers we do

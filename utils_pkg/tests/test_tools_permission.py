@@ -12,7 +12,10 @@ import logging
 
 import pytest
 from klea_utils.mcp.errors import PermissionDeniedError
-from klea_utils.mcp.tools.permission import check_path_access
+from klea_utils.mcp.tools.permission import (
+    check_path_access,
+    check_tool_arguments_permissions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +86,46 @@ def test_default_root_is_cwd(tmp_path, monkeypatch):
     check_path_access(root / "sub")
     with pytest.raises(PermissionDeniedError):
         check_path_access(tmp_path)
+
+
+def test_check_tool_arguments_allows_inside(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "file.txt").touch()
+    meta = {"checkpaths": ["path"]}
+    result = check_tool_arguments_permissions(
+        meta, {"path": str(root / "file.txt")}, root
+    )
+    assert result == []
+
+
+def test_check_tool_arguments_denies_outside(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.touch()
+    meta = {"checkpaths": ["path"]}
+    denials = check_tool_arguments_permissions(meta, {"path": str(outside)}, root)
+    assert len(denials) == 1
+    assert "denied" in denials[0]
+
+
+def test_check_tool_arguments_no_meta(tmp_path):
+    assert check_tool_arguments_permissions(None, {"path": "/etc"}, tmp_path) == []
+    assert check_tool_arguments_permissions({}, {"path": "/etc"}, tmp_path) == []
+
+
+def test_check_tool_arguments_no_checkpaths(tmp_path):
+    assert (
+        check_tool_arguments_permissions({"other": 1}, {"path": "/etc"}, tmp_path) == []
+    )
+
+
+def test_check_tool_arguments_missing_arg(tmp_path):
+    meta = {"checkpaths": ["path"]}
+    assert check_tool_arguments_permissions(meta, {}, tmp_path) == []
+
+
+def test_check_tool_arguments_skips_non_string(tmp_path):
+    meta = {"checkpaths": ["limit"]}
+    assert check_tool_arguments_permissions(meta, {"limit": 3}, tmp_path) == []

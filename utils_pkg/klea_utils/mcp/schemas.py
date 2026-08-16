@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ToolInfo(BaseModel):
@@ -28,3 +28,17 @@ class ToolInfo(BaseModel):
     checkpaths: list[str] | None = None
     # Additional application-specific metadata.
     meta: dict[str, Any] | None = None
+
+
+class ToolCallSchema(BaseModel):
+    """A single tool call selected by a tools picker node."""
+
+    tool: str = ""
+    args: dict[str, Any] = Field(default_factory=dict)
+    reason: str = ""
+
+
+class ToolCallsSchema(BaseModel):
+    """The structured output of a tools picker node: a list of tool calls."""
+
+    tool_calls: list[ToolCallSchema] = Field(default_factory=list)

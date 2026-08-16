@@ -26,6 +26,18 @@ def sample_tool(param: str) -> str:
     return param
 
 
+@tool_meta(ToolInfo(tags={"testing"}, checkpaths=["path"]))
+def checkpath_tool(path: str) -> str:
+    """A tool whose path argument must be permission-checked."""
+    return path
+
+
+@tool_meta(ToolInfo(tags={"testing"}))
+def nopath_tool(x: str) -> str:
+    """A tool with no path arguments."""
+    return x
+
+
 def plain_helper() -> str:
     """A helper that is not a tool."""
     return "helper"
@@ -70,3 +82,28 @@ async def test_register_tools_ignores_imported_decorated_functions():
     logger.debug(f"{names = }")
 
     assert "imported_tool" not in names
+
+
+@pytest.mark.asyncio
+async def test_register_tools_puts_checkpaths_in_meta():
+    """checkpaths declared on ToolInfo must reach clients on the Tool meta."""
+    server = FastMCP("test-server")
+    register_tools(server, [sys.modules[__name__]])
+
+    tools = await server.list_tools()
+    checkpath_tools = [t for t in tools if t.name == "checkpath_tool"]
+    assert len(checkpath_tools) == 1
+    assert checkpath_tools[0].meta is not None
+    assert checkpath_tools[0].meta["checkpaths"] == ["path"]
+
+
+@pytest.mark.asyncio
+async def test_register_tools_without_checkpaths_omits_key():
+    """Tools that declare no checkpaths must not carry the key in meta."""
+    server = FastMCP("test-server")
+    register_tools(server, [sys.modules[__name__]])
+
+    tools = await server.list_tools()
+    nopath_tools = [t for t in tools if t.name == "nopath_tool"]
+    assert len(nopath_tools) == 1
+    assert "checkpaths" not in (nopath_tools[0].meta or {})
