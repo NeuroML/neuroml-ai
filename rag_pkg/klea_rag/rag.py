@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from pathlib import Path
 from typing import final, override
 
 from fastmcp.mcp_config import MCPConfig
@@ -19,6 +20,8 @@ from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
+from klea_utils.nodes.tools_caller import ToolsCallerNode
+from klea_utils.nodes.tools_picker import ToolsPicker
 from klea_utils.stores.config import RetrieverConfig
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
@@ -33,8 +36,6 @@ from .nodes.init_rag import InitRAGState
 from .nodes.retrieve_info import RetrieveInfoNode
 from .nodes.route_evaluator import RouteEvaluator
 from .nodes.route_query import RouteQuery
-from .nodes.tools_caller import ToolsCaller
-from .nodes.tools_picker import ToolsPicker
 from .schemas import RAGState
 
 
@@ -215,16 +216,19 @@ class RAG(BaseLangGraph):
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
-            domain_tools_info=self.tools_info,
+            tools_info=self.tools_info,
+            model_type="chat",
+            prompt_registry_location=Path(__file__).parent / "nodes" / "prompts",
         )
         self.workflow.add_node(
             self._tools_picker_node.label, self._tools_picker_node.execute
         )
 
-        self._tools_caller_node = ToolsCaller(
+        self._tools_caller_node = ToolsCallerNode(
             logger=self.logger,
             label="Running tools",
             mcp_client=self.mcp_client,
+            tools_meta={t.name: t.meta for t in (self.mcp_tools or []) if t.meta},
         )
         self.workflow.add_node(
             self._tools_caller_node.label, self._tools_caller_node.execute
