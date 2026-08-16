@@ -43,7 +43,9 @@ def normalize_doi(doi: str) -> str:
 
     ``https://doi.org/10.x/y``, ``http://dx.doi.org/10.x/y`` and
     ``doi: 10.x/y`` all become ``10.x/y``.  Trailing punctuation is
-    removed.
+    removed, and a trailing URL path after the DOI suffix is stripped
+    (a valid DOI suffix contains no ``/``, e.g. the path in
+    ``10.1073/pnas.2201699120/-/DCSupplemental``).
 
     :param doi: DOI string, possibly wrapped in a URL or prefix
     :returns: Normalised DOI, or ``""`` when *doi* is empty
@@ -54,7 +56,13 @@ def normalize_doi(doi: str) -> str:
     value = re.sub(
         r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", value, flags=re.IGNORECASE
     )
-    return value.rstrip(".,;:)]}")
+    value = value.rstrip(".,;:)]}")
+    # A valid DOI is ``10.<registrant>/<suffix>``; anything after the
+    # second slash is a URL path, not part of the DOI.
+    parts = value.split("/", 2)
+    if len(parts) == 3:
+        value = f"{parts[0]}/{parts[1]}"
+    return value
 
 
 def _strip_tags(value: str | None) -> str | None:

@@ -15,6 +15,8 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
+from klea_utils.stores.metadata import SHARED_DOC_METADATA_KEYS
+
 #: Metadata key holding each document's original per-source scores (e.g.
 #: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.
 SOURCE_SCORES_KEY = "_source_scores"
@@ -211,12 +213,22 @@ def _format_score_str(doc: Document, score: float) -> str:
     return f" (relevance score: {score:.4f})"
 
 
-def serialize_vs_retrieval(
+def serialize_reference_material(
     reference_material: dict[str, list[tuple[Document, float]]],
 ) -> str:
-    """Serialize vector store retrieval results into text for use in prompt context.
+    """Serialize reference material into text for use in prompt context.
 
-    Documents are sorted by relevance score within each group.
+    Documents are grouped by their source file (``file_name`` metadata)
+    and each source file's document-level metadata is emitted once, with
+    the file's chunks listed underneath.  The shared bibliographic
+    fields (authors, year, journal, ...) are identical on every chunk of
+    a file, so they are listed once on the source header; a ``url*`` key
+    is also hoisted to the header when the whole file shares the same
+    value.  Per-chunk metadata that differs (e.g. a heading-specific
+    ``url``) is emitted inline so no chunk is misattributed.  Files are
+    ordered by their best chunk's relevance score; chunks within a file
+    by score.
+
     Uses Docling ``HybridChunker`` metadata format:
 
     - ``headings``: list of heading hierarchy (most specific last)
@@ -229,27 +241,71 @@ def serialize_vs_retrieval(
     """
     serialized = ""
     for q, sorted_refs in reference_material.items():
-        ctr = 1
         serialized += f"## {q}\n"
-        for r, score in sorted_refs:
-            headings = r.metadata.get("headings", [])
-            file_name = r.metadata.get("file_name", "")
-            heading_str = " > ".join(headings) if headings else "(no heading)"
-            if file_name:
-                heading_str = f"[{file_name}] {heading_str}"
 
-            score_str = _format_score_str(r, score)
-            serialized += (
-                f"\n### Document {ctr}/{len(sorted_refs)}: {heading_str}{score_str}\n"
-            )
-            custom_meta = {
-                k: v for k, v in r.metadata.items() if k not in _INTERNAL_META_KEYS
+        # Group chunks by source file, keeping per-file best score for ordering.
+        files: dict[str, list[tuple[Document, float]]] = {}
+        for doc, score in sorted_refs:
+            file_name = doc.metadata.get("file_name", "")
+            files.setdefault(file_name, []).append((doc, score))
+
+        ordered_files = sorted(
+            files.items(), key=lambda item: max(s for _, s in item[1]), reverse=True
+        )
+        for ctr, (file_name, file_docs) in enumerate(ordered_files, 1):
+            file_docs.sort(key=lambda item: item[1], reverse=True)
+            first_doc, first_score = file_docs[0]
+
+            # Document-level metadata: the shared bibliographic fields
+            # (authors, year, journal, ...) come from the file's top chunk
+            # -- every chunk of the file carries the same values, so they
+            # are emitted once.  A url* key is promoted to the file level
+            # too when every chunk carries the identical value (the common
+            # case); otherwise it stays per-chunk below.
+            file_meta = {
+                k: v
+                for k, v in first_doc.metadata.items()
+                if k in SHARED_DOC_METADATA_KEYS
             }
-            if custom_meta:
-                meta_str = " | ".join(f"{k}={v}" for k, v in custom_meta.items())
+            url_keys = {
+                k for doc, _ in file_docs for k in doc.metadata if k.startswith("url")
+            }
+            for url_key in url_keys:
+                values = {doc.metadata.get(url_key) for doc, _ in file_docs}
+                if len(values) == 1 and None not in values:
+                    file_meta[url_key] = first_doc.metadata.get(url_key)
+
+            heading_str = f"[{file_name}]" if file_name else "(no file)"
+            score_str = _format_score_str(first_doc, first_score)
+            serialized += (
+                f"\n### Source document {ctr}/{len(ordered_files)}: "
+                f"{heading_str}{score_str}\n"
+            )
+            if file_meta:
+                meta_str = " | ".join(f"{k}={v}" for k, v in file_meta.items())
                 serialized += f"Metadata: {meta_str}\n"
-            serialized += r.page_content
-            ctr += 1
+
+            for chunk_ctr, (doc, score) in enumerate(file_docs, 1):
+                headings = doc.metadata.get("headings", [])
+                heading_str = " > ".join(headings) if headings else "(no heading)"
+                score_str = _format_score_str(doc, score)
+                serialized += f"\n  Chunk {chunk_ctr}: {heading_str}{score_str}\n"
+
+                # Chunk-level metadata: non-internal keys not already on the
+                # file level (shared bibliographic fields, and url keys the
+                # whole file shares).  A differing url (e.g. heading-specific)
+                # is emitted inline so no chunk is misattributed.
+                chunk_meta = {
+                    k: v
+                    for k, v in doc.metadata.items()
+                    if k not in _INTERNAL_META_KEYS
+                    and k not in SHARED_DOC_METADATA_KEYS
+                    and file_meta.get(k, object()) != v
+                }
+                if chunk_meta:
+                    meta_str = " | ".join(f"{k}={v}" for k, v in chunk_meta.items())
+                    serialized += f"  Chunk metadata: {meta_str}\n"
+                serialized += doc.page_content
 
     return serialized
 
@@ -397,4 +453,36 @@ def instantiate_vector_store(
             raise ValueError(
                 f"Unknown vector store scheme '{scheme}'. "
                 f"Supported: chroma, qdrant, pgvector"
+            )
+
+
+def drop_collection(store, store_path: str, collection_name: str) -> None:
+    """Drop a vector store collection (portable across backends).
+
+    Used by ``store --force`` to replace a collection wholesale, since
+    documents within a collection cannot be updated in place portably.
+    Chroma and PGVector expose ``delete_collection`` on their LangChain
+    wrapper; Qdrant's wrapper does not, so its raw client is used
+    instead.
+
+    :param store: Instantiated LangChain vector store
+    :param store_path: Store URI (``scheme:location``)
+    :param collection_name: Collection name to drop
+    :raises ValueError: When the scheme is missing or unknown
+    """
+    scheme, sep, _ = store_path.partition(":")
+    if not sep:
+        raise ValueError(
+            f"Invalid vector store path '{store_path}': expected format "
+            f"'scheme:location' (e.g. 'chroma:/path/to/store')"
+        )
+    match scheme.lower():
+        case "chroma" | "pgvector":
+            store.delete_collection()
+        case "qdrant":
+            store._client.delete_collection(collection_name)
+        case _:
+            raise ValueError(
+                f"Unsupported vector store scheme '{scheme}' for collection "
+                f"drop. Supported: chroma, qdrant, pgvector"
             )

@@ -149,15 +149,37 @@ To create a BM25 store alongside a vector store, pass
 :doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``
 entry to the domain config pointing at the written corpus file.
 
+.. _reference-material:
+
+Reference material for the answer LLM
+-------------------------------------
+
+The fused retrieval results are handed to the answer LLM as
+*reference material*, grouped by source file.  Each file's shared
+bibliographic metadata (authors, year, journal, DOI) is shown once on a
+"source document" header, and the file's chunks are listed underneath,
+each carrying its own inline relevance score and numbered within the
+file.  Chunk-level metadata that differs from the file's (e.g. a
+heading-specific URL) stays inline on the chunk.
+
+Grouping and scores are deliberately kept separate: chunks are ordered
+by their file's best relevance score, so a low-scoring chunk in an
+early file can appear before a higher-scoring chunk in a later file.
+Every chunk therefore carries its own score, so position is never
+mistaken for relevance.  The exact serialized layout is described in
+the :class:`~klea_utils.stores.utils.serialize_reference_material` API
+reference.
+
 .. _metadata-extraction:
 
 Bibliographic metadata extraction
 ---------------------------------
 
 When documents are chunked, Klea automatically tries to populate the
-per-file ``DEFAULT`` entry of ``metadata-map.template.json`` with
-bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
-pre-population aid: the researcher reviews and corrects the values
+per-file ``DEFAULT`` entry of ``metadata-map.template.json`` (written to
+the source directory's ``.klea-cache/``) with bibliographic metadata
+(title, authors, keywords, DOI, URL).  This is a pre-population aid: the
+researcher copies the template out, reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.
 
 Multiple URLs are written as separate keys (``url_1``, ``url_2``, ...);
@@ -198,6 +220,15 @@ Two internal keys are added to each file's ``DEFAULT`` entry:
 
 These keys are internal: they guide the researcher reviewing the
 template, and are never shown to the answer LLM.
+
+When storing, each file's ``DEFAULT`` metadata is applied to every chunk,
+and per-heading entries are merged over it (heading-specific keys win,
+``DEFAULT`` fills the rest).  An empty ``{}`` placeholder simply falls
+through to ``DEFAULT``.  ``klea-stores-create map-lint <dir>`` runs
+deterministic, LLM-free checks over the map (missing fields, suspicious
+titles or DOIs, year/filename mismatches, stale ``venue`` keys, excess
+``url*`` keys) and is printed automatically after ``chunk``; re-run it
+after hand-editing the template.
 
 DOI resolution uses the APIs' polite pool when ``KLEA_INGEST_MAILTO``
 is set to an email address (higher rate limits).  It is skipped

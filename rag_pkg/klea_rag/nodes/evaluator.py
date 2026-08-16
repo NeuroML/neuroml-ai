@@ -14,7 +14,7 @@ from typing import Any, override
 from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
-from klea_utils.stores.utils import serialize_vs_retrieval
+from klea_utils.stores.utils import serialize_reference_material
 
 from klea_rag.schemas import EvaluateAnswerSchema, RAGState
 
@@ -49,7 +49,7 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     def _get_prompt_variables(self, state: RAGState) -> dict:
         """Format prompt with question, context, and answer."""
         question = state.query
-        context = serialize_vs_retrieval(state.reference_material)
+        context = serialize_reference_material(state.reference_material)
         answer = state.messages[-1].content
         if isinstance(answer, list):
             answer = "".join(

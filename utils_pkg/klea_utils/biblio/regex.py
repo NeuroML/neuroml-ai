@@ -20,9 +20,12 @@ DOI_RE = re.compile(r"\b10\.\d{4,9}/[^\s,;]+")
 #: Loose URL pattern.
 URL_RE = re.compile(r"https?://[^\s,;]+")
 
-#: Labeled keyword list header (Keywords:, Key words:, ...).
+#: Labeled keyword list header.  Accepts an optional colon and the list
+#: on the same line or the following line, since publishers format these
+#: in several ways (e.g. ``Keywords: a, b``, ``KEYWORDS`` then the list,
+#: ``Keywords :`` then the list on the next line).
 _KEYWORDS_RE = re.compile(
-    r"(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:\s*(.+)$"
+    r"(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:?\s*(.+)$"
 )
 #: Labeled author list header, without the bare "By:" variant.
 _AUTHORS_LABELED_RE = re.compile(r"(?im)^\s*authors?\s*\(?s?\)?\s*:\s*(.{3,500})$")
@@ -37,6 +40,12 @@ _URL_LABELED_RE = re.compile(r"(?im)^\s*(?:url|website|homepage|webpage)\s*:\s*(
 #: (authors, keywords, DOI, URL) live on the first page, so scanning the
 #: whole document is unnecessary and would raise false-positive noise.
 DEFAULT_SCAN_LIMIT = 3000
+
+#: Keyword headers can sit well below the author/DOI region (e.g. after an
+#: abstract), so keywords are scanned over a wider window than the other
+#: fields, which stay at :data:`DEFAULT_SCAN_LIMIT` to avoid false
+#: positives on prose deeper in the document.
+KEYWORD_SCAN_LIMIT = 8000
 
 
 def extract_regex_metadata(
@@ -59,7 +68,9 @@ def extract_regex_metadata(
     scan_text = text[:limit]
 
     result: dict[str, Any] = {}
-    keywords = _scan_keywords(scan_text)
+    # Keywords are scanned over their own wider window (they can sit below
+    # the abstract); the other fields stay within *limit*.
+    keywords = _scan_keywords(text[:KEYWORD_SCAN_LIMIT])
     if keywords:
         result["keywords"] = keywords
     authors = _scan_authors(scan_text)
@@ -76,7 +87,11 @@ def extract_regex_metadata(
 
 
 def _scan_keywords(text: str) -> list[str]:
-    """Return the keyword list from a labeled keyword header, if any."""
+    """Return the keyword list from a labeled keyword header, if any.
+
+    Accepts ``Keywords: a, b``, ``KEYWORDS`` with the list on the next
+    line, and ``Keywords :`` with the list on the next line.
+    """
     match = _KEYWORDS_RE.search(text)
     if not match:
         return []
@@ -103,6 +118,54 @@ def _scan_doi(text: str) -> str | None:
     if match:
         return _rstrip_punct(match.group(0))
     return None
+
+
+def _sanitize_doi(doi: str) -> str | None:
+    """Return a valid DOI from a possibly-garbled match, or ``None``.
+
+    A DOI is ``10.<registrant>/<suffix>`` where the suffix contains no
+    further ``/``.  URL-based matches often drag in a trailing path
+    (e.g. ``10.1073/pnas.2201699120/-/DCSupplemental``) and text matches
+    can carry markdown/URL continuation junk (e.g. ``](https...``) or be
+    truncated by whitespace Docling inserted mid-DOI; this keeps only
+    the ``prefix/suffix`` part.  Returns ``None`` when *doi* is not a
+    well-formed DOI after sanitizing.
+    """
+    cleaned = _rstrip_punct(doi)
+    match = DOI_RE.match(cleaned)
+    if not match:
+        return None
+    candidate = match.group(0)
+    # Bound the suffix at markdown/URL continuations and trailing
+    # punctuation, then strip a trailing URL path (a valid DOI suffix
+    # has no further slash).
+    candidate = re.split(r"[\])}\s]", candidate, maxsplit=1)[0]
+    candidate = candidate.rstrip(".,;:)]}")
+    parts = candidate.split("/", 1)
+    if len(parts) == 2 and "/" in parts[1]:
+        candidate = parts[0] + "/" + parts[1].split("/", 1)[0]
+    return candidate or None
+
+
+def _scan_dois(text: str) -> list[str]:
+    """Return all distinct DOI candidates found in *text*.
+
+    Unlike :func:`_scan_doi`, which returns a single match, this returns
+    every DOI-like match (sanitized and deduplicated) so the extraction
+    cascade can try candidates in order instead of trusting the first
+    match, which may be a broken or journal-level DOI.
+
+    :param text: Text to scan
+    :returns: Deduplicated list of sanitized DOI strings
+    """
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    for match in DOI_RE.finditer(text):
+        doi = _sanitize_doi(match.group(0))
+        if doi and doi not in seen_set:
+            seen_set.add(doi)
+            seen.append(doi)
+    return seen
 
 
 def _scan_url(text: str) -> str | None:

@@ -18,7 +18,7 @@ from klea_utils.llm import (
 )
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
-from klea_utils.stores.utils import serialize_vs_retrieval
+from klea_utils.stores.utils import serialize_reference_material
 from klea_utils.tools import textualize_tool_results
 from langchain.messages import AIMessage
 from pydantic import BaseModel, Field
@@ -61,7 +61,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     def _get_prompt_variables(self, state: BaseModel) -> dict:
         """Format prompt with question and serialized reference material."""
         reference_material = state.reference_material  # type: ignore
-        reference_material_text = serialize_vs_retrieval(reference_material)
+        reference_material_text = serialize_reference_material(reference_material)
 
         # Add tool results to the reference material
         if hasattr(state, "tool_results") and state.tool_results:  # type: ignore

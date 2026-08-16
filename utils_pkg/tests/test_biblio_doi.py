@@ -90,6 +90,16 @@ def test_normalize_doi_variants():
         assert normalize_doi(wrapped) == expected, wrapped
 
 
+def test_normalize_doi_strips_trailing_path():
+    """A trailing URL path after the DOI suffix is dropped."""
+    assert normalize_doi("10.1073/pnas.2201699120/-/DCSupplemental") == (
+        "10.1073/pnas.2201699120"
+    )
+    assert normalize_doi("10.1098/rstb.2017.0379/254766/rstb.2017.0379.pdf") == (
+        "10.1098/rstb.2017.0379"
+    )
+
+
 def test_normalize_crossref():
     """Crossref responses normalise, stripping JATS tags from the abstract."""
     record = _normalize_crossref(CROSSREF_JSON)

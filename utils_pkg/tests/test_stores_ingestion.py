@@ -16,10 +16,12 @@ from pathlib import Path
 
 import pytest
 from klea_utils.stores.ingestion import (
+    CACHE_DIR_NAME,
     TEMPLATE_FILE_NAME,
     StoresBuilder,
     _apply_store_metadata_policy,
     _ensure_doi_url,
+    _first_heading_title,
     _normalize_extracted_metadata,
     _sanitize_store_metadata,
     _split_url_list,
@@ -316,10 +318,12 @@ class TestConvertAndChunkNormalization:
         from types import SimpleNamespace
 
         # Skip the real biblio cascade; it operates on a Docling document
-        # we are not building here.
+        # we are not building here.  A real title is returned so the
+        # chunk-heading title fallback does not engage (it has its own
+        # dedicated test).
         monkeypatch.setattr(
             "klea_utils.stores.ingestion.extract_metadata",
-            lambda *args, **kwargs: {},
+            lambda *args, **kwargs: {"title": "A real extracted title"},
         )
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -356,7 +360,7 @@ class TestConvertAndChunkNormalization:
 
         docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
 
-        assert extracted == {}
+        assert extracted == {"title": "A real extracted title"}
         assert docs[0].page_content == "multi-scale modeling in neuroscience"
         assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
         assert docs[1].page_content == "plain content"
@@ -377,7 +381,7 @@ class TestConvertAndChunkNormalization:
 
         monkeypatch.setattr(
             "klea_utils.stores.ingestion.extract_metadata",
-            lambda *args, **kwargs: {},
+            lambda *args, **kwargs: {"title": "A real extracted title"},
         )
 
         def _doc_chunk(text: str, headings: list[str] | None) -> DocChunk:
@@ -423,10 +427,138 @@ class TestConvertAndChunkNormalization:
 
         docs, extracted = builder._convert_and_chunk(Path("paper.pdf"), resolver=None)
 
-        assert extracted == {}
+        assert extracted == {"title": "A real extracted title"}
         assert docs[0].metadata["headings"] == ["Multi-scale Modeling"]
         assert docs[1].page_content == "no heading chunk"
         assert docs[1].metadata["headings"] == []
+
+    def test_convert_and_chunk_title_fallback_uses_first_heading(self, monkeypatch):
+        """When the cascade falls back to the stem, the first chunk heading is used."""
+        from types import SimpleNamespace
+
+        # Empty extraction -> title missing -> chunk-heading fallback engages.
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk._text
+
+        chunker = _FakeChunker(
+            [
+                _FakeChunk(
+                    "CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS",
+                    ["CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS"],
+                ),
+                _FakeChunk("abstract text", ["ABSTRACT"]),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(
+            Path("MiTuraga2022.pdf"), resolver=None
+        )
+
+        assert extracted["title"] == "CONNECTOME-CONSTRAINED LATENT VARIABLE MODELS"
+        assert "chunk-heading" in extracted["_sources"]
+
+    def test_convert_and_chunk_title_fallback_skips_labels(self, monkeypatch):
+        """Label headings (DOI:, Highlights) are skipped for the title fallback."""
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.extract_metadata",
+            lambda *args, **kwargs: {},
+        )
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+
+        class _FakeConverter:
+            def convert(self, path):
+                return SimpleNamespace(document=SimpleNamespace())
+
+        class _FakeChunker:
+            def __init__(self, chunks):
+                self._chunks = chunks
+
+            def chunk(self, dl_doc):
+                return self._chunks
+
+            def contextualize(self, chunk):
+                return chunk._text
+
+        chunker = _FakeChunker(
+            [
+                _FakeChunk("citation text", []),
+                _FakeChunk("doi text", ["DOI:"]),
+                _FakeChunk(
+                    "Potential role of a ventral nerve cord",
+                    [
+                        "Potential role of a ventral nerve cord central pattern generator"
+                    ],
+                ),
+            ]
+        )
+        monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
+        monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
+
+        docs, extracted = builder._convert_and_chunk(
+            Path("Olivares2017.pdf"), resolver=None
+        )
+
+        assert (
+            extracted["title"]
+            == "Potential role of a ventral nerve cord central pattern generator"
+        )
+
+
+class TestFirstHeadingTitle:
+    """_first_heading_title falls back to the first non-label heading."""
+
+    def _docs(self, *heading_lists):
+        docs = []
+        for heads in heading_lists:
+            docs.append(
+                Document(
+                    page_content="content",
+                    metadata={"headings": heads} if heads else {},
+                )
+            )
+        return docs
+
+    def test_uses_first_non_empty_heading(self):
+        assert (
+            _first_heading_title(
+                self._docs([], ["DOI:"], ["Potential role of a ventral nerve cord"])
+            )
+            == "Potential role of a ventral nerve cord"
+        )
+
+    def test_skips_label_headings(self):
+        assert _first_heading_title(
+            self._docs(["Highlights"], ["ABSTRACT"], ["Real Title"])
+        ) == ("Real Title")
+
+    def test_no_headings_returns_none(self):
+        assert _first_heading_title(self._docs([], [])) is None
+
+    def test_all_labels_returns_none(self):
+        assert _first_heading_title(self._docs(["Review"], ["DOI:"])) is None
 
 
 class TestIngestion:
@@ -439,6 +571,51 @@ class TestIngestion:
 
     def teardown_method(self):
         self.tmpdir.cleanup()
+
+    def test_prune_cache_removes_orphans_keeps_current(self):
+        """Prune removes entries whose hash matches no current file."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        current = "xxh64:abcdef1234567890"
+        for name in (
+            "xxh64_abcdef1234567890.pkl",  # matches a current file
+            "xxh64_deadbeefdeadbeef.pkl",  # orphan (renamed/removed file)
+            "xxh64_0123456789abcdef.pkl",  # orphan (changed file)
+        ):
+            (cache_dir / name).write_bytes(b"stale")
+        # Non-chunk-cache files must be left untouched.
+        doi_cache = cache_dir / "doi-cache.json"
+        doi_cache.write_text('{"10.1234/test": {}}')
+        unrelated = cache_dir / "readme.txt"
+        unrelated.write_text("not cache data")
+
+        builder._prune_cache(self.tmpdir_path, {current})
+
+        assert (cache_dir / "xxh64_abcdef1234567890.pkl").exists()
+        assert not (cache_dir / "xxh64_deadbeefdeadbeef.pkl").exists()
+        assert not (cache_dir / "xxh64_0123456789abcdef.pkl").exists()
+        assert doi_cache.exists()
+        assert unrelated.exists()
+
+    def test_prune_cache_no_cache_dir_is_noop(self):
+        """Prune on a source dir without a cache directory does nothing."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._prune_cache(self.tmpdir_path, {"xxh64:abcdef1234567890"})
+
+    def test_prune_cache_all_current_keeps_everything(self):
+        """No entries are removed when every cache file is current."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        current = {"xxh64:abc", "xxh64:def"}
+        for name in ("xxh64_abc.pkl", "xxh64_def.pkl"):
+            (cache_dir / name).write_bytes(b"ok")
+
+        builder._prune_cache(self.tmpdir_path, current)
+
+        assert (cache_dir / "xxh64_abc.pkl").exists()
+        assert (cache_dir / "xxh64_def.pkl").exists()
 
     @pytest.mark.localonly
     def test_build_chroma(self):
@@ -642,7 +819,7 @@ class TestIngestion:
     def test_cache_load_handles_legacy_format(self):
         """Legacy plain-list cache entries load with empty extraction."""
         doc = Document(page_content="Legacy.", metadata={})
-        cache_dir = self.tmpdir_path / ".klea-cache"
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
         cache_dir.mkdir()
         with open(cache_dir / "xxh64_legacy.pkl", "wb") as f:
             pickle.dump([doc], f)
@@ -715,7 +892,8 @@ class TestIngestion:
         """An explicit metadata-map path beats the template fallback."""
         explicit = self.tmpdir_path / "explicit.json"
         explicit.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "explicit"}}}))
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -725,7 +903,8 @@ class TestIngestion:
 
     def test_resolve_metadata_map_falls_back_to_template(self):
         """Without an explicit path, the template map is used when present."""
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({"test.md": {"DEFAULT": {"url": "template"}}}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -753,7 +932,8 @@ class TestIngestion:
 
     def test_resolve_metadata_map_errors_on_empty_template(self):
         """An empty template map is treated the same as no map at all."""
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps({}))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -783,7 +963,12 @@ class TestIngestion:
             }
 
         def _fake_store_all(
-            results, store_uri, collection_name, force=False, bm25_path=None
+            results,
+            store_uri,
+            collection_name,
+            source_dir,
+            force=False,
+            bm25_path=None,
         ):
             nonlocal captured_store
             captured_store = True
@@ -803,8 +988,9 @@ class TestIngestion:
         assert passed_maps[1] is not None
         assert passed_maps[1]["test.md"]["DEFAULT"]["journal"] == "Journal of X"
         assert captured_store is True
-        # The template was written so it can be reviewed for a later store.
-        assert (self.tmpdir_path / TEMPLATE_FILE_NAME).is_file()
+        # The template was written to the cache folder so it can be reviewed
+        # for a later store.
+        assert (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).is_file()
 
     def test_resolve_metadata_matches_normalized_headings(self):
         """_resolve_metadata matches normalized chunk headings to map keys."""
@@ -820,6 +1006,142 @@ class TestIngestion:
             },
         )
         assert meta == {"topic": "nml"}
+
+    def test_resolve_metadata_empty_heading_falls_through_to_default(self):
+        """An empty heading placeholder must not strip the DEFAULT metadata."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Introduction"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback", "year": 2020},
+                    "Introduction": {},
+                }
+            },
+        )
+        assert meta == {"topic": "fallback", "year": 2020}
+
+    def test_resolve_metadata_empty_heading_falls_to_later_heading(self):
+        """Empty headings fall through to a more specific (later) match."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro", "Methods", "Results"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Intro": {},
+                    "Methods": {},
+                    "Results": {"topic": "results"},
+                }
+            },
+        )
+        assert meta == {"topic": "results"}
+
+    def test_resolve_metadata_empty_everything_returns_default(self):
+        """When every matching heading is empty, DEFAULT is returned."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"topic": "fallback"},
+                    "Intro": {},
+                }
+            },
+        )
+        assert meta == {"topic": "fallback"}
+
+    def test_resolve_metadata_filled_heading_beats_empty_default(self):
+        """A filled heading entry wins over an empty DEFAULT."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Intro": {"url": "https://example.com/intro"},
+                }
+            },
+        )
+        assert meta == {"url": "https://example.com/intro"}
+
+    def test_resolve_metadata_all_empty_returns_empty_dict(self):
+        """When the file exists but has no metadata anywhere, return {}."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Intro": {},
+                }
+            },
+        )
+        assert meta == {}
+
+    def test_resolve_metadata_merges_heading_url_over_default(self):
+        """A heading that only sets url keeps the DEFAULT bibliographic fields."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Introduction"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {
+                        "authors": ["A. Sinha"],
+                        "year": 2020,
+                        "journal": "eLife",
+                    },
+                    "Introduction": {"url": "https://example.com/intro"},
+                }
+            },
+        )
+        assert meta == {
+            "authors": ["A. Sinha"],
+            "year": 2020,
+            "journal": "eLife",
+            "url": "https://example.com/intro",
+        }
+
+    def test_resolve_metadata_heading_overrides_default_field(self):
+        """A heading-specific key wins over the DEFAULT value for that key."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Methods"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"url": "https://example.com/paper"},
+                    "Methods": {"url": "https://example.com/methods"},
+                }
+            },
+        )
+        assert meta == {"url": "https://example.com/methods"}
+
+    def test_resolve_metadata_merge_only_for_first_nonempty_heading(self):
+        """Empty headings fall through before the merge happens."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Intro", "Methods"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"authors": ["A. Sinha"], "year": 2020},
+                    "Intro": {},
+                    "Methods": {"url": "https://example.com/methods"},
+                }
+            },
+        )
+        assert meta == {
+            "authors": ["A. Sinha"],
+            "year": 2020,
+            "url": "https://example.com/methods",
+        }
 
     @pytest.mark.localonly
     def test_chunk_all_errors_when_file_missing_from_map(self):
@@ -841,6 +1163,53 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         with pytest.raises(ValueError, match="test.md"):
             builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+
+    def test_load_and_fold_results_raises_on_uncached_file(self):
+        """_load_and_fold_results refuses to load a file with no cache entry."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with pytest.raises(ValueError, match="test.md.*cache"):
+            builder._load_and_fold_results(self.tmpdir_path, None)
+
+    def test_load_and_fold_results_succeeds_when_all_cached(self):
+        """_load_and_fold_results passes when every file is already cached."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Populate the cache first (chunk_all converts on the fly).
+        builder.chunk_all(self.tmpdir_path)
+
+        results = builder._load_and_fold_results(self.tmpdir_path, None)
+        assert len(results) == 1
+        assert results[0][2].name == "test.md"
+
+    def test_load_and_fold_results_applies_metadata_map(self):
+        """_load_and_fold_results folds the metadata map into cached chunks."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        builder.chunk_all(self.tmpdir_path)
+
+        metadata_map = {"test.md": {"DEFAULT": {"year": 2020, "journal": "J"}}}
+        results = builder._load_and_fold_results(self.tmpdir_path, metadata_map)
+        assert len(results) == 1
+        for doc in results[0][1]:
+            assert doc.metadata["year"] == 2020
+            assert doc.metadata["journal"] == "J"
+
+    def test_chunk_all_still_converts_on_the_fly(self):
+        """chunk_all converts on the fly when no cache entry exists."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        results, _ = builder.chunk_all(self.tmpdir_path)
+        assert len(results) == 1
+        assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
 
     @pytest.mark.localonly
     def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
@@ -942,7 +1311,8 @@ class TestIngestion:
     def test_write_heading_template_preserves_existing_when_empty(self):
         """An empty chunk run must not clobber an existing template."""
         existing = {"paper.pdf": {"DEFAULT": {"title": "T"}}}
-        template = self.tmpdir_path / TEMPLATE_FILE_NAME
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
         template.write_text(json.dumps(existing))
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
@@ -969,7 +1339,7 @@ class TestIngestion:
             self.tmpdir_path,
         )
 
-        text = (self.tmpdir_path / TEMPLATE_FILE_NAME).read_text()
+        text = (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).read_text()
         assert "B\u00f3ris Marin" in text
         assert "\\u00f3" not in text
         assert json.loads(text)["paper.pdf"]["DEFAULT"]["authors"] == [
@@ -981,7 +1351,7 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         builder.write_heading_template({}, self.tmpdir_path)
 
-        assert not (self.tmpdir_path / TEMPLATE_FILE_NAME).exists()
+        assert not (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).exists()
 
     def test_build_raises_when_nothing_chunked(self, monkeypatch):
         """build() fails loudly instead of storing nothing and reporting done."""
@@ -992,8 +1362,15 @@ class TestIngestion:
             builder.build(str(self.tmpdir_path), "chroma:/tmp/x", "c")
 
     def test_find_files_excludes_template(self):
-        """The generated template is not treated as an ingestible file."""
-        (self.tmpdir_path / TEMPLATE_FILE_NAME).write_text("{}")
+        """The generated template in .klea-cache/ is not ingestible.
+
+        The template now lives in the cache folder, which _find_files
+        skips wholesale; a stray template in the source dir would be an
+        unsupported extension anyway.
+        """
+        template = self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        template.parent.mkdir(parents=True, exist_ok=True)
+        template.write_text("{}")
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         assert builder._find_files(self.tmpdir_path) == []
 
@@ -1016,6 +1393,39 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         assert builder._find_files(self.tmpdir_path) == [src]
 
+    def test_find_files_excludes_configured_store_dir(self):
+        """The configured store directory is never ingested."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, store_dir=store)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_find_files_excludes_chroma_store_heuristically(self):
+        """A nested store is excluded even without an explicit store_dir."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_find_files_keeps_real_source_with_sqlite_name(self):
+        """A .md source alongside a store folder is still found."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, store_dir=store)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
     def test_store_all_sanitizes_metadata_for_upsert(self, monkeypatch):
         """Empty-list/None metadata is dropped at upsert; originals intact.
 
@@ -1027,9 +1437,16 @@ class TestIngestion:
         class FakeStore:
             def __init__(self):
                 self.added: list[Document] = []
+                self.dropped = False
 
             def add_documents(self, docs):
                 self.added.extend(docs)
+
+            def delete_collection(self):
+                self.dropped = True
+
+            def delete(self, ids=None, **kwargs):
+                pass
 
         fake = FakeStore()
         monkeypatch.setattr(
@@ -1052,10 +1469,13 @@ class TestIngestion:
             [("xxh64:abc", [doc], Path("a.md"))],
             "chroma:/tmp/x",
             "col",
+            self.tmpdir_path,
             force=True,
         )
 
+        assert fake.dropped is True
         assert len(fake.added) == 1
+        assert fake.added[0].id == "a.md:0"
         meta = fake.added[0].metadata
         assert "headings" not in meta
         assert "extra" not in meta
@@ -1074,9 +1494,17 @@ class TestIngestion:
         class FakeStore:
             def __init__(self):
                 self.calls: list[int] = []
+                self.added_ids: list[str] = []
 
             def add_documents(self, docs):
                 self.calls.append(len(docs))
+                self.added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                pass
 
         fake = FakeStore()
         monkeypatch.setattr(
@@ -1102,13 +1530,219 @@ class TestIngestion:
                 [("xxh64:abc", docs, Path("a.md"))],
                 "chroma:/tmp/x",
                 "col",
+                self.tmpdir_path,
                 force=True,
             )
 
         assert fake.calls == [4, 4, 2]
+        assert fake.added_ids == [f"a.md:{i}" for i in range(10)]
         assert "Stored 4/10 chunks (40%) from a.md" in caplog.text
         assert "Stored 8/10 chunks (80%) from a.md" in caplog.text
         assert "Added 10 chunks from a.md (1/1)" in caplog.text
+
+    def test_manifest_round_trip(self):
+        """The store manifest is written and reloaded."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = {
+            "version": 1,
+            "collection": "col",
+            "files": {"a.md": {"file_hash": "xxh64:abc", "num_chunks": 2}},
+        }
+        builder._save_manifest(self.tmpdir_path, "col", manifest)
+
+        loaded = builder._load_manifest(self.tmpdir_path, "col")
+        assert loaded == manifest
+
+    def test_manifest_missing_is_fresh(self):
+        """A missing manifest yields an empty file mapping."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"] == {}
+
+    def test_manifest_corrupt_is_fresh(self):
+        """A corrupt manifest is ignored and treated as fresh."""
+        path = self.tmpdir_path / CACHE_DIR_NAME / "col.manifest.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("not json")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"] == {}
+
+    def test_store_all_incremental_skips_unchanged(self, monkeypatch):
+        """Unchanged files (hash matches manifest) are skipped."""
+        calls: list[int] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                calls.append(len(docs))
+
+            def delete(self, ids=None, **kwargs):
+                calls.append(-len(ids or []))
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Pre-seed the manifest: a.md already stored with this hash.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"a.md": {"file_hash": "xxh64:abc", "num_chunks": 2}},
+            },
+        )
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        assert calls == []
+
+    def test_store_all_incremental_replaces_changed(self, monkeypatch):
+        """A changed file has its old chunk IDs deleted, then is re-added."""
+        deleted: list[list[str]] = []
+        added_ids: list[str] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                added_ids.extend(d.id for d in docs)
+
+            def delete(self, ids=None, **kwargs):
+                deleted.append(ids or [])
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Manifest says a.md had 3 chunks with the old hash.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"a.md": {"file_hash": "xxh64:old", "num_chunks": 3}},
+            },
+        )
+
+        docs = [
+            Document(page_content=f"x{i}", metadata={"file_name": "a.md"})
+            for i in range(2)
+        ]
+        builder.store_all(
+            [("xxh64:new", docs, Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        # Old IDs 0..2 deleted, then the two new chunks added.
+        assert deleted == [["a.md:0", "a.md:1", "a.md:2"]]
+        assert added_ids == ["a.md:0", "a.md:1"]
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"]["a.md"] == {"file_hash": "xxh64:new", "num_chunks": 2}
+
+    def test_store_all_no_force_never_prunes_absent_files(self, monkeypatch):
+        """Files in the manifest but absent from the source are left alone."""
+        deleted: list[list[str]] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                deleted.append(ids or [])
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+        # Manifest knows about removed.md, but it is not in the results.
+        builder._save_manifest(
+            self.tmpdir_path,
+            "col",
+            {
+                "version": 1,
+                "collection": "col",
+                "files": {"removed.md": {"file_hash": "xxh64:r", "num_chunks": 5}},
+            },
+        )
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+        )
+
+        # a.md added; removed.md untouched.
+        assert deleted == []
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert "removed.md" in manifest["files"]
+
+    def test_store_all_force_drops_and_rebuilds(self, monkeypatch):
+        """--force drops the collection and re-stores every file."""
+        dropped = []
+        added_ids: list[str] = []
+
+        class FakeStore:
+            def add_documents(self, docs):
+                added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                dropped.append(True)
+
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: FakeStore(),
+        )
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder.embeddings = object()
+
+        doc = Document(page_content="x", metadata={"file_name": "a.md"})
+        builder.store_all(
+            [("xxh64:abc", [doc], Path("a.md"))],
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+            force=True,
+        )
+
+        assert dropped == [True]
+        assert added_ids == ["a.md:0"]
+        manifest = builder._load_manifest(self.tmpdir_path, "col")
+        assert manifest["files"]["a.md"] == {"file_hash": "xxh64:abc", "num_chunks": 1}
+
+
+def test_store_dir_resolves_local_and_remote_schemes():
+    """_store_dir returns local folders but None for remote schemes."""
+    from klea_utils.ui.stores_create import _store_dir
+
+    chroma_dir = _store_dir("chroma:/tmp/store")
+    assert chroma_dir is not None
+    assert chroma_dir.name == "store"
+
+    lance_dir = _store_dir("lancedb:/tmp/lance")
+    assert lance_dir is not None
+    assert lance_dir.name == "lance"
+
+    assert _store_dir("qdrant:http://localhost:6333") is None
+    assert _store_dir("pgvector:postgresql://host/db") is None
+    assert _store_dir("no-scheme-path") is None
 
 
 if __name__ == "__main__":

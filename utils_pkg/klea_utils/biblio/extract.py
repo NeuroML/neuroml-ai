@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Protocol
 
 from .docling import extract_docling_structured, extract_layout_region
-from .doi import BiblioRecord
+from .doi import BiblioRecord, normalize_doi
 from .pdf import extract_pdf_info
-from .regex import extract_regex_metadata
+from .regex import _scan_dois, extract_regex_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,8 @@ def extract_metadata(
     doi = _discover_doi(pdf_fields, layout_regex, regex_fields)
     logger.debug(f"discovered {doi = }")
 
-    record = _resolve_record(doi, resolver)
+    candidates = _doi_candidates(full_text, docling_info)
+    record = _resolve_record(doi, resolver, candidates)
 
     # Most authoritative first.
     tiers: list[tuple[str, dict]] = []
@@ -176,33 +177,105 @@ def extract_metadata_from_text(
     return _merge_tiers(tiers, record, pdf_fields, file_path)
 
 
-def _resolve_record(doi: str | None, resolver: Resolver | None) -> BiblioRecord | None:
-    """Resolve *doi* via *resolver*, logging skipped/failed resolutions.
+def _resolve_record(
+    doi: str | None,
+    resolver: Resolver | None,
+    candidates: list[str] | None = None,
+) -> BiblioRecord | None:
+    """Resolve *doi* via *resolver*, falling back to *candidates*.
+
+    The primary *doi* is tried first.  If it resolves to a record *with
+    authors* (a paper record), that is used.  Otherwise -- or when the
+    primary is missing -- the remaining *candidates* are tried in order
+    until one yields a record with authors.  If only author-less records
+    are found (e.g. a journal-level DOI like ``10.1073/pnas``), the first
+    resolved record is returned as a last resort, matching the old
+    behaviour.
 
     Logs an informational message when a discovered DOI is not resolved
     because no resolver was provided, and a warning when resolution is
     attempted but fails.
 
-    :param doi: Discovered DOI, or ``None``
+    :param doi: Primary discovered DOI, or ``None``
     :param resolver: Resolver, or ``None``
+    :param candidates: Additional DOI candidates to try when the primary
+        does not resolve to a paper record
     :returns: Resolved record, or ``None``
     """
-    if not doi:
-        return None
     if resolver is None:
-        logger.info(f"DOI {doi} discovered but DOI resolution skipped (no resolver)")
+        if doi:
+            logger.info(
+                f"DOI {doi} discovered but DOI resolution skipped (no resolver)"
+            )
         return None
-    record = resolver.resolve(doi)
-    if record is not None:
-        logger.info(
-            f"resolved DOI {doi} via DOI services\n"
-            f"{record.title = }\n"
-            f"{record.authors = }\n"
-            f"{record.year = }"
-        )
-    else:
-        logger.warning(f"Could not resolve DOI {doi} (see DOI resolver logs)")
-    return record
+
+    ordered = []
+    if doi:
+        ordered.append(doi)
+    for candidate in candidates or []:
+        if candidate not in ordered:
+            ordered.append(candidate)
+    if not ordered:
+        return None
+
+    first_resolved: BiblioRecord | None = None
+    for candidate in ordered:
+        logger.debug(f"trying DOI candidate {candidate!r}")
+        record = resolver.resolve(candidate)
+        if record is None:
+            logger.warning(f"Could not resolve DOI {candidate} (see DOI resolver logs)")
+            continue
+        if first_resolved is None:
+            first_resolved = record
+            logger.info(
+                f"resolved DOI {candidate} via DOI services\n"
+                f"{record.title = }\n"
+                f"{record.authors = }\n"
+                f"{record.year = }"
+            )
+        if record.authors:
+            logger.info(
+                f"using DOI {candidate} (record has authors)\n"
+                f"{record.title = }\n"
+                f"{record.year = }"
+            )
+            return record
+
+    logger.warning(
+        "No DOI candidate resolved to a paper record; "
+        "falling back to the first resolved record"
+    )
+    return first_resolved
+
+
+def _doi_candidates(full_text: str, docling_info: dict) -> list[str]:
+    """Return deduplicated DOI candidates from text and docling URLs.
+
+    The primary DOI (from the labeled tiers) may be broken or a
+    journal-level stub; these additional candidates give the resolver
+    something to fall back to.  They come from two sources:
+
+    - every ``10.`` match in the document text (:func:`_scan_dois`), and
+    - DOIs embedded in the docling ``urls`` hyperlinks.
+
+    :param full_text: Joined document text
+    :param docling_info: Docling tier output (may carry a ``urls`` list)
+    :returns: Deduplicated list of sanitized DOI strings
+    """
+    candidates: list[str] = []
+    seen: set[str] = set()
+    text_candidates = _scan_dois(full_text)
+    url_candidates = [
+        candidate
+        for url in (docling_info.get("urls") or [])
+        for candidate in _scan_dois(url)
+    ]
+    for candidate in text_candidates + url_candidates:
+        normalized = normalize_doi(candidate)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            candidates.append(normalized)
+    return candidates
 
 
 def _document_text(dl_doc) -> str:

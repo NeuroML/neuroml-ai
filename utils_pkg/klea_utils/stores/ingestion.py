@@ -19,39 +19,61 @@ from langchain_core.documents import Document
 
 from ..biblio.extract import Resolver, extract_metadata, extract_metadata_from_text
 from ..llm import setup_embedding
-from .utils import instantiate_vector_store, normalize_text
+from .metadata import (
+    STORE_DROPPED_METADATA_KEYS,
+)
+from .utils import drop_collection, instantiate_vector_store, normalize_text
 
 CACHE_DIR_NAME = ".klea-cache"
 TEMPLATE_FILE_NAME = "metadata-map.template.json"
 
-#: Metadata keys that are always stored in the vector store, together with
-#: the bibliographic fields produced by the extraction cascade
-#: (``title``, ``authors``, ``keywords``, ``year``, ``journal``, ``doi``).
-#: Any ``url*`` key (``url``, ``url_1``, ``url_doi``, ...) is also always
-#: stored.  This whitelist documents the guaranteed stored schema; *presence*
-#: of the cascade fields is determined by the metadata map (whose
-#: researcher-curated keys pass through unmodified).  See
-#: :func:`_apply_store_metadata_policy`.
-ALWAYS_STORED_METADATA_KEYS = frozenset(
+#: Heading texts that are never a real document title.  When the title
+#: extraction falls back to the filename stem, the first chunk heading is
+#: used as a title fallback instead -- but journal banners and section
+#: labels (e.g. ``Review``, ``Highlights``, ``DOI:``) are not titles, so
+#: they are skipped.  Lowercased for comparison.
+_TITLE_SKIP_HEADINGS = frozenset(
     {
-        "file_name",
-        "file_hash",
-        "headings",
-        "title",
-        "authors",
-        "keywords",
-        "year",
-        "journal",
+        "review",
+        "research",
+        "research article",
+        "highlights",
+        "abstract",
+        "author summary",
+        "summary",
+        "introduction",
+        "doi:",
         "doi",
+        "editorial",
+        "front matter",
+        "correspondence",
+        "*for correspondence:",
     }
 )
 
-#: Metadata keys that are never stored.  Provenance keys from the biblio
-#: cascade; keys starting with ``_`` (e.g. ``_metadata_complete``,
-#: ``_sources``, ``_source_scores``) are also always dropped.  These guide
-#: the researcher reviewing ``metadata-map.template.json`` but carry no
-#: meaning in a store.  See :func:`_apply_store_metadata_policy`.
-STORE_DROPPED_METADATA_KEYS = frozenset({"source_path", "source_type", "source_url"})
+
+def _first_heading_title(docs: list[Document]) -> str | None:
+    """Return the first chunk heading that looks like a title, or ``None``.
+
+    Scans *docs* in document order for the first non-empty heading chain
+    and returns its first element, skipping headings that are journal
+    banners or section labels (see :data:`_TITLE_SKIP_HEADINGS`).  This
+    is a fallback for documents whose title Docling's layout model does
+    not label as a ``TITLE`` item (e.g. some conference preprints), used
+    only when the extraction cascade falls back to the filename stem.
+
+    :param docs: Chunked documents in document order
+    :returns: First heading that looks like a title, or ``None``
+    """
+    for doc in docs:
+        headings = doc.metadata.get("headings") or []
+        if not headings:
+            continue
+        candidate = headings[0].strip()
+        if candidate.lower() in _TITLE_SKIP_HEADINGS:
+            continue
+        return candidate
+    return None
 
 
 class StoresBuilder:
@@ -82,6 +104,7 @@ class StoresBuilder:
         tokenizer_model: str = DEFAULT_TOKENIZER_MODEL,
         do_ocr: bool = True,
         embed_batch_size: int = DEFAULT_EMBED_BATCH_SIZE,
+        store_dir: Path | None = None,
     ):
         """Initialise the builder.
 
@@ -100,6 +123,10 @@ class StoresBuilder:
             significantly.
         :param embed_batch_size: Chunks per ``add_documents`` call when
             writing to the vector store
+        :param store_dir: Vector store directory (e.g. a Chroma store
+            folder) that may live inside the source directory and must
+            be excluded from ingestion.  ``None`` for remote backends
+            with no local folder.
         """
         self.embedding_model = embedding_model
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
@@ -113,6 +140,7 @@ class StoresBuilder:
         self._converter = None
         self._chunker = None
         self._metadata_map_path: Path | None = None
+        self.store_dir = store_dir.resolve() if store_dir else None
 
         self.logger.info(
             f"StoresBuilder initialised (max_tokens={max_tokens}, "
@@ -173,7 +201,7 @@ class StoresBuilder:
             # be reviewed and re-stored later.
             self.write_heading_template(file_headings, source_path)
             template_map = self._load_metadata_map(
-                str(source_path / TEMPLATE_FILE_NAME)
+                str(self._cache_dir(source_path) / TEMPLATE_FILE_NAME)
             )
             results, _ = self.chunk_all(source_path, template_map, force=False)
             if not results:
@@ -181,7 +209,14 @@ class StoresBuilder:
                     f"No files were successfully chunked from {source_path}"
                 )
 
-        self.store_all(results, store_uri, collection_name, force, bm25_path)
+        self.store_all(
+            results,
+            store_uri,
+            collection_name,
+            source_path,
+            force=force,
+            bm25_path=bm25_path,
+        )
         self.logger.info(f"Ingestion complete for collection '{collection_name}'")
 
     def chunk_all(
@@ -198,6 +233,11 @@ class StoresBuilder:
         The per-file ``DEFAULT`` template entry is pre-filled with the
         automatically-extracted bibliographic metadata (see
         :func:`~klea_utils.biblio.extract.extract_metadata`).
+
+        The metadata map is folded into the chunks via
+        :meth:`_fold_metadata_map`.  The cache-only ``store`` command
+        does not call this -- it uses :meth:`_load_and_fold_results`,
+        which loads cached chunks without converting.
 
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment,
@@ -219,8 +259,16 @@ class StoresBuilder:
         file_headings: dict[str, dict[str, Any]] = {}
         total = len(files)
 
+        # Hashes of every source file found (whether or not it converts
+        # successfully below).  Used to prune cache entries whose hash no
+        # longer matches a source file (e.g. renamed/removed files or
+        # legacy entries from a previous pipeline), so the cache always
+        # mirrors the source directory.
+        current_hashes: set[str] = set()
+
         for ctr, file_path in enumerate(files, 1):
             file_hash = _hash_file(file_path)
+            current_hashes.add(file_hash)
 
             docs = None
             extracted: dict[str, Any] = {}
@@ -279,31 +327,7 @@ class StoresBuilder:
                 )
 
             if metadata_map:
-                if file_path.name not in metadata_map:
-                    raise ValueError(
-                        f"No metadata map entry for {file_path.name}. "
-                        f"Add a '{file_path.name}' entry (a DEFAULT entry "
-                        f"is enough) to the metadata map; run "
-                        f"'klea-stores-create chunk' to regenerate the "
-                        f"template."
-                    )
-                resolved_count = 0
-                for doc in docs:
-                    meta = self._resolve_metadata(
-                        file_path.name,
-                        doc.metadata.get("headings"),
-                        metadata_map,
-                    )
-                    if meta:
-                        doc.metadata.update(_apply_store_metadata_policy(meta))
-                        resolved_count += 1
-                if resolved_count == 0:
-                    self.logger.warning(
-                        f"No metadata resolved for {file_path.name} from the "
-                        f"metadata map. Check that the map is keyed by the "
-                        f"source filename and that the chunk headings (or a "
-                        f"DEFAULT entry) provide metadata."
-                    )
+                self._fold_metadata_map(file_path, docs, metadata_map)
 
             normalized_default = _normalize_extracted_metadata(extracted)
             if normalized_default != extracted:
@@ -327,36 +351,161 @@ class StoresBuilder:
 
             results.append((file_hash, docs, file_path))
 
+        self._prune_cache(source_path, current_hashes)
+
         # The resolver's HTTP client is left for the process to clean up;
         # ingestion is a one-shot CLI run.
         return results, file_headings
+
+    def _fold_metadata_map(
+        self,
+        file_path: Path,
+        docs: list[Document],
+        metadata_map: dict[str, dict[str, Any]],
+    ) -> None:
+        """Apply the per-file metadata map to *docs* (in place).
+
+        Raises when *file_path* has no entry in the map, and warns when
+        no chunk resolves metadata from it.  Shared by :meth:`chunk_all`
+        (convert path) and :meth:`_load_and_fold_results` (cache-only
+        store path) so both fold the map identically.
+
+        :param file_path: Source file whose chunks are being enriched
+        :param docs: Chunked documents for the file (mutated in place)
+        :param metadata_map: Per-file metadata map keyed by source filename
+        """
+        if file_path.name not in metadata_map:
+            raise ValueError(
+                f"No metadata map entry for {file_path.name}. "
+                f"Add a '{file_path.name}' entry (a DEFAULT entry "
+                f"is enough) to the metadata map; run "
+                f"'klea-stores-create chunk' to regenerate the "
+                f"template."
+            )
+        resolved_count = 0
+        for doc in docs:
+            meta = self._resolve_metadata(
+                file_path.name,
+                doc.metadata.get("headings"),
+                metadata_map,
+            )
+            if meta:
+                doc.metadata.update(_apply_store_metadata_policy(meta))
+                resolved_count += 1
+        if resolved_count == 0:
+            self.logger.warning(
+                f"No metadata resolved for {file_path.name} from the "
+                f"metadata map. Check that the map is keyed by the "
+                f"source filename and that the chunk headings (or a "
+                f"DEFAULT entry) provide metadata."
+            )
+
+    def _load_and_fold_results(
+        self,
+        source_path: Path,
+        metadata_map: dict[str, dict[str, Any]] | None,
+    ) -> list[tuple[str, list[Document], Path]]:
+        """Load cached chunks and fold the metadata map into them.
+
+        Cache-only: every source file must already have a cache entry
+        (run ``klea-stores-create chunk`` or ``build`` first).  A file
+        with no cache entry raises ``ValueError`` instead of being
+        converted on the fly.  This is the cache-only path used by the
+        ``store`` command; ``chunk`` and ``build`` convert on the fly
+        via :meth:`chunk_all` instead.
+
+        :param source_path: Resolved source directory path
+        :param metadata_map: Metadata map for heading-based enrichment
+        :returns: List of ``(file_hash, docs, file_path)`` tuples ready
+            for :meth:`store_all`
+        :raises ValueError: When a source file has no cache entry
+        """
+        files = self._find_files(source_path)
+        self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
+
+        results: list[tuple[str, list[Document], Path]] = []
+        for ctr, file_path in enumerate(files, 1):
+            file_hash = _hash_file(file_path)
+            cached = self._load_from_cache(source_path, file_hash)
+            if cached is None:
+                raise ValueError(
+                    f"No cache entry for {file_path.name}. The cache-only "
+                    f"store command requires every file to be converted "
+                    f"first; run 'klea-stores-create chunk' (or 'build') "
+                    f"to convert it."
+                )
+            docs, _ = cached
+            self.logger.debug(
+                f"Using cached chunks for: {file_path.name} ({ctr}/{len(files)})"
+            )
+
+            for doc in docs:
+                doc.metadata.update(
+                    {
+                        "file_hash": file_hash,
+                        "file_name": file_path.name,
+                    }
+                )
+
+            if metadata_map:
+                self._fold_metadata_map(file_path, docs, metadata_map)
+
+            results.append((file_hash, docs, file_path))
+
+        return results
 
     def store_all(
         self,
         results: list[tuple[str, list[Document], Path]],
         store_uri: str,
         collection_name: str,
+        source_dir: Path,
         force: bool = False,
         bm25_path: str | None = None,
     ) -> None:
         """Write chunked documents to a vector store.
 
-        Initialises the embedding model on first call if not already
-        done.  Skips files whose hash is already present in the store
-        (unless ``force`` is ``True``).  Optionally also writes the
-        combined document corpus for BM25 retrieval.
+        Incremental by default: a store manifest
+        (``<source_dir>/.klea-cache/<collection>.manifest.json``) records
+        which files are in the collection and how many chunks each has,
+        so unchanged files are skipped, changed files have their old
+        chunk IDs deleted and are re-added, and new files are added.
+        Files absent from the source directory are left untouched
+        (never pruned).
+
+        With ``force`` the whole collection is dropped and rebuilt from
+        scratch (see :func:`klea_utils.stores.utils.drop_collection`),
+        then the manifest is rewritten.  This is the portable way to
+        update a collection, since documents within a collection cannot
+        be updated in place across all backends.
+
+        Chunk IDs are deterministic (``<file_name>:<chunk_index>``) so
+        deletion by ID works on every backend.
 
         :param results: List of ``(file_hash, docs, file_path)`` tuples
             from :meth:`chunk_all`
         :param store_uri: Vector store URI
         :param collection_name: Collection name for the store
-        :param force: Re-store all files even if already indexed
+        :param source_dir: Resolved source directory (for the manifest)
+        :param force: Drop the collection and re-store everything
         :param bm25_path: Optional path to write the combined BM25 corpus to
         """
         if self.embeddings is None:
             self.logger.info(f"Initialising embedding model ({self.embedding_model})")
             self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert store_uri and collection_name
+
+        manifest_path = self._manifest_path(source_dir, collection_name)
+        if not force and not manifest_path.is_file():
+            # First store for this collection, or the cache/manifest was
+            # deleted: everything is treated as new.  Let the user know the
+            # manifest is load-bearing for future incremental runs.
+            self.logger.info(
+                f"No store manifest found at {manifest_path}; all files will "
+                f"be stored.  The manifest is written here and reused for "
+                f"incremental updates -- keep it."
+            )
+        manifest = self._load_manifest(source_dir, collection_name)
 
         self.logger.info(f"Opening vector store '{collection_name}' at {store_uri}")
         store = instantiate_vector_store(
@@ -367,16 +516,44 @@ class StoresBuilder:
             create=True,
         )
 
+        if force:
+            self.logger.info(f"Force: dropping collection '{collection_name}'")
+            drop_collection(store, store_uri, collection_name)
+            store = instantiate_vector_store(
+                store_uri,
+                collection_name,
+                self.embeddings,
+                self.logger,
+                create=True,
+            )
+            manifest = {"version": 1, "collection": collection_name, "files": {}}
+
+        raw_files = manifest.get("files")
+        if not isinstance(raw_files, dict):
+            raw_files = {}
+            manifest["files"] = raw_files
+        manifest_files: dict[str, Any] = raw_files
         total = len(results)
         for ctr, (file_hash, docs, file_path) in enumerate(results, 1):
-            if not force:
-                existing = store.get(where={"file_hash": file_hash})
-                if existing and existing["ids"]:
-                    self.logger.debug(
-                        f"Skipping already indexed file: "
-                        f"{file_path.name} ({ctr}/{total})"
-                    )
-                    continue
+            file_name = file_path.name
+            known: dict[str, Any] | None = manifest_files.get(file_name)
+
+            if not force and known and known.get("file_hash") == file_hash:
+                self.logger.debug(
+                    f"Skipping unchanged file: {file_name} ({ctr}/{total})"
+                )
+                continue
+
+            # A changed file: drop its previously-stored chunk IDs first
+            # (deterministic ``file_name:idx``), so re-adding updates in
+            # place and a shrunken file leaves no stale rows behind.
+            if known:
+                old_chunks = known.get("num_chunks", 0)
+                old_ids = [f"{file_name}:{i}" for i in range(old_chunks)]
+                store.delete(ids=old_ids)
+                self.logger.debug(
+                    f"Deleted {len(old_ids)} previously stored chunks for {file_name}"
+                )
 
             # Chroma rejects empty-list and None metadata values on upsert.
             # The cache keeps ``headings: []`` as an explicit "no headings
@@ -387,8 +564,9 @@ class StoresBuilder:
                 Document(
                     page_content=doc.page_content,
                     metadata=_sanitize_store_metadata(doc.metadata),
+                    id=f"{file_name}:{idx}",
                 )
-                for doc in docs
+                for idx, doc in enumerate(docs)
             ]
             # Embed in batches: a single ``add_documents`` call embeds every
             # chunk in one request (Ollama sends all texts at once), which can
@@ -403,12 +581,17 @@ class StoresBuilder:
                 if pct >= last_pct + 10:
                     last_pct = pct
                     self.logger.info(
-                        f"Stored {done}/{num_docs} chunks ({pct}%) from "
-                        f"{file_path.name}"
+                        f"Stored {done}/{num_docs} chunks ({pct}%) from {file_name}"
                     )
             self.logger.info(
-                f"Added {num_docs} chunks from {file_path.name} ({ctr}/{total})"
+                f"Added {num_docs} chunks from {file_name} ({ctr}/{total})"
             )
+            manifest_files[file_name] = {
+                "file_hash": file_hash,
+                "num_chunks": num_docs,
+            }
+
+        self._save_manifest(source_dir, collection_name, manifest)
 
         if bm25_path:
             self.write_bm25_store(results, bm25_path)
@@ -455,6 +638,13 @@ class StoresBuilder:
         unique heading chain found in that file.  The user fills in the
         ``{}`` with their metadata key-value pairs.
 
+        The template is written into the source directory's cache folder
+        (``<source_dir>/.klea-cache/metadata-map.template.json``), the
+        same place the chunk cache and ``doi-cache.json`` live.  To
+        review it, copy it out (e.g. to ``metadata-map.json``), edit,
+        and pass the copy to ``klea-stores-create store
+        --metadata-map <path>``.
+
         Refuses to write when *file_headings* is empty (no files were
         chunked): an existing template is preserved rather than clobbered
         with an empty one.
@@ -462,9 +652,9 @@ class StoresBuilder:
         :param file_headings: ``{file_name: {"DEFAULT": {},
             "heading > heading": {}, ...}, ...}`` from :meth:`chunk_all`
         :param source_dir: Resolved source directory path (template is
-            written alongside it)
+            written into its cache folder)
         """
-        out_path = source_dir / TEMPLATE_FILE_NAME
+        out_path = self._cache_dir(source_dir) / TEMPLATE_FILE_NAME
         if not file_headings:
             if out_path.is_file():
                 self.logger.warning(
@@ -475,6 +665,7 @@ class StoresBuilder:
                 f"No files chunked and no existing template at {out_path}"
             )
             return
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         # ensure_ascii=False keeps accented characters (e.g. "B\u00f3ris")
         # as literal UTF-8 in the file, so the human editing the template
         # can see exactly what text a heading/author contains.
@@ -495,6 +686,68 @@ class StoresBuilder:
         """
         return source_dir / CACHE_DIR_NAME
 
+    def _manifest_path(self, source_dir: Path, collection_name: str) -> Path:
+        """Return the store manifest path for a collection.
+
+        The manifest records which files (and how many chunks each) are
+        in a collection, so ``store`` can do incremental updates without
+        querying the vector store (which is not portable across
+        backends).  It lives in the source directory's cache folder
+        alongside the chunk cache and ``doi-cache.json``.
+
+        :param source_dir: Resolved source directory path
+        :param collection_name: Collection name for the store
+        :returns: Path to ``<cache_dir>/<collection>.manifest.json``
+        """
+        return self._cache_dir(source_dir) / f"{collection_name}.manifest.json"
+
+    def _load_manifest(self, source_dir: Path, collection_name: str) -> dict[str, Any]:
+        """Load the store manifest, tolerating a missing or corrupt file.
+
+        A missing manifest (first store, or a store created before
+        manifests existed) yields an empty manifest so all files are
+        treated as new.
+
+        :param source_dir: Resolved source directory path
+        :param collection_name: Collection name for the store
+        :returns: Manifest dict with a ``files`` mapping of
+            ``{file_name: {"file_hash": str, "num_chunks": int}}``
+        """
+        path = self._manifest_path(source_dir, collection_name)
+        empty: dict[str, Any] = {
+            "version": 1,
+            "collection": collection_name,
+            "files": {},
+        }
+        if not path.is_file():
+            return empty
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            self.logger.warning(f"Could not read store manifest {path}: {e}")
+            return empty
+        if not isinstance(data, dict) or not isinstance(data.get("files"), dict):
+            self.logger.warning(f"Malformed store manifest {path}; ignoring")
+            return empty
+        return data
+
+    def _save_manifest(
+        self,
+        source_dir: Path,
+        collection_name: str,
+        manifest: dict,
+    ) -> None:
+        """Write the store manifest to disk, tolerating failures."""
+        path = self._manifest_path(source_dir, collection_name)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w") as f:
+                json.dump(manifest, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+        except OSError as e:
+            self.logger.warning(f"Could not write store manifest {path}: {e}")
+
     def _cache_path(self, source_dir: Path, file_hash: str) -> Path:
         """Return the cache file path for a given file hash.
 
@@ -508,6 +761,46 @@ class StoresBuilder:
         """
         safe_hash = file_hash.replace(":", "_")
         return self._cache_dir(source_dir) / f"{safe_hash}.pkl"
+
+    def _prune_cache(self, source_dir: Path, current_hashes: set[str]) -> None:
+        """Remove cache entries whose hash matches no current source file.
+
+        Cache entries are keyed by the xxhash of their source file, so an
+        entry whose hash is not in *current_hashes* can never be a future
+        cache hit (the source file was renamed, removed, or changed, or
+        the entry predates a pipeline change).  Called after every
+        :meth:`chunk_all` run so the cache always mirrors the source
+        directory and users never need to clean it by hand.
+
+        Only ``*.pkl`` chunk-cache files are touched; other cache files
+        (e.g. ``doi-cache.json``) are left alone.
+
+        :param source_dir: Resolved source directory path
+        :param current_hashes: xxhash digests of all source files found
+            during this run (including files that failed to convert)
+        """
+        cache_dir = self._cache_dir(source_dir)
+        if not cache_dir.is_dir():
+            return
+        pruned: list[Path] = []
+        for path in cache_dir.glob("*.pkl"):
+            if path.name not in {
+                self._cache_path(source_dir, file_hash).name
+                for file_hash in current_hashes
+            }:
+                try:
+                    path.unlink()
+                    pruned.append(path)
+                except OSError as exc:
+                    self.logger.warning(
+                        f"Could not remove stale cache entry {path}: {exc}"
+                    )
+        if pruned:
+            self.logger.info(
+                f"Pruned {len(pruned)} stale cache entr{'y' if len(pruned) == 1 else 'ies'} "
+                f"from {cache_dir}"
+            )
+            self.logger.debug(f"Pruned: {[p.name for p in pruned]}")
 
     def _save_to_cache(
         self,
@@ -649,7 +942,7 @@ class StoresBuilder:
         if metadata_map_path:
             metadata_map = self._load_metadata_map(metadata_map_path)
         else:
-            template = source_path / TEMPLATE_FILE_NAME
+            template = self._cache_dir(source_path) / TEMPLATE_FILE_NAME
             if not template.is_file():
                 return None
             self.logger.info(
@@ -674,8 +967,13 @@ class StoresBuilder:
         """Resolve a metadata dict for a chunk using the per-file metadata map.
 
         Looks up the file in the map, then matches the heading chain
-        from most specific to least specific.  Falls back to
-        ``DEFAULT`` for that file.
+        from most specific to least specific.  The first non-empty
+        matching heading entry is merged over ``DEFAULT`` (gap-fill:
+        heading-specific keys win, ``DEFAULT`` fills everything else),
+        so a heading that only sets e.g. a ``url`` still inherits the
+        file's authors/year/journal.  An entry that matches a heading
+        but is empty (a ``{}`` placeholder the user did not fill in)
+        falls through to the next heading, and finally to ``DEFAULT``.
 
         :param file_name: Source filename to look up in the map
         :param headings: Heading hierarchy for the chunk (most specific
@@ -687,6 +985,7 @@ class StoresBuilder:
         file_map = metadata_map.get(file_name)
         if file_map is None:
             return None
+        fallback = file_map.get("DEFAULT")
         if headings:
             # NOTE: only individual headings are matched here, never the
             # full heading chain (e.g. "A > B").  The metadata map keys
@@ -698,9 +997,21 @@ class StoresBuilder:
             # progressively shorter suffixes.
             for heading in reversed(headings):
                 if heading in file_map:
-                    self.logger.debug(f"Resolved metadata for {file_name}: '{heading}'")
-                    return file_map[heading]
-        fallback = file_map.get("DEFAULT")
+                    matched = file_map[heading]
+                    if matched:
+                        merged = {**(fallback or {}), **matched}
+                        self.logger.debug(
+                            f"Resolved metadata for {file_name}: '{heading}' "
+                            f"(merged over DEFAULT)"
+                        )
+                        return merged
+                    # Empty placeholder the user left unfilled; keep
+                    # looking (fall through to DEFAULT) rather than
+                    # returning metadata that strips the DEFAULT values.
+                    self.logger.debug(
+                        f"Empty metadata entry for {file_name}: "
+                        f"'{heading}'; falling through"
+                    )
         if fallback:
             self.logger.debug(f"Resolved DEFAULT metadata for {file_name}")
         return fallback
@@ -714,9 +1025,14 @@ class StoresBuilder:
         docling's :attr:`~docling.datamodel.base_models.FormatToExtensions`.
 
         Files with unsupported extensions are logged as a warning and skipped.
-        The generated ``metadata-map.template.json`` and the metadata map
+        The generated ``metadata-map.template.json``, the metadata map
         passed via :meth:`_load_metadata_map` (when it lives inside
-        *source_dir*) are excluded: they are config, not source documents.
+        *source_dir*), and the vector store directory are excluded: they
+        are generated artifacts, not source documents.  The store is
+        excluded when it is configured (:attr:`store_dir`) or when it is
+        any directory inside *source_dir* that contains a
+        ``chroma.sqlite3`` (so a store created without setting
+        :attr:`store_dir` is still not ingested).
 
         :param source_dir: Directory to walk recursively
         :returns: Sorted list of files with supported extensions
@@ -727,18 +1043,30 @@ class StoresBuilder:
         for exts in FormatToExtensions.values():
             all_exts.update(exts)
 
+        source_resolved = source_dir.resolve()
+
+        # Directories that must never be ingested: the configured store
+        # (when it lives under the source dir) and any Chroma store folder
+        # (a dir containing chroma.sqlite3) inside the source dir.
+        skip_dirs: set[Path] = set()
+        if self.store_dir is not None and source_resolved in self.store_dir.parents:
+            skip_dirs.add(self.store_dir.resolve())
+        for chroma_db in source_dir.rglob("chroma.sqlite3"):
+            if chroma_db.is_file():
+                skip_dirs.add(chroma_db.parent.resolve())
+
         supported: list[Path] = []
         for f in sorted(source_dir.rglob("*")):
             if not f.is_file():
                 continue
             if CACHE_DIR_NAME in f.parts:
                 continue
-            if f.name == TEMPLATE_FILE_NAME:
-                continue
             if (
                 self._metadata_map_path is not None
                 and f.resolve() == self._metadata_map_path
             ):
+                continue
+            if any(f.resolve().is_relative_to(skip_dir) for skip_dir in skip_dirs):
                 continue
             suffix = f.suffix.lstrip(".").lower()
             if suffix in all_exts:
@@ -885,6 +1213,23 @@ class StoresBuilder:
             pdf_path=str(file_path) if file_path.suffix.lower() == ".pdf" else None,
             resolver=resolver,
         )
+
+        # Fall back to the first chunk heading when the cascade produced
+        # only the filename stem (the merge tiers' last resort).  The
+        # chunker's heading detection is layout-aware and often recovers
+        # the real title (e.g. conference preprints) where Docling did not
+        # label a TITLE item.  See _first_heading_title.
+        if not extracted.get("title") or extracted["title"] == Path(file_path).stem:
+            heading_title = _first_heading_title(docs)
+            if heading_title:
+                self.logger.debug(
+                    f"Title fallback for {file_path.name}: "
+                    f"using first chunk heading {heading_title!r}"
+                )
+                extracted["title"] = heading_title
+                sources = extracted.setdefault("_sources", [])
+                if "chunk-heading" not in sources:
+                    sources.append("chunk-heading")
 
         return docs, extracted
 

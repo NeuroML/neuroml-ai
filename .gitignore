@@ -68,3 +68,5 @@ data/scripts/nml-docs
 .nicegui/
 
 tmp/
+
+smoke.pkl

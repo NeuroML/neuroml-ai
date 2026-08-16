@@ -13,15 +13,61 @@ import logging
 import pytest
 from klea_utils.stores.utils import (
     REF_DOC_OVERHEAD,
+    drop_collection,
     format_source_scores,
     instantiate_vector_store,
     rrf_merge,
-    serialize_vs_retrieval,
+    serialize_reference_material,
     truncate_reference_material,
 )
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
+
+
+def test_drop_collection_chroma_and_pgvector_use_wrapper():
+    """Chroma/PGVector drop via the wrapper's delete_collection."""
+
+    class _Store:
+        def __init__(self):
+            self.dropped = False
+
+        def delete_collection(self):
+            self.dropped = True
+
+    store = _Store()
+    drop_collection(store, "chroma:/path", "col")
+    assert store.dropped is True
+
+    store = _Store()
+    drop_collection(store, "pgvector:postgresql://host/db", "col")
+    assert store.dropped is True
+
+
+def test_drop_collection_qdrant_uses_raw_client():
+    """Qdrant drops via its raw client (no wrapper delete_collection)."""
+
+    class _Store:
+        collection_name = "col"
+
+        def __init__(self):
+            self.dropped = None
+            self._client = type(
+                "_C",
+                (),
+                {"delete_collection": lambda self, n: setattr(store, "dropped", n)},
+            )()
+
+    store = _Store()
+    drop_collection(store, "qdrant:http://localhost:6333", "col")
+    assert store.dropped == "col"
+
+
+def test_drop_collection_unknown_scheme():
+    """An unknown scheme raises ValueError."""
+    store = type("_Store", (), {"delete_collection": lambda self: None})()
+    with pytest.raises(ValueError, match="Unsupported"):
+        drop_collection(store, "nope:/path", "col")
 
 
 class _FakeEmbeddings:
@@ -176,26 +222,232 @@ def test_format_source_scores_none_when_absent():
     assert result is None
 
 
-def test_serialize_vs_retrieval_shows_per_source_scores():
-    """serialize_vs_retrieval labels per-source scores for the LLM."""
+def test_serialize_reference_material_shows_per_source_scores():
+    """serialize_reference_material labels per-source scores for the LLM."""
     d1 = _doc("Hodgkin-Huxley action potential")
     d1.metadata["_source_scores"] = {"vector store": 0.8723, "BM25": 3.2100}
 
-    text = serialize_vs_retrieval({"NeuroML": [(d1, 0.0323)]})
+    text = serialize_reference_material({"NeuroML": [(d1, 0.0323)]})
     logger.info(f"serialized text:\n{text}")
 
     assert "relevance: vector store 0.8723, BM25 3.2100" in text
 
 
-def test_serialize_vs_retrieval_falls_back_to_relevance_score():
+def test_serialize_reference_material_falls_back_to_relevance_score():
     """Untagged docs fall back to the plain relevance score."""
     d1 = _doc("plain content")
 
-    text = serialize_vs_retrieval({"NeuroML": [(d1, 0.42)]})
+    text = serialize_reference_material({"NeuroML": [(d1, 0.42)]})
     logger.info(f"serialized text:\n{text}")
 
     assert "relevance score: 0.4200" in text
     assert "_source_scores" not in text
+
+
+def test_serialize_reference_material_groups_chunks_by_file():
+    """Multiple chunks of one file emit document metadata once."""
+    d1 = Document(
+        page_content="chunk one content",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro"],
+            "authors": ["A. Sinha"],
+            "year": 2020,
+        },
+    )
+    d2 = Document(
+        page_content="chunk two content",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro", "Methods"],
+            "authors": ["A. Sinha"],
+            "year": 2020,
+        },
+    )
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.9), (d2, 0.7)]})
+    logger.info(f"serialized text:\n{text}")
+
+    # Document-level metadata appears once, on the source header.
+    assert text.count("Metadata: authors=['A. Sinha'] | year=2020") == 1
+    assert "Source document 1/1: [paper.pdf]" in text
+    # Both chunks are present, numbered within the single source document.
+    assert "chunk one content" in text
+    assert "chunk two content" in text
+    assert text.count("Chunk 1:") == 1
+    assert text.count("Chunk 2:") == 1
+
+
+def test_serialize_reference_material_chunk_numbering_resets_per_file():
+    """Chunk numbering restarts for each source document."""
+    d1 = Document(
+        page_content="one",
+        metadata={"file_name": "a.pdf", "headings": ["Intro"]},
+    )
+    d2 = Document(
+        page_content="two",
+        metadata={"file_name": "a.pdf", "headings": ["Intro", "Methods"]},
+    )
+    d3 = Document(
+        page_content="three",
+        metadata={"file_name": "b.pdf", "headings": ["Intro"]},
+    )
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.9), (d2, 0.7), (d3, 0.8)]})
+    logger.info(f"serialized text:\n{text}")
+
+    # Each source document numbers its own chunks from 1.
+    assert "Chunk 1: Intro" in text
+    assert "Chunk 2: Intro > Methods" in text
+    # b.pdf only has one chunk, so it gets Chunk 1, not Chunk 3.
+    assert text.count("Chunk 1:") == 2
+    assert text.count("Chunk 2:") == 1
+
+
+def test_serialize_reference_material_chunk_metadata_differs_inline():
+    """Chunk-level metadata that differs from the file-level is inline."""
+    d1 = Document(
+        page_content="intro content",
+        metadata={
+            "file_name": "docs/index.md",
+            "headings": ["Home"],
+            "url": "https://example.com/",
+        },
+    )
+    d2 = Document(
+        page_content="guide content",
+        metadata={
+            "file_name": "docs/index.md",
+            "headings": ["Home", "Guide"],
+            "url": "https://example.com/",
+            "url_section": "https://example.com/guide",
+        },
+    )
+
+    text = serialize_reference_material({"Docs": [(d1, 0.8), (d2, 0.6)]})
+    logger.info(f"serialized text:\n{text}")
+
+    # Shared url only once (file-level); the section url inline.
+    assert text.count("url=https://example.com/") == 1
+    assert "url_section=https://example.com/guide" in text
+
+
+def test_serialize_reference_material_different_urls_per_chunk():
+    """Chunks with different urls keep their own url inline, not the file's."""
+    d1 = Document(
+        page_content="intro content",
+        metadata={
+            "file_name": "docs/index.md",
+            "headings": ["Home"],
+            "url": "https://example.com/home",
+        },
+    )
+    d2 = Document(
+        page_content="guide content",
+        metadata={
+            "file_name": "docs/index.md",
+            "headings": ["Home", "Guide"],
+            "url": "https://example.com/guide",
+        },
+    )
+
+    text = serialize_reference_material({"Docs": [(d1, 0.8), (d2, 0.6)]})
+    logger.info(f"serialized text:\n{text}")
+
+    # Both urls present; each chunk carries its own.
+    assert "url=https://example.com/home" in text
+    assert "url=https://example.com/guide" in text
+    assert text.count("url=https://example.com/home") == 1
+    assert text.count("url=https://example.com/guide") == 1
+    # Neither url was hoisted to the file level (they differ).
+    assert not text.startswith("Metadata: url=")
+
+
+def test_serialize_reference_material_shared_url_hoisted_once():
+    """An identical url across all chunks is emitted once on the file level."""
+    d1 = Document(
+        page_content="one",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro"],
+            "url": "https://doi.org/10.1/x",
+        },
+    )
+    d2 = Document(
+        page_content="two",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro", "Methods"],
+            "url": "https://doi.org/10.1/x",
+        },
+    )
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.9), (d2, 0.7)]})
+    logger.info(f"serialized text:\n{text}")
+
+    assert text.count("url=https://doi.org/10.1/x") == 1
+    assert "Metadata: url=https://doi.org/10.1/x" in text
+
+
+def test_serialize_reference_material_shared_fields_once_per_file():
+    """Shared bibliographic fields appear once per file, never per chunk."""
+    d1 = Document(
+        page_content="one",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro"],
+            "authors": ["A. Sinha"],
+            "year": 2020,
+        },
+    )
+    d2 = Document(
+        page_content="two",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro", "Methods"],
+            "authors": ["A. Sinha"],
+            "year": 2020,
+        },
+    )
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.9), (d2, 0.7)]})
+    logger.info(f"serialized text:\n{text}")
+
+    assert text.count("authors=['A. Sinha']") == 1
+    assert text.count("year=2020") == 1
+    assert "Metadata: authors=['A. Sinha'] | year=2020" in text
+
+
+def test_serialize_reference_material_orders_files_by_best_score():
+    """Files are ordered by their best chunk's score."""
+    d1 = Document(
+        page_content="a",
+        metadata={"file_name": "low.pdf", "year": 2020},
+    )
+    d2 = Document(
+        page_content="b",
+        metadata={"file_name": "high.pdf", "year": 2021},
+    )
+    d3 = Document(
+        page_content="c",
+        metadata={"file_name": "high.pdf", "year": 2021},
+    )
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.3), (d2, 0.9), (d3, 0.8)]})
+    logger.info(f"serialized text:\n{text}")
+
+    assert text.index("high.pdf") < text.index("low.pdf")
+
+
+def test_serialize_reference_material_no_file_name_falls_back_to_no_file():
+    """Docs without a file_name still serialize under a '(no file)' group."""
+    d1 = Document(page_content="lonely chunk", metadata={"year": 2020})
+
+    text = serialize_reference_material({"NeuroML": [(d1, 0.5)]})
+    logger.info(f"serialized text:\n{text}")
+
+    assert "(no file)" in text
+    assert "lonely chunk" in text
 
 
 def _budgeted_refs(n_docs, content_len):

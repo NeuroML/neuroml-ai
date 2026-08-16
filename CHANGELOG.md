@@ -39,6 +39,10 @@
   DOI services, PDF Info, Docling, regex tiers) pre-fills the `DEFAULT`
   entries of `metadata-map.template.json`; `KLEA_INGEST_MAILTO` opts
   into DOI polite pools; `--no-ocr` speeds up text-based PDFs.
+- `klea-stores-create map-lint <dir>`: LLM-free health checks on the
+  metadata map (missing fields, suspicious titles/DOIs, year/filename
+  mismatches, stale `venue` keys, excess `url*` keys, placeholder
+  counts), printed automatically at the end of `chunk`.
 - `klea_agent` is now the main application (general-purpose agent with
   coding capabilities); `klea_rag` is consumed by it.
 - Configurable model system (per-node `model_defaults`, dynamic provider
@@ -82,9 +86,18 @@
   package-local copies; tools are discovered by their `@tool_meta`
   decoration (function name is the tool name) rather than a `_tool` name
   suffix.
+<<<<<<< HEAD
 - `download_file` now sends an honest User-Agent and refuses internal and
   private hosts by default (shared SSRF guard, shared with `web_fetch`;
   `allow_internal_hosts` opts out).
+||||||| eeb1ec8
+=======
+- Reference material is serialized grouped by source file: shared
+  bibliographic metadata (authors, year, journal, ...) is emitted once
+  per file with chunks numbered beneath, each carrying its own inline
+  relevance score; `serialize_vs_retrieval` renamed
+  `serialize_reference_material`.
+>>>>>>> development
 - HTTP stack consolidated on httpx: aiohttp removed everywhere; shared
   sessions use HTTP/2 (`http2=True`) with tuned connection limits; a
   single `_make_retryer_httpx` helper backs the bundled tools.
@@ -100,6 +113,30 @@
   cycle, at retrieval.
 - `download_file` no longer corrupts binary downloads by writing them
   decoded as text; the raw response body is saved as bytes.
+- Empty `{}` heading placeholders in the metadata map no longer strip
+  the `DEFAULT` metadata from matching chunks; per-heading entries are
+  merged over `DEFAULT` (gap-fill), so a heading that sets only a `url`
+  keeps the file's authors/year/journal.
+- Orphaned `.klea-cache` entries (whose source file no longer exists)
+  are now auto-pruned on every `chunk`/`store`/`build` run.
+- `klea-stores-create store` is now cache-only: it no longer converts
+  files on the fly (conversion settings `--max-tokens` and `--ocr`
+  were removed; `chunk` owns them).  Run `chunk` (or `build`) first so
+  every file is cached.
+  Internally, cache loading + metadata-map folding were extracted from
+  `chunk_all` into a shared `_fold_metadata_map` helper and a dedicated
+  cache-only `_load_and_fold_results` path used by `store`.
+- `store` is now incremental via a per-collection store manifest
+  (`.klea-cache/<collection>.manifest.json`): unchanged files are
+  skipped, changed files have their old chunk IDs deleted and are
+  re-added in place, and files absent from the source are never pruned.
+  Chunk IDs are deterministic (`<file_name>:<chunk_index>`).  `store
+  --force` drops the whole collection and rebuilds it (portable across
+  backends via a `drop_collection` dispatch helper), which fixes the
+  previous `--force` duplicate-on-re-add behaviour.
+- `metadata-map.template.json` is now generated into
+  `<source_dir>/.klea-cache/` instead of the source directory; copy it
+  out to review and pass the reviewed copy via `--metadata-map`.
 
 ---
 

@@ -9,12 +9,34 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from pathlib import Path
 
 import typer
 
 from ..plogging import setup_root_logger
 
 app = typer.Typer(help="Create stores from documents")
+
+
+def _store_dir(store_path: str) -> Path | None:
+    """Return the local directory of a store URI, or ``None``.
+
+    Backends with a local store folder (e.g. ``chroma:/path/to/store``,
+    or any future filesystem-backed scheme) have a directory that may
+    live inside the source directory and must be excluded from
+    ingestion.  Remote backends whose location is a URL or database
+    connection string (``qdrant:http://...``, ``pgvector:postgresql://...``)
+    have no local folder.
+
+    :param store_path: Vector store URI (``scheme:location``)
+    :returns: Resolved local directory, or ``None`` for remote schemes
+    """
+    scheme, sep, location = store_path.partition(":")
+    if not sep:
+        return None
+    if location.startswith(("http://", "https://", "postgresql://", "postgres://")):
+        return None
+    return Path(location).resolve()
 
 
 @app.command()
@@ -145,6 +167,7 @@ def build(
             max_tokens=max_tokens,
             do_ocr=ocr,
             embed_batch_size=embed_batch_size,
+            store_dir=_store_dir(store_path),
         )
         builder.build(
             source_dir=source_dir,
@@ -199,7 +222,11 @@ def chunk(
         # --help fast (Python only needs the function signature).
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import TEMPLATE_FILE_NAME, StoresBuilder
+        from klea_utils.stores.ingestion import (
+            CACHE_DIR_NAME,
+            TEMPLATE_FILE_NAME,
+            StoresBuilder,
+        )
 
         builder = StoresBuilder(
             embedding_model="",  # not needed for chunking only
@@ -223,11 +250,29 @@ def chunk(
         )
         raise typer.Exit(1)
     logger.info("Chunking complete -- cache is ready")
+    from klea_utils.stores.ingestion import CACHE_DIR_NAME
+
     logger.info(
         f"Review/update the metadata map before storing: "
-        f"{source_path / TEMPLATE_FILE_NAME} -- fill in per-heading entries, "
-        "then run 'klea-stores-create store' with --metadata-map"
+        f"{source_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME} -- copy it out, "
+        f"fill in per-heading entries, then run 'klea-stores-create store' "
+        f"with --metadata-map"
     )
+    logger.info("Metadata map summary:")
+    try:
+        import json
+
+        from klea_utils.stores.map_lint import (
+            format_metadata_lint_report,
+            lint_metadata_map,
+        )
+
+        map_path = source_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        with open(map_path) as f:
+            data = json.load(f)
+        print(format_metadata_lint_report(lint_metadata_map(data)))
+    except Exception as e:
+        logger.warning(f"Could not lint metadata map: {e}")
 
 
 @app.command()
@@ -256,17 +301,6 @@ def store(
         "-m",
         help="Embedding model identifier",
     ),
-    max_tokens: int = typer.Option(
-        450, "--max-tokens", help="Maximum tokens per chunk (for files not yet cached)"
-    ),
-    ocr: bool = typer.Option(
-        True,
-        "--ocr/--no-ocr",
-        help="Whether to perform optical character recognition (OCR) "
-        "during PDF conversion (default: on). Keep for scanned/image "
-        "PDFs; disable for text-based PDFs to speed up conversion "
-        "significantly",
-    ),
     metadata_map_path: str = typer.Option(
         None,
         "--metadata-map",
@@ -274,7 +308,7 @@ def store(
         help="JSON file keyed by source filename; each file entry maps "
         "heading chains to metadata dicts (with per-file DEFAULT fallback). "
         "Defaults to metadata-map.template.json in the source "
-        "directory; required when no template exists",
+        "directory's cache folder; required when no template exists",
     ),
     bm25_store: str = typer.Option(
         None,
@@ -293,15 +327,31 @@ def store(
         "per-request overhead on very large corpora",
     ),
     force: bool = typer.Option(
-        False, "--force", "-f", help="Re-process all files even if unchanged"
+        False,
+        "--force",
+        "-f",
+        help="Drop the collection and re-store all files from scratch "
+        "(the portable way to update a collection; documents within a "
+        "collection cannot be updated in place).  Without --force, "
+        "`store` is incremental: unchanged files are skipped and changed "
+        "files are updated in place.  Does not reconvert: files must "
+        "already be cached by 'chunk'",
     ),
 ):
     """Write cached document chunks to a vector store.
 
-    Reads previously cached chunks from ``<source_dir>/.klea-cache/``,
-    optionally applies a metadata map (per-file format), and writes
-    them to the vector store.  Unseen files are converted and chunked
-    on the fly.
+    Cache-only: every source file must already have a cache entry (run
+    ``klea-stores-create chunk`` first).  Reads the cached chunks from
+    ``<source_dir>/.klea-cache/``, applies the metadata map, and writes
+    them to the vector store.  Conversion settings (OCR, max tokens)
+    belong to ``chunk``; ``store`` never converts on the fly.
+
+    Incremental by default: a store manifest in
+    ``<source_dir>/.klea-cache/`` records which files are in the
+    collection, so unchanged files are skipped and changed files are
+    updated in place.  Pass ``--force`` to drop the whole collection
+    and rebuild it (documents within a collection cannot be updated in
+    place across all backends).
 
     The ``--bm25-store`` option (default ``<collection>.pkl`` in the
     current directory) writes the combined chunked documents to a single
@@ -334,9 +384,8 @@ def store(
         builder = StoresBuilder(
             embedding_model=embedding_model,
             logger=logger,
-            max_tokens=max_tokens,
-            do_ocr=ocr,
             embed_batch_size=embed_batch_size,
+            store_dir=_store_dir(store_path),
         )
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
@@ -350,13 +399,11 @@ def store(
             raise ValueError(
                 f"No metadata map found for {source_path}. Run "
                 f"'klea-stores-create chunk' to generate "
-                f"{TEMPLATE_FILE_NAME} in the source directory, or pass "
-                f"--metadata-map."
+                f"{TEMPLATE_FILE_NAME} in the source directory's cache "
+                f"folder, or pass --metadata-map."
             )
 
-        results, _ = builder.chunk_all(
-            source_path, metadata_map=metadata_map, force=force
-        )
+        results = builder._load_and_fold_results(source_path, metadata_map)
         if not results:
             logger.error(
                 f"No files were successfully chunked from "
@@ -364,11 +411,79 @@ def store(
             )
             raise typer.Exit(1)
         builder.store_all(
-            results, store_path, collection_name, force=force, bm25_path=bm25_store
+            results,
+            store_path,
+            collection_name,
+            source_path,
+            force=force,
+            bm25_path=bm25_store,
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
+        from klea_utils.stores.ingestion import CACHE_DIR_NAME
+
+        logger.info(
+            f"The chunk cache and store manifest in "
+            f"{source_path / CACHE_DIR_NAME} are reused for incremental "
+            f"updates -- keep them to avoid re-converting and re-storing "
+            f"everything."
+        )
     except typer.Exit:
         raise
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command()
+def map_lint(
+    source_dir: str = typer.Argument(
+        help="Directory containing the metadata map (uses "
+        "metadata-map.template.json in the .klea-cache folder unless "
+        "--metadata-map is given)"
+    ),
+    metadata_map_path: str = typer.Option(
+        None,
+        "--metadata-map",
+        "-M",
+        help="Explicit metadata-map JSON file to lint, instead of the "
+        "template in SOURCE_DIR",
+    ),
+):
+    """Report issues in a metadata map so it can be reviewed efficiently.
+
+    Runs only deterministic checks (missing fields, suspicious titles or
+    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,
+    placeholder counts) -- no LLM is needed.  Useful after editing the
+    map by hand, and printed automatically at the end of 'chunk'.
+    """
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
+
+    try:
+        import json
+        from pathlib import Path
+
+        from klea_utils.stores.ingestion import CACHE_DIR_NAME, TEMPLATE_FILE_NAME
+        from klea_utils.stores.map_lint import (
+            format_metadata_lint_report,
+            lint_metadata_map,
+        )
+
+        source_path = Path(source_dir).resolve()
+        if not source_path.is_dir():
+            raise FileNotFoundError(f"Source directory not found: {source_path}")
+
+        if metadata_map_path:
+            map_path = Path(metadata_map_path)
+        else:
+            map_path = source_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        if not map_path.is_file():
+            raise FileNotFoundError(f"Metadata map not found: {map_path}")
+
+        with open(map_path) as f:
+            data = json.load(f)
+        report = lint_metadata_map(data)
+        print(format_metadata_lint_report(report))
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
