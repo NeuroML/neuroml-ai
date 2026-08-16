@@ -1393,6 +1393,39 @@ class TestIngestion:
         builder = StoresBuilder(embedding_model="", logger=self.logger)
         assert builder._find_files(self.tmpdir_path) == [src]
 
+    def test_find_files_excludes_configured_store_dir(self):
+        """The configured store directory is never ingested."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, store_dir=store)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_find_files_excludes_chroma_store_heuristically(self):
+        """A nested store is excluded even without an explicit store_dir."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
+    def test_find_files_keeps_real_source_with_sqlite_name(self):
+        """A .md source alongside a store folder is still found."""
+        src = self.tmpdir_path / "doc.md"
+        src.write_text("# Doc\n")
+        store = self.tmpdir_path / "celegans-store"
+        store.mkdir()
+        (store / "chroma.sqlite3").write_bytes(b"store")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, store_dir=store)
+        assert builder._find_files(self.tmpdir_path) == [src]
+
     def test_store_all_sanitizes_metadata_for_upsert(self, monkeypatch):
         """Empty-list/None metadata is dropped at upsert; originals intact.
 

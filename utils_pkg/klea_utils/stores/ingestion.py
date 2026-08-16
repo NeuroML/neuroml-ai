@@ -104,6 +104,7 @@ class StoresBuilder:
         tokenizer_model: str = DEFAULT_TOKENIZER_MODEL,
         do_ocr: bool = True,
         embed_batch_size: int = DEFAULT_EMBED_BATCH_SIZE,
+        store_dir: Path | None = None,
     ):
         """Initialise the builder.
 
@@ -122,6 +123,10 @@ class StoresBuilder:
             significantly.
         :param embed_batch_size: Chunks per ``add_documents`` call when
             writing to the vector store
+        :param store_dir: Vector store directory (e.g. a Chroma store
+            folder) that may live inside the source directory and must
+            be excluded from ingestion.  ``None`` for remote backends
+            with no local folder.
         """
         self.embedding_model = embedding_model
         self.logger = logging.getLogger(f"{logger.name}.{self.__class__.__name__}")
@@ -135,6 +140,7 @@ class StoresBuilder:
         self._converter = None
         self._chunker = None
         self._metadata_map_path: Path | None = None
+        self.store_dir = store_dir.resolve() if store_dir else None
 
         self.logger.info(
             f"StoresBuilder initialised (max_tokens={max_tokens}, "
@@ -1019,9 +1025,14 @@ class StoresBuilder:
         docling's :attr:`~docling.datamodel.base_models.FormatToExtensions`.
 
         Files with unsupported extensions are logged as a warning and skipped.
-        The generated ``metadata-map.template.json`` and the metadata map
+        The generated ``metadata-map.template.json``, the metadata map
         passed via :meth:`_load_metadata_map` (when it lives inside
-        *source_dir*) are excluded: they are config, not source documents.
+        *source_dir*), and the vector store directory are excluded: they
+        are generated artifacts, not source documents.  The store is
+        excluded when it is configured (:attr:`store_dir`) or when it is
+        any directory inside *source_dir* that contains a
+        ``chroma.sqlite3`` (so a store created without setting
+        :attr:`store_dir` is still not ingested).
 
         :param source_dir: Directory to walk recursively
         :returns: Sorted list of files with supported extensions
@@ -1031,6 +1042,18 @@ class StoresBuilder:
         all_exts: set[str] = set()
         for exts in FormatToExtensions.values():
             all_exts.update(exts)
+
+        source_resolved = source_dir.resolve()
+
+        # Directories that must never be ingested: the configured store
+        # (when it lives under the source dir) and any Chroma store folder
+        # (a dir containing chroma.sqlite3) inside the source dir.
+        skip_dirs: set[Path] = set()
+        if self.store_dir is not None and source_resolved in self.store_dir.parents:
+            skip_dirs.add(self.store_dir.resolve())
+        for chroma_db in source_dir.rglob("chroma.sqlite3"):
+            if chroma_db.is_file():
+                skip_dirs.add(chroma_db.parent.resolve())
 
         supported: list[Path] = []
         for f in sorted(source_dir.rglob("*")):
@@ -1042,6 +1065,8 @@ class StoresBuilder:
                 self._metadata_map_path is not None
                 and f.resolve() == self._metadata_map_path
             ):
+                continue
+            if any(f.resolve().is_relative_to(skip_dir) for skip_dir in skip_dirs):
                 continue
             suffix = f.suffix.lstrip(".").lower()
             if suffix in all_exts:

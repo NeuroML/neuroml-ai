@@ -9,12 +9,30 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from pathlib import Path
 
 import typer
 
 from ..plogging import setup_root_logger
 
 app = typer.Typer(help="Create stores from documents")
+
+
+def _store_dir(store_path: str) -> Path | None:
+    """Return the local directory of a store URI, or ``None``.
+
+    Local backends (e.g. ``chroma:/path/to/store``) have a filesystem
+    directory that may live inside the source directory and must be
+    excluded from ingestion.  Remote backends (``qdrant:http://...``,
+    ``pgvector:postgresql://...``) have no local folder.
+
+    :param store_path: Vector store URI (``scheme:location``)
+    :returns: Resolved local directory, or ``None`` for remote schemes
+    """
+    scheme, sep, location = store_path.partition(":")
+    if not sep or scheme.lower() != "chroma":
+        return None
+    return Path(location).resolve()
 
 
 @app.command()
@@ -145,6 +163,7 @@ def build(
             max_tokens=max_tokens,
             do_ocr=ocr,
             embed_batch_size=embed_batch_size,
+            store_dir=_store_dir(store_path),
         )
         builder.build(
             source_dir=source_dir,
@@ -362,6 +381,7 @@ def store(
             embedding_model=embedding_model,
             logger=logger,
             embed_batch_size=embed_batch_size,
+            store_dir=_store_dir(store_path),
         )
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
