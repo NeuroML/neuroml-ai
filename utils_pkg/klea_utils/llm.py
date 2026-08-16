@@ -932,6 +932,7 @@ def get_last_n_conversations(
     :returns: (conversation, ordered list of human/ai messages)
 
     """
+    logger.debug(f"{start = }; {stop = }")
     conv_messages: list[BaseMessage] = [
         msg
         for msg in all_messages[start:stop]
