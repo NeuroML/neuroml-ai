@@ -78,6 +78,12 @@
   files to text with paged, line-numbered output (`offset`/`limit`,
   `line_start`/`line_end`/`total_lines`); document conversion results are
   cached per process.  Adds `firecrawl-anydoc` to the `[mcp]` extra.
+- Path-permission layer for MCP tools: tools can declare which arguments
+  are file paths (`checkpaths` in `ToolInfo`); `klea_agent` and `klea_rag`
+  now check those paths against the working directory before dispatch and
+  refuse out-of-boundary calls without invoking the tool.
+- The agent's bundled tool server now also serves `read_file` (paged
+  document and plain-text reading).
 
 ### Changed
 
