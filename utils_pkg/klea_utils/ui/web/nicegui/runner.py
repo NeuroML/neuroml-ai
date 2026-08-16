@@ -127,6 +127,13 @@ def setup_layout(
     ui.add_css(
         ".model-tooltip { white-space: pre-wrap !important; max-width: none !important; }"
     )
+    # The chat input must stay pinned to the bottom of the central pane.
+    # Quasar wraps each tab panel in a `.q-panel` container between
+    # `.q-tab-panels` and `.q-tab-panel`; it must also flex-fill so the chat
+    # panel's scroll area can grow and push the input row down.
+    ui.add_css(
+        ".center-tab-panels > .q-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }"
+    )
     # Status pane styling  ---  uses disclosure triangles (same pattern as inspector)
     ui.add_css(
         ".status-entry > summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }"
@@ -179,6 +186,9 @@ def setup_layout(
     _current_chat_id = [chat_id]
     toggle_icon_ref: list = [None]
     _is_streaming: list = [False]
+    # Reference to the central tab panel widget, filled in once the layout
+    # is built (handlers above it may run later, at click time).
+    _center_panels: list = [None]
 
     # ``user_id`` (a setup_layout parameter) is captured by reference in
     # every handler below.  Handlers therefore see a rebind made elsewhere
@@ -435,6 +445,8 @@ def setup_layout(
         _render_chat_area()
         _render_chat_list.refresh()
         _status_pane.refresh()
+        _reset_center_tab()
+        _render_inspector_panel.refresh()
         background_tasks.create(_fetch_model_info())
 
     def _delete_chat(chat_id: str) -> None:
@@ -461,6 +473,8 @@ def setup_layout(
                 _render_chat_area()
                 _render_chat_list.refresh()
                 _status_pane.refresh()
+                _reset_center_tab()
+                _render_inspector_panel.refresh()
         else:
             _render_chat_list.refresh()
 
@@ -491,34 +505,24 @@ def setup_layout(
             left_drawer.props(remove="mini")
             toggle_icon_ref[0].name = "keyboard_double_arrow_left"
 
-    def _show_inspection_dialog() -> None:
-        """Open a modal dialog with inspector/debug entries for the active chat."""
-        current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
-        if not current_chat or not current_chat.get("inspector_entries"):
+    @ui.refreshable
+    def _render_inspector_panel() -> None:
+        """Render the inspector entries for the active chat in the inspect tab."""
+        with ui.column().classes("w-full px-2 gap-0"):
+            current_chat = chats.get(f"{user_id}:{_current_chat_id[0]}")
+            if not current_chat or not current_chat.get("inspector_entries"):
+                ui.label("No inspection data yet").classes("text-sm text-grey-5 py-8")
+                ui.label(
+                    "Inspector entries will appear here after a query completes."
+                ).classes("text-xs text-grey-5")
+                return
+
+            entries = list(current_chat["inspector_entries"])
             logger.debug(
-                "inspector dialog: no entries for chat=%s",
+                "Rendering inspector panel for chat %s (entries=%d)",
                 _current_chat_id[0],
+                len(entries),
             )
-            return
-
-        logger.debug(
-            "Opening inspector dialog for chat %s (entries=%d)",
-            _current_chat_id[0],
-            len(current_chat["inspector_entries"]),
-        )
-
-        entries = list(current_chat["inspector_entries"])
-        dialog = ui.dialog()
-
-        def _close_dialog():
-            logger.debug(
-                "Close button clicked for inspector dialog (chat %s)",
-                _current_chat_id[0],
-            )
-            dialog.close()
-
-        with dialog, ui.card().classes("w-full p-4"):
-            ui.label("Inspector").classes("text-lg font-bold mb-4")
             for idx, entry in enumerate(entries):
                 heading = entry.get("heading", "")
                 timing = entry.get("timing_seconds", None)
@@ -551,13 +555,13 @@ def setup_layout(
                             ui.code(
                                 json.dumps(details, indent=2), language="json"
                             ).classes("text-xs")
-            with ui.row().classes("w-full justify-end pt-4"):
-                ui.button("Close", on_click=_close_dialog).props(
-                    "unelevated color=primary"
-                )
-        logger.debug("Calling dialog.open() for chat %s", _current_chat_id[0])
-        dialog.open()
-        logger.debug("dialog.open() returned for chat %s", _current_chat_id[0])
+
+    def _reset_center_tab() -> None:
+        """Switch the central tab panel back to the chat tab."""
+        panels = _center_panels[0]
+        if panels is not None:
+            panels.set_value("chat")
+            logger.debug("reset center panel to chat tab")
 
     def _toggle_inspector_entry(idx: int) -> None:
         """Toggle the expanded/collapsed state of an inspector entry for the active chat."""
@@ -702,6 +706,7 @@ def setup_layout(
                         "No data was cleared.",
                         type="negative",
                         timeout=10000,
+                        close_button=True,
                     )
                     dialog.close()
                     return
@@ -711,6 +716,7 @@ def setup_layout(
                 f"Failed to delete session: {e}",
                 type="negative",
                 timeout=10000,
+                close_button=True,
             )
             dialog.close()
             return
@@ -824,37 +830,15 @@ def setup_layout(
                                 .strftime("%a %d %b %Y at %X")
                             )
                     ui.space()
-                    with ui.element():
-                        with (
-                            ui.button(
-                                icon="settings",
-                                on_click=_model_config_dialog,
-                            )
-                            .props("flat dense round color=grey-9")
-                            .classes("text-sm")
-                        ):
-                            ui.tooltip("Choose models")
-                        has_entries = bool(current_chat.get("inspector_entries"))
-
-                        def _open_inspector():
-                            """Log and open the inspector dialog if not streaming."""
-                            logger.debug(
-                                "inspector button clicked for chat=%s (streaming=%s)",
-                                _current_chat_id[0],
-                                _is_streaming[0],
-                            )
-                            if not _is_streaming[0]:
-                                _show_inspection_dialog()
-
-                        btn = (
-                            ui.button(icon="info", on_click=_open_inspector)
-                            .props("flat dense round color=grey-9")
-                            .classes("text-sm")
+                    with (
+                        ui.button(
+                            icon="settings",
+                            on_click=_model_config_dialog,
                         )
-                        if _is_streaming[0] or not has_entries:
-                            btn.props("disabled")
-                        with btn:
-                            ui.tooltip("Inspector available after query")
+                        .props("flat dense round color=grey-9")
+                        .classes("text-sm")
+                    ):
+                        ui.tooltip("Choose models")
                 model_info = current_chat.get("model_info", {})
                 if model_info:
                     tooltip_parts: list[str] = []
@@ -938,182 +922,227 @@ def setup_layout(
         .classes("w-full px-2")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
-        with ui.scroll_area().classes("w-full grow chat-scroll-area") as _scroll_area:
-            _chat_area = ui.column().classes("w-full")
-            _render_chat_area()
-            _stream_container = ui.column().classes("w-full")
+        with ui.tabs().classes("w-full") as center_tabs:
+            chat_tab = ui.tab(name="chat", label="chat")
+            inspect_tab = ui.tab(name="inspect", label="inspect")
+        with (
+            ui.tab_panels(center_tabs, value="chat")
+            .classes("w-full grow center-tab-panels")
+            .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
+        ) as center_panels:
+            _center_panels[0] = center_panels
+            with (
+                ui.tab_panel(chat_tab)
+                .classes("w-full")
+                .style(
+                    "flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0;"
+                )
+            ):
+                with ui.scroll_area().classes(
+                    "w-full grow chat-scroll-area"
+                ) as _scroll_area:
+                    _chat_area = ui.column().classes("w-full")
+                    _render_chat_area()
+                    _stream_container = ui.column().classes("w-full")
 
-        with ui.row().classes("w-full no-wrap items-end py-4"):
-            text = (
-                ui.textarea(placeholder="Start a conversation")
-                .props("rounded outlined input-class=mx-3 autogrow")
-                .classes("flex-grow")
-            )
+                with ui.row().classes("w-full no-wrap items-end py-4"):
+                    text = (
+                        ui.textarea(placeholder="Start a conversation")
+                        .props("rounded outlined input-class=mx-3 autogrow")
+                        .classes("flex-grow")
+                    )
 
-            async def _do_stream(query: str, chat_id: str) -> None:
-                """Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI."""
-                current_chat = ensure_chat(user_id, chat_id)
-                logger.debug("Clearing inspector entries for chat %s", chat_id)
-                _is_streaming[0] = True
-                current_chat["inspector_entries"] = []
-                current_chat["inspector_expanded"] = set()
-                current_chat["state_sections"] = {}
-                _status_pane.refresh()
-                with _stream_container:
-                    pg_row = ui.row().classes("w-full items-center gap-2 p-2")
-                    with pg_row:
-                        ui.spinner(type="dots").classes("w-4 h-4")
-                        pg_label = ui.label("").classes("text-xs text-grey-5 italic")
-
-                full_response = ""
-                try:
-                    async for event in stream_events(
-                        query, chat_id, server_url, user_id=user_id
-                    ):
-                        t = event.get("type", "?")
-                        logger.debug("chat=%s stream event type=%s", chat_id, t)
-                        if t == "progress":
-                            pg_label.set_text(f"{event.get('node', '')}")
-                        elif t == "debug":
-                            data = event.get("data", {})
-                            current_chat["inspector_entries"].append(
-                                {
-                                    "type": t,
-                                    "node": event.get("node", ""),
-                                    "heading": data.get("heading", ""),
-                                    "summary": data.get("summary", ""),
-                                    "details": data.get("details", {}),
-                                    "timing_seconds": data.get("timing_seconds", None),
-                                }
-                            )
-                        elif t == "usage":
-                            data = event.get("data", {})
-                            details = data.get("details", {})
-                            token_usage = current_chat.setdefault(
-                                "token_usage",
-                                {
-                                    "input_tokens": 0,
-                                    "output_tokens": 0,
-                                    "total_tokens": 0,
-                                },
-                            )
-                            for key in (
-                                "input_tokens",
-                                "output_tokens",
-                                "total_tokens",
-                            ):
-                                token_usage[key] += details.get(key, 0)
-                            _status_pane.refresh()
-                        elif t == "state":
-                            data = event.get("data", {})
-                            node = event.get("node", "")
-                            current_chat["state_sections"][node] = {
-                                "heading": data.get("heading", ""),
-                                "display": data.get("display", ""),
-                                "summary": data.get("summary", ""),
-                                "details": data.get("details", {}),
-                            }
-                            _status_pane.refresh()
-                        elif t == "complete":
-                            pg_row.delete()
-                            full_response = event.get("message_for_user", full_response)
-                            logger.debug(
-                                "chat=%s response_len=%d",
-                                chat_id,
-                                len(full_response),
-                            )
-                            ensure_chat(user_id, chat_id)["messages"].append(
-                                (
-                                    full_response,
-                                    datetime.now().astimezone().strftime("%X"),
-                                    False,
+                    async def _do_stream(query: str, chat_id: str) -> None:
+                        """Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI."""
+                        current_chat = ensure_chat(user_id, chat_id)
+                        logger.debug("Streaming query for chat %s", chat_id)
+                        _is_streaming[0] = True
+                        current_chat["state_sections"] = {}
+                        _status_pane.refresh()
+                        # Inspector entries are buffered locally and only
+                        # committed on completion, so the inspect tab keeps
+                        # showing the previous query's data until the
+                        # current one finishes.
+                        new_entries: list[dict] = []
+                        with _stream_container:
+                            pg_row = ui.row().classes("w-full items-center gap-2 p-2")
+                            with pg_row:
+                                ui.spinner(type="dots").classes("w-4 h-4")
+                                pg_label = ui.label("").classes(
+                                    "text-xs text-grey-5 italic"
                                 )
-                            )
-                            _render_chat_area()
-                            _is_streaming[0] = False
-                            _status_pane.refresh()
-                            break
-                        elif t == "error":
+
+                        full_response = ""
+                        try:
+                            async for event in stream_events(
+                                query, chat_id, server_url, user_id=user_id
+                            ):
+                                t = event.get("type", "?")
+                                logger.debug("chat=%s stream event type=%s", chat_id, t)
+                                if t == "progress":
+                                    pg_label.set_text(f"{event.get('node', '')}")
+                                elif t == "debug":
+                                    data = event.get("data", {})
+                                    new_entries.append(
+                                        {
+                                            "type": t,
+                                            "node": event.get("node", ""),
+                                            "heading": data.get("heading", ""),
+                                            "summary": data.get("summary", ""),
+                                            "details": data.get("details", {}),
+                                            "timing_seconds": data.get(
+                                                "timing_seconds", None
+                                            ),
+                                        }
+                                    )
+                                elif t == "usage":
+                                    data = event.get("data", {})
+                                    details = data.get("details", {})
+                                    token_usage = current_chat.setdefault(
+                                        "token_usage",
+                                        {
+                                            "input_tokens": 0,
+                                            "output_tokens": 0,
+                                            "total_tokens": 0,
+                                        },
+                                    )
+                                    for key in (
+                                        "input_tokens",
+                                        "output_tokens",
+                                        "total_tokens",
+                                    ):
+                                        token_usage[key] += details.get(key, 0)
+                                    _status_pane.refresh()
+                                elif t == "state":
+                                    data = event.get("data", {})
+                                    node = event.get("node", "")
+                                    current_chat["state_sections"][node] = {
+                                        "heading": data.get("heading", ""),
+                                        "display": data.get("display", ""),
+                                        "summary": data.get("summary", ""),
+                                        "details": data.get("details", {}),
+                                    }
+                                    _status_pane.refresh()
+                                elif t == "complete":
+                                    pg_row.delete()
+                                    full_response = event.get(
+                                        "message_for_user", full_response
+                                    )
+                                    logger.debug(
+                                        "chat=%s response_len=%d",
+                                        chat_id,
+                                        len(full_response),
+                                    )
+                                    ensure_chat(user_id, chat_id)["messages"].append(
+                                        (
+                                            full_response,
+                                            datetime.now().astimezone().strftime("%X"),
+                                            False,
+                                        )
+                                    )
+                                    _render_chat_area()
+                                    _is_streaming[0] = False
+                                    _status_pane.refresh()
+                                    current_chat["inspector_entries"] = new_entries
+                                    current_chat["inspector_expanded"] = set()
+                                    _render_inspector_panel.refresh()
+                                    break
+                                elif t == "error":
+                                    pg_row.delete()
+                                    logger.debug(
+                                        "chat=%s stream error: %s",
+                                        chat_id,
+                                        event.get("message", "Unknown error"),
+                                    )
+                                    with _stream_container:
+                                        ui.notification(
+                                            f"Error: {event.get('message', 'Unknown error')}",
+                                            type="negative",
+                                            timeout=10000,
+                                            close_button=True,
+                                        )
+                                    _is_streaming[0] = False
+                                    _status_pane.refresh()
+                                    break
+                        except httpx.RequestError as e:
                             pg_row.delete()
-                            logger.debug(
-                                "chat=%s stream error: %s",
-                                chat_id,
-                                event.get("message", "Unknown error"),
-                            )
+                            logger.debug("chat=%s request error: %s", chat_id, e)
                             with _stream_container:
                                 ui.notification(
-                                    f"Error: {event.get('message', 'Unknown error')}",
+                                    f"Connection error: {e}",
                                     type="negative",
                                     timeout=10000,
+                                    close_button=True,
                                 )
                             _is_streaming[0] = False
                             _status_pane.refresh()
-                            break
-                except httpx.RequestError as e:
-                    pg_row.delete()
-                    logger.debug("chat=%s request error: %s", chat_id, e)
-                    with _stream_container:
-                        ui.notification(
-                            f"Connection error: {e}",
-                            type="negative",
-                            timeout=10000,
+
+                    def send() -> None:
+                        """Append the current input text as a user message. Creates a new chat if none is active."""
+                        if not text.value.strip():
+                            return
+                        stamp = datetime.now().astimezone().strftime("%X")
+                        query = text.value
+                        text.value = ""
+
+                        current = _current_chat_id[0]
+                        logger.debug("current=%s query_len=%d", current, len(query))
+                        if not current:
+                            current = coolname.generate_slug(2)
+                            _current_chat_id[0] = current
+                            app.storage.user["chat_id"] = current
+                            ensure_chat(user_id, current)
+                            background_tasks.create(
+                                create_chat_on_server(server_url, user_id, current)
+                            )
+                            # Populate model_info for the newly created chat so
+                            # the "Choose models" dialog has roles to render.
+                            # Without this the status pane stays empty and the
+                            # dialog silently no-ops for chats started by typing
+                            # the first message.
+                            background_tasks.create(_fetch_model_info())
+                            _render_chat_list.refresh()
+
+                        ensure_chat(user_id, current)["messages"].append(
+                            (query, stamp, True)
                         )
-                    _is_streaming[0] = False
-                    _status_pane.refresh()
+                        _render_chat_area()
+                        _render_chat_list.refresh()
 
-            def send() -> None:
-                """Append the current input text as a user message. Creates a new chat if none is active."""
-                if not text.value.strip():
-                    return
-                stamp = datetime.now().astimezone().strftime("%X")
-                query = text.value
-                text.value = ""
+                        background_tasks.create(_do_stream(query, current))
 
-                current = _current_chat_id[0]
-                logger.debug("current=%s query_len=%d", current, len(query))
-                if not current:
-                    current = coolname.generate_slug(2)
-                    _current_chat_id[0] = current
-                    app.storage.user["chat_id"] = current
-                    ensure_chat(user_id, current)
-                    background_tasks.create(
-                        create_chat_on_server(server_url, user_id, current)
+                    with (
+                        text.add_slot("append"),
+                        ui.button(icon="send", on_click=send).props(
+                            "flat dense round color=primary"
+                        ),
+                    ):
+                        ui.tooltip("Enter to send, Shift+Enter for newline")
+
+                # Plain Enter sends the message and prevents the default newline
+                def handle_enter(e: GenericEventArguments):
+                    """Send on Enter, insert newline on Shift+Enter."""
+                    if e.args.get("shiftKey"):
+                        text.value += "\n"
+                    else:
+                        send()
+
+                text.on("keydown.enter.exact.prevent", handle_enter)
+                # Clicking the send icon inside the textarea also sends.
+                text.on("click:append", send)
+
+                if disclaimer:
+                    ui.label(disclaimer).classes(
+                        "text-xs text-grey-5 pb-2 w-full text-center"
                     )
-                    # Populate model_info for the newly created chat so the
-                    # "Choose models" dialog has roles to render. Without this
-                    # the status pane stays empty and the dialog silently
-                    # no-ops for chats started by typing the first message.
-                    background_tasks.create(_fetch_model_info())
-                    _render_chat_list.refresh()
-
-                ensure_chat(user_id, current)["messages"].append((query, stamp, True))
-                _render_chat_area()
-                _render_chat_list.refresh()
-
-                background_tasks.create(_do_stream(query, current))
-
             with (
-                text.add_slot("append"),
-                ui.button(icon="send", on_click=send).props(
-                    "flat dense round color=primary"
-                ),
+                ui.tab_panel(inspect_tab)
+                .classes("w-full")
+                .style(
+                    "flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0;"
+                )
             ):
-                ui.tooltip("Enter to send, Shift+Enter for newline")
-
-        # Plain Enter sends the message and prevents the default newline
-        def handle_enter(e: GenericEventArguments):
-            """Send on Enter, insert newline on Shift+Enter."""
-            if e.args.get("shiftKey"):
-                text.value += "\n"
-            else:
-                send()
-
-        text.on("keydown.enter.exact.prevent", handle_enter)
-        # Clicking the send icon inside the textarea also sends.
-        text.on("click:append", send)
-
-        if disclaimer:
-            ui.label(disclaimer).classes("text-xs text-grey-5 pb-2 w-full text-center")
+                _render_inspector_panel()
 
     # ---- Footer ----
     with ui.footer().classes("bg-grey-3 dark:bg-grey-9 text-xs py-1"):
