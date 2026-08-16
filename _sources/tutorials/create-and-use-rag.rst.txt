@@ -140,7 +140,14 @@ first run.  This caches converted chunks so subsequent runs skip the
 expensive Docling conversion.  Each ``chunk``/``store``/``build`` run
 automatically prunes cache entries whose source file no longer exists
 (e.g. renamed or removed files), so the cache always mirrors the source
-directory and ``--force`` regenerates it cleanly.
+directory and ``--force`` regenerates it cleanly.  The cache folder
+also holds the generated ``metadata-map.template.json`` (copy it out to
+review; see below) and the per-collection store manifest.
+
+Keep the ``.klea-cache/`` folder: it is reused across runs -- the chunk
+cache avoids re-converting unchanged files, and the store manifest is
+how ``store`` knows what is already indexed for incremental updates.
+Deleting it forces a full re-convert and re-store.
 
 The vector store folder will also have been created, with the
 ``chroma.sqlite3`` database inside it.  Later runs point ``--store`` at
@@ -346,19 +353,20 @@ Once the basic pipeline works, here are natural next steps:
 
 **Metadata enrichment**
    Add source URLs or other metadata to retrieved chunks.  First run
-   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``.
-   Each file's ``DEFAULT`` entry is pre-filled automatically with
-   bibliographic metadata (title, authors, keywords, DOI, URL) where it
-   could be extracted -- see :doc:`../concepts/rag` for the extraction
-   cascade.  Review and correct the values (check the
-   ``_metadata_complete`` flag), then ``klea-stores-create store
-   --metadata-map <file>``.  See ``klea-stores-create --help`` for
-   examples.  The metadata-map file may live inside the source directory:
-   it and the generated template are excluded from ingestion.  Run
-   ``klea-stores-create map-lint <dir>`` any time (or read the summary
-   printed after ``chunk``) for a quick, LLM-free health check of the map
-   -- it flags missing fields, suspicious titles/DOIs, year/filename
-   mismatches, and other issues to fix before storing.
+   ``klea-stores-create chunk`` to generate a ``metadata-map.template.json``
+   in ``<source_dir>/.klea-cache/``; copy it out to review.  Each file's
+   ``DEFAULT`` entry is pre-filled automatically with bibliographic
+   metadata (title, authors, keywords, DOI, URL) where it could be
+   extracted -- see :doc:`../concepts/rag` for the extraction cascade.
+   Review and correct the values (check the ``_metadata_complete`` flag),
+   then ``klea-stores-create store --metadata-map <file>``.  See
+   ``klea-stores-create --help`` for examples.  The reviewed map file may
+   live anywhere (e.g. in the source directory); it is passed explicitly
+   with ``--metadata-map``.  Run ``klea-stores-create map-lint <dir>``
+   any time (or read the summary printed after ``chunk``) for a quick,
+   LLM-free health check of the map -- it flags missing fields,
+   suspicious titles/DOIs, year/filename mismatches, and other issues to
+   fix before storing.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model
@@ -381,9 +389,24 @@ Once the basic pipeline works, here are natural next steps:
    ``store`` is cache-only: every file must already have been converted
    by ``chunk``, and it never converts on the fly.  Adding new files to
    the source directory means re-running ``chunk`` (which is incremental
-   and converts only the new files) and then ``store``.  Re-running
-   ``store`` after editing the metadata map skips files whose hash is
-   already stored -- pass ``--force`` to re-store them.
+   and converts only the new files) and then ``store``.
+
+   ``store`` is incremental by default: a store manifest in
+   ``<source_dir>/.klea-cache/<collection>.manifest.json`` records which
+   files are in the collection, so unchanged files are skipped and
+   changed files are updated in place.  Files removed from the source
+   directory are never pruned automatically -- pass ``--force`` to drop
+   the whole collection and rebuild it from scratch (the portable way to
+   update a collection, since documents within a collection cannot be
+   updated in place across all backends).  Re-running ``store --force``
+   after editing the metadata map re-applies the new metadata.
+
+**Metadata map template**
+   ``klea-stores-create chunk`` writes
+   ``metadata-map.template.json`` into ``<source_dir>/.klea-cache/``
+   (alongside the chunk cache and ``doi-cache.json``).  To review it,
+   copy it out (e.g. to ``metadata-map.json``), edit, and pass the copy
+   to ``klea-stores-create store --metadata-map <path>``.
 
 **Hybrid keyword retrieval**
    Add a BM25 store alongside a vector store: run

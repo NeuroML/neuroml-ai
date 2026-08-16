@@ -417,7 +417,13 @@ first run.  This caches converted chunks so subsequent runs skip the
 expensive Docling conversion.  Each <code class="docutils literal notranslate"><span class="pre">chunk</span></code>/<code class="docutils literal notranslate"><span class="pre">store</span></code>/<code class="docutils literal notranslate"><span class="pre">build</span></code> run
 automatically prunes cache entries whose source file no longer exists
 (e.g. renamed or removed files), so the cache always mirrors the source
-directory and <code class="docutils literal notranslate"><span class="pre">--force</span></code> regenerates it cleanly.</p>
+directory and <code class="docutils literal notranslate"><span class="pre">--force</span></code> regenerates it cleanly.  The cache folder
+also holds the generated <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> (copy it out to
+review; see below) and the per-collection store manifest.</p>
+<p>Keep the <code class="docutils literal notranslate"><span class="pre">.klea-cache/</span></code> folder: it is reused across runs – the chunk
+cache avoids re-converting unchanged files, and the store manifest is
+how <code class="docutils literal notranslate"><span class="pre">store</span></code> knows what is already indexed for incremental updates.
+Deleting it forces a full re-convert and re-store.</p>
 <p>The vector store folder will also have been created, with the
 <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code> database inside it.  Later runs point <code class="docutils literal notranslate"><span class="pre">--store</span></code> at
 the same folder; the file is always named <code class="docutils literal notranslate"><span class="pre">chroma.sqlite3</span></code>.</p>
@@ -592,21 +598,22 @@ Use <code class="docutils literal notranslate"><span class="pre">--server</span>
 <section id="going-further">
 <h2>Going further<a class="headerlink" href="#going-further" title="Link to this heading">¶</a></h2>
 <p>Once the basic pipeline works, here are natural next steps:</p>
-<dl class="simple">
+<dl>
 <dt><strong>Metadata enrichment</strong></dt><dd><p>Add source URLs or other metadata to retrieved chunks.  First run
-<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>.
-Each file’s <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry is pre-filled automatically with
-bibliographic metadata (title, authors, keywords, DOI, URL) where it
-could be extracted – see <a class="reference internal" href="../concepts/rag.html"><span class="doc">RAG</span></a> for the extraction
-cascade.  Review and correct the values (check the
-<code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> flag), then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span>
-<span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.  See <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for
-examples.  The metadata-map file may live inside the source directory:
-it and the generated template are excluded from ingestion.  Run
-<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code> any time (or read the summary
-printed after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>) for a quick, LLM-free health check of the map
-– it flags missing fields, suspicious titles/DOIs, year/filename
-mismatches, and other issues to fix before storing.</p>
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> to generate a <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code>
+in <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code>; copy it out to review.  Each file’s
+<code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry is pre-filled automatically with bibliographic
+metadata (title, authors, keywords, DOI, URL) where it could be
+extracted – see <a class="reference internal" href="../concepts/rag.html"><span class="doc">RAG</span></a> for the extraction cascade.
+Review and correct the values (check the <code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> flag),
+then <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span> <span class="pre">&lt;file&gt;</span></code>.  See
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--help</span></code> for examples.  The reviewed map file may
+live anywhere (e.g. in the source directory); it is passed explicitly
+with <code class="docutils literal notranslate"><span class="pre">--metadata-map</span></code>.  Run <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code>
+any time (or read the summary printed after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>) for a quick,
+LLM-free health check of the map – it flags missing fields,
+suspicious titles/DOIs, year/filename mismatches, and other issues to
+fix before storing.</p>
 </dd>
 <dt><strong>Different embedding models</strong></dt><dd><p>Swap <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code> for a HuggingFace embedding model
 (see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for model naming conventions).</p>
@@ -625,9 +632,22 @@ inspect the chunks and edit the metadata map before embedding.
 <code class="docutils literal notranslate"><span class="pre">store</span></code> is cache-only: every file must already have been converted
 by <code class="docutils literal notranslate"><span class="pre">chunk</span></code>, and it never converts on the fly.  Adding new files to
 the source directory means re-running <code class="docutils literal notranslate"><span class="pre">chunk</span></code> (which is incremental
-and converts only the new files) and then <code class="docutils literal notranslate"><span class="pre">store</span></code>.  Re-running
-<code class="docutils literal notranslate"><span class="pre">store</span></code> after editing the metadata map skips files whose hash is
-already stored – pass <code class="docutils literal notranslate"><span class="pre">--force</span></code> to re-store them.</p>
+and converts only the new files) and then <code class="docutils literal notranslate"><span class="pre">store</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">store</span></code> is incremental by default: a store manifest in
+<code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/&lt;collection&gt;.manifest.json</span></code> records which
+files are in the collection, so unchanged files are skipped and
+changed files are updated in place.  Files removed from the source
+directory are never pruned automatically – pass <code class="docutils literal notranslate"><span class="pre">--force</span></code> to drop
+the whole collection and rebuild it from scratch (the portable way to
+update a collection, since documents within a collection cannot be
+updated in place across all backends).  Re-running <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">--force</span></code>
+after editing the metadata map re-applies the new metadata.</p>
+</dd>
+<dt><strong>Metadata map template</strong></dt><dd><p><code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">chunk</span></code> writes
+<code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> into <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code>
+(alongside the chunk cache and <code class="docutils literal notranslate"><span class="pre">doi-cache.json</span></code>).  To review it,
+copy it out (e.g. to <code class="docutils literal notranslate"><span class="pre">metadata-map.json</span></code>), edit, and pass the copy
+to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--metadata-map</span> <span class="pre">&lt;path&gt;</span></code>.</p>
 </dd>
 <dt><strong>Hybrid keyword retrieval</strong></dt><dd><p>Add a BM25 store alongside a vector store: run
 <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store</span> <span class="pre">--bm25-store</span> <span class="pre">/path/to/corpus.pkl</span></code> and add a

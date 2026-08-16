@@ -521,6 +521,13 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  them to the vector store.  Conversion settings (OCR, max tokens)     
  belong to ``chunk``; ``store`` never converts on the fly.            
                                                                       
+ Incremental by default: a store manifest in                          
+ ``&lt;source_dir&gt;/.klea-cache/`` records which files are in the         
+ collection, so unchanged files are skipped and changed files are     
+ updated in place.  Pass ``--force`` to drop the whole collection     
+ and rebuild it (documents within a collection cannot be updated in   
+ place across all backends).                                          
+                                                                      
  The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
  current directory) writes the combined chunked documents to a single 
  pickle file that can be used as a BM25 store.                        
@@ -562,9 +569,9 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                         per-file DEFAULT           │
 │                                         fallback). Defaults to     │
 │                                         metadata-map.template.json │
-│                                         in the source directory;   │
-│                                         required when no template  │
-│                                         exists                     │
+│                                         in the source directory&#39;s  │
+│                                         cache folder; required     │
+│                                         when no template exists    │
 │    --bm25-store                TEXT     Write the combined         │
 │                                         document corpus to this    │
 │                                         path for BM25 retrieval (a │
@@ -584,12 +591,20 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                         per-request overhead on    │
 │                                         very large corpora         │
 │                                         [default: 256]             │
-│    --force             -f               Re-store files even if     │
-│                                         their hash is already in   │
-│                                         the store (e.g. after      │
-│                                         editing the metadata map). │
-│                                         Does not reconvert: files  │
-│                                         must already be cached by  │
+│    --force             -f               Drop the collection and    │
+│                                         re-store all files from    │
+│                                         scratch (the portable way  │
+│                                         to update a collection;    │
+│                                         documents within a         │
+│                                         collection cannot be       │
+│                                         updated in place).         │
+│                                         Without --force, `store`   │
+│                                         is incremental: unchanged  │
+│                                         files are skipped and      │
+│                                         changed files are updated  │
+│                                         in place.  Does not        │
+│                                         reconvert: files must      │
+│                                         already be cached by       │
 │                                         &#39;chunk&#39;                    │
 │    --help                               Show this message and      │
 │                                         exit.                      │
@@ -611,7 +626,8 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
 │ *    source_dir      TEXT  Directory containing the metadata map   │
-│                            (uses metadata-map.template.json unless │
+│                            (uses metadata-map.template.json in the │
+│                            .klea-cache folder unless               │
 │                            --metadata-map is given)                │
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯

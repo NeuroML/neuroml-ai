@@ -757,6 +757,41 @@
                 <span class="sa">f</span><span class="s2">&quot;Supported: chroma, qdrant, pgvector&quot;</span>
             <span class="p">)</span></div>
 
+
+
+<div class="viewcode-block" id="drop_collection">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.drop_collection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">drop_collection</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop a vector store collection (portable across backends).</span>
+
+<span class="sd">    Used by ``store --force`` to replace a collection wholesale, since</span>
+<span class="sd">    documents within a collection cannot be updated in place portably.</span>
+<span class="sd">    Chroma and PGVector expose ``delete_collection`` on their LangChain</span>
+<span class="sd">    wrapper; Qdrant&#39;s wrapper does not, so its raw client is used</span>
+<span class="sd">    instead.</span>
+
+<span class="sd">    :param store: Instantiated LangChain vector store</span>
+<span class="sd">    :param store_path: Store URI (``scheme:location``)</span>
+<span class="sd">    :param collection_name: Collection name to drop</span>
+<span class="sd">    :raises ValueError: When the scheme is missing or unknown</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">store_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sep</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid vector store path &#39;</span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">&#39;: expected format &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;scheme:location&#39; (e.g. &#39;chroma:/path/to/store&#39;)&quot;</span>
+        <span class="p">)</span>
+    <span class="k">match</span> <span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+        <span class="k">case</span> <span class="s2">&quot;chroma&quot;</span> <span class="o">|</span> <span class="s2">&quot;pgvector&quot;</span><span class="p">:</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">delete_collection</span><span class="p">()</span>
+        <span class="k">case</span> <span class="s2">&quot;qdrant&quot;</span><span class="p">:</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">delete_collection</span><span class="p">(</span><span class="n">collection_name</span><span class="p">)</span>
+        <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unsupported vector store scheme &#39;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">&#39; for collection &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;drop. Supported: chroma, qdrant, pgvector&quot;</span>
+            <span class="p">)</span></div>
+
 </pre></div>
         </article>
       </div>

@@ -444,9 +444,10 @@ reference.</p>
 <section id="bibliographic-metadata-extraction">
 <span id="metadata-extraction"></span><h2>Bibliographic metadata extraction<a class="headerlink" href="#bibliographic-metadata-extraction" title="Link to this heading">¶</a></h2>
 <p>When documents are chunked, Klea automatically tries to populate the
-per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry of <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> with
-bibliographic metadata (title, authors, keywords, DOI, URL).  This is a
-pre-population aid: the researcher reviews and corrects the values
+per-file <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> entry of <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> (written to
+the source directory’s <code class="docutils literal notranslate"><span class="pre">.klea-cache/</span></code>) with bibliographic metadata
+(title, authors, keywords, DOI, URL).  This is a pre-population aid: the
+researcher copies the template out, reviews and corrects the values
 before storing, rather than filling the metadata map in from scratch.</p>
 <p>Multiple URLs are written as separate keys (<code class="docutils literal notranslate"><span class="pre">url_1</span></code>, <code class="docutils literal notranslate"><span class="pre">url_2</span></code>, …);
 each <code class="docutils literal notranslate"><span class="pre">url*</span></code> key is shown as its own reference in retrieval results and

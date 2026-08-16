@@ -359,6 +359,12 @@ map by hand, and printed automatically at the end of ‘chunk’.</p>
 <code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code>, applies the metadata map, and writes
 them to the vector store.  Conversion settings (OCR, max tokens)
 belong to <code class="docutils literal notranslate"><span class="pre">chunk</span></code>; <code class="docutils literal notranslate"><span class="pre">store</span></code> never converts on the fly.</p>
+<p>Incremental by default: a store manifest in
+<code class="docutils literal notranslate"><span class="pre">&lt;source_dir&gt;/.klea-cache/</span></code> records which files are in the
+collection, so unchanged files are skipped and changed files are
+updated in place.  Pass <code class="docutils literal notranslate"><span class="pre">--force</span></code> to drop the whole collection
+and rebuild it (documents within a collection cannot be updated in
+place across all backends).</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> option (default <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the
 current directory) writes the combined chunked documents to a single
 pickle file that can be used as a BM25 store.</p>

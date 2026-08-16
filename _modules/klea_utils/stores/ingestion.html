@@ -307,7 +307,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">instantiate_vector_store</span><span class="p">,</span> <span class="n">normalize_text</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drop_collection</span><span class="p">,</span> <span class="n">instantiate_vector_store</span><span class="p">,</span> <span class="n">normalize_text</span>
 
 <span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">&quot;.klea-cache&quot;</span>
 <span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">&quot;metadata-map.template.json&quot;</span>
@@ -391,6 +391,7 @@
         <span class="n">tokenizer_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_TOKENIZER_MODEL</span><span class="p">,</span>
         <span class="n">do_ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">embed_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_EMBED_BATCH_SIZE</span><span class="p">,</span>
+        <span class="n">store_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the builder.</span>
 
@@ -409,6 +410,10 @@
 <span class="sd">            significantly.</span>
 <span class="sd">        :param embed_batch_size: Chunks per ``add_documents`` call when</span>
 <span class="sd">            writing to the vector store</span>
+<span class="sd">        :param store_dir: Vector store directory (e.g. a Chroma store</span>
+<span class="sd">            folder) that may live inside the source directory and must</span>
+<span class="sd">            be excluded from ingestion.  ``None`` for remote backends</span>
+<span class="sd">            with no local folder.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span> <span class="o">=</span> <span class="n">embedding_model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -422,6 +427,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_converter</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_chunker</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span> <span class="o">=</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">if</span> <span class="n">store_dir</span> <span class="k">else</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;StoresBuilder initialised (max_tokens=</span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">, &quot;</span>
@@ -484,7 +490,7 @@
             <span class="c1"># be reviewed and re-stored later.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_heading_template</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
             <span class="n">template_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span>
-                <span class="nb">str</span><span class="p">(</span><span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">)</span>
+                <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">)</span>
             <span class="p">)</span>
             <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">template_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
@@ -492,7 +498,14 @@
                     <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">store_uri</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">bm25_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span>
+            <span class="n">results</span><span class="p">,</span>
+            <span class="n">store_uri</span><span class="p">,</span>
+            <span class="n">collection_name</span><span class="p">,</span>
+            <span class="n">source_path</span><span class="p">,</span>
+            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
+            <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_path</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ingestion complete for collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
 
 
@@ -741,27 +754,53 @@
         <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]],</span>
         <span class="n">store_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">bm25_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write chunked documents to a vector store.</span>
 
-<span class="sd">        Initialises the embedding model on first call if not already</span>
-<span class="sd">        done.  Skips files whose hash is already present in the store</span>
-<span class="sd">        (unless ``force`` is ``True``).  Optionally also writes the</span>
-<span class="sd">        combined document corpus for BM25 retrieval.</span>
+<span class="sd">        Incremental by default: a store manifest</span>
+<span class="sd">        (``&lt;source_dir&gt;/.klea-cache/&lt;collection&gt;.manifest.json``) records</span>
+<span class="sd">        which files are in the collection and how many chunks each has,</span>
+<span class="sd">        so unchanged files are skipped, changed files have their old</span>
+<span class="sd">        chunk IDs deleted and are re-added, and new files are added.</span>
+<span class="sd">        Files absent from the source directory are left untouched</span>
+<span class="sd">        (never pruned).</span>
+
+<span class="sd">        With ``force`` the whole collection is dropped and rebuilt from</span>
+<span class="sd">        scratch (see :func:`klea_utils.stores.utils.drop_collection`),</span>
+<span class="sd">        then the manifest is rewritten.  This is the portable way to</span>
+<span class="sd">        update a collection, since documents within a collection cannot</span>
+<span class="sd">        be updated in place across all backends.</span>
+
+<span class="sd">        Chunk IDs are deterministic (``&lt;file_name&gt;:&lt;chunk_index&gt;``) so</span>
+<span class="sd">        deletion by ID works on every backend.</span>
 
 <span class="sd">        :param results: List of ``(file_hash, docs, file_path)`` tuples</span>
 <span class="sd">            from :meth:`chunk_all`</span>
 <span class="sd">        :param store_uri: Vector store URI</span>
 <span class="sd">        :param collection_name: Collection name for the store</span>
-<span class="sd">        :param force: Re-store all files even if already indexed</span>
+<span class="sd">        :param source_dir: Resolved source directory (for the manifest)</span>
+<span class="sd">        :param force: Drop the collection and re-store everything</span>
 <span class="sd">        :param bm25_path: Optional path to write the combined BM25 corpus to</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initialising embedding model (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="n">setup_embedding</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">store_uri</span> <span class="ow">and</span> <span class="n">collection_name</span>
+
+        <span class="n">manifest_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manifest_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">manifest_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="c1"># First store for this collection, or the cache/manifest was</span>
+            <span class="c1"># deleted: everything is treated as new.  Let the user know the</span>
+            <span class="c1"># manifest is load-bearing for future incremental runs.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No store manifest found at </span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">; all files will &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;be stored.  The manifest is written here and reused for &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;incremental updates -- keep it.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_manifest</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Opening vector store &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; at </span><span class="si">{</span><span class="n">store_uri</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">store</span> <span class="o">=</span> <span class="n">instantiate_vector_store</span><span class="p">(</span>
@@ -772,16 +811,44 @@
             <span class="n">create</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Force: dropping collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="n">drop_collection</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">store_uri</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
+            <span class="n">store</span> <span class="o">=</span> <span class="n">instantiate_vector_store</span><span class="p">(</span>
+                <span class="n">store_uri</span><span class="p">,</span>
+                <span class="n">collection_name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span>
+                <span class="n">create</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">manifest</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection_name</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="p">{}}</span>
+
+        <span class="n">raw_files</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;files&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw_files</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">raw_files</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_files</span>
+        <span class="n">manifest_files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_files</span>
         <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
-                <span class="n">existing</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">where</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;file_hash&quot;</span><span class="p">:</span> <span class="n">file_hash</span><span class="p">})</span>
-                <span class="k">if</span> <span class="n">existing</span> <span class="ow">and</span> <span class="n">existing</span><span class="p">[</span><span class="s2">&quot;ids&quot;</span><span class="p">]:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Skipping already indexed file: &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
-                    <span class="p">)</span>
-                    <span class="k">continue</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">known</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">manifest_files</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span> <span class="ow">and</span> <span class="n">known</span> <span class="ow">and</span> <span class="n">known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_hash&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">file_hash</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Skipping unchanged file: </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># A changed file: drop its previously-stored chunk IDs first</span>
+            <span class="c1"># (deterministic ``file_name:idx``), so re-adding updates in</span>
+            <span class="c1"># place and a shrunken file leaves no stale rows behind.</span>
+            <span class="k">if</span> <span class="n">known</span><span class="p">:</span>
+                <span class="n">old_chunks</span> <span class="o">=</span> <span class="n">known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;num_chunks&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">old_ids</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">old_chunks</span><span class="p">)]</span>
+                <span class="n">store</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="n">old_ids</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Deleted </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">old_ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> previously stored chunks for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
 
             <span class="c1"># Chroma rejects empty-list and None metadata values on upsert.</span>
             <span class="c1"># The cache keeps ``headings: []`` as an explicit &quot;no headings</span>
@@ -792,8 +859,9 @@
                 <span class="n">Document</span><span class="p">(</span>
                     <span class="n">page_content</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">page_content</span><span class="p">,</span>
                     <span class="n">metadata</span><span class="o">=</span><span class="n">_sanitize_store_metadata</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">),</span>
+                    <span class="nb">id</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span>
+                <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
             <span class="p">]</span>
             <span class="c1"># Embed in batches: a single ``add_documents`` call embeds every</span>
             <span class="c1"># chunk in one request (Ollama sends all texts at once), which can</span>
@@ -808,12 +876,17 @@
                 <span class="k">if</span> <span class="n">pct</span> <span class="o">&gt;=</span> <span class="n">last_pct</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:</span>
                     <span class="n">last_pct</span> <span class="o">=</span> <span class="n">pct</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Stored </span><span class="si">{</span><span class="n">done</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">num_docs</span><span class="si">}</span><span class="s2"> chunks (</span><span class="si">{</span><span class="n">pct</span><span class="si">}</span><span class="s2">%) from &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Stored </span><span class="si">{</span><span class="n">done</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">num_docs</span><span class="si">}</span><span class="s2"> chunks (</span><span class="si">{</span><span class="n">pct</span><span class="si">}</span><span class="s2">%) from </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span>
                     <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Added </span><span class="si">{</span><span class="n">num_docs</span><span class="si">}</span><span class="s2"> chunks from </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Added </span><span class="si">{</span><span class="n">num_docs</span><span class="si">}</span><span class="s2"> chunks from </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)&quot;</span>
             <span class="p">)</span>
+            <span class="n">manifest_files</span><span class="p">[</span><span class="n">file_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;file_hash&quot;</span><span class="p">:</span> <span class="n">file_hash</span><span class="p">,</span>
+                <span class="s2">&quot;num_chunks&quot;</span><span class="p">:</span> <span class="n">num_docs</span><span class="p">,</span>
+            <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_manifest</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">bm25_path</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_bm25_store</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">bm25_path</span><span class="p">)</span></div>
@@ -866,6 +939,13 @@
 <span class="sd">        unique heading chain found in that file.  The user fills in the</span>
 <span class="sd">        ``{}`` with their metadata key-value pairs.</span>
 
+<span class="sd">        The template is written into the source directory&#39;s cache folder</span>
+<span class="sd">        (``&lt;source_dir&gt;/.klea-cache/metadata-map.template.json``), the</span>
+<span class="sd">        same place the chunk cache and ``doi-cache.json`` live.  To</span>
+<span class="sd">        review it, copy it out (e.g. to ``metadata-map.json``), edit,</span>
+<span class="sd">        and pass the copy to ``klea-stores-create store</span>
+<span class="sd">        --metadata-map &lt;path&gt;``.</span>
+
 <span class="sd">        Refuses to write when *file_headings* is empty (no files were</span>
 <span class="sd">        chunked): an existing template is preserved rather than clobbered</span>
 <span class="sd">        with an empty one.</span>
@@ -873,9 +953,9 @@
 <span class="sd">        :param file_headings: ``{file_name: {&quot;DEFAULT&quot;: {},</span>
 <span class="sd">            &quot;heading &gt; heading&quot;: {}, ...}, ...}`` from :meth:`chunk_all`</span>
 <span class="sd">        :param source_dir: Resolved source directory path (template is</span>
-<span class="sd">            written alongside it)</span>
+<span class="sd">            written into its cache folder)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">out_path</span> <span class="o">=</span> <span class="n">source_dir</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="n">out_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">file_headings</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">out_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
@@ -886,6 +966,7 @@
                 <span class="sa">f</span><span class="s2">&quot;No files chunked and no existing template at </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
             <span class="k">return</span>
+        <span class="n">out_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># ensure_ascii=False keeps accented characters (e.g. &quot;B\u00f3ris&quot;)</span>
         <span class="c1"># as literal UTF-8 in the file, so the human editing the template</span>
         <span class="c1"># can see exactly what text a heading/author contains.</span>
@@ -906,6 +987,68 @@
 <span class="sd">        :returns: Path to ``&lt;source_dir&gt;/.klea-cache/``</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">source_dir</span> <span class="o">/</span> <span class="n">CACHE_DIR_NAME</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_manifest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the store manifest path for a collection.</span>
+
+<span class="sd">        The manifest records which files (and how many chunks each) are</span>
+<span class="sd">        in a collection, so ``store`` can do incremental updates without</span>
+<span class="sd">        querying the vector store (which is not portable across</span>
+<span class="sd">        backends).  It lives in the source directory&#39;s cache folder</span>
+<span class="sd">        alongside the chunk cache and ``doi-cache.json``.</span>
+
+<span class="sd">        :param source_dir: Resolved source directory path</span>
+<span class="sd">        :param collection_name: Collection name for the store</span>
+<span class="sd">        :returns: Path to ``&lt;cache_dir&gt;/&lt;collection&gt;.manifest.json``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.manifest.json&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load the store manifest, tolerating a missing or corrupt file.</span>
+
+<span class="sd">        A missing manifest (first store, or a store created before</span>
+<span class="sd">        manifests existed) yields an empty manifest so all files are</span>
+<span class="sd">        treated as new.</span>
+
+<span class="sd">        :param source_dir: Resolved source directory path</span>
+<span class="sd">        :param collection_name: Collection name for the store</span>
+<span class="sd">        :returns: Manifest dict with a ``files`` mapping of</span>
+<span class="sd">            ``{file_name: {&quot;file_hash&quot;: str, &quot;num_chunks&quot;: int}}``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manifest_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
+        <span class="n">empty</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection_name</span><span class="p">,</span>
+            <span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">empty</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not read store manifest </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">empty</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;files&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Malformed store manifest </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">; ignoring&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">empty</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_manifest</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the store manifest to disk, tolerating failures.&quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manifest_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not write store manifest </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_cache_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the cache file path for a given file hash.</span>
@@ -1101,7 +1244,7 @@
         <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
             <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">template</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+            <span class="n">template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">template</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="k">return</span> <span class="kc">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
@@ -1184,9 +1327,14 @@
 <span class="sd">        docling&#39;s :attr:`~docling.datamodel.base_models.FormatToExtensions`.</span>
 
 <span class="sd">        Files with unsupported extensions are logged as a warning and skipped.</span>
-<span class="sd">        The generated ``metadata-map.template.json`` and the metadata map</span>
+<span class="sd">        The generated ``metadata-map.template.json``, the metadata map</span>
 <span class="sd">        passed via :meth:`_load_metadata_map` (when it lives inside</span>
-<span class="sd">        *source_dir*) are excluded: they are config, not source documents.</span>
+<span class="sd">        *source_dir*), and the vector store directory are excluded: they</span>
+<span class="sd">        are generated artifacts, not source documents.  The store is</span>
+<span class="sd">        excluded when it is configured (:attr:`store_dir`) or when it is</span>
+<span class="sd">        any directory inside *source_dir* that contains a</span>
+<span class="sd">        ``chroma.sqlite3`` (so a store created without setting</span>
+<span class="sd">        :attr:`store_dir` is still not ingested).</span>
 
 <span class="sd">        :param source_dir: Directory to walk recursively</span>
 <span class="sd">        :returns: Sorted list of files with supported extensions</span>
@@ -1197,18 +1345,30 @@
         <span class="k">for</span> <span class="n">exts</span> <span class="ow">in</span> <span class="n">FormatToExtensions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
             <span class="n">all_exts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">exts</span><span class="p">)</span>
 
+        <span class="n">source_resolved</span> <span class="o">=</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="c1"># Directories that must never be ingested: the configured store</span>
+        <span class="c1"># (when it lives under the source dir) and any Chroma store folder</span>
+        <span class="c1"># (a dir containing chroma.sqlite3) inside the source dir.</span>
+        <span class="n">skip_dirs</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">source_resolved</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
+            <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">chroma_db</span> <span class="ow">in</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;chroma.sqlite3&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">chroma_db</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">chroma_db</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+
         <span class="n">supported</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="n">CACHE_DIR_NAME</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
                 <span class="k">continue</span>
-            <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">:</span>
-                <span class="k">continue</span>
             <span class="k">if</span> <span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
                 <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span>
             <span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">skip_dir</span><span class="p">)</span> <span class="k">for</span> <span class="n">skip_dir</span> <span class="ow">in</span> <span class="n">skip_dirs</span><span class="p">):</span>
                 <span class="k">continue</span>
             <span class="n">suffix</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">all_exts</span><span class="p">:</span>
