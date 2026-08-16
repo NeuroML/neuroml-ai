@@ -81,7 +81,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         return domain_str
 
     @override
-    def _get_system_prompt(self, state: RAGState) -> str:
+    def _get_system_prompt(self, state: RAGState) -> str | list[Any]:
         """Load base prompt, append domains, then rules, then optional memory."""
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
@@ -96,6 +96,11 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         # query (recency), maximizing adherence to the JSON format.
         if self.output_schema:
             system_prompt += self._format_output_schema_prompt()
+
+        if self.memory:
+            # Mirror the base node: with memory enabled the system prompt is
+            # a list of ("system", text) plus recent history messages.
+            return [("system", system_prompt), *self._get_recent_memory_messages(state)]
 
         self.logger.debug(f"{system_prompt =}")
         return system_prompt

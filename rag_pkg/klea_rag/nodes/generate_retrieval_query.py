@@ -55,13 +55,12 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
         )
 
     @override
-    def _get_system_prompt(self, state: RAGState) -> str:
+    def _get_system_prompt(self, state: RAGState) -> str | list[Any]:
         """Load system prompt, optionally appending evaluator feedback."""
         system_prompt = super()._get_system_prompt(state)
 
         if state.retrieval_attempts > 0:
             self.logger.info("Regenerating retrieval query, updating system prompt")
-            sentence, newline, rest = system_prompt.partition("\n")
             new_sentence = dedent(
                 """
                 Generate a new concise retrieval query from the user's question. Think about the user's intent step by step.
@@ -75,7 +74,16 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
 
                 """
             )
-            system_prompt = new_sentence + rest
+            if isinstance(system_prompt, list):
+                # Memory enabled: super() returns a ("system", text) list plus
+                # recent history; replace just the text part.
+                text = system_prompt[0][1]
+                sentence, newline, rest = text.partition("\n")
+                system_prompt = list(system_prompt)
+                system_prompt[0] = ("system", new_sentence + rest)
+            else:
+                sentence, newline, rest = system_prompt.partition("\n")
+                system_prompt = new_sentence + rest
             self.logger.debug(f"New {system_prompt =}")
 
         return system_prompt

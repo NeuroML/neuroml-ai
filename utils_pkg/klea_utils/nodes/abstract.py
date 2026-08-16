@@ -361,7 +361,9 @@ class AbstractLLMNode[TSchema: BaseModel](
 
             info = self._get_info()
             details = info.details.copy()
-            details["system_prompt"] = self._last_system_prompt
+            # ``_last_system_prompt`` may be a list when the node keeps a
+            # verbatim memory window; use the formatted prompt instead.
+            details["input_prompt"] = prompt_value_to_messages(self._last_prompt)
             return NodeStreamData(summary=info.summary, details=details)
         """
         return None
@@ -420,13 +422,19 @@ class AbstractLLMNode[TSchema: BaseModel](
         ...
 
     @abstractmethod
-    def _get_system_prompt(self, state: BaseModel) -> str:
-        """Return system prompt for this node"""
+    def _get_system_prompt(self, state: BaseModel) -> str | list[Any]:
+        """Return system prompt for this node.
+
+        May return a list of ``("system", text)`` plus recent history
+        message objects (when the node keeps a verbatim memory window),
+        which ``_create_prompt_template`` places between the system and
+        human prompts.
+        """
         ...
 
     @abstractmethod
     def _create_prompt_template(
-        self, system_prompt: str, human_prompt: str
+        self, system_prompt: str | list[Any], human_prompt: str
     ) -> ChatPromptTemplate:
         """Create ChatPromptTemplate for this node"""
         ...

@@ -20,6 +20,7 @@ from textwrap import dedent
 from typing import Any, Literal, cast
 
 from langchain.messages import AIMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
@@ -36,6 +37,7 @@ from ..llm import (
     classify_llm_invocation_error,
     content_to_str,
     get_provider_allowed_fields,
+    get_recent_messages,
     get_token_limit_param,
     is_output_truncated,
     load_prompt,
@@ -130,7 +132,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         llm_models: dict[str, Any],
         output_schema: type[TSchema] | None,
         memory: bool = False,
-        num_history_messages: int = 10,
+        num_history_chars: int = 10_000,
     ):
         """Initialize with file-based prompt loading and memory support.
 
@@ -139,14 +141,15 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
-        :param num_history_messages: Number of recent messages to include
+        :param num_history_chars: Character budget for the recent verbatim
+            history messages injected between the system and human prompts.
         """
         super().__init__(logger, label, llm_models, output_schema=output_schema)
 
         self._prompt_prefix: str | None = None
         self._prompt_registry_location: Path | None = None
         self.memory = memory
-        self.num_history_messages = num_history_messages
+        self.num_history_chars = num_history_chars
 
     @property
     def prompt_prefix(self) -> str:
@@ -529,8 +532,19 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             """
         )
 
-    def _get_system_prompt(self, state: BaseModel) -> str:
-        """Load system prompt from file, optionally adding memory summary and output schema."""
+    def _get_system_prompt(self, state: BaseModel) -> str | list:
+        """Load system prompt from file, optionally adding memory and schema.
+
+        When memory is enabled, returns a list of ``("system", text)`` plus
+        the recent conversation as real message objects (in interleaved
+        order), so ``_create_prompt_template`` can place them between the
+        system and human prompts.  Otherwise returns the system prompt text
+        as a plain string.
+
+        :param state: Graph state.
+        :returns: System prompt text, or a list of system text + history
+            message objects when memory is enabled.
+        """
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
         if self.memory:
@@ -546,8 +560,29 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             # query (recency), maximizing adherence to the JSON format.
             system_prompt += self._format_output_schema_prompt()
 
+        if self.memory:
+            system_messages: list[Any] = [("system", system_prompt)]
+            system_messages += self._get_recent_memory_messages(state)
+            self.logger.debug(f"{system_messages =}")
+            return system_messages
+
         self.logger.debug(f"{system_prompt =}")
         return system_prompt
+
+    def _get_recent_memory_messages(self, state: BaseModel) -> list[BaseMessage]:
+        """Return the recent verbatim history messages for the prompt.
+
+        The most recent human/ai messages, bounded by ``num_history_chars``,
+        are injected as real message objects between the system and human
+        prompts (instead of being flattened into the system prompt).
+
+        :param state: Graph state.
+        :returns: Ordered recent human/ai messages.
+        """
+        return get_recent_messages(
+            state.messages,  # type: ignore
+            self.num_history_chars,
+        )
 
     def _get_human_prompt(self, state: BaseModel) -> str:
         """Load human prompt from file."""
@@ -568,16 +603,31 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         )
 
     def _create_prompt_template(
-        self, system_prompt: str, human_prompt: str
+        self, system_prompt: str | list[Any], human_prompt: str
     ) -> ChatPromptTemplate:
-        """Create ChatPromptTemplate with system and human messages."""
-        if len(system_prompt) and len(human_prompt):
+        """Create ChatPromptTemplate with system and human messages.
+
+        *system_prompt* may be a plain string (memory disabled) or a list of
+        ``("system", text)`` plus recent history message objects (memory
+        enabled); the human prompt is appended after it.
+
+        :param system_prompt: System prompt text or a system-side list
+            including recent history messages.
+        :param human_prompt: Human prompt text.
+        """
+        system_messages = (
+            [("system", system_prompt)]
+            if isinstance(system_prompt, str)
+            else system_prompt
+        )
+
+        if len(system_messages) and len(human_prompt):
             prompt_template = ChatPromptTemplate(
-                [("system", system_prompt), ("human", human_prompt)]
+                [*system_messages, ("human", human_prompt)]
             )
-        elif len(system_prompt) and not len(human_prompt):
-            prompt_template = ChatPromptTemplate([("system", system_prompt)])
-        elif len(human_prompt) and not len(system_prompt):
+        elif len(system_messages) and not len(human_prompt):
+            prompt_template = ChatPromptTemplate(system_messages)
+        elif len(human_prompt) and not len(system_messages):
             prompt_template = ChatPromptTemplate([("human", human_prompt)])
         else:
             raise PromptTemplateError(

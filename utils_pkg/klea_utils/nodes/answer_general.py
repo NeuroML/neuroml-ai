@@ -45,7 +45,7 @@ class AnswerGeneral(BaseLLMNode):
         label: str,
         llm_models: dict[str, Any],
         memory: bool = False,
-        num_history_messages: int = 10,
+        num_history_chars: int = 10_000,
         fallback_config: FallbackConfig | None = None,
     ):
         """Initialise the general answer node.
@@ -54,7 +54,8 @@ class AnswerGeneral(BaseLLMNode):
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param memory: Whether to include conversation history in the prompt
-        :param num_history_messages: Number of recent messages to include when memory is enabled
+        :param num_history_chars: Character budget for the recent verbatim
+            history messages injected between the system and human prompts.
         :param fallback_config: Optional config for fallback warning text
         """
         super().__init__(
@@ -65,7 +66,7 @@ class AnswerGeneral(BaseLLMNode):
             memory=memory,
         )
 
-        self.num_history_messages = num_history_messages
+        self.num_history_chars = num_history_chars
         self.fallback_config = fallback_config
 
     @override

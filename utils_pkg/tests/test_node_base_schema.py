@@ -149,8 +149,12 @@ def test_system_prompt_puts_schema_after_memory(tmp_path):
 
     system = node._get_system_prompt(state)
 
-    assert "remember-the-context" in system
-    assert system.index("## Output schema (strict)") > system.index(
+    # With memory enabled the system prompt is a list of ``("system", text)``
+    # plus any recent history messages; the text lives in the first element.
+    assert isinstance(system, list)
+    system_text = system[0][1]
+    assert "remember-the-context" in system_text
+    assert system_text.index("## Output schema (strict)") > system_text.index(
         "remember-the-context"
     )
 
