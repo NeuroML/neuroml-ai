@@ -86,18 +86,19 @@
   package-local copies; tools are discovered by their `@tool_meta`
   decoration (function name is the tool name) rather than a `_tool` name
   suffix.
-<<<<<<< HEAD
 - `download_file` now sends an honest User-Agent and refuses internal and
   private hosts by default (shared SSRF guard, shared with `web_fetch`;
   `allow_internal_hosts` opts out).
-||||||| eeb1ec8
-=======
 - Reference material is serialized grouped by source file: shared
   bibliographic metadata (authors, year, journal, ...) is emitted once
   per file with chunks numbered beneath, each carrying its own inline
   relevance score; `serialize_vs_retrieval` renamed
   `serialize_reference_material`.
->>>>>>> development
+- Conversation memory is bounded by characters instead of message counts:
+  recent history is injected as real message objects (a character-budgeted
+  verbatim window between the system and human prompts), older history is
+  compressed into a running context summary that never overlaps that
+  window, and summarisation triggers on accumulated characters.
 - HTTP stack consolidated on httpx: aiohttp removed everywhere; shared
   sessions use HTTP/2 (`http2=True`) with tuned connection limits; a
   single `_make_retryer_httpx` helper backs the bundled tools.
