@@ -21,16 +21,20 @@ app = typer.Typer(help="Create stores from documents")
 def _store_dir(store_path: str) -> Path | None:
     """Return the local directory of a store URI, or ``None``.
 
-    Local backends (e.g. ``chroma:/path/to/store``) have a filesystem
-    directory that may live inside the source directory and must be
-    excluded from ingestion.  Remote backends (``qdrant:http://...``,
-    ``pgvector:postgresql://...``) have no local folder.
+    Backends with a local store folder (e.g. ``chroma:/path/to/store``,
+    or any future filesystem-backed scheme) have a directory that may
+    live inside the source directory and must be excluded from
+    ingestion.  Remote backends whose location is a URL or database
+    connection string (``qdrant:http://...``, ``pgvector:postgresql://...``)
+    have no local folder.
 
     :param store_path: Vector store URI (``scheme:location``)
     :returns: Resolved local directory, or ``None`` for remote schemes
     """
     scheme, sep, location = store_path.partition(":")
-    if not sep or scheme.lower() != "chroma":
+    if not sep:
+        return None
+    if location.startswith(("http://", "https://", "postgresql://", "postgres://")):
         return None
     return Path(location).resolve()
 

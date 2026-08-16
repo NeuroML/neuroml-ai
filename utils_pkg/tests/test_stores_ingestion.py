@@ -1728,5 +1728,22 @@ class TestIngestion:
         assert manifest["files"]["a.md"] == {"file_hash": "xxh64:abc", "num_chunks": 1}
 
 
+def test_store_dir_resolves_local_and_remote_schemes():
+    """_store_dir returns local folders but None for remote schemes."""
+    from klea_utils.ui.stores_create import _store_dir
+
+    chroma_dir = _store_dir("chroma:/tmp/store")
+    assert chroma_dir is not None
+    assert chroma_dir.name == "store"
+
+    lance_dir = _store_dir("lancedb:/tmp/lance")
+    assert lance_dir is not None
+    assert lance_dir.name == "lance"
+
+    assert _store_dir("qdrant:http://localhost:6333") is None
+    assert _store_dir("pgvector:postgresql://host/db") is None
+    assert _store_dir("no-scheme-path") is None
+
+
 if __name__ == "__main__":
     pytest.main()
