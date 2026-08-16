@@ -30,6 +30,6 @@ class InitGraphState(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
             "message_for_user": "",
             "plan": PlanSchema(),
             "goal": GoalSchema(),
-            "tool_call": None,
-            "tool_responses": [],
+            "tool_calls": [],
+            "tool_results": [],
         }

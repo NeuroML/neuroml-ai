@@ -10,8 +10,10 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 import sys
+from pathlib import Path
 from typing import Any, final, override
 
+from fastmcp.client.client import CallToolResult
 from fastmcp.mcp_config import MCPConfig, StdioMCPServer
 from klea_utils.graph.base import BaseLangGraph
 from klea_utils.llm import create_configurable_model
@@ -19,6 +21,8 @@ from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
+from klea_utils.nodes.tools_caller import ToolsCallerNode
+from klea_utils.nodes.tools_picker import ToolsPicker
 from langgraph.graph import END, START, StateGraph
 
 from klea_agent.nodes.answer_user import AnswerUser
@@ -27,8 +31,6 @@ from klea_agent.nodes.explore_planner import ExplorePlanner
 from klea_agent.nodes.goal_setter import GoalSetter
 from klea_agent.nodes.init_graph import InitGraphState
 from klea_agent.nodes.planner import Planner
-from klea_agent.nodes.tools_caller import ToolsCaller
-from klea_agent.nodes.tools_picker import ToolsPicker
 from klea_agent.nodes.tools_router import ToolsRouter
 
 from .config import AppConfig, AppEnv
@@ -113,6 +115,20 @@ class KleaAgent(BaseLangGraph):
     async def _step_router_node(self, state: KleaAgentState) -> str:
         return state.plan.status
 
+    def _update_plan_step_status(
+        self, state: KleaAgentState, results: list[CallToolResult]
+    ) -> dict[str, Any]:
+        """Mark the current plan step done/failed from the tool results.
+
+        :param state: Current graph state.
+        :param results: Tool call results (one per call in ``tool_calls``).
+        :returns: State updates carrying the updated plan.
+        """
+        current_step = state.plan.step_list[state.plan.current_step_index]
+        current_step.status = "failed" if results[0].is_error else "done"
+        state.plan.current_step_index += 1
+        return {"plan": state.plan}
+
     async def _create_graph(self):
         """Create the LangGraph"""
         self.workflow = StateGraph(KleaAgentState)
@@ -177,10 +193,16 @@ class KleaAgent(BaseLangGraph):
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
+            tools_info=self.tools_info,
+            model_type="plan",
+            prompt_registry_location=Path(__file__).parent / "nodes" / "prompts",
         )
-        self._tools_picker_node.set_tools_info(self.tools_info)
-        self._tools_caller_node = ToolsCaller(
-            logger=self.logger, label="Running tools", mcp_client=self.mcp_client
+        self._tools_caller_node = ToolsCallerNode(
+            logger=self.logger,
+            label="Running tools",
+            mcp_client=self.mcp_client,
+            tools_meta={t.name: t.meta for t in (self.mcp_tools or []) if t.meta},
+            post_dispatch=self._update_plan_step_status,
         )
         self._tools_router_node = ToolsRouter(logger=self.logger, label="Routing tools")
         self._evaluator_node = Evaluator(logger=self.logger, label="Evaluating")

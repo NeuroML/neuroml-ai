@@ -14,6 +14,7 @@ from fastmcp import Context
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.mcp.tools.list_files import list_files as list_files_impl
+from klea_utils.mcp.tools.read_file import read_file as read_file_impl
 from klea_utils.mcp.tools.web_fetch import web_fetch as web_fetch_impl
 from pydantic import Field
 
@@ -48,7 +49,7 @@ async def web_fetch(
     )
 
 
-@tool_meta(ToolInfo(tags={"bundled", "files"}))
+@tool_meta(ToolInfo(tags={"bundled", "files"}, checkpaths=["path"]))
 async def list_files(
     path: Annotated[
         str,
@@ -103,4 +104,59 @@ async def list_files(
         include_directories=include_directories,
         recursive=recursive,
         max_results=max_results,
+    )
+
+
+@tool_meta(ToolInfo(tags={"bundled", "files"}, checkpaths=["path"]))
+async def read_file(
+    path: Annotated[
+        str,
+        Field(
+            description=(
+                "File path to read. Must be relative to current working "
+                "directory and cannot contain '..' for security"
+            ),
+            min_length=1,
+        ),
+    ],
+    offset: Annotated[
+        int,
+        Field(description="1-indexed line to start reading from", ge=1),
+    ] = 1,
+    limit: Annotated[
+        int | None,
+        Field(description="Maximum number of lines to return. 'None' for end of file"),
+    ] = 2000,
+    max_chars: Annotated[
+        int,
+        Field(description="Hard cap on characters of content to return", ge=1),
+    ] = 100_000,
+) -> dict[str, Any]:
+    """Read a file and return a slice of its text content.
+
+    Use this tool to inspect source files, logs, or documents as plain text.
+    Document formats (PDF, office files) are converted to Markdown first.
+
+    Use when:
+    - You need to see the contents of a file in the project.
+    - You want to page through a large file by line numbers.
+
+    Do not use for:
+    - Listing a directory (use the list files tool instead).
+    - Fetching remote content (use the web fetch tool instead).
+
+    Example: read_file(path="README.md", offset=1, limit=100)
+
+    Args:
+        path: File path to read. Must be relative to the current working
+            directory and cannot contain '..' for security.
+        offset: 1-indexed line to start reading from.
+        limit: Maximum number of lines to return. None reads to the end.
+        max_chars: Hard cap on characters of content to return.
+    """
+    return read_file_impl(
+        path=path,
+        offset=offset,
+        limit=limit,
+        max_chars=max_chars,
     )
