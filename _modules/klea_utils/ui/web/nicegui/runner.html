@@ -414,6 +414,13 @@
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
         <span class="s2">&quot;.model-tooltip { white-space: pre-wrap !important; max-width: none !important; }&quot;</span>
     <span class="p">)</span>
+    <span class="c1"># The chat input must stay pinned to the bottom of the central pane.</span>
+    <span class="c1"># Quasar wraps each tab panel in a `.q-panel` container between</span>
+    <span class="c1"># `.q-tab-panels` and `.q-tab-panel`; it must also flex-fill so the chat</span>
+    <span class="c1"># panel&#39;s scroll area can grow and push the input row down.</span>
+    <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
+        <span class="s2">&quot;.center-tab-panels &gt; .q-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }&quot;</span>
+    <span class="p">)</span>
     <span class="c1"># Status pane styling  ---  uses disclosure triangles (same pattern as inspector)</span>
     <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span>
         <span class="s2">&quot;.status-entry &gt; summary { list-style: none; display: flex; align-items: center; gap: 0.25rem; }&quot;</span>
@@ -466,6 +473,9 @@
     <span class="n">_current_chat_id</span> <span class="o">=</span> <span class="p">[</span><span class="n">chat_id</span><span class="p">]</span>
     <span class="n">toggle_icon_ref</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
     <span class="n">_is_streaming</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
+    <span class="c1"># Reference to the central tab panel widget, filled in once the layout</span>
+    <span class="c1"># is built (handlers above it may run later, at click time).</span>
+    <span class="n">_center_panels</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
 
     <span class="c1"># ``user_id`` (a setup_layout parameter) is captured by reference in</span>
     <span class="c1"># every handler below.  Handlers therefore see a rebind made elsewhere</span>
@@ -722,6 +732,8 @@
         <span class="n">_render_chat_area</span><span class="p">()</span>
         <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
         <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="n">_reset_center_tab</span><span class="p">()</span>
+        <span class="n">_render_inspector_panel</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
         <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_fetch_model_info</span><span class="p">())</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_delete_chat</span><span class="p">(</span><span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -748,6 +760,8 @@
                 <span class="n">_render_chat_area</span><span class="p">()</span>
                 <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                 <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                <span class="n">_reset_center_tab</span><span class="p">()</span>
+                <span class="n">_render_inspector_panel</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
@@ -778,34 +792,24 @@
             <span class="n">left_drawer</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="n">remove</span><span class="o">=</span><span class="s2">&quot;mini&quot;</span><span class="p">)</span>
             <span class="n">toggle_icon_ref</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;keyboard_double_arrow_left&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_show_inspection_dialog</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Open a modal dialog with inspector/debug entries for the active chat.&quot;&quot;&quot;</span>
-        <span class="n">current_chat</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">current_chat</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">):</span>
+    <span class="nd">@ui</span><span class="o">.</span><span class="n">refreshable</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_render_inspector_panel</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render the inspector entries for the active chat in the inspect tab.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full px-2 gap-0&quot;</span><span class="p">):</span>
+            <span class="n">current_chat</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">current_chat</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">):</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;No inspection data yet&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm text-grey-5 py-8&quot;</span><span class="p">)</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span>
+                    <span class="s2">&quot;Inspector entries will appear here after a query completes.&quot;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+
+            <span class="n">entries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">])</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;inspector dialog: no entries for chat=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Rendering inspector panel for chat </span><span class="si">%s</span><span class="s2"> (entries=</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="p">,</span>
                 <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">entries</span><span class="p">),</span>
             <span class="p">)</span>
-            <span class="k">return</span>
-
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;Opening inspector dialog for chat </span><span class="si">%s</span><span class="s2"> (entries=</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="p">,</span>
-            <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="nb">len</span><span class="p">(</span><span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">]),</span>
-        <span class="p">)</span>
-
-        <span class="n">entries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">])</span>
-        <span class="n">dialog</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">dialog</span><span class="p">()</span>
-
-        <span class="k">def</span><span class="w"> </span><span class="nf">_close_dialog</span><span class="p">():</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Close button clicked for inspector dialog (chat </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
-                <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="p">)</span>
-            <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
-        <span class="k">with</span> <span class="n">dialog</span><span class="p">,</span> <span class="n">ui</span><span class="o">.</span><span class="n">card</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full p-4&quot;</span><span class="p">):</span>
-            <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;Inspector&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-lg font-bold mb-4&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">entries</span><span class="p">):</span>
                 <span class="n">heading</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
                 <span class="n">timing</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timing_seconds&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -838,13 +842,13 @@
                             <span class="n">ui</span><span class="o">.</span><span class="n">code</span><span class="p">(</span>
                                 <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">language</span><span class="o">=</span><span class="s2">&quot;json&quot;</span>
                             <span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs&quot;</span><span class="p">)</span>
-            <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full justify-end pt-4&quot;</span><span class="p">):</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="s2">&quot;Close&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">_close_dialog</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span>
-                    <span class="s2">&quot;unelevated color=primary&quot;</span>
-                <span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Calling dialog.open() for chat </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="n">dialog</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;dialog.open() returned for chat </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_reset_center_tab</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Switch the central tab panel back to the chat tab.&quot;&quot;&quot;</span>
+        <span class="n">panels</span> <span class="o">=</span> <span class="n">_center_panels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">panels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">panels</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="s2">&quot;chat&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;reset center panel to chat tab&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_toggle_inspector_entry</span><span class="p">(</span><span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Toggle the expanded/collapsed state of an inspector entry for the active chat.&quot;&quot;&quot;</span>
@@ -989,6 +993,7 @@
                         <span class="s2">&quot;No data was cleared.&quot;</span><span class="p">,</span>
                         <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
                         <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                        <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                     <span class="k">return</span>
@@ -998,6 +1003,7 @@
                 <span class="sa">f</span><span class="s2">&quot;Failed to delete session: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
                 <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span>
@@ -1111,37 +1117,15 @@
                                 <span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%a</span><span class="s2"> </span><span class="si">%d</span><span class="s2"> %b %Y at </span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">)</span>
                             <span class="p">)</span>
                     <span class="n">ui</span><span class="o">.</span><span class="n">space</span><span class="p">()</span>
-                    <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">():</span>
-                        <span class="k">with</span> <span class="p">(</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
-                                <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span>
-                                <span class="n">on_click</span><span class="o">=</span><span class="n">_model_config_dialog</span><span class="p">,</span>
-                            <span class="p">)</span>
-                            <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
-                            <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
-                        <span class="p">):</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Choose models&quot;</span><span class="p">)</span>
-                        <span class="n">has_entries</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">))</span>
-
-                        <span class="k">def</span><span class="w"> </span><span class="nf">_open_inspector</span><span class="p">():</span>
-<span class="w">                            </span><span class="sd">&quot;&quot;&quot;Log and open the inspector dialog if not streaming.&quot;&quot;&quot;</span>
-                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;inspector button clicked for chat=</span><span class="si">%s</span><span class="s2"> (streaming=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
-                                <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                                <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                            <span class="p">)</span>
-                            <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                                <span class="n">_show_inspection_dialog</span><span class="p">()</span>
-
-                        <span class="n">btn</span> <span class="o">=</span> <span class="p">(</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">_open_inspector</span><span class="p">)</span>
-                            <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
-                            <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
+                    <span class="k">with</span> <span class="p">(</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
+                            <span class="n">icon</span><span class="o">=</span><span class="s2">&quot;settings&quot;</span><span class="p">,</span>
+                            <span class="n">on_click</span><span class="o">=</span><span class="n">_model_config_dialog</span><span class="p">,</span>
                         <span class="p">)</span>
-                        <span class="k">if</span> <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">has_entries</span><span class="p">:</span>
-                            <span class="n">btn</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;disabled&quot;</span><span class="p">)</span>
-                        <span class="k">with</span> <span class="n">btn</span><span class="p">:</span>
-                            <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Inspector available after query&quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;flat dense round color=grey-9&quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-sm&quot;</span><span class="p">)</span>
+                    <span class="p">):</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Choose models&quot;</span><span class="p">)</span>
                 <span class="n">model_info</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_info&quot;</span><span class="p">,</span> <span class="p">{})</span>
                 <span class="k">if</span> <span class="n">model_info</span><span class="p">:</span>
                     <span class="n">tooltip_parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1225,182 +1209,227 @@
         <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full px-2&quot;</span><span class="p">)</span>
         <span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;flex: 1; min-height: 0; display: flex; flex-direction: column;&quot;</span><span class="p">)</span>
     <span class="p">):</span>
-        <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">scroll_area</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full grow chat-scroll-area&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">_scroll_area</span><span class="p">:</span>
-            <span class="n">_chat_area</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
-            <span class="n">_render_chat_area</span><span class="p">()</span>
-            <span class="n">_stream_container</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">tabs</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">center_tabs</span><span class="p">:</span>
+            <span class="n">chat_tab</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">tab</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;chat&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;chat&quot;</span><span class="p">)</span>
+            <span class="n">inspect_tab</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">tab</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;inspect&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;inspect&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="n">ui</span><span class="o">.</span><span class="n">tab_panels</span><span class="p">(</span><span class="n">center_tabs</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;chat&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full grow center-tab-panels&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;flex: 1; min-height: 0; display: flex; flex-direction: column;&quot;</span><span class="p">)</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">center_panels</span><span class="p">:</span>
+            <span class="n">_center_panels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">center_panels</span>
+            <span class="k">with</span> <span class="p">(</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">tab_panel</span><span class="p">(</span><span class="n">chat_tab</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">style</span><span class="p">(</span>
+                    <span class="s2">&quot;flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0;&quot;</span>
+                <span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">scroll_area</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+                    <span class="s2">&quot;w-full grow chat-scroll-area&quot;</span>
+                <span class="p">)</span> <span class="k">as</span> <span class="n">_scroll_area</span><span class="p">:</span>
+                    <span class="n">_chat_area</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
+                    <span class="n">_render_chat_area</span><span class="p">()</span>
+                    <span class="n">_stream_container</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
 
-        <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full no-wrap items-end py-4&quot;</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">textarea</span><span class="p">(</span><span class="n">placeholder</span><span class="o">=</span><span class="s2">&quot;Start a conversation&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;rounded outlined input-class=mx-3 autogrow&quot;</span><span class="p">)</span>
-                <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;flex-grow&quot;</span><span class="p">)</span>
-            <span class="p">)</span>
+                <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full no-wrap items-end py-4&quot;</span><span class="p">):</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">textarea</span><span class="p">(</span><span class="n">placeholder</span><span class="o">=</span><span class="s2">&quot;Start a conversation&quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">&quot;rounded outlined input-class=mx-3 autogrow&quot;</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;flex-grow&quot;</span><span class="p">)</span>
+                    <span class="p">)</span>
 
-            <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_do_stream</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">                </span><span class="sd">&quot;&quot;&quot;Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI.&quot;&quot;&quot;</span>
-                <span class="n">current_chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Clearing inspector entries for chat </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-                <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-                <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-                <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_expanded&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-                <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;state_sections&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-                <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
-                    <span class="n">pg_row</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full items-center gap-2 p-2&quot;</span><span class="p">)</span>
-                    <span class="k">with</span> <span class="n">pg_row</span><span class="p">:</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">spinner</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;dots&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-4 h-4&quot;</span><span class="p">)</span>
-                        <span class="n">pg_label</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5 italic&quot;</span><span class="p">)</span>
-
-                <span class="n">full_response</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">stream_events</span><span class="p">(</span>
-                        <span class="n">query</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
-                    <span class="p">):</span>
-                        <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;?&quot;</span><span class="p">)</span>
-                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream event type=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
-                            <span class="n">pg_label</span><span class="o">.</span><span class="n">set_text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;debug&quot;</span><span class="p">:</span>
-                            <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                                <span class="p">{</span>
-                                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span>
-                                    <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                    <span class="s2">&quot;heading&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                    <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                    <span class="s2">&quot;details&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{}),</span>
-                                    <span class="s2">&quot;timing_seconds&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;timing_seconds&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-                                <span class="p">}</span>
-                            <span class="p">)</span>
-                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;usage&quot;</span><span class="p">:</span>
-                            <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                            <span class="n">details</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                            <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
-                                <span class="s2">&quot;token_usage&quot;</span><span class="p">,</span>
-                                <span class="p">{</span>
-                                    <span class="s2">&quot;input_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                                    <span class="s2">&quot;output_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                                    <span class="s2">&quot;total_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                                <span class="p">},</span>
-                            <span class="p">)</span>
-                            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span>
-                                <span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span>
-                                <span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span>
-                                <span class="s2">&quot;total_tokens&quot;</span><span class="p">,</span>
-                            <span class="p">):</span>
-                                <span class="n">token_usage</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-                            <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span>
-                            <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                            <span class="n">node</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;state_sections&quot;</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                                <span class="s2">&quot;heading&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-                                <span class="s2">&quot;details&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{}),</span>
-                            <span class="p">}</span>
-                            <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;complete&quot;</span><span class="p">:</span>
-                            <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                            <span class="n">full_response</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="n">full_response</span><span class="p">)</span>
-                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> response_len=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
-                                <span class="n">chat_id</span><span class="p">,</span>
-                                <span class="nb">len</span><span class="p">(</span><span class="n">full_response</span><span class="p">),</span>
-                            <span class="p">)</span>
-                            <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                                <span class="p">(</span>
-                                    <span class="n">full_response</span><span class="p">,</span>
-                                    <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">),</span>
-                                    <span class="kc">False</span><span class="p">,</span>
+                    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_do_stream</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">                        </span><span class="sd">&quot;&quot;&quot;Stream the RAG pipeline progress, store the final answer in the chat dict, and update the UI.&quot;&quot;&quot;</span>
+                        <span class="n">current_chat</span> <span class="o">=</span> <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Streaming query for chat </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+                        <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;state_sections&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                        <span class="c1"># Inspector entries are buffered locally and only</span>
+                        <span class="c1"># committed on completion, so the inspect tab keeps</span>
+                        <span class="c1"># showing the previous query&#39;s data until the</span>
+                        <span class="c1"># current one finishes.</span>
+                        <span class="n">new_entries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
+                            <span class="n">pg_row</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full items-center gap-2 p-2&quot;</span><span class="p">)</span>
+                            <span class="k">with</span> <span class="n">pg_row</span><span class="p">:</span>
+                                <span class="n">ui</span><span class="o">.</span><span class="n">spinner</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;dots&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-4 h-4&quot;</span><span class="p">)</span>
+                                <span class="n">pg_label</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+                                    <span class="s2">&quot;text-xs text-grey-5 italic&quot;</span>
                                 <span class="p">)</span>
-                            <span class="p">)</span>
-                            <span class="n">_render_chat_area</span><span class="p">()</span>
-                            <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-                            <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                            <span class="k">break</span>
-                        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
+
+                        <span class="n">full_response</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">stream_events</span><span class="p">(</span>
+                                <span class="n">query</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span>
+                            <span class="p">):</span>
+                                <span class="n">t</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;?&quot;</span><span class="p">)</span>
+                                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream event type=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
+                                    <span class="n">pg_label</span><span class="o">.</span><span class="n">set_text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                                <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;debug&quot;</span><span class="p">:</span>
+                                    <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                                    <span class="n">new_entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                        <span class="p">{</span>
+                                            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span>
+                                            <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                            <span class="s2">&quot;heading&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                            <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                            <span class="s2">&quot;details&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                                            <span class="s2">&quot;timing_seconds&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                                                <span class="s2">&quot;timing_seconds&quot;</span><span class="p">,</span> <span class="kc">None</span>
+                                            <span class="p">),</span>
+                                        <span class="p">}</span>
+                                    <span class="p">)</span>
+                                <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;usage&quot;</span><span class="p">:</span>
+                                    <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                                    <span class="n">details</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                                    <span class="n">token_usage</span> <span class="o">=</span> <span class="n">current_chat</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                                        <span class="s2">&quot;token_usage&quot;</span><span class="p">,</span>
+                                        <span class="p">{</span>
+                                            <span class="s2">&quot;input_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                            <span class="s2">&quot;output_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                            <span class="s2">&quot;total_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                                        <span class="p">},</span>
+                                    <span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span>
+                                        <span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span>
+                                        <span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span>
+                                        <span class="s2">&quot;total_tokens&quot;</span><span class="p">,</span>
+                                    <span class="p">):</span>
+                                        <span class="n">token_usage</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                                    <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                                <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span>
+                                    <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                                    <span class="n">node</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                                    <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;state_sections&quot;</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                                        <span class="s2">&quot;heading&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;heading&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                        <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;display&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                        <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                                        <span class="s2">&quot;details&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;details&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                                    <span class="p">}</span>
+                                    <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                                <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;complete&quot;</span><span class="p">:</span>
+                                    <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+                                    <span class="n">full_response</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                                        <span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="n">full_response</span>
+                                    <span class="p">)</span>
+                                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                        <span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> response_len=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+                                        <span class="n">chat_id</span><span class="p">,</span>
+                                        <span class="nb">len</span><span class="p">(</span><span class="n">full_response</span><span class="p">),</span>
+                                    <span class="p">)</span>
+                                    <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                        <span class="p">(</span>
+                                            <span class="n">full_response</span><span class="p">,</span>
+                                            <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">),</span>
+                                            <span class="kc">False</span><span class="p">,</span>
+                                        <span class="p">)</span>
+                                    <span class="p">)</span>
+                                    <span class="n">_render_chat_area</span><span class="p">()</span>
+                                    <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                                    <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                                    <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_entries</span>
+                                    <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;inspector_expanded&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                                    <span class="n">_render_inspector_panel</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                                    <span class="k">break</span>
+                                <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
+                                    <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+                                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                                        <span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                                        <span class="n">chat_id</span><span class="p">,</span>
+                                        <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown error&quot;</span><span class="p">),</span>
+                                    <span class="p">)</span>
+                                    <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
+                                        <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                                            <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
+                                            <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                                            <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                        <span class="p">)</span>
+                                    <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                                    <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                                    <span class="k">break</span>
+                        <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">RequestError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                             <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> stream error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-                                <span class="n">chat_id</span><span class="p">,</span>
-                                <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown error&quot;</span><span class="p">),</span>
-                            <span class="p">)</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> request error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
                             <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
                                 <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
-                                    <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Unknown error&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                    <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                                     <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
                                     <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                                    <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                                 <span class="p">)</span>
                             <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                             <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-                            <span class="k">break</span>
-                <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">RequestError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;chat=</span><span class="si">%s</span><span class="s2"> request error: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
-                    <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Connection error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;negative&quot;</span><span class="p">,</span>
-                            <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+
+                    <span class="k">def</span><span class="w"> </span><span class="nf">send</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">                        </span><span class="sd">&quot;&quot;&quot;Append the current input text as a user message. Creates a new chat if none is active.&quot;&quot;&quot;</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                            <span class="k">return</span>
+                        <span class="n">stamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">query</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">value</span>
+                        <span class="n">text</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+                        <span class="n">current</span> <span class="o">=</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;current=</span><span class="si">%s</span><span class="s2"> query_len=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
+                            <span class="n">current</span> <span class="o">=</span> <span class="n">coolname</span><span class="o">.</span><span class="n">generate_slug</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                            <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
+                            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;chat_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
+                            <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+                            <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                                <span class="n">create_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+                            <span class="p">)</span>
+                            <span class="c1"># Populate model_info for the newly created chat so</span>
+                            <span class="c1"># the &quot;Choose models&quot; dialog has roles to render.</span>
+                            <span class="c1"># Without this the status pane stays empty and the</span>
+                            <span class="c1"># dialog silently no-ops for chats started by typing</span>
+                            <span class="c1"># the first message.</span>
+                            <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_fetch_model_info</span><span class="p">())</span>
+                            <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+
+                        <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">stamp</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
                         <span class="p">)</span>
-                    <span class="n">_is_streaming</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+                        <span class="n">_render_chat_area</span><span class="p">()</span>
+                        <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
 
-            <span class="k">def</span><span class="w"> </span><span class="nf">send</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">                </span><span class="sd">&quot;&quot;&quot;Append the current input text as a user message. Creates a new chat if none is active.&quot;&quot;&quot;</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-                    <span class="k">return</span>
-                <span class="n">stamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="n">query</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">value</span>
-                <span class="n">text</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                        <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_do_stream</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">current</span><span class="p">))</span>
 
-                <span class="n">current</span> <span class="o">=</span> <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;current=</span><span class="si">%s</span><span class="s2"> query_len=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">current</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
-                    <span class="n">current</span> <span class="o">=</span> <span class="n">coolname</span><span class="o">.</span><span class="n">generate_slug</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
-                    <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
-                    <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">&quot;chat_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
-                    <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
-                    <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-                        <span class="n">create_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
+                    <span class="k">with</span> <span class="p">(</span>
+                        <span class="n">text</span><span class="o">.</span><span class="n">add_slot</span><span class="p">(</span><span class="s2">&quot;append&quot;</span><span class="p">),</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;send&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">send</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span>
+                            <span class="s2">&quot;flat dense round color=primary&quot;</span>
+                        <span class="p">),</span>
+                    <span class="p">):</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Enter to send, Shift+Enter for newline&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Plain Enter sends the message and prevents the default newline</span>
+                <span class="k">def</span><span class="w"> </span><span class="nf">handle_enter</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">GenericEventArguments</span><span class="p">):</span>
+<span class="w">                    </span><span class="sd">&quot;&quot;&quot;Send on Enter, insert newline on Shift+Enter.&quot;&quot;&quot;</span>
+                    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;shiftKey&quot;</span><span class="p">):</span>
+                        <span class="n">text</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">send</span><span class="p">()</span>
+
+                <span class="n">text</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;keydown.enter.exact.prevent&quot;</span><span class="p">,</span> <span class="n">handle_enter</span><span class="p">)</span>
+                <span class="c1"># Clicking the send icon inside the textarea also sends.</span>
+                <span class="n">text</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;click:append&quot;</span><span class="p">,</span> <span class="n">send</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">disclaimer</span><span class="p">:</span>
+                    <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">disclaimer</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+                        <span class="s2">&quot;text-xs text-grey-5 pb-2 w-full text-center&quot;</span>
                     <span class="p">)</span>
-                    <span class="c1"># Populate model_info for the newly created chat so the</span>
-                    <span class="c1"># &quot;Choose models&quot; dialog has roles to render. Without this</span>
-                    <span class="c1"># the status pane stays empty and the dialog silently</span>
-                    <span class="c1"># no-ops for chats started by typing the first message.</span>
-                    <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_fetch_model_info</span><span class="p">())</span>
-                    <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-
-                <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">query</span><span class="p">,</span> <span class="n">stamp</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
-                <span class="n">_render_chat_area</span><span class="p">()</span>
-                <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-
-                <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_do_stream</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">current</span><span class="p">))</span>
-
             <span class="k">with</span> <span class="p">(</span>
-                <span class="n">text</span><span class="o">.</span><span class="n">add_slot</span><span class="p">(</span><span class="s2">&quot;append&quot;</span><span class="p">),</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span><span class="n">icon</span><span class="o">=</span><span class="s2">&quot;send&quot;</span><span class="p">,</span> <span class="n">on_click</span><span class="o">=</span><span class="n">send</span><span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span>
-                    <span class="s2">&quot;flat dense round color=primary&quot;</span>
-                <span class="p">),</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">tab_panel</span><span class="p">(</span><span class="n">inspect_tab</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;w-full&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">style</span><span class="p">(</span>
+                    <span class="s2">&quot;flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0;&quot;</span>
+                <span class="p">)</span>
             <span class="p">):</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">tooltip</span><span class="p">(</span><span class="s2">&quot;Enter to send, Shift+Enter for newline&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Plain Enter sends the message and prevents the default newline</span>
-        <span class="k">def</span><span class="w"> </span><span class="nf">handle_enter</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">GenericEventArguments</span><span class="p">):</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;Send on Enter, insert newline on Shift+Enter.&quot;&quot;&quot;</span>
-            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;shiftKey&quot;</span><span class="p">):</span>
-                <span class="n">text</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">send</span><span class="p">()</span>
-
-        <span class="n">text</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;keydown.enter.exact.prevent&quot;</span><span class="p">,</span> <span class="n">handle_enter</span><span class="p">)</span>
-        <span class="c1"># Clicking the send icon inside the textarea also sends.</span>
-        <span class="n">text</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;click:append&quot;</span><span class="p">,</span> <span class="n">send</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">disclaimer</span><span class="p">:</span>
-            <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">disclaimer</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;text-xs text-grey-5 pb-2 w-full text-center&quot;</span><span class="p">)</span>
+                <span class="n">_render_inspector_panel</span><span class="p">()</span>
 
     <span class="c1"># ---- Footer ----</span>
     <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">footer</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">&quot;bg-grey-3 dark:bg-grey-9 text-xs py-1&quot;</span><span class="p">):</span>
