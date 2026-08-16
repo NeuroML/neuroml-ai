@@ -147,7 +147,7 @@ class RAG(BaseLangGraph):
     @override
     async def _create_graph(self):
         """Create the LangGraph"""
-        self.workflow = StateGraph(RAGState)  # ty: ignore[invalid-assignment]
+        self.workflow = StateGraph(RAGState)
 
         # TODO: should be a check that gives user an error
         assert self.stores is not None or self.mcp_client is not None
