@@ -10,8 +10,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import json
 import logging
-from typing import Literal
+from typing import Any, Literal, cast
 
+from klea_utils.graph.schemas import TokenUsage
 from klea_utils.nodes.base import BaseLLMNode, _is_empty_result, _schema_to_example
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -206,3 +207,17 @@ def test_process_output_no_warning_on_populated_result(caplog):
         result = node._process_output(output)
     assert result == AnswerSchema(answer="a real answer")
     assert "Empty LLM output" not in caplog.text
+
+
+def test_llm_post_exec_stream_emits_usage_event():
+    """AbstractLLMNode._post_exec_stream adds the LLM-specific usage event."""
+    node = _node(AnswerSchema)
+    node._token_usage = TokenUsage(input_tokens=10, output_tokens=5, total_tokens=15)
+    events: list[dict] = []
+    cast(Any, node).write_custom_stream = events.append
+
+    node._post_exec_stream()
+
+    event_types = [e["type"] for e in events]
+    assert event_types == ["usage"]
+    assert events[0]["data"]["details"]["input_tokens"] == 10

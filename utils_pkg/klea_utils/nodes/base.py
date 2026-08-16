@@ -186,14 +186,6 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """Set the prompts directory path."""
         self._prompt_registry_location = value
 
-    def _pre_exec(self, state: BaseModel) -> bool:
-        """Pre-execution check. Override to conditionally skip node execution.
-
-        Return False to skip execution (returns empty dict).
-        Return True (default) to proceed with the standard flow.
-        """
-        return True
-
     @property
     def output_schema(self) -> type[TSchema] | None:
         """Return Pydantic schema for structured output if required"""

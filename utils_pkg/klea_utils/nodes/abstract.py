@@ -110,6 +110,110 @@ class AbstractLangGraphNode[TSchema: BaseModel, TReturn](ABC):
         """
         ...
 
+    # ------------------------------------------------------------------
+    # Execution contract (shared by all nodes)
+    #
+    # These hooks form the contract available to every node.  ``execute``
+    # is not a template here (LLM and tool-calling nodes differ too much),
+    # so each node decides when to call them:
+    #
+    # - ``_pre_exec(state)``: whether to run at all.  Returning False skips
+    #   execution (``execute`` returns an empty dict).  Default: True.
+    # - ``_pre_exec_stream()``: emit a progress event before doing work.
+    # - ``_post_exec_stream()``: emit ``info``/``debug``/``state`` events
+    #   from ``_get_info``/``_get_debug``/``_get_status`` after doing work.
+    #
+    # ``AbstractLLMNode`` calls all three from its own ``execute`` template
+    # and additionally emits a token-usage event (LLM-specific).
+    # ------------------------------------------------------------------
+
+    def _pre_exec(self, state: BaseModel) -> bool:
+        """Pre-execution check. Override to conditionally skip execution.
+
+        Return False to skip execution (``execute`` returns an empty dict).
+        Return True (default) to proceed with the standard flow.
+        """
+        return True
+
+    def _pre_exec_stream(self) -> None:
+        """Emit streaming event before node execution.
+
+        Default: emits a ``progress`` event with the node label.
+        Override to customise pre-execution streaming.
+        """
+        self.write_custom_stream({"type": "progress", "node": self.label})
+
+    def _post_exec_stream(self) -> None:
+        """Emit streaming events after node execution.
+
+        Default: emits ``info``, ``debug``, and ``state`` events from
+        ``_get_info``, ``_get_debug``, and ``_get_status`` if they return
+        non-None values.  ``AbstractLLMNode`` overrides this to also emit
+        the token-usage event, which is LLM-specific.
+        Override to customise post-execution streaming.
+        """
+        info = self._get_info()
+        if info:
+            event = NodeStreamEvent(type="info", node=self.label, data=info)
+            self.write_custom_stream(event.model_dump())
+        debug = self._get_debug()
+        if debug:
+            event = NodeStreamEvent(type="debug", node=self.label, data=debug)
+            self.write_custom_stream(event.model_dump())
+        status = self._get_status()
+        if status:
+            event = NodeStreamEvent(type="state", node=self.label, data=status)
+            self.write_custom_stream(event.model_dump())
+
+    def _get_info(self) -> NodeStreamData | None:
+        """Return structured summary data for an ``info`` stream event.
+
+        Override in subclasses to provide node-specific summary data.
+        Has access to all ``self._last_*`` values.
+
+        :returns: NodeStreamData with summary and details, or None to skip
+
+        Example::
+
+            return NodeStreamData(
+                summary="Classified into: neuron, morphology",
+                details={"classified_domains": ["neuron", "morphology"]}
+            )
+        """
+        return None
+
+    def _get_debug(self) -> NodeStreamData | None:
+        """Return structured debug data for a ``debug`` stream event.
+
+        Override in subclasses to provide node-specific debug data.
+        Has access to all ``self._last_*`` values.
+
+        :returns: NodeStreamData with summary and details, or None to skip
+
+        Example::
+
+            info = self._get_info()
+            details = info.details.copy()
+            # ``_last_system_prompt`` may be a list when the node keeps a
+            # verbatim memory window; use the formatted prompt instead.
+            details["input_prompt"] = prompt_value_to_messages(self._last_prompt)
+            return NodeStreamData(summary=info.summary, details=details)
+        """
+        return None
+
+    def _get_status(self) -> NodeStreamData | None:
+        """Return status pane content for this node.
+
+        Override to populate the status pane with display-ready
+        markdown content.  The ``display`` field of the returned
+        ``NodeStreamData`` is rendered in the status pane; the frontend
+        replaces the previous entry for this node label so loops do not
+        accumulate.
+
+        :returns: NodeStreamData with display content, or None to skip
+        """
+        return None
+
 
 class AbstractLLMNode[TSchema: BaseModel](
     AbstractLangGraphNode[TSchema, dict[str, Any]]
@@ -232,43 +336,14 @@ class AbstractLLMNode[TSchema: BaseModel](
         self.logger.debug(f"{self._final_state =}")
         return self._final_state
 
-    @abstractmethod
-    def _pre_exec(self, state: BaseModel) -> bool:
-        """Pre-execution check. Override to conditionally skip node execution.
-
-        Return False to skip execution (returns empty dict).
-        Return True (default) to proceed with the standard flow.
-        """
-        ...
-
-    def _pre_exec_stream(self) -> None:
-        """Emit streaming event before LLM invocation.
-
-        Default: emits a ``progress`` event with the node label.
-        Override to customise pre-execution streaming.
-        """
-        self.write_custom_stream({"type": "progress", "node": self.label})
-
     def _post_exec_stream(self) -> None:
         """Emit streaming events after LLM invocation.
 
-        Default: emits ``info``, ``debug``, ``state``, and ``usage``
-        events from ``_get_info``, ``_get_debug``, ``_get_status``,
-        and ``_get_usage`` if they return non-None values.
-        Override to customise post-execution streaming.
+        Emits the shared ``info``, ``debug``, and ``state`` events (via the
+        base) plus the ``usage`` event, which is LLM-specific: non-LLM
+        nodes have no token usage, so this stays in ``AbstractLLMNode``.
         """
-        info = self._get_info()
-        if info:
-            event = NodeStreamEvent(type="info", node=self.label, data=info)
-            self.write_custom_stream(event.model_dump())
-        debug = self._get_debug()
-        if debug:
-            event = NodeStreamEvent(type="debug", node=self.label, data=debug)
-            self.write_custom_stream(event.model_dump())
-        status = self._get_status()
-        if status:
-            event = NodeStreamEvent(type="state", node=self.label, data=status)
-            self.write_custom_stream(event.model_dump())
+        super()._post_exec_stream()
         usage = self._get_usage()
         if usage:
             event = NodeStreamEvent(type="usage", node=self.label, data=usage)
