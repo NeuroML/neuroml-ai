@@ -144,6 +144,11 @@ directory and ``--force`` regenerates it cleanly.  The cache folder
 also holds the generated ``metadata-map.template.json`` (copy it out to
 review; see below) and the per-collection store manifest.
 
+Keep the ``.klea-cache/`` folder: it is reused across runs -- the chunk
+cache avoids re-converting unchanged files, and the store manifest is
+how ``store`` knows what is already indexed for incremental updates.
+Deleting it forces a full re-convert and re-store.
+
 The vector store folder will also have been created, with the
 ``chroma.sqlite3`` database inside it.  Later runs point ``--store`` at
 the same folder; the file is always named ``chroma.sqlite3``.

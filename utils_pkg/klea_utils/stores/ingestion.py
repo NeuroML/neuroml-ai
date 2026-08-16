@@ -489,6 +489,16 @@ class StoresBuilder:
             self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert store_uri and collection_name
 
+        manifest_path = self._manifest_path(source_dir, collection_name)
+        if not force and not manifest_path.is_file():
+            # First store for this collection, or the cache/manifest was
+            # deleted: everything is treated as new.  Let the user know the
+            # manifest is load-bearing for future incremental runs.
+            self.logger.info(
+                f"No store manifest found at {manifest_path}; all files will "
+                f"be stored.  The manifest is written here and reused for "
+                f"incremental updates -- keep it."
+            )
         manifest = self._load_manifest(source_dir, collection_name)
 
         self.logger.info(f"Opening vector store '{collection_name}' at {store_uri}")

@@ -395,6 +395,14 @@ def store(
             bm25_path=bm25_store,
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
+        from klea_utils.stores.ingestion import CACHE_DIR_NAME
+
+        logger.info(
+            f"The chunk cache and store manifest in "
+            f"{source_path / CACHE_DIR_NAME} are reused for incremental "
+            f"updates -- keep them to avoid re-converting and re-storing "
+            f"everything."
+        )
     except typer.Exit:
         raise
     except Exception as e:
