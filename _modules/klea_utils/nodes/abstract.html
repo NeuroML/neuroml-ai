@@ -407,7 +407,111 @@
 <span class="sd">        :returns: State updates (dict) or routing label (str)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span></div>
-</div>
+
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># Execution contract (shared by all nodes)</span>
+    <span class="c1">#</span>
+    <span class="c1"># These hooks form the contract available to every node.  ``execute``</span>
+    <span class="c1"># is not a template here (LLM and tool-calling nodes differ too much),</span>
+    <span class="c1"># so each node decides when to call them:</span>
+    <span class="c1">#</span>
+    <span class="c1"># - ``_pre_exec(state)``: whether to run at all.  Returning False skips</span>
+    <span class="c1">#   execution (``execute`` returns an empty dict).  Default: True.</span>
+    <span class="c1"># - ``_pre_exec_stream()``: emit a progress event before doing work.</span>
+    <span class="c1"># - ``_post_exec_stream()``: emit ``info``/``debug``/``state`` events</span>
+    <span class="c1">#   from ``_get_info``/``_get_debug``/``_get_status`` after doing work.</span>
+    <span class="c1">#</span>
+    <span class="c1"># ``AbstractLLMNode`` calls all three from its own ``execute`` template</span>
+    <span class="c1"># and additionally emits a token-usage event (LLM-specific).</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pre-execution check. Override to conditionally skip execution.</span>
+
+<span class="sd">        Return False to skip execution (``execute`` returns an empty dict).</span>
+<span class="sd">        Return True (default) to proceed with the standard flow.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming event before node execution.</span>
+
+<span class="sd">        Default: emits a ``progress`` event with the node label.</span>
+<span class="sd">        Override to customise pre-execution streaming.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_post_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming events after node execution.</span>
+
+<span class="sd">        Default: emits ``info``, ``debug``, and ``state`` events from</span>
+<span class="sd">        ``_get_info``, ``_get_debug``, and ``_get_status`` if they return</span>
+<span class="sd">        non-None values.  ``AbstractLLMNode`` overrides this to also emit</span>
+<span class="sd">        the token-usage event, which is LLM-specific.</span>
+<span class="sd">        Override to customise post-execution streaming.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">info</span><span class="p">:</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
+        <span class="n">debug</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_debug</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">debug</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_status</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">status</span><span class="p">:</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured summary data for an ``info`` stream event.</span>
+
+<span class="sd">        Override in subclasses to provide node-specific summary data.</span>
+<span class="sd">        Has access to all ``self._last_*`` values.</span>
+
+<span class="sd">        :returns: NodeStreamData with summary and details, or None to skip</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            return NodeStreamData(</span>
+<span class="sd">                summary=&quot;Classified into: neuron, morphology&quot;,</span>
+<span class="sd">                details={&quot;classified_domains&quot;: [&quot;neuron&quot;, &quot;morphology&quot;]}</span>
+<span class="sd">            )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured debug data for a ``debug`` stream event.</span>
+
+<span class="sd">        Override in subclasses to provide node-specific debug data.</span>
+<span class="sd">        Has access to all ``self._last_*`` values.</span>
+
+<span class="sd">        :returns: NodeStreamData with summary and details, or None to skip</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            info = self._get_info()</span>
+<span class="sd">            details = info.details.copy()</span>
+<span class="sd">            # ``_last_system_prompt`` may be a list when the node keeps a</span>
+<span class="sd">            # verbatim memory window; use the formatted prompt instead.</span>
+<span class="sd">            details[&quot;input_prompt&quot;] = prompt_value_to_messages(self._last_prompt)</span>
+<span class="sd">            return NodeStreamData(summary=info.summary, details=details)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return status pane content for this node.</span>
+
+<span class="sd">        Override to populate the status pane with display-ready</span>
+<span class="sd">        markdown content.  The ``display`` field of the returned</span>
+<span class="sd">        ``NodeStreamData`` is rendered in the status pane; the frontend</span>
+<span class="sd">        replaces the previous entry for this node label so loops do not</span>
+<span class="sd">        accumulate.</span>
+
+<span class="sd">        :returns: NodeStreamData with display content, or None to skip</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
@@ -537,43 +641,14 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span></div>
 
 
-    <span class="nd">@abstractmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pre-execution check. Override to conditionally skip node execution.</span>
-
-<span class="sd">        Return False to skip execution (returns empty dict).</span>
-<span class="sd">        Return True (default) to proceed with the standard flow.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="o">...</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming event before LLM invocation.</span>
-
-<span class="sd">        Default: emits a ``progress`` event with the node label.</span>
-<span class="sd">        Override to customise pre-execution streaming.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">_post_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming events after LLM invocation.</span>
 
-<span class="sd">        Default: emits ``info``, ``debug``, ``state``, and ``usage``</span>
-<span class="sd">        events from ``_get_info``, ``_get_debug``, ``_get_status``,</span>
-<span class="sd">        and ``_get_usage`` if they return non-None values.</span>
-<span class="sd">        Override to customise post-execution streaming.</span>
+<span class="sd">        Emits the shared ``info``, ``debug``, and ``state`` events (via the</span>
+<span class="sd">        base) plus the ``usage`` event, which is LLM-specific: non-LLM</span>
+<span class="sd">        nodes have no token usage, so this stays in ``AbstractLLMNode``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_info</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">info</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
-        <span class="n">debug</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_debug</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">debug</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
-        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_status</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">status</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_post_exec_stream</span><span class="p">()</span>
         <span class="n">usage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_usage</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">usage</span><span class="p">:</span>
             <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;usage&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
