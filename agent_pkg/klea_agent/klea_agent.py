@@ -212,7 +212,8 @@ class KleaAgent(BaseLangGraph):
                 logger=self.logger,
                 label="Summarizing history",
                 llm_models=self.llm_models,
-                summarisation_threshold=10,
+                summarisation_threshold_chars=10_000,
+                num_history_chars=10_000,
             )
             self.workflow.add_node(
                 self._summarise_history_node.label,

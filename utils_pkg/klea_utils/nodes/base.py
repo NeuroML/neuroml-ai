@@ -594,7 +594,5 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         The default implementation returns an empty string.
         """
         return add_memory_to_prompt(
-            messages=state.messages,  # type: ignore
             context_summary=state.context_summary,  # type: ignore
-            num_history_messages=self.num_history_messages,
         )

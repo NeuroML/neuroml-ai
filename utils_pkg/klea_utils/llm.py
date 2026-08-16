@@ -19,7 +19,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, NamedTuple, cast
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import PromptValue
 from langgraph.types import RunnableConfig
 from pydantic import BaseModel
@@ -919,50 +919,77 @@ class LLMModel(BaseModel):
 
 def get_last_n_conversations(
     all_messages, start: int = 0, stop: int | None = None
-) -> tuple[str, list[HumanMessage], list[AIMessage]]:
-    """Get recent converstations between start and stop indices
+) -> tuple[str, list[BaseMessage]]:
+    """Get recent conversations between start and stop indices.
+
+    Returns the conversation as a single text block (used as prompt/summary
+    input) along with the ordered ``BaseMessage`` objects, preserving the
+    interleaved user/assistant order of the original history.
 
     :param all_messages: all the messages
     :param start: start index
     :param stop: stop index
-    :returns: (conversation, list of human messages, list of ai messages)
+    :returns: (conversation, ordered list of human/ai messages)
 
     """
-    conv_messages = list(
-        filter(
-            lambda x: isinstance(x, (HumanMessage, AIMessage)),
-            all_messages[start:stop],
-        )
-    )
-    human_messages = []
-    ai_messages = []
+    conv_messages: list[BaseMessage] = [
+        msg
+        for msg in all_messages[start:stop]
+        if isinstance(msg, (HumanMessage, AIMessage))
+    ]
     conversation = ""
     for msg in conv_messages:
         if isinstance(msg, HumanMessage):
             conversation += f"{msg.pretty_repr()}"
-            human_messages.append(msg)
         else:
             conversation += f": {msg.pretty_repr()}"
-            ai_messages.append(msg)
 
     logger.debug(f"{conversation = }")
 
-    return (
-        conversation.replace("{", "{{").replace("}", "}}"),
-        human_messages,
-        ai_messages,
-    )
+    return (conversation.replace("{", "{{").replace("}", "}}"), conv_messages)
 
 
-# TODO: num_history_messages is currently part of the orchestrator, but nodes wont have access to it.
-def add_memory_to_prompt(context_summary: str, messages, num_history_messages) -> str:
-    """Add memory to system prompt.
+def get_recent_messages(
+    messages, max_chars: int, keep_at_least: int = 1
+) -> list[BaseMessage]:
+    """Return the most recent human/ai messages bounded by *max_chars*.
 
-    Adds the context summary and recent conversation
+    Walks backwards through *messages* (in their original interleaved order)
+    accumulating ``pretty_repr()`` length until *max_chars* would be
+    exceeded.  The first *keep_at_least* messages are always included, so
+    the latest exchange is never dropped even when it alone exceeds the
+    budget.
 
-    :param state: agent state
-    :returns: "memory" string to add to the system prompt
+    :param messages: All conversation messages.
+    :param max_chars: Maximum total characters of the returned window.
+    :param keep_at_least: Minimum number of messages to always include.
+    :returns: Ordered list of recent human/ai messages.
+    """
+    recent: list[BaseMessage] = []
+    total = 0
+    for msg in reversed(messages):
+        if not isinstance(msg, (HumanMessage, AIMessage)):
+            continue
+        length = len(msg.pretty_repr())
+        if len(recent) >= keep_at_least and total + length > max_chars:
+            break
+        recent.append(msg)
+        total += length
+    recent.reverse()
+    logger.debug(f"{len(recent) = } recent messages, {total} chars")
+    return recent
 
+
+def add_memory_to_prompt(context_summary: str) -> str:
+    """Add the context summary to the system prompt.
+
+    Returns a text block framing the previous-context summary.  Recent
+    conversation messages are no longer flattened into this block: they are
+    injected as real message objects by the node's prompt assembly (see
+    ``klea_utils.nodes.base``).
+
+    :param context_summary: Summary of the past conversation.
+    :returns: Prompt text block, or ``""`` when there is no summary.
     """
     ret_string = ""
 
@@ -985,20 +1012,6 @@ def add_memory_to_prompt(context_summary: str, messages, num_history_messages) -
 
         {context_summary}
 
-        """)
-
-    conversation, _, _ = get_last_n_conversations(
-        messages, (-1 * num_history_messages), None
-    )
-    if len(conversation):
-        ret_string += dedent(f"""
-        ### Recent messages
-
-        Here are recent messages between the user and the assistant:
-
-        {conversation}
-
-        -----
         """)
 
     if len(ret_string):
