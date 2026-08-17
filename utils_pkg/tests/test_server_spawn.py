@@ -79,6 +79,13 @@ class TestConfigureProfile:
         with pytest.raises(typer.BadParameter):
             configure_profile("template", "TEST_APP_CONFIG_FILE", tmp_path, None)
 
+    def test_template_refusing_overwrite_raises_bad_parameter(self, tmp_path):
+        def writer(output_dir):
+            raise FileExistsError("Refusing to overwrite existing config")
+
+        with pytest.raises(typer.BadParameter, match="Refusing to overwrite"):
+            configure_profile("template", "TEST_APP_CONFIG_FILE", tmp_path, writer)
+
 
 class TestIsLoopbackHost(unittest.TestCase):
     def test_loopback_hosts(self):
