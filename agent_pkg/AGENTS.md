@@ -54,15 +54,18 @@ klea_agent/
 │   ├── goal_setter.py
 │   ├── init_graph.py
 │   ├── planner.py
-│   ├── tools_caller.py
-│   ├── tools_picker.py
 │   └── tools_router.py
 │   └── prompts/     # Prompt markdown templates per node
 ├── schemas.py       # Pydantic schemas
-├── tools/           # Bundled MCP tools
-│   └── bundled.py
 └── ui/
     └── cli.py       # Typer CLI entry point (klea, klea-serve)
+```
+
+The bundled tools server is shared: it lives in `klea_utils.mcp.server`
+(`bundled.py` + `bundled_tools.py`), auto-launched by the agent as a stdio
+subprocess (`python -m klea_utils.mcp.server.bundled`), and also runnable
+standalone via the `klea-mcp` CLI. The tool picker/caller nodes are the
+shared `klea_utils.nodes.tools_picker` / `klea_utils.nodes.tools_caller`.
 ```
 
 ### Key Technologies

@@ -27,8 +27,8 @@ def default_preprocessing_func(text: str) -> list[str]:
 class BM25Retriever(BaseRetriever):
     """BM25 retriever using rank_bm25 for keyword-based document scoring.
 
-    This retriever processes a collection of documents into an in-memory Okapi BM25 
-    index using the `rank_bm25` package. It tokenizes page contents and ranks 
+    This retriever processes a collection of documents into an in-memory Okapi BM25
+    index using the `rank_bm25` package. It tokenizes page contents and ranks
     documents based on term frequency and inverse document frequency (TF-IDF derivative).
 
     Attributes:

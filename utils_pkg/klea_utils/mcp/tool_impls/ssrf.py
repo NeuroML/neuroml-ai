@@ -2,7 +2,7 @@
 """
 SSRF (Server-Side Request Forgery) protection for outbound HTTP tools.
 
-File: klea_utils/mcp/tools/ssrf.py
+File: klea_utils/mcp/tool_impls/ssrf.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>

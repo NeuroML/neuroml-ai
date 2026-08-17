@@ -27,6 +27,15 @@ class TestWriteConfigTemplate:
         assert config.mcp_servers == {}
         assert config.providers == {}
 
+    def test_bundled_tools_enabled_by_default_for_agent(self):
+        config = AppConfig()
+        assert config.general.bundled_tools.enabled is True
+
+    def test_template_includes_bundled_tools(self, tmp_path):
+        target = write_config_template(tmp_path)
+        data = json.loads(target.read_text())
+        assert data["general"]["bundled_tools"]["enabled"] is True
+
     def test_refuses_overwrite(self, tmp_path):
         write_config_template(tmp_path)
         with pytest.raises(FileExistsError):

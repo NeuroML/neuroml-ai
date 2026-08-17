@@ -196,16 +196,23 @@ Git log has the step-by-step edits. Omit routine work.
 - Use the shared session helpers in `klea_utils` (`klea_utils/api/utils.py`
   `_make_retryer_httpx`, `klea_utils/mcp/lifespan.py`) rather than rolling
   per-module retry/backoff logic.
-- Shared MCP tool implementations live in `klea_utils/mcp/tools/`; apps wrap
+- Shared MCP tool implementations live in `klea_utils/mcp/tool_impls/`; apps wrap
   them into FastMCP tools and pass their httpx session via the lifespan
   context (key `http_session`, see `klea_utils.mcp.lifespan`). Tool tests use
   httpx-shaped fakes implementing the `SessionLike` protocol
   (`stream`/`get`).
+- Shared MCP servers live in `klea_utils/mcp/server/`: the bundled tools
+  server (`bundled.py` FastMCP instance + `bundled_tools.py` wrappers) is
+  auto-launched by apps as a stdio subprocess (`python -m
+  klea_utils.mcp.server.bundled`) and also exposed standalone via the
+  `klea-mcp` CLI.  `BaseLangGraph._bundled_server_config()` builds its
+  (config-filterable via tags) stdio entry; the effect/intent signal is
+  carried by standard MCP tool annotations, not tags.
 
 ## Permissions conventions
 
 - Every tool that reads or writes the filesystem must gate its path
-  arguments through `klea_utils.mcp.tools.permission.check_path_access`
+  arguments through `klea_utils.mcp.tool_impls.permission.check_path_access`
   with an explicit boundary (`project_root`, default cwd) and return a
   clear, non-halting error on denial.  Self-contained helpers with their
   own containment (e.g. `download_file_to_cache`) use that as the

@@ -38,6 +38,18 @@ def nopath_tool(x: str) -> str:
     return x
 
 
+@tool_meta(ToolInfo(tags={"testing"}, read_only=True, open_world=True))
+def annotated_tool(param: str) -> str:
+    """A tool carrying standard MCP annotation hints."""
+    return param
+
+
+@tool_meta(ToolInfo(tags={"testing"}, destructive=True))
+def destructive_tool(param: str) -> str:
+    """A tool marked destructive."""
+    return param
+
+
 def plain_helper() -> str:
     """A helper that is not a tool."""
     return "helper"
@@ -107,3 +119,36 @@ async def test_register_tools_without_checkpaths_omits_key():
     nopath_tools = [t for t in tools if t.name == "nopath_tool"]
     assert len(nopath_tools) == 1
     assert "checkpaths" not in (nopath_tools[0].meta or {})
+
+
+@pytest.mark.asyncio
+async def test_register_tools_folds_annotation_hints():
+    """ToolInfo hint fields must reach clients as standard ToolAnnotations."""
+    server = FastMCP("test-server")
+    register_tools(server, [sys.modules[__name__]])
+
+    tools = {t.name: t for t in await server.list_tools()}
+
+    annotated = tools["annotated_tool"]
+    assert annotated.annotations is not None
+    assert annotated.annotations.readOnlyHint is True
+    assert annotated.annotations.openWorldHint is True
+    assert annotated.annotations.destructiveHint is None
+
+    destructive = tools["destructive_tool"]
+    assert destructive.annotations is not None
+    assert destructive.annotations.destructiveHint is True
+    assert destructive.annotations.readOnlyHint is None
+    assert destructive.annotations.openWorldHint is None
+
+
+@pytest.mark.asyncio
+async def test_register_tools_no_annotations_when_unset():
+    """A tool declaring no hints must not carry an annotations object."""
+    server = FastMCP("test-server")
+    register_tools(server, [sys.modules[__name__]])
+
+    tools = {t.name: t for t in await server.list_tools()}
+
+    plain = tools["sample_tool"]
+    assert plain.annotations is None

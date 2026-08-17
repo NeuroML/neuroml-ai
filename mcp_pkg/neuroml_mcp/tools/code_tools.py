@@ -15,7 +15,7 @@ from typing import Annotated, Any
 
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
-from klea_utils.mcp.tools.list_files import list_files as list_files_impl
+from klea_utils.mcp.tool_impls.list_files import list_files as list_files_impl
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
@@ -26,7 +26,7 @@ from .sandbox import nml_mcp_sandbox
 sbox = nml_mcp_sandbox
 
 
-@tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
+@tool_meta(ToolInfo(title="Echo text", tags={"neuroml", "echo"}))
 async def dummy_code(
     astring: str,
 ) -> str:
@@ -49,7 +49,12 @@ async def dummy_code(
 
 
 @tool_meta(
-    ToolInfo(title="List files and directories", tags={"testing"}, checkpaths=["path"])
+    ToolInfo(
+        title="List files and directories",
+        tags={"neuroml", "local", "files"},
+        checkpaths=["path"],
+        read_only=True,
+    )
 )
 async def list_files(
     path: Annotated[str, Field(min_length=1)],
@@ -104,7 +109,13 @@ async def list_files(
     )
 
 
-@tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
+@tool_meta(
+    ToolInfo(
+        title="Execute Python code",
+        tags={"neuroml", "local", "code"},
+        destructive=True,
+    )
+)
 async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
 ) -> dict[str, Any]:

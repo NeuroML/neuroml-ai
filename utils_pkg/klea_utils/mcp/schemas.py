@@ -14,7 +14,17 @@ from pydantic import BaseModel, Field
 
 
 class ToolInfo(BaseModel):
-    """Metadata used to describe an MCP tool to clients and models."""
+    """Metadata used to describe an MCP tool to clients and models.
+
+    The ``read_only`` / ``destructive`` / ``idempotent`` / ``open_world``
+    fields map 1:1 to the standard MCP ``ToolAnnotations`` hints
+    (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
+    ``openWorldHint``); see
+    https://fastmcp.wiki/en/servers/tools#mcp-annotations for what each
+    hint means and how a client is expected to act on it.
+    :func:`klea_utils.mcp.registry.register_tools` folds them onto the
+    registered tool.
+    """
 
     # Detailed tool documentation for the LLM; falls back to the function docstring.
     description: str | None = None
@@ -28,6 +38,12 @@ class ToolInfo(BaseModel):
     checkpaths: list[str] | None = None
     # Additional application-specific metadata.
     meta: dict[str, Any] | None = None
+    # Standard MCP ToolAnnotations hints (see the docstring link above).
+    # Each is only set when declared (None = server does not express it).
+    read_only: bool | None = None
+    destructive: bool | None = None
+    idempotent: bool | None = None
+    open_world: bool | None = None
 
 
 class ToolCallSchema(BaseModel):

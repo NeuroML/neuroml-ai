@@ -2,7 +2,7 @@
 """
 File listing implementation for Klea MCP tools.
 
-File: klea_utils/mcp/tools/list_files.py
+File: klea_utils/mcp/tool_impls/list_files.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from klea_utils.mcp.errors import PermissionDeniedError
-from klea_utils.mcp.tools.permission import check_path_access
+from klea_utils.mcp.tool_impls.permission import check_path_access
 
 logger = logging.getLogger(__name__)
 

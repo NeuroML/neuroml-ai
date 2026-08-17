@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from pathlib import Path
 from typing import Any
 
+from klea_utils.mcp.server.config import BundledToolsConfig
 from klea_utils.stores.config import PerDomainConfig as BasePerDomainConfig
 from pydantic import BaseModel, Field
 
@@ -39,6 +40,13 @@ class GeneralConfig(BaseModel):
     fallback_warning: str = ""
     max_retrieval_attempts: int = 5
     max_rewrite_attempts: int = 1
+    #: The shared bundled tools server is opt-in for the RAG: deployments
+    #: wire in the common file/web/download tools explicitly rather than
+    #: getting them by default (RAGs are domain specific, so which common
+    #: tools make sense differs per deployment).
+    bundled_tools: BundledToolsConfig = Field(
+        default_factory=lambda: BundledToolsConfig(enabled=False)
+    )
 
 
 class PerDomainConfig(BasePerDomainConfig):

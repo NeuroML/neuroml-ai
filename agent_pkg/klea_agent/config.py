@@ -11,12 +11,22 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from pathlib import Path
 from typing import Any
 
+from klea_utils.mcp.server.config import BundledToolsConfig
 from pydantic import BaseModel, Field
+
+
+class GeneralConfig(BaseModel):
+    """General, domain-agnostic application settings (agent)."""
+
+    #: The shared bundled tools server is on by default for the agent
+    #: (batteries-included coding agent); deployers can disable or filter it.
+    bundled_tools: BundledToolsConfig = Field(default_factory=BundledToolsConfig)
 
 
 class AppConfig(BaseModel):
     """Application configuration loaded from the JSON config file."""
 
+    general: GeneralConfig = Field(default_factory=GeneralConfig)
     mcp_servers: dict[str, Any] = Field(default_factory=dict)
     providers: dict[str, dict[str, dict[str, Any]]] = Field(default_factory=dict)
 

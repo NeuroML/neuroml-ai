@@ -9,12 +9,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-import sys
 from pathlib import Path
 from typing import Any, final, override
 
 from fastmcp.client.client import CallToolResult
-from fastmcp.mcp_config import MCPConfig, StdioMCPServer
+from fastmcp.mcp_config import MCPConfig
 from klea_utils.graph.base import BaseLangGraph
 from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.fixed_answer import FixedAnswer
@@ -96,15 +95,11 @@ class KleaAgent(BaseLangGraph):
         into a single MCPConfig, and sets up a single domain that includes
         both so tool descriptions are built correctly.
         """
-        # Build bundled server config
-        bundle_server = StdioMCPServer(
-            command=sys.executable,
-            args=["-m", "klea_agent.tools.bundled"],
-        )
-
-        # Merge external + bundled
-        ext_servers: dict[str, Any] = dict(self.app_config.mcp_servers)
-        all_servers = {**ext_servers, "bundled": bundle_server}
+        all_servers: dict[str, Any] = dict(self.app_config.mcp_servers)
+        if bundled := self._bundled_server_config():
+            all_servers["bundled"] = bundled
+        else:
+            self.logger.info("Bundled tools server disabled")
 
         self.mcp_config = MCPConfig(mcpServers=all_servers)
         self.domain_mcp_configs = {"code": MCPConfig(mcpServers=all_servers)}

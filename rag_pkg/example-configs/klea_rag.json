@@ -45,7 +45,9 @@
             "mcp_servers": {
                 "NeuroML":
                 {
-                    "url": "http://127.0.0.1:8542/mcp"
+                    "url": "http://127.0.0.1:8542/mcp",
+                    "include_tags": ["web", "neuroml"],
+                    "exclude_tags": ["code"]
                 }
             }
         },

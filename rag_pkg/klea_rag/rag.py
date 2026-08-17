@@ -151,6 +151,13 @@ class RAG(BaseLangGraph):
         self.k_max = self.app_config.general.k_max
         self.k_inc = self.app_config.general.k_inc
         self.max_refs_size = self.app_config.general.max_refs_size
+
+        # The bundled tools server, when enabled, is a general, domain-agnostic
+        # tool source: it is made available to every configured domain.
+        bundled = self._bundled_server_config()
+        if bundled:
+            domain_ms["bundled"] = bundled
+            self.logger.debug("Bundled tools server enabled across all domains")
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
 
         # The embedding model is only required when vector stores are
@@ -162,9 +169,13 @@ class RAG(BaseLangGraph):
         # store per-domain MCP configs for domain-aware tool descriptions
         self.domain_mcp_configs = {}
         for d, inf in domains.items():
-            domain_ms = inf.model_dump(include={"mcp_servers"}).get("mcp_servers", {})
-            if domain_ms:
-                self.domain_mcp_configs[d] = MCPConfig(mcpServers=domain_ms)
+            domain_servers = inf.model_dump(include={"mcp_servers"}).get(
+                "mcp_servers", {}
+            )
+            if bundled:
+                domain_servers = {**domain_servers, "bundled": bundled}
+            if domain_servers:
+                self.domain_mcp_configs[d] = MCPConfig(mcpServers=domain_servers)
 
     @override
     async def _create_graph(self):
