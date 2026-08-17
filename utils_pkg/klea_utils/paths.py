@@ -50,6 +50,53 @@ def get_config_dir(dirs: PlatformDirs) -> Path:
     return Path(dirs.user_config_dir)
 
 
+def resolve_app_config_path(
+    config_file: str,
+    conf_dir: str | Path,
+    cwd: str | Path | None = None,
+) -> Path:
+    """Locate the application config file, checking the working directory first.
+
+    ``config_file`` may be an absolute path or a relative name/path.  The
+    working directory is searched before *conf_dir* (the per-app config
+    directory), so a profile dropped in ``CWD`` overrides one installed in
+    the config directory.
+
+    :param config_file: App config file path or bare filename
+    :param conf_dir: Config directory searched after the working directory
+    :param cwd: Working directory to search first (defaults to ``Path.cwd()``)
+    :returns: The first existing match
+    :raises FileNotFoundError: If no existing file matches
+    :raises ValueError: If *config_file* is empty
+    """
+    if not config_file:
+        raise ValueError("Empty config file name")
+
+    cwd_path = Path(cwd) if cwd is not None else Path.cwd()
+    conf_dir_path = Path(conf_dir)
+
+    candidate = Path(config_file)
+    if candidate.is_absolute():
+        if candidate.exists():
+            return candidate
+        raise FileNotFoundError(f"Could not find config file: {candidate}")
+
+    cwd_candidate = cwd_path / candidate
+    if cwd_candidate.exists():
+        return cwd_candidate
+
+    conf_candidate = conf_dir_path / candidate
+    if conf_candidate.exists():
+        return conf_candidate
+
+    raise FileNotFoundError(
+        f"Could not find config file '{config_file}' in:\n"
+        f"  {cwd_path}\n"
+        f"  {conf_dir_path}\n"
+        "Create it there, or select another config with --profile <name>."
+    )
+
+
 def init_dir(path: str | Path) -> Path:
     """Create *path* (and parents) if it doesn't exist.
 

@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field, create_model
 
 from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
-from klea_utils.paths import init_dir
+from klea_utils.paths import get_config_dir, init_dir, resolve_app_config_path
 from klea_utils.stores.config import RetrieverConfig
 from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
 from klea_utils.stores.retrieval.vs import VSRetriever
@@ -170,7 +170,11 @@ class BaseLangGraph(ABC):
         """Load env file, and configuration
 
         Uses ``self.env_class`` and ``self.env_file`` to locate and parse
-        the configuration file. Raises FileNotFoundError if the file does not exist.
+        the env file, then resolves the application config file (from
+        ``self.app_env.app_config_file``) via
+        :func:`klea_utils.paths.resolve_app_config_path` -- the working
+        directory first, then the per-app config directory.  Raises
+        ``FileNotFoundError`` if either file does not exist.
         """
         env_file_path = Path(self.env_file)
         if not env_file_path.exists():
@@ -183,21 +187,31 @@ class BaseLangGraph(ABC):
         self.logger.debug(f"env file: {self.env_file}")
         self.logger.debug(f"env: {self.app_env}")
 
-        if "app_config_file" in self.env_class.model_fields:
-            config_file = Path(self.app_env.app_config_file)
-            if not config_file.exists():
-                raise FileNotFoundError(f"Could not find config file: {config_file}")
-            else:
-                with open(config_file, "r") as f:
-                    config_dict = json.load(f)
-                    self.logger.debug(f"{config_dict = }")
-                    self.app_config = self.config_class(**config_dict)
-                    self.logger.debug(f"{self.app_config = }")
-        else:
+        if "app_config_file" not in self.env_class.model_fields:
             raise FileNotFoundError(
                 f"No config file provided. Please provide one in the env file ({self.env_file})."
                 + f"You can use the {self.env_var} environment variable to specify the env file."
             )
+
+        # An explicit empty value means "not set" -- fall back to the field
+        # default so a line like ``KLEA_AGENT_APP_CONFIG_FILE=`` does not
+        # resolve to the current directory itself.
+        app_config_file = self.app_env.app_config_file
+        if not app_config_file:
+            app_config_file = self.env_class.model_fields["app_config_file"].default
+            self.logger.debug(
+                f"empty app_config_file -- using default {app_config_file}"
+            )
+
+        config_file = resolve_app_config_path(
+            app_config_file, get_config_dir(self.paths)
+        )
+        self.logger.debug(f"config file: {config_file}")
+        with open(config_file, "r") as f:
+            config_dict = json.load(f)
+            self.logger.debug(f"{config_dict = }")
+            self.app_config = self.config_class(**config_dict)
+            self.logger.debug(f"{self.app_config = }")
 
     def _create_mcp_client(self) -> None:
         """Create MCP client from the JSON config file.
