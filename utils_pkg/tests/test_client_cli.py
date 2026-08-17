@@ -58,6 +58,10 @@ class TestMakeClientApp(unittest.TestCase):
                 single_query="hello",
                 tui_app_name="klea-rag-tui",
                 app_module="klea_rag.api.main:app",
+                profile=None,
+                config_env_var=None,
+                config_dir=None,
+                template_writer=None,
             )
 
     def test_cli_custom_server_and_title(self):
@@ -73,6 +77,10 @@ class TestMakeClientApp(unittest.TestCase):
                 single_query="q",
                 tui_app_name="klea-rag-tui",
                 app_module="klea_rag.api.main:app",
+                profile=None,
+                config_env_var=None,
+                config_dir=None,
+                template_writer=None,
             )
 
     def test_web_routing(self):

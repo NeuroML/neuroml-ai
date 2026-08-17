@@ -9,13 +9,75 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import os
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import httpx
-from klea_utils.api.server import is_loopback_host, spawn_server
+import pytest
+import typer
+from klea_utils.api.server import (
+    configure_profile,
+    is_loopback_host,
+    spawn_server,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class TestConfigureProfile:
+    """Tests for the --profile handler used by the serve and client CLIs."""
+
+    def test_none_is_noop(self, monkeypatch):
+        monkeypatch.delenv("TEST_APP_CONFIG_FILE", raising=False)
+        configure_profile(None, "TEST_APP_CONFIG_FILE", None, None)
+        assert "TEST_APP_CONFIG_FILE" not in os.environ
+
+    def test_sets_env_var(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("TEST_APP_CONFIG_FILE", raising=False)
+        (tmp_path / "config.json").write_text("{}")
+        configure_profile("config", "TEST_APP_CONFIG_FILE", tmp_path, None)
+        assert os.environ["TEST_APP_CONFIG_FILE"] == "config.json"
+
+    def test_strips_trailing_json(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("TEST_APP_CONFIG_FILE", raising=False)
+        (tmp_path / "config.json").write_text("{}")
+        configure_profile("config.json", "TEST_APP_CONFIG_FILE", tmp_path, None)
+        assert os.environ["TEST_APP_CONFIG_FILE"] == "config.json"
+
+    def test_missing_profile_raises_bad_parameter(self, tmp_path):
+        with pytest.raises(typer.BadParameter):
+            configure_profile("nope", "TEST_APP_CONFIG_FILE", tmp_path, None)
+
+    def test_no_config_dir_skips_validation(self, monkeypatch):
+        monkeypatch.delenv("TEST_APP_CONFIG_FILE", raising=False)
+        configure_profile("whatever", "TEST_APP_CONFIG_FILE", None, None)
+        assert os.environ["TEST_APP_CONFIG_FILE"] == "whatever.json"
+
+    def test_no_env_var_warns(self, tmp_path, capsys):
+        (tmp_path / "config.json").write_text("{}")
+        configure_profile("config", None, tmp_path, None)
+        assert "has no effect" in capsys.readouterr().out
+
+    def test_template_writes_and_exits(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.delenv("TEST_APP_CONFIG_FILE", raising=False)
+        monkeypatch.chdir(tmp_path)
+
+        def writer(output_dir):
+            target = Path(output_dir) / "config.json"
+            target.write_text("{}")
+            return target
+
+        with pytest.raises(typer.Exit):
+            configure_profile("template", "TEST_APP_CONFIG_FILE", tmp_path, writer)
+        assert (tmp_path / "config.json").exists()
+        assert "TEST_APP_CONFIG_FILE" not in os.environ
+        assert "Template config written" in capsys.readouterr().out
+
+    def test_template_without_writer_raises(self, tmp_path):
+        with pytest.raises(typer.BadParameter):
+            configure_profile("template", "TEST_APP_CONFIG_FILE", tmp_path, None)
 
 
 class TestIsLoopbackHost(unittest.TestCase):

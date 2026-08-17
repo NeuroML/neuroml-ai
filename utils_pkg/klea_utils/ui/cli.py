@@ -12,6 +12,7 @@ import asyncio
 import importlib.util
 import shlex
 import subprocess
+from collections.abc import Callable
 from contextlib import chdir, nullcontext
 from pathlib import Path
 
@@ -27,7 +28,14 @@ def _validate_url(value: str) -> str:
         raise typer.BadParameter(str(e))
 
 
-def _maybe_spawn_server(server_url: str, app_module: str):
+def _maybe_spawn_server(
+    server_url: str,
+    app_module: str,
+    profile: str | None = None,
+    config_env_var: str | None = None,
+    config_dir: str | Path | None = None,
+    template_writer: Callable[[Path], Path] | None = None,
+):
     """Context manager spawning a local server when none is running.
 
     Shared by the cli and web clients.  Auto-starting only makes sense for
@@ -36,16 +44,43 @@ def _maybe_spawn_server(server_url: str, app_module: str):
     is reused and left running (no-op), otherwise one is spawned and
     stopped when the ``with`` block exits.
 
+    A ``--profile`` value is applied before any spawn decision: the
+    special value ``template`` scaffolds a config and exits, any other
+    name is validated and forwarded to the spawned server through
+    *config_env_var* (see
+    :func:`klea_utils.api.server.configure_profile`).  A profile cannot
+    affect a server that already exists or one on a remote host, so a
+    warning is printed in those cases.
+
     :param server_url: Base URL of the API server (e.g. ``http://127.0.0.1:8005``)
     :param app_module: Uvicorn module string for the server (e.g.
         ``"klea_rag.api.main:app"``)
+    :param profile: Config profile name, or ``None``
+    :param config_env_var: Env var carrying the config file into the server
+    :param config_dir: Config directory used for profile validation
+    :param template_writer: Callable that writes a config template for
+        ``--profile template``
     """
     # Lazy: spawn_server pulls in the klea_utils.api machinery.
-    from klea_utils.api.server import is_loopback_host, spawn_server, split_server_url
+    from klea_utils.api.server import (
+        configure_profile,
+        is_loopback_host,
+        spawn_server,
+        split_server_url,
+    )
+
+    configure_profile(profile, config_env_var, config_dir, template_writer)
 
     host, port = split_server_url(server_url)
     if not is_loopback_host(host):
+        if profile:
+            print(
+                f"Warning: --profile {profile} is ignored when connecting to a "
+                f"remote server ({server_url})."
+            )
         return nullcontext()
+    if profile:
+        return spawn_server(app_module, host=host, port=port, profile=profile)
     return spawn_server(app_module, host=host, port=port)
 
 
@@ -55,9 +90,20 @@ def _run_cli(
     single_query: str,
     tui_app_name: str,
     app_module: str,
+    profile: str | None = None,
+    config_env_var: str | None = None,
+    config_dir: str | Path | None = None,
+    template_writer: Callable[[Path], Path] | None = None,
 ) -> None:
     """Run the interactive terminal (cli) client."""
-    with _maybe_spawn_server(server_url, app_module):
+    with _maybe_spawn_server(
+        server_url,
+        app_module,
+        profile=profile,
+        config_env_var=config_env_var,
+        config_dir=config_dir,
+        template_writer=template_writer,
+    ):
         from klea_utils.ui.tui.repl import run_repl
 
         try:
@@ -85,9 +131,20 @@ def _run_web(
     debug: bool,
     web_app_name: str,
     app_module: str,
+    profile: str | None = None,
+    config_env_var: str | None = None,
+    config_dir: str | Path | None = None,
+    template_writer: Callable[[Path], Path] | None = None,
 ) -> None:
     """Run the NiceGUI web client."""
-    with _maybe_spawn_server(server_url, app_module):
+    with _maybe_spawn_server(
+        server_url,
+        app_module,
+        profile=profile,
+        config_env_var=config_env_var,
+        config_dir=config_dir,
+        template_writer=template_writer,
+    ):
         spec = importlib.util.find_spec("klea_utils.ui.web.nicegui.app")
         assert spec and spec.origin, "Could not locate nicegui app entry point"
         cwd = Path(spec.origin).parent
@@ -113,6 +170,9 @@ def make_client_app(
     app_module: str,
     tui_app_name: str,
     web_app_name: str,
+    config_env_var: str | None = None,
+    config_dir: str | Path | None = None,
+    template_writer: Callable[[Path], Path] | None = None,
 ) -> typer.Typer:
     """Create a Typer app for a Klea user client (cli + web).
 
@@ -123,6 +183,14 @@ def make_client_app(
     values are passed as parameters, so the rag and code entry points
     stay thin wrappers.
 
+    Both subcommands accept ``--profile``: the value is validated and
+    forwarded to a spawned local server through *config_env_var* (see
+    :func:`klea_utils.api.server.configure_profile`), so the config file
+    is chosen per invocation.  A profile only applies to a server the
+    client spawns itself; reusing an already-running server or pointing at
+    a remote host ignores it with a warning.  The special profile
+    ``template`` scaffolds a new config and exits.
+
     :param label: Short package name used in help text (e.g. ``"RAG"``)
     :param server_url_default: Default server URL (e.g.
         ``"http://127.0.0.1:8005"``)
@@ -132,6 +200,12 @@ def make_client_app(
         ``"klea-rag-tui"``)
     :param web_app_name: Log identity for the web client (e.g.
         ``"klea-rag-web"``)
+    :param config_env_var: Environment variable that carries the config
+        file name into the spawned server (e.g. ``"KLEA_RAG_APP_CONFIG_FILE"``)
+    :param config_dir: Config directory searched after the working
+        directory when validating ``--profile``
+    :param template_writer: Callable that writes a config template into
+        the working directory for ``--profile template``
     :returns: A :class:`typer.Typer` app for use as a CLI entry point
     """
     app = typer.Typer(help=f"Simple KLEA {label} user client")
@@ -150,6 +224,14 @@ def make_client_app(
     )
     title_option = typer.Option(
         f"KLEA {label}", "--title", "-t", help="Title for application"
+    )
+    profile_option = typer.Option(
+        None,
+        "--profile",
+        "-p",
+        help="Config profile name: loads <name>.json from the current "
+        "directory or the config dir. Use 'template' to scaffold a "
+        "new config and exit.",
     )
 
     @app.callback(invoke_without_command=True)
@@ -170,6 +252,7 @@ def make_client_app(
             "-q",
             help="Single query mode: answer a query and exit",
         ),
+        profile: str = profile_option,
     ):
         _run_cli(
             server_url=server_url,
@@ -177,6 +260,10 @@ def make_client_app(
             single_query=single_query or "",
             tui_app_name=tui_app_name,
             app_module=app_module,
+            profile=profile,
+            config_env_var=config_env_var,
+            config_dir=config_dir,
+            template_writer=template_writer,
         )
 
     cli.__doc__ = cli_help
@@ -215,6 +302,7 @@ def make_client_app(
         debug: bool = typer.Option(
             False, "--debug", "-d", help="Enable auto-reload on file changes"
         ),
+        profile: str = profile_option,
     ):
         _run_web(
             server_url=server_url,
@@ -227,6 +315,10 @@ def make_client_app(
             debug=debug,
             web_app_name=web_app_name,
             app_module=app_module,
+            profile=profile,
+            config_env_var=config_env_var,
+            config_dir=config_dir,
+            template_writer=template_writer,
         )
 
     web.__doc__ = web_help
