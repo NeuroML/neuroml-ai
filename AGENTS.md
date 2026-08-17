@@ -201,6 +201,13 @@ Git log has the step-by-step edits. Omit routine work.
   context (key `http_session`, see `klea_utils.mcp.lifespan`). Tool tests use
   httpx-shaped fakes implementing the `SessionLike` protocol
   (`stream`/`get`).
+- Shared MCP servers live in `klea_utils/mcp/server/`: the bundled tools
+  server (`bundled.py` FastMCP instance + `bundled_tools.py` wrappers) is
+  auto-launched by apps as a stdio subprocess (`python -m
+  klea_utils.mcp.server.bundled`) and also exposed standalone via the
+  `klea-mcp` CLI.  `BaseLangGraph._bundled_server_config()` builds its
+  (config-filterable via tags) stdio entry; the effect/intent signal is
+  carried by standard MCP tool annotations, not tags.
 
 ## Permissions conventions
 

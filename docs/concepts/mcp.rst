@@ -51,6 +51,95 @@ See :doc:`../tutorials/create-and-use-rag` for a full example and the
 NeuroML package ships with ``nml-mcp``, an MCP server exposing tools for
 NeuroML model generation, validation, and lookup.
 
+Filtering tools by tag
+----------------------
+
+Klea lets a deployment enable or disable the tools of a configured MCP
+server without editing any server code.  Each tool carries *tags*; the
+RAG/agent config selects which tags to expose through fastmcp's
+``include_tags`` / ``exclude_tags`` fields on a server entry.  A RAG domain
+that only wants the query tools of a server (not its local file / code
+tools) can filter by tag:
+
+.. code-block:: json
+
+   {
+       "domains": {
+           "NeuroML": {
+               "mcp_servers": {
+                   "NeuroML": {
+                       "url": "http://127.0.0.1:8542/mcp",
+                       "include_tags": ["web", "neuroml"],
+                       "exclude_tags": ["code"]
+                   }
+               }
+           }
+       }
+   }
+
+``include_tags`` exposes only tools carrying at least one listed tag;
+``exclude_tags`` hides any tool carrying a listed tag.  Both are optional
+and can be combined.  When only ``exclude_tags`` is set, everything except
+the excluded tags is enabled.  These fields also work for stdio servers
+(the bundled tools server below).
+
+The tag vocabulary
+^^^^^^^^^^^^^^^^^^
+
+Tags are used for **Klea's own config filtering** -- which domain's tools
+to expose, and whether to allow local or web-facing tools.  Two groups:
+
+* **Scope** tracks where a tool operates:
+  ``local`` (filesystem / process on the host) or ``web`` (interacts with
+  external URLs / web APIs).
+* **Domain / functional** groups tools by purpose, for example ``files``,
+  ``code``, ``download``, ``echo``, ``neuroml``, ``neuroml-db``, ``osb``.
+
+Every tool also carries the ``bundled`` tag when it comes from the common
+bundled server, so enabling the whole common set is a single
+``include_tags: ["bundled"]``.  Specific current assignments::
+
+   bundled  web_fetch, list_files, read_file, download_file (each also has its scope + functional tags)
+
+   Web scope:   web_fetch (bundled), download_file (bundled, download)
+   Local scope: list_files / read_file (bundled, files),
+                run_python_code / run_lems_simulation (neuroml, code)
+   Echo:        dummy_code / dummy (neuroml, echo)
+
+Behavioral intent (whether a tool is read-only or destructive) is *not*
+tagged.  That is carried by standard MCP tool annotations
+(``readOnlyHint`` / ``destructiveHint``), which any compliant client can
+enforce without knowing Klea's tag vocabulary.  Tags answer "which tools to
+expose"; annotations answer "what effects the tool may have".
+
+The bundled tools server
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Klea ships a set of common tools (web fetch, file list/read, download)
+as a shared MCP server in ``klea_utils.mcp.server``.  Applications
+auto-launch it as a stdio subprocess by default, so users get the common
+tools with no extra setup; the same server can be run standalone over HTTP
+via the ``klea-mcp`` CLI for remote deployments.
+
+Whether the bundled server is used, and which of its tools are exposed, is
+configured under ``general.bundled_tools``:
+
+.. code-block:: json
+
+   {
+       "general": {
+           "bundled_tools": {
+               "enabled": true,
+               "include_tags": ["web"],
+               "exclude_tags": ["download"]
+           }
+       }
+   }
+
+The agent enables the bundled server by default (batteries included); the
+RAG leaves it disabled by default, since each RAG deployment is domain
+specific and should wire in only the tools it needs.
+
 How Klea uses the tools
 -----------------------
 
