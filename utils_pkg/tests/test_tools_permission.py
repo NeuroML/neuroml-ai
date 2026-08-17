@@ -12,7 +12,7 @@ import logging
 
 import pytest
 from klea_utils.mcp.errors import PermissionDeniedError
-from klea_utils.mcp.tools.permission import (
+from klea_utils.mcp.tool_impls.permission import (
     check_path_access,
     check_tool_arguments_permissions,
 )

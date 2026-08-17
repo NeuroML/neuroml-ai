@@ -5,7 +5,7 @@ the permission layer as it evolves.
 
 ## Current state
 
-`klea_utils.mcp.tools.permission` provides `check_path_access(path,
+`klea_utils.mcp.tool_impls.permission` provides `check_path_access(path,
 project_root=None)` and `PermissionDeniedError`.  It is an author-side
 defense layer:
 
@@ -15,15 +15,15 @@ defense layer:
 - Every Klea-authored tool that reads or writes the filesystem must gate
   its path arguments through `check_path_access` and return a clear,
   non-halting error on denial:
-  - `list_files` (`klea_utils/mcp/tools/list_files.py`) -- takes
+  - `list_files` (`klea_utils/mcp/tool_impls/list_files.py`) -- takes
     `project_root`.
-  - `download_file` (`klea_utils/mcp/tools/download_file.py`) -- takes
+  - `download_file` (`klea_utils/mcp/tool_impls/download_file.py`) -- takes
     `project_root`.
   - `download_file_to_cache` scopes its boundary to its own cache
     directory, so per-app cache helpers keep working unmodified.
 
 `check_tool_arguments_permissions(tool_meta, arguments, project_root)`
-(`klea_utils/mcp/tools/permission.py`) is the client-side counterpart: it
+(`klea_utils/mcp/tool_impls/permission.py`) is the client-side counterpart: it
 reads the `checkpaths` key from a tool's MCP `meta` dict and checks each
 declared path argument without raising.  It never touches a server it does
 not control, so the gate is:
@@ -76,7 +76,7 @@ mark its per-plan-step status.
 ## Network safety (SSRF) for outbound tools
 
 Outbound HTTP tools (`web_fetch`, `download_file`) share an SSRF guard in
-`klea_utils.mcp.tools.ssrf` (`check_ssrf`, `is_private_or_reserved`):
+`klea_utils.mcp.tool_impls.ssrf` (`check_ssrf`, `is_private_or_reserved`):
 requests to loopback, private, link-local, reserved, or multicast
 addresses are refused unless the caller passes `allow_internal_hosts=True`.
 

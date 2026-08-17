@@ -17,12 +17,15 @@ import time
 import httpx
 import klea_utils.api.utils as api_utils
 import pytest
-from klea_utils.mcp.tools import read_file as read_file_module
-from klea_utils.mcp.tools import web_fetch as web_fetch_module
-from klea_utils.mcp.tools.download_file import download_file, download_file_to_cache
-from klea_utils.mcp.tools.list_files import list_files
-from klea_utils.mcp.tools.read_file import read_file
-from klea_utils.mcp.tools.web_fetch import web_fetch
+from klea_utils.mcp.tool_impls import read_file as read_file_module
+from klea_utils.mcp.tool_impls import web_fetch as web_fetch_module
+from klea_utils.mcp.tool_impls.download_file import (
+    download_file,
+    download_file_to_cache,
+)
+from klea_utils.mcp.tool_impls.list_files import list_files
+from klea_utils.mcp.tool_impls.read_file import read_file
+from klea_utils.mcp.tool_impls.web_fetch import web_fetch
 
 logger = logging.getLogger(__name__)
 

@@ -26,7 +26,7 @@ _SESSION_LIMITS = httpx.Limits(
 def make_http_session_lifespan(session_key: str = "http_session"):
     """Create a FastMCP lifespan that provides a shared httpx session.
 
-    Tools that need an HTTP session (e.g. klea_utils.mcp.tools.web_fetch)
+    Tools that need an HTTP session (e.g. klea_utils.mcp.tool_impls.web_fetch)
     read it from ``ctx.lifespan_context[<session_key>]`` in their MCP wrapper.
     Lifespans are composable with the ``|`` operator.
 

@@ -15,7 +15,7 @@ from typing import Any
 from fastmcp.client.client import CallToolResult
 from mcp.types import TextContent
 
-from klea_utils.mcp.tools.permission import check_tool_arguments_permissions
+from klea_utils.mcp.tool_impls.permission import check_tool_arguments_permissions
 
 logger = logging.getLogger(__name__)
 

@@ -101,7 +101,7 @@ class KleaAgent(BaseLangGraph):
         # Build bundled server config
         bundle_server = StdioMCPServer(
             command=sys.executable,
-            args=["-m", "klea_agent.tools.bundled"],
+            args=["-m", "klea_utils.mcp.server.bundled"],
         )
 
         # Merge external + bundled
