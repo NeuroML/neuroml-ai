@@ -335,6 +335,94 @@ streamable HTTP MCP endpoint:</p>
 NeuroML package ships with <code class="docutils literal notranslate"><span class="pre">nml-mcp</span></code>, an MCP server exposing tools for
 NeuroML model generation, validation, and lookup.</p>
 </section>
+<section id="filtering-tools-by-tag">
+<h2>Filtering tools by tag<a class="headerlink" href="#filtering-tools-by-tag" title="Link to this heading">¶</a></h2>
+<p>Klea lets a deployment enable or disable the tools of a configured MCP
+server without editing any server code.  Each tool carries <em>tags</em>; the
+RAG/agent config selects which tags to expose through fastmcp’s
+<code class="docutils literal notranslate"><span class="pre">include_tags</span></code> / <code class="docutils literal notranslate"><span class="pre">exclude_tags</span></code> fields on a server entry.  A RAG domain
+that only wants the query tools of a server (not its local file / code
+tools) can filter by tag:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"NeuroML"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"mcp_servers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"NeuroML"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://127.0.0.1:8542/mcp"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"include_tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="s2">"neuroml"</span><span class="p">],</span>
+<span class="w">                    </span><span class="nt">"exclude_tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"code"</span><span class="p">]</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">include_tags</span></code> exposes only tools carrying at least one listed tag;
+<code class="docutils literal notranslate"><span class="pre">exclude_tags</span></code> hides any tool carrying a listed tag.  Both are optional
+and can be combined.  When only <code class="docutils literal notranslate"><span class="pre">exclude_tags</span></code> is set, everything except
+the excluded tags is enabled.  These fields also work for stdio servers
+(the bundled tools server below).</p>
+<section id="the-tag-vocabulary">
+<h3>The tag vocabulary<a class="headerlink" href="#the-tag-vocabulary" title="Link to this heading">¶</a></h3>
+<p>Tags are used for <strong>Klea’s own config filtering</strong> – which domain’s tools
+to expose, and whether to allow local or web-facing tools.  Two groups:</p>
+<ul class="simple">
+<li><p><strong>Scope</strong> tracks where a tool operates:
+<code class="docutils literal notranslate"><span class="pre">local</span></code> (filesystem / process on the host) or <code class="docutils literal notranslate"><span class="pre">web</span></code> (interacts with
+external URLs / web APIs).</p></li>
+<li><p><strong>Domain / functional</strong> groups tools by purpose, for example <code class="docutils literal notranslate"><span class="pre">files</span></code>,
+<code class="docutils literal notranslate"><span class="pre">code</span></code>, <code class="docutils literal notranslate"><span class="pre">download</span></code>, <code class="docutils literal notranslate"><span class="pre">echo</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml-db</span></code>, <code class="docutils literal notranslate"><span class="pre">osb</span></code>.</p></li>
+</ul>
+<p>Every tool also carries the <code class="docutils literal notranslate"><span class="pre">bundled</span></code> tag when it comes from the common
+bundled server, so enabling the whole common set is a single
+<code class="docutils literal notranslate"><span class="pre">include_tags:</span> <span class="pre">[&quot;bundled&quot;]</span></code>.  Specific current assignments:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bundled</span>  <span class="n">web_fetch</span><span class="p">,</span> <span class="n">list_files</span><span class="p">,</span> <span class="n">read_file</span><span class="p">,</span> <span class="n">download_file</span> <span class="p">(</span><span class="n">each</span> <span class="n">also</span> <span class="n">has</span> <span class="n">its</span> <span class="n">scope</span> <span class="o">+</span> <span class="n">functional</span> <span class="n">tags</span><span class="p">)</span>
+
+<span class="n">Web</span> <span class="n">scope</span><span class="p">:</span>   <span class="n">web_fetch</span> <span class="p">(</span><span class="n">bundled</span><span class="p">),</span> <span class="n">download_file</span> <span class="p">(</span><span class="n">bundled</span><span class="p">,</span> <span class="n">download</span><span class="p">)</span>
+<span class="n">Local</span> <span class="n">scope</span><span class="p">:</span> <span class="n">list_files</span> <span class="o">/</span> <span class="n">read_file</span> <span class="p">(</span><span class="n">bundled</span><span class="p">,</span> <span class="n">files</span><span class="p">),</span>
+             <span class="n">run_python_code</span> <span class="o">/</span> <span class="n">run_lems_simulation</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
+<span class="n">Echo</span><span class="p">:</span>        <span class="n">dummy_code</span> <span class="o">/</span> <span class="n">dummy</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">,</span> <span class="n">echo</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Behavioral intent (whether a tool is read-only or destructive) is <em>not</em>
+tagged.  That is carried by standard MCP tool annotations
+(<code class="docutils literal notranslate"><span class="pre">readOnlyHint</span></code> / <code class="docutils literal notranslate"><span class="pre">destructiveHint</span></code>), which any compliant client can
+enforce without knowing Klea’s tag vocabulary.  Tags answer “which tools to
+expose”; annotations answer “what effects the tool may have”.</p>
+<p>Klea’s own tools set these annotations as part of their declarative
+metadata (<code class="docutils literal notranslate"><span class="pre">ToolInfo</span></code> fields <code class="docutils literal notranslate"><span class="pre">read_only</span></code> / <code class="docutils literal notranslate"><span class="pre">destructive</span></code> /
+<code class="docutils literal notranslate"><span class="pre">idempotent</span></code> / <code class="docutils literal notranslate"><span class="pre">open_world</span></code>), which <code class="docutils literal notranslate"><span class="pre">register_tools</span></code> folds onto the
+registered MCP tool; see the <code class="docutils literal notranslate"><span class="pre">ToolInfo</span></code> docstring and
+<a class="reference external" href="https://fastmcp.wiki/en/servers/tools#mcp-annotations">https://fastmcp.wiki/en/servers/tools#mcp-annotations</a>.  So a generic MCP
+host connecting to a Klea server sees the read-only / destructive contract
+for free, without adopting Klea’s tag vocabulary.</p>
+</section>
+<section id="the-bundled-tools-server">
+<h3>The bundled tools server<a class="headerlink" href="#the-bundled-tools-server" title="Link to this heading">¶</a></h3>
+<p>Klea ships a set of common tools (web fetch, file list/read, download)
+as a shared MCP server in <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.server</span></code>.  Applications
+auto-launch it as a stdio subprocess by default, so users get the common
+tools with no extra setup; the same server can be run standalone over HTTP
+via the <code class="docutils literal notranslate"><span class="pre">klea-mcp</span></code> CLI for remote deployments.</p>
+<p>Whether the bundled server is used, and which of its tools are exposed, is
+configured under <code class="docutils literal notranslate"><span class="pre">general.bundled_tools</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"general"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"bundled_tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"include_tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"web"</span><span class="p">],</span>
+<span class="w">            </span><span class="nt">"exclude_tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"download"</span><span class="p">]</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The agent enables the bundled server by default (batteries included); the
+RAG leaves it disabled by default, since each RAG deployment is domain
+specific and should wire in only the tools it needs.</p>
+</section>
+</section>
 <section id="how-klea-uses-the-tools">
 <h2>How Klea uses the tools<a class="headerlink" href="#how-klea-uses-the-tools" title="Link to this heading">¶</a></h2>
 <p>At startup, the graph connects to each configured MCP server, lists its
@@ -545,6 +633,11 @@ those prefixes vary between deployments.</p>
 <li><a class="reference internal" href="#what-is-mcp">What is MCP?</a></li>
 <li><a class="reference internal" href="#how-klea-uses-mcp">How Klea uses MCP</a></li>
 <li><a class="reference internal" href="#configuring-mcp-servers">Configuring MCP servers</a></li>
+<li><a class="reference internal" href="#filtering-tools-by-tag">Filtering tools by tag</a><ul>
+<li><a class="reference internal" href="#the-tag-vocabulary">The tag vocabulary</a></li>
+<li><a class="reference internal" href="#the-bundled-tools-server">The bundled tools server</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#how-klea-uses-the-tools">How Klea uses the tools</a></li>
 <li><a class="reference internal" href="#writing-tools-for-klea">Writing tools for Klea</a></li>
 <li><a class="reference internal" href="#tool-description-length-and-style">Tool description length and style</a><ul>

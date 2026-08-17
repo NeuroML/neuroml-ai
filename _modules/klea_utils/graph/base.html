@@ -761,6 +761,38 @@
                 <span class="n">result</span><span class="p">[</span><span class="n">provider</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">role_configs</span><span class="p">[</span><span class="n">role</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">result</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_bundled_server_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Build the bundled tools server config entry from the app config.</span>
+
+<span class="sd">        Reads ``app_config.general.bundled_tools`` and returns ``None`` when</span>
+<span class="sd">        the bundled tools are disabled.  The entry is a *dict*, not a</span>
+<span class="sd">        ``StdioMCPServer`` instance, so ``MCPConfig``'s union validator picks</span>
+<span class="sd">        ``TransformingStdioMCPServer`` whenever tag filters are present and</span>
+<span class="sd">        applies them; without filters it stays a plain ``StdioMCPServer``.</span>
+
+<span class="sd">        Apps merge the result into their ``mcpServers`` mapping; when merged</span>
+<span class="sd">        into a domain's config the bundled tools become available to that</span>
+<span class="sd">        domain's tool picker.</span>
+
+<span class="sd">        :returns: Dict-form stdio server config, or ``None`` when disabled.</span>
+<span class="sd">        """</span>
+        <span class="n">general</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="p">,</span> <span class="s2">"general"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">bundled</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">general</span><span class="p">,</span> <span class="s2">"bundled_tools"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bundled</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">bundled</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Bundled tools server disabled or not configured"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"command"</span><span class="p">:</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"-m"</span><span class="p">,</span> <span class="s2">"klea_utils.mcp.server.bundled"</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">bundled</span><span class="o">.</span><span class="n">include_tags</span><span class="p">:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">"include_tags"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bundled</span><span class="o">.</span><span class="n">include_tags</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bundled</span><span class="o">.</span><span class="n">exclude_tags</span><span class="p">:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">"exclude_tags"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">bundled</span><span class="o">.</span><span class="n">exclude_tags</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Bundled tools server config: </span><span class="si">{</span><span class="n">config</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span>
+
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_create_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Build and compile the LangGraph, storing it in ``self.graph``.</span>
