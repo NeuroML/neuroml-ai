@@ -79,10 +79,11 @@ class BaseLangGraph(ABC):
     - Dual-stream logging
 
     Subclasses must implement:
-    - :meth:`_setup_models`: Create ``self.llm_models`` (the env schema is
-      generated from its roles)
-    - :meth:`_create_graph`: Build and compile the LangGraph
-    - Declare ``config_class`` for the JSON configuration
+
+    - ``_setup_models``: create ``self.llm_models``; the env schema is
+      generated from its roles.
+    - ``_create_graph``: build and compile the LangGraph.
+    - ``config_class``: the Pydantic class for the JSON configuration.
     """
 
     #: Pydantic BaseSettings class for env loading.  Subclasses need not
@@ -537,18 +538,19 @@ class BaseLangGraph(ABC):
         """Set up the orchestrator.
 
         Calls hooks and template methods in this order:
-        1. ``_pre_setup()``
-        2. ``_setup_checkpointer()``
-        3. ``_setup_models()`` -- builds ``self.llm_models`` (roles and
-           required flags), which the env schema is generated from
-        4. ``_load_env()`` -- parses the env into ``self.app_env`` using
-           the schema generated from ``llm_models``, and loads the JSON config
-        5. ``_configure_resources()``
-        6. ``_check_required_models()``
-        7. ``_create_mcp_client()``
-        8. ``_pre_graph()``
-        9. ``_create_graph()``
-        10. ``_post_setup()``
+
+        #. ``_pre_setup()``
+        #. ``_setup_checkpointer()``
+        #. ``_setup_models()``: build ``self.llm_models`` (roles and required
+           flags) that the env schema is generated from.
+        #. ``_load_env()``: parse the env into ``self.app_env`` using the
+           schema generated from ``llm_models``, then load the JSON config.
+        #. ``_configure_resources()``
+        #. ``_check_required_models()``
+        #. ``_create_mcp_client()``
+        #. ``_pre_graph()``
+        #. ``_create_graph()``
+        #. ``_post_setup()``
         """
         self._pre_setup()
         await self._setup_checkpointer()
