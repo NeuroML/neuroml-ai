@@ -168,7 +168,13 @@ def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     return model_str
 
 
-@tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"neuroml", "local", "code"}))
+@tool_meta(
+    ToolInfo(
+        title="Run a LEMS simulation",
+        tags={"neuroml", "local", "code"},
+        destructive=True,
+    )
+)
 async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
     """Execute a LEMS simulation using pynml and the jLEMS simulator.
 
@@ -206,6 +212,8 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
     ToolInfo(
         title="Find models on NeuroML-db",
         tags={"neuroml", "web", "neuroml-db"},
+        read_only=True,
+        open_world=True,
     )
 )
 async def get_models_from_neuromldb(
@@ -304,6 +312,8 @@ async def get_models_from_neuromldb(
     ToolInfo(
         title="Find repositories on Open Source Brain",
         tags={"neuroml", "web", "osb"},
+        read_only=True,
+        open_world=True,
     )
 )
 async def get_repositories_from_open_source_brain(

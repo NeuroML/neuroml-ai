@@ -42,6 +42,38 @@ def _tags(tool) -> set[str]:
     return set(meta.get("fastmcp", {}).get("tags", []))
 
 
+async def test_annotation_hints_on_io_tools():
+    """Behavioral intent is carried by standard ToolAnnotations, not tags:
+    web lookups are read-only + open world; code/simulation executors are
+    destructive."""
+    tools = await _tools_by_name()
+
+    read_only = {
+        "get_models_from_neuromldb",
+        "get_repositories_from_open_source_brain",
+        "list_files",
+    }
+    destructive = {"run_python_code", "run_lems_simulation"}
+
+    for name in read_only:
+        ann = tools[name].annotations
+        assert ann is not None, name
+        assert ann.readOnlyHint is True, name
+    for name in destructive:
+        ann = tools[name].annotations
+        assert ann is not None, name
+        assert ann.destructiveHint is True, name
+
+    web_lookup = tools["get_models_from_neuromldb"].annotations
+    assert web_lookup.openWorldHint is True
+
+
+async def test_echo_and_template_tools_declare_no_hints():
+    tools = await _tools_by_name()
+    for name in ("dummy_code", "dummy", "create_new_NeuroML_model"):
+        assert tools[name].annotations is None, name
+
+
 async def test_no_testing_tag_remains():
     tools = await _tools_by_name()
     for name, tool in tools.items():

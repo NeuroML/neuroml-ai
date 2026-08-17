@@ -53,6 +53,7 @@ async def dummy_code(
         title="List files and directories",
         tags={"neuroml", "local", "files"},
         checkpaths=["path"],
+        read_only=True,
     )
 )
 async def list_files(
@@ -108,7 +109,13 @@ async def list_files(
     )
 
 
-@tool_meta(ToolInfo(title="Execute Python code", tags={"neuroml", "local", "code"}))
+@tool_meta(
+    ToolInfo(
+        title="Execute Python code",
+        tags={"neuroml", "local", "code"},
+        destructive=True,
+    )
+)
 async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
 ) -> dict[str, Any]:

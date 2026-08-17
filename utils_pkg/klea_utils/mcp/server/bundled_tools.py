@@ -25,7 +25,7 @@ from klea_utils.mcp.tool_impls.web_fetch import web_fetch as web_fetch_impl
 BUNDLED_TAG = "bundled"
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "web"}))
+@tool_meta(ToolInfo(tags={BUNDLED_TAG, "web"}, read_only=True))
 async def web_fetch(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],
@@ -62,7 +62,9 @@ async def web_fetch(
     )
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "local", "files"}, checkpaths=["path"]))
+@tool_meta(
+    ToolInfo(tags={BUNDLED_TAG, "local", "files"}, checkpaths=["path"], read_only=True)
+)
 async def list_files(
     path: Annotated[
         str,
@@ -142,7 +144,9 @@ async def list_files(
     )
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "local", "files"}, checkpaths=["path"]))
+@tool_meta(
+    ToolInfo(tags={BUNDLED_TAG, "local", "files"}, checkpaths=["path"], read_only=True)
+)
 async def read_file(
     path: Annotated[
         str,
@@ -200,7 +204,14 @@ async def read_file(
     )
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "web", "download"}, checkpaths=["file_path"]))
+@tool_meta(
+    ToolInfo(
+        tags={BUNDLED_TAG, "web", "download"},
+        checkpaths=["file_path"],
+        destructive=True,
+        open_world=True,
+    )
+)
 async def download_file(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],

@@ -88,6 +88,24 @@ async def test_bundle_server_registers_expected_tools():
     assert by_name["web_fetch"].meta is None
 
 
+async def test_bundle_server_annotation_hints():
+    """Read-only bundled tools carry readOnlyHint; the download tool is
+    marked destructive + open world."""
+    tools = {t.name: t for t in await bundle_server.list_tools()}
+
+    for name in ("web_fetch", "list_files", "read_file"):
+        ann = tools[name].annotations
+        assert ann is not None, name
+        assert ann.readOnlyHint is True, name
+        assert ann.destructiveHint is None, name
+
+    download = tools["download_file"]
+    assert download.annotations is not None
+    assert download.annotations.readOnlyHint is None
+    assert download.annotations.destructiveHint is True
+    assert download.annotations.openWorldHint is True
+
+
 async def test_bundle_server_serves_via_inprocess_client():
     from fastmcp import Client
 
