@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.stores.retrieval.base</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Base class for retriever managers</span>
 
 <span class="sd">File: klea_utils/stores/retrieval/base.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
@@ -305,7 +305,7 @@
 <div class="viewcode-block" id="BaseKleaRetriever">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BaseKleaRetriever</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for domain-aware retriever managers.</span>
+<span class="w">    </span><span class="sd">"""Base class for domain-aware retriever managers.</span>
 
 <span class="sd">    Holds the machinery common to all retrievers: lazy per-domain store</span>
 <span class="sd">    loading, per-store retrieval depth (``k``) tracking with graph-wide</span>
@@ -320,12 +320,12 @@
 <span class="sd">    - :meth:`_retrieve_from_store`: run a single store against a query</span>
 
 <span class="sd">    Subclasses should set :attr:`source_label` to a human-readable name</span>
-<span class="sd">    for the retriever type (e.g. ``&quot;vector store&quot;``, ``&quot;BM25&quot;``), used to</span>
+<span class="sd">    for the retriever type (e.g. ``"vector store"``, ``"BM25"``), used to</span>
 <span class="sd">    label the original per-source scores preserved during fusion.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="c1">#: Human-readable name for this retriever type, used to label scores.</span>
-    <span class="n">source_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;retriever&quot;</span>
+    <span class="n">source_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"retriever"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -335,7 +335,7 @@
         <span class="n">k_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">k_inc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the retriever manager.</span>
+<span class="w">        </span><span class="sd">"""Initialise the retriever manager.</span>
 
 <span class="sd">        ``default_k``, ``k_max``, and ``k_inc`` are the manager-wide fallback</span>
 <span class="sd">        values used by stores that do not define their own per-store</span>
@@ -346,59 +346,59 @@
 <span class="sd">        :param default_k: Fallback number of documents to retrieve</span>
 <span class="sd">        :param k_max: Fallback maximum number of documents to retrieve</span>
 <span class="sd">        :param k_inc: Fallback amount to increase ``k`` by per ``inc_k``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">default_k</span> <span class="o">=</span> <span class="n">default_k</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k_max</span> <span class="o">=</span> <span class="n">k_max</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span> <span class="o">=</span> <span class="n">k_inc</span>
         <span class="c1"># Current retrieval depth (k) per store, keyed by (domain, store name).</span>
-        <span class="c1"># Seeded lazily from each store&#39;s default_k on first use; mutated by</span>
+        <span class="c1"># Seeded lazily from each store's default_k on first use; mutated by</span>
         <span class="c1"># inc_k()/reset_k().  Keeping k per store lets each store be tuned</span>
         <span class="c1"># independently even though retrieval is driven by a single graph-wide</span>
         <span class="c1"># routing decision.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">:</span> <span class="n">RetrieverConfig</span> <span class="o">=</span> <span class="n">config</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <div class="viewcode-block" id="BaseKleaRetriever.setup">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.setup">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hook for subclasses to initialise shared resources.</span>
+<span class="w">        </span><span class="sd">"""Hook for subclasses to initialise shared resources.</span>
 
 <span class="sd">        Called once by the orchestrator before retrieval.  Subclasses that</span>
 <span class="sd">        need no shared setup leave this as a no-op.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">pass</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_assert_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hook called at the start of :meth:`load`.</span>
+<span class="w">        </span><span class="sd">"""Hook called at the start of :meth:`load`.</span>
 
 <span class="sd">        Subclasses can assert that their required resources (e.g. an</span>
 <span class="sd">        embedding model) are available before stores are loaded.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">pass</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_default_k_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the default k for a store, falling back to the global value.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the default k for a store, falling back to the global value."""</span>
         <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">default_k</span> <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">default_k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_k</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_k_max_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the k cap for a store, falling back to the global value.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the k cap for a store, falling back to the global value."""</span>
         <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">k_max</span> <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">k_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_max</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_k_inc_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the k increment for a store, falling back to the global value.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the k increment for a store, falling back to the global value."""</span>
         <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">k_inc</span> <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">k_inc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_current_k</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the current k for a store, seeding it from its default on first use.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the current k for a store, seeding it from its default on first use."""</span>
         <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_k_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_loaded_stores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(domain_name, store)`` pairs for stores that are loaded.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return ``(domain_name, store)`` pairs for stores that are loaded."""</span>
         <span class="n">loaded</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">domain_name</span><span class="p">,</span> <span class="n">domain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stores_of</span><span class="p">(</span><span class="n">domain</span><span class="p">):</span>
@@ -409,16 +409,16 @@
 <div class="viewcode-block" id="BaseKleaRetriever.can_inc_k">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.can_inc_k">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">can_inc_k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return whether any loaded store still has room to grow k.</span>
+<span class="w">        </span><span class="sd">"""Return whether any loaded store still has room to grow k.</span>
 
 <span class="sd">        Non-mutating counterpart of :meth:`inc_k`: reports whether an</span>
-<span class="sd">        ``inc_k()`` call would increase at least one store&#39;s k, without</span>
+<span class="sd">        ``inc_k()`` call would increase at least one store's k, without</span>
 <span class="sd">        changing any k values.  Routers use this to decide between</span>
 <span class="sd">        retrieving more information and re-querying, so the actual</span>
 <span class="sd">        increment happens once, at the point of retrieval.</span>
 
-<span class="sd">        :returns: True if at least one loaded store&#39;s k is below its cap</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        :returns: True if at least one loaded store's k is below its cap</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loaded_stores</span><span class="p">():</span>
             <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_k</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">current</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_inc_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_max_for</span><span class="p">(</span><span class="n">store</span><span class="p">):</span>
@@ -429,14 +429,14 @@
 <div class="viewcode-block" id="BaseKleaRetriever.inc_k">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.inc_k">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">inc_k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Increase k for all loaded stores by their per-store increment.</span>
+<span class="w">        </span><span class="sd">"""Increase k for all loaded stores by their per-store increment.</span>
 
-<span class="sd">        Each store&#39;s k is capped by its own ``k_max``, so stores with a</span>
+<span class="sd">        Each store's k is capped by its own ``k_max``, so stores with a</span>
 <span class="sd">        smaller cap stop being incremented sooner.  Stores that are not yet</span>
 <span class="sd">        loaded keep their default k until they are loaded.</span>
 
-<span class="sd">        :returns: True if at least one store&#39;s k was increased</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        :returns: True if at least one store's k was increased</span>
+<span class="sd">        """</span>
         <span class="n">incremented</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">for</span> <span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loaded_stores</span><span class="p">():</span>
             <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_k</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
@@ -444,66 +444,66 @@
             <span class="k">if</span> <span class="n">new_k</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_k_max_for</span><span class="p">(</span><span class="n">store</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">[(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">new_k</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_inc_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">new_k</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_k_inc_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">new_k</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
                 <span class="p">)</span>
                 <span class="n">incremented</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">incremented</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;k not increased for any store&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"k not increased for any store"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">incremented</span></div>
 
 
 <div class="viewcode-block" id="BaseKleaRetriever.reset_k">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.reset_k">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">reset_k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset k for all loaded stores to their per-store default value.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Reset k for all loaded stores to their per-store default value."""</span>
         <span class="k">for</span> <span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loaded_stores</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_k</span><span class="p">[(</span><span class="n">domain_name</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_k_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;k reset to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_k_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2"> for </span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"k reset to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_k_for</span><span class="p">(</span><span class="n">store</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2"> for </span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="BaseKleaRetriever.load_all_stores">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.load_all_stores">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_all_stores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load all stores for all domains.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Load all stores for all domains."""</span>
         <span class="k">for</span> <span class="n">domain_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">domains</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">domain_name</span><span class="p">)</span></div>
 
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">domains</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a list of all configured domains.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Get a list of all configured domains."""</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 
 <div class="viewcode-block" id="BaseKleaRetriever.load">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.load">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load stores for a domain (lazy loading).</span>
+<span class="w">        </span><span class="sd">"""Load stores for a domain (lazy loading).</span>
 
 <span class="sd">        :param domain_name: Name of the domain to load stores for</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_assert_ready</span><span class="p">()</span>
 
         <span class="n">domain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">domain</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Got domain information: </span><span class="si">{</span><span class="n">domain</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Got domain information: </span><span class="si">{</span><span class="n">domain</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">store</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stores_of</span><span class="p">(</span><span class="n">domain</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Store &#39;</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; already loaded, skipping&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Store '</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">' already loaded, skipping"</span><span class="p">)</span>
                 <span class="k">continue</span>
 
             <span class="n">store_name</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">name</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Got store for domain </span><span class="si">{</span><span class="n">domain_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">store_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="sa">f</span><span class="s2">"Got store for domain </span><span class="si">{</span><span class="n">domain_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">store_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">)"</span>
             <span class="p">)</span>
 
             <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instantiate_store</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">store_name</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Finished loading store &#39;</span><span class="si">{</span><span class="n">store_name</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Finished loading store '</span><span class="si">{</span><span class="n">store_name</span><span class="si">}</span><span class="s2">' from </span><span class="si">{</span><span class="n">store</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span></div>
 
 
@@ -515,7 +515,7 @@
         <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve documents from all stores for a domain.</span>
+<span class="w">        </span><span class="sd">"""Retrieve documents from all stores for a domain.</span>
 
 <span class="sd">        :param domain_name: Name of the domain to search in</span>
 <span class="sd">        :param query: User query string</span>
@@ -524,7 +524,7 @@
 <span class="sd">            Applied natively by stores that support a backend filter and</span>
 <span class="sd">            post-filtered for stores that do not (BM25)</span>
 <span class="sd">        :returns: List of (document, relevance_score) tuples</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">domain_name</span><span class="p">)</span>
 
         <span class="n">domain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -551,17 +551,17 @@
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_stores_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">:</span> <span class="n">PerDomainConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the list of stores configured for *domain*.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the list of stores configured for *domain*."""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_instantiate_store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate the underlying retriever object for a store.</span>
+<span class="w">        </span><span class="sd">"""Instantiate the underlying retriever object for a store.</span>
 
 <span class="sd">        :param path: Store path from the configuration</span>
 <span class="sd">        :param name: Store name from the configuration</span>
 <span class="sd">        :returns: Instantiated retriever object</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
@@ -572,7 +572,7 @@
         <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve from a single store, returning (document, score) tuples.</span>
+<span class="w">        </span><span class="sd">"""Retrieve from a single store, returning (document, score) tuples.</span>
 
 <span class="sd">        :param store: Loaded store object to query</span>
 <span class="sd">        :param query: User query string</span>
@@ -580,7 +580,7 @@
 <span class="sd">        :param metadata_filter: Optional metadata filter in the DSL (see</span>
 <span class="sd">            :func:`klea_utils.stores.filters.validate_metadata_filter`)</span>
 <span class="sd">        :returns: List of (document, score) tuples</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span></div>
 
 </pre></div>

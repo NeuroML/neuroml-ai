@@ -456,7 +456,7 @@ If a wrong build is already present, force-reinstall the pair instead
 <p>Check your capability with <code class="docutils literal notranslate"><span class="pre">torch.cuda.get_device_capability(0)</span></code> and
 install the <code class="docutils literal notranslate"><span class="pre">torch</span></code>/<code class="docutils literal notranslate"><span class="pre">torchvision</span></code> pair with the full pin so the
 package manager cannot pick a different CUDA suffix:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">pip</span> <span class="n">install</span> <span class="s2">&quot;torch==&lt;version&gt;+cu126&quot;</span> <span class="s2">&quot;torchvision==&lt;version&gt;+cu126&quot;</span> \
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">pip</span> <span class="n">install</span> <span class="s2">"torch==&lt;version&gt;+cu126"</span> <span class="s2">"torchvision==&lt;version&gt;+cu126"</span> \
     <span class="o">--</span><span class="n">extra</span><span class="o">-</span><span class="n">index</span><span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="o">.</span><span class="n">pytorch</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">whl</span><span class="o">/</span><span class="n">cu126</span>
 </pre></div>
 </div>
@@ -474,24 +474,36 @@ extensions yourself, and it must match the wheel’s CUDA version.</p>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
 <p>Both the RAG and Agent packages load configuration from:</p>
-<ol class="arabic simple">
+<ol class="arabic">
 <li><p>An env file (<code class="docutils literal notranslate"><span class="pre">k=v</span></code> format):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">KLEA_RAG_ENV_FILE</span></code> or <code class="docutils literal notranslate"><span class="pre">rag.env</span></code> for the RAG system</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">KLEA_AGENT_ENV_FILE</span></code> or <code class="docutils literal notranslate"><span class="pre">klea_agent.env</span></code> for the Agent system</p></li>
 </ul>
 </li>
-<li><p>A JSON configuration file referenced inside the env file.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rag_pkg/example-configs/klea_rag.json</span></code> or a copy you customise</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">agent_pkg/mcp.json</span></code> for Agent MCP server configuration</p></li>
-</ul>
+<li><p>A JSON configuration file selected by a <em>profile</em> name.</p>
+<p>Each JSON config is identified by a profile: <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">&lt;name&gt;</span></code> loads
+<code class="docutils literal notranslate"><span class="pre">&lt;name&gt;.json</span></code>.  The file is looked up in the current directory first,
+then in the per-app config directory (<code class="docutils literal notranslate"><span class="pre">~/.config/klea/</span></code> for the Agent,
+<code class="docutils literal notranslate"><span class="pre">~/.config/klea-rag/</span></code> for the RAG, honoring <code class="docutils literal notranslate"><span class="pre">XDG_CONFIG_HOME</span></code>).  The
+default profile is <code class="docutils literal notranslate"><span class="pre">klea_agent</span></code> / <code class="docutils literal notranslate"><span class="pre">klea_rag</span></code>, so <code class="docutils literal notranslate"><span class="pre">klea_agent.json</span></code>
+and <code class="docutils literal notranslate"><span class="pre">klea_rag.json</span></code> are loaded when no <code class="docutils literal notranslate"><span class="pre">--profile</span></code> is given.</p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">template</span></code> on any CLI to scaffold a ready-to-fill config
+into the current directory (it refuses to overwrite an existing file).</p>
+<p><code class="docutils literal notranslate"><span class="pre">--profile</span></code> takes precedence over the <code class="docutils literal notranslate"><span class="pre">KLEA_AGENT_APP_CONFIG_FILE</span></code> /
+<code class="docutils literal notranslate"><span class="pre">KLEA_RAG_APP_CONFIG_FILE</span></code> environment variable, which is still honored
+when set in the shell or a deployment (and, as a fallback, as a key in
+the env file).</p>
 </li>
 </ol>
 <p>Example env file:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KLEA_RAG_CHAT_MODEL</span><span class="o">=</span><span class="n">ollama</span><span class="p">:</span><span class="n">qwen3</span><span class="p">:</span><span class="mf">0.6</span><span class="n">b</span>
 <span class="n">KLEA_RAG_EMBEDDING_MODEL</span><span class="o">=</span><span class="n">ollama</span><span class="p">:</span><span class="n">bge</span><span class="o">-</span><span class="n">m3</span>
-<span class="n">KLEA_RAG_APP_CONFIG_FILE</span><span class="o">=/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">klea_rag</span><span class="o">.</span><span class="n">json</span>
+</pre></div>
+</div>
+<p>Example invocation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">klea</span><span class="o">-</span><span class="n">rag</span><span class="o">-</span><span class="n">serve</span> <span class="o">--</span><span class="n">profile</span> <span class="n">my</span><span class="o">-</span><span class="n">config</span>
+<span class="n">KLEA_RAG_ENV_FILE</span><span class="o">=</span><span class="n">rag</span><span class="o">.</span><span class="n">env</span> <span class="n">klea</span><span class="o">-</span><span class="n">rag</span> <span class="n">cli</span> <span class="o">--</span><span class="n">profile</span> <span class="n">my</span><span class="o">-</span><span class="n">config</span>
 </pre></div>
 </div>
 <section id="choosing-models">
@@ -586,7 +598,7 @@ relative to the working directory the web client is launched from (not the
 platform user-data directory) and are named
 <code class="docutils literal notranslate"><span class="pre">storage-user-&lt;session-id&gt;.json</span></code>.</p>
 <p>Each file stores only a pointer to server-side state:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="s2">&quot;dark_mode&quot;</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">"user_id"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">,</span> <span class="s2">"dark_mode"</span><span class="p">:</span> <span class="n">false</span><span class="p">,</span> <span class="s2">"chat_id"</span><span class="p">:</span> <span class="s2">"..."</span><span class="p">}</span>
 </pre></div>
 </div>
 <p>The chat history itself lives in the server’s session store

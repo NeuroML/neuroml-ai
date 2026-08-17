@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.stores.retrieval.bm25</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">BM25 keyword retriever manager</span>
 
 <span class="sd">File: klea_utils/stores/retrieval/bm25.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
@@ -315,7 +315,7 @@
 <div class="viewcode-block" id="BM25RetrieverManager">
 <a class="viewcode-back" href="../../../../api/utils/stores.html#klea_utils.stores.retrieval.bm25.BM25RetrieverManager">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BM25RetrieverManager</span><span class="p">(</span><span class="n">BaseKleaRetriever</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages domain-specific BM25 keyword stores.</span>
+<span class="w">    </span><span class="sd">"""Manages domain-specific BM25 keyword stores.</span>
 
 <span class="sd">    Each BM25 store is a pickled corpus of chunked documents written by</span>
 <span class="sd">    :class:`~klea_utils.stores.ingestion.StoresBuilder.write_bm25_store`.</span>
@@ -335,9 +335,9 @@
 <span class="sd">    platformed deployments are ever planned, consider a proper keyword</span>
 <span class="sd">    backend (e.g. Elasticsearch, Qdrant sparse vectors, or Postgres</span>
 <span class="sd">    full-text search) instead.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">source_label</span> <span class="o">=</span> <span class="s2">&quot;BM25&quot;</span>
+    <span class="n">source_label</span> <span class="o">=</span> <span class="s2">"BM25"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -347,14 +347,14 @@
         <span class="n">k_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">k_inc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the BM25 retriever manager.</span>
+<span class="w">        </span><span class="sd">"""Initialise the BM25 retriever manager.</span>
 
 <span class="sd">        :param config: Retriever configuration for all domains</span>
 <span class="sd">        :param logger: Logger instance (injected from orchestrator)</span>
 <span class="sd">        :param default_k: Fallback number of documents to retrieve</span>
 <span class="sd">        :param k_max: Fallback maximum number of documents to retrieve</span>
 <span class="sd">        :param k_inc: Fallback amount to increase ``k`` by per ``inc_k``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
             <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
@@ -365,29 +365,29 @@
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_stores_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">:</span> <span class="n">PerDomainConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the BM25 stores configured for *domain*.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the BM25 stores configured for *domain*."""</span>
         <span class="k">return</span> <span class="n">domain</span><span class="o">.</span><span class="n">bm25_stores</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_instantiate_store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load a BM25 corpus pickle and build a BM25Retriever from it.</span>
+<span class="w">        </span><span class="sd">"""Load a BM25 corpus pickle and build a BM25Retriever from it.</span>
 
 <span class="sd">        :param path: Path to the pickled document corpus</span>
 <span class="sd">        :param name: Store name from the configuration</span>
 <span class="sd">        :returns: A :class:`klea_utils.stores.langchain_bm25.BM25Retriever`,</span>
 <span class="sd">            or ``None`` if the corpus file is missing</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">corpus_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">corpus_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;BM25 corpus not found, skipping store &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">corpus_path</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"BM25 corpus not found, skipping store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">corpus_path</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">corpus_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">corpus_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">docs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks for BM25 store &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks for BM25 store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">BM25Retriever</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
 
     <span class="nd">@override</span>
@@ -398,7 +398,7 @@
         <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run BM25 keyword search on a single store.</span>
+<span class="w">        </span><span class="sd">"""Run BM25 keyword search on a single store.</span>
 
 <span class="sd">        When *metadata_filter* is set, more candidates than *k* are</span>
 <span class="sd">        fetched (a :data:`BM25_FILTER_MARGIN`) and only the matching</span>
@@ -415,7 +415,7 @@
 <span class="sd">        :returns: List of (document, relevance_score) tuples.  Documents</span>
 <span class="sd">            with a non-positive score (no term overlap with the query)</span>
 <span class="sd">            are dropped.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">retriever</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">loaded_object</span>
         <span class="n">processed</span> <span class="o">=</span> <span class="n">retriever</span><span class="o">.</span><span class="n">preprocess_func</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
         <span class="n">margin</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">BM25_FILTER_MARGIN</span> <span class="k">if</span> <span class="n">metadata_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">k</span>
@@ -432,8 +432,8 @@
             <span class="n">kept_ids</span> <span class="o">=</span> <span class="p">{</span><span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">}</span>
             <span class="n">result</span> <span class="o">=</span> <span class="p">[(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">if</span> <span class="nb">id</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span> <span class="ow">in</span> <span class="n">kept_ids</span><span class="p">][:</span><span class="n">k</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;BM25 filter: kept </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> after filtering with &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metadata_filter</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"BM25 filter: kept </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> after filtering with "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metadata_filter</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span></div>
 

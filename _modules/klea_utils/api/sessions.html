@@ -284,20 +284,20 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.api.sessions</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Chat session CRUD endpoints.</span>
 
 <span class="sd">NOTE: *user_id* is currently a browser-generated UUID taken from</span>
 <span class="sd">the URL path.  For multi-user deployments this must be replaced with</span>
 <span class="sd">an authenticated identity (JWT / OAuth) extracted from the request</span>
-<span class="sd">context — otherwise any user can delete or rename another user&#39;s chats</span>
+<span class="sd">context — otherwise any user can delete or rename another user's chats</span>
 <span class="sd">by modifying the ``user_id`` in the URL.</span>
 
 <span class="sd">File: klea_utils/api/sessions.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
@@ -315,7 +315,7 @@
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions.CreateChatPayload">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CreateChatPayload</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
     <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></div>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
 
 
 
@@ -329,7 +329,7 @@
 <div class="viewcode-block" id="create_sessions_router">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions.create_sessions_router">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_sessions_router</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">APIRouter</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an APIRouter for chat session CRUD.</span>
+<span class="w">    </span><span class="sd">"""Create an APIRouter for chat session CRUD.</span>
 
 <span class="sd">    Endpoints:</span>
 
@@ -341,24 +341,24 @@
 <span class="sd">        not provided.</span>
 
 <span class="sd">    ``PATCH /chat/{user_id}/{chat_id}``</span>
-<span class="sd">        Update a chat&#39;s metadata (title).</span>
+<span class="sd">        Update a chat's metadata (title).</span>
 
 <span class="sd">    ``DELETE /chat/{user_id}/{chat_id}``</span>
 <span class="sd">        Remove a chat and all associated data.</span>
 
 <span class="sd">    ``DELETE /chat/{user_id}``</span>
 <span class="sd">        Remove all chats, messages, and checkpoints for the user.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/chat&quot;</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;sessions&quot;</span><span class="p">])</span>
+<span class="sd">    """</span>
+    <span class="n">router</span> <span class="o">=</span> <span class="n">APIRouter</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"/chat"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"sessions"</span><span class="p">])</span>
 
-    <span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{user_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/</span><span class="si">{user_id}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_chats</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
         <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
         <span class="n">chats</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">list_chats</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;list_chats(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> chat(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chats</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"list_chats(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> chat(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">chats</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">chats</span>
 
-    <span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{user_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/</span><span class="si">{user_id}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">CreateChatPayload</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
         <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
         <span class="n">title</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">title</span> <span class="ow">or</span> <span class="n">coolname</span><span class="o">.</span><span class="n">generate_slug</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
@@ -366,41 +366,41 @@
         <span class="n">chat</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">chat</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                <span class="s2">&quot;create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): store returned None after insert&quot;</span><span class="p">,</span>
+                <span class="s2">"create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): store returned None after insert"</span><span class="p">,</span>
                 <span class="n">user_id</span><span class="p">,</span>
                 <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Failed to create chat&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">"Failed to create chat"</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">): OK&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span>
+            <span class="s2">"create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">): OK"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">chat</span>
 
-    <span class="nd">@router</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{user_id}</span><span class="s2">/</span><span class="si">{chat_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nd">@router</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">"/</span><span class="si">{user_id}</span><span class="s2">/</span><span class="si">{chat_id}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">update_chat</span><span class="p">(</span>
         <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">UpdateChatPayload</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span>
     <span class="p">):</span>
         <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">store</span><span class="o">.</span><span class="n">get_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;update_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): chat not found&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Chat not found&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"update_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): chat not found"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">"Chat not found"</span><span class="p">)</span>
         <span class="n">store</span><span class="o">.</span><span class="n">rename_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;update_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">): OK&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">title</span>
+            <span class="s2">"update_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">): OK"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">payload</span><span class="o">.</span><span class="n">title</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">get_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
 
-    <span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{user_id}</span><span class="s2">/</span><span class="si">{chat_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">"/</span><span class="si">{user_id}</span><span class="s2">/</span><span class="si">{chat_id}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
         <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">store</span><span class="o">.</span><span class="n">get_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): chat not found&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">&quot;Chat not found&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): chat not found"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">"Chat not found"</span><span class="p">)</span>
         <span class="n">store</span><span class="o">.</span><span class="n">delete_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): OK&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span> <span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">}</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): OK"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">,</span> <span class="s2">"chat_id"</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">}</span>
 
-    <span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{user_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">"/</span><span class="si">{user_id}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">):</span>
         <span class="n">store</span><span class="p">:</span> <span class="n">SessionStore</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">chat_sessions</span>
         <span class="n">graph</span><span class="p">:</span> <span class="n">BaseLangGraph</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">graph</span>
@@ -408,15 +408,15 @@
         <span class="c1"># Purge LangGraph checkpoints for every chat thread.</span>
         <span class="n">removed</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">chat</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">list_chats</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
-            <span class="n">thread_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;user_</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:chat_</span><span class="si">{</span><span class="n">chat</span><span class="p">[</span><span class="s1">&#39;chat_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">thread_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"user_</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:chat_</span><span class="si">{</span><span class="n">chat</span><span class="p">[</span><span class="s1">'chat_id'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
             <span class="k">if</span> <span class="n">graph</span><span class="o">.</span><span class="n">checkpointer</span><span class="p">:</span>
                 <span class="k">await</span> <span class="n">graph</span><span class="o">.</span><span class="n">checkpointer</span><span class="o">.</span><span class="n">adelete_thread</span><span class="p">(</span><span class="n">thread_id</span><span class="p">)</span>
             <span class="n">removed</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="c1"># Purge sessions + messages.</span>
         <span class="n">store</span><span class="o">.</span><span class="n">delete_user_chats</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;delete_user(</span><span class="si">%s</span><span class="s2">): removed </span><span class="si">%d</span><span class="s2"> chat(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">removed</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"delete_user(</span><span class="si">%s</span><span class="s2">): removed </span><span class="si">%d</span><span class="s2"> chat(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">removed</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">,</span> <span class="s2">"user_id"</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">"removed"</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
 
     <span class="k">return</span> <span class="n">router</span></div>
 

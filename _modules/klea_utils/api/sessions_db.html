@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.api.sessions_db</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Persistent SQLite-backed store for chat session data.</span>
 
 <span class="sd">Manages two tables alongside the LangGraph checkpoint DB:</span>
@@ -301,7 +301,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -318,22 +318,22 @@
 <div class="viewcode-block" id="SessionStore">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SessionStore</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;SQLite-backed persistent store for chat session data.</span>
+<span class="w">    </span><span class="sd">"""SQLite-backed persistent store for chat session data.</span>
 
 <span class="sd">    All public methods are thread-safe.  The store auto-creates its schema</span>
 <span class="sd">    on first connection.</span>
 
 <span class="sd">    :param db_path: Filesystem path to the SQLite database file.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">_SCHEMA_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">_SCHEMA_SQL</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">    CREATE TABLE IF NOT EXISTS chat_sessions (</span>
 <span class="s2">        user_id     TEXT NOT NULL,</span>
 <span class="s2">        chat_id     TEXT NOT NULL,</span>
-<span class="s2">        title       TEXT NOT NULL DEFAULT &#39;&#39;,</span>
+<span class="s2">        title       TEXT NOT NULL DEFAULT '',</span>
 <span class="s2">        created_at  REAL NOT NULL,</span>
 <span class="s2">        updated_at  REAL NOT NULL,</span>
-<span class="s2">        overrides   TEXT NOT NULL DEFAULT &#39;</span><span class="si">{}</span><span class="s2">&#39;,  -- JSON blob: {&quot;rag&quot;:{&quot;model&quot;:...,},&quot;guard&quot;:{...}}</span>
+<span class="s2">        overrides   TEXT NOT NULL DEFAULT '</span><span class="si">{}</span><span class="s2">',  -- JSON blob: {"rag":{"model":...,},"guard":{...}}</span>
 <span class="s2">        PRIMARY KEY (user_id, chat_id)</span>
 <span class="s2">    );</span>
 
@@ -353,7 +353,7 @@
 <span class="s2">    CREATE INDEX IF NOT EXISTS idx_messages_chat</span>
 <span class="s2">        ON messages(user_id, chat_id, created_at);</span>
 
-<span class="s2">    &quot;&quot;&quot;</span>
+<span class="s2">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
@@ -363,7 +363,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">executescript</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_SCHEMA_SQL</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SessionStore opened at </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"SessionStore opened at </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
     <span class="c1"># Internal helpers</span>
@@ -387,105 +387,105 @@
 <div class="viewcode-block" id="SessionStore.list_chats">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.list_chats">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_chats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all chats for *user_id*, newest first.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return all chats for *user_id*, newest first."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;list_chats(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> chat(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"list_chats(</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> chat(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.get_chat">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_chat">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a single chat or ``None``.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return a single chat or ``None``."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT * FROM chat_sessions WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT * FROM chat_sessions WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;get_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;found&quot;</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="s2">&quot;not found&quot;</span>
+            <span class="s2">"get_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">"found"</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="s2">"not found"</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.create_chat">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.create_chat">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Insert a chat row if it does not already exist.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Insert a chat row if it does not already exist."""</span>
         <span class="n">now</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">()</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;INSERT OR IGNORE INTO chat_sessions &quot;</span>
-                <span class="s2">&quot;(user_id, chat_id, title, created_at, updated_at, overrides) &quot;</span>
-                <span class="s2">&quot;VALUES (?, ?, ?, ?, ?, &#39;</span><span class="si">{}</span><span class="s2">&#39;)&quot;</span><span class="p">,</span>
+                <span class="s2">"INSERT OR IGNORE INTO chat_sessions "</span>
+                <span class="s2">"(user_id, chat_id, title, created_at, updated_at, overrides) "</span>
+                <span class="s2">"VALUES (?, ?, ?, ?, ?, '</span><span class="si">{}</span><span class="s2">')"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">now</span><span class="p">,</span> <span class="n">now</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"create_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.delete_chat">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.delete_chat">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a chat and all its associated data.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Remove a chat and all its associated data."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;DELETE FROM chat_sessions WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"DELETE FROM chat_sessions WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;DELETE FROM messages WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"DELETE FROM messages WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"delete_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.delete_user_chats">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.delete_user_chats">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">delete_user_chats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove all chats and messages for a user.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Remove all chats and messages for a user."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DELETE FROM messages WHERE user_id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"DELETE FROM messages WHERE user_id = ?"</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;DELETE FROM chat_sessions WHERE user_id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,)</span>
+                <span class="s2">"DELETE FROM chat_sessions WHERE user_id = ?"</span><span class="p">,</span> <span class="p">(</span><span class="n">user_id</span><span class="p">,)</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;delete_user_chats(</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"delete_user_chats(</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.rename_chat">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.rename_chat">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">rename_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the display title of a chat.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Update the display title of a chat."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;UPDATE chat_sessions SET title = ?, updated_at = ? &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"UPDATE chat_sessions SET title = ?, updated_at = ? "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">(),</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;rename_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"rename_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, title=</span><span class="si">%r</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.touch_chat">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.touch_chat">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">touch_chat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Bump ``updated_at`` without changing any other field.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Bump ``updated_at`` without changing any other field."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;UPDATE chat_sessions SET updated_at = ? &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"UPDATE chat_sessions SET updated_at = ? "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">(),</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;touch_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"touch_chat(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
 
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -495,17 +495,17 @@
 <div class="viewcode-block" id="SessionStore.get_overrides">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_overrides">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_overrides</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return per-role model overrides keyed by role.</span>
+<span class="w">        </span><span class="sd">"""Return per-role model overrides keyed by role.</span>
 
-<span class="sd">        Returns ``{&quot;rag&quot;: {&quot;model&quot;: &quot;...&quot;, &quot;provider&quot;: &quot;...&quot;}, ...}``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        Returns ``{"rag": {"model": "...", "provider": "..."}, ...}``</span>
+<span class="sd">        """</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;overrides&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;get_overrides(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> role(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"overrides"</span><span class="p">]</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"get_overrides(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> role(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 
@@ -518,61 +518,61 @@
         <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set or replace model overrides for a given role.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Set or replace model overrides for a given role."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
-            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;overrides&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"overrides"</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="p">{}</span>
             <span class="n">current</span><span class="p">[</span><span class="n">role</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;UPDATE chat_sessions SET overrides = ?, updated_at = ? &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"UPDATE chat_sessions SET overrides = ?, updated_at = ? "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_json_dumps</span><span class="p">(</span><span class="n">current</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">(),</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;set_override(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">, model=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="s2">"set_override(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">, model=</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span>
             <span class="n">user_id</span><span class="p">,</span>
             <span class="n">chat_id</span><span class="p">,</span>
             <span class="n">role</span><span class="p">,</span>
-            <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;?&quot;</span><span class="p">),</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">"?"</span><span class="p">),</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.clear_overrides">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.clear_overrides">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_overrides</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove all model overrides for a chat.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Remove all model overrides for a chat."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;UPDATE chat_sessions SET overrides = &#39;</span><span class="si">{}</span><span class="s2">&#39;, updated_at = ? &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"UPDATE chat_sessions SET overrides = '</span><span class="si">{}</span><span class="s2">', updated_at = ? "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">(),</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;clear_overrides(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"clear_overrides(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SessionStore.clear_override">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.clear_override">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_override</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove the model override for a single role in a chat.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Remove the model override for a single role in a chat."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT overrides FROM chat_sessions WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
-            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;overrides&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">"overrides"</span><span class="p">])</span> <span class="k">if</span> <span class="n">row</span> <span class="k">else</span> <span class="p">{}</span>
             <span class="n">current</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">role</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;UPDATE chat_sessions SET overrides = ?, updated_at = ? &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ?&quot;</span><span class="p">,</span>
+                <span class="s2">"UPDATE chat_sessions SET overrides = ?, updated_at = ? "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ?"</span><span class="p">,</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_json_dumps</span><span class="p">(</span><span class="n">current</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">(),</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;clear_override(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"clear_override(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">role</span><span class="p">)</span></div>
 
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -582,22 +582,22 @@
 <div class="viewcode-block" id="SessionStore.get_messages">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_messages">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_messages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all messages for a chat, oldest first.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return all messages for a chat, oldest first."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;SELECT id, role, content, metadata, created_at &quot;</span>
-                <span class="s2">&quot;FROM messages &quot;</span>
-                <span class="s2">&quot;WHERE user_id = ? AND chat_id = ? &quot;</span>
-                <span class="s2">&quot;ORDER BY created_at ASC&quot;</span><span class="p">,</span>
+                <span class="s2">"SELECT id, role, content, metadata, created_at "</span>
+                <span class="s2">"FROM messages "</span>
+                <span class="s2">"WHERE user_id = ? AND chat_id = ? "</span>
+                <span class="s2">"ORDER BY created_at ASC"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">),</span>
             <span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
         <span class="n">result</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
             <span class="n">m</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-            <span class="n">m</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">])</span>
+            <span class="n">m</span><span class="p">[</span><span class="s2">"metadata"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_loads</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"metadata"</span><span class="p">])</span>
             <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;get_messages(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> message(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="s2">"get_messages(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> message(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
@@ -612,18 +612,18 @@
         <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append a single message to a chat&#39;s history.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Append a single message to a chat's history."""</span>
         <span class="n">meta_raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_json_dumps</span><span class="p">(</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{})</span>
         <span class="n">now</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">()</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-                <span class="s2">&quot;INSERT INTO messages (user_id, chat_id, role, content, metadata, created_at) &quot;</span>
-                <span class="s2">&quot;VALUES (?, ?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+                <span class="s2">"INSERT INTO messages (user_id, chat_id, role, content, metadata, created_at) "</span>
+                <span class="s2">"VALUES (?, ?, ?, ?, ?, ?)"</span><span class="p">,</span>
                 <span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">role</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="n">meta_raw</span><span class="p">,</span> <span class="n">now</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;add_message(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">, content_len=</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="s2">"add_message(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, role=</span><span class="si">%s</span><span class="s2">, content_len=</span><span class="si">%d</span><span class="s2">)"</span><span class="p">,</span>
             <span class="n">user_id</span><span class="p">,</span>
             <span class="n">chat_id</span><span class="p">,</span>
             <span class="n">role</span><span class="p">,</span>
@@ -636,32 +636,32 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">add_messages</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">messages</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Append multiple messages atomically.</span>
+<span class="w">        </span><span class="sd">"""Append multiple messages atomically.</span>
 
 <span class="sd">        Each dict must have ``role`` and ``content`` keys, and may have</span>
 <span class="sd">        an optional ``metadata`` key.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">now</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_now</span><span class="p">()</span>
         <span class="n">batch</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">(</span>
                 <span class="n">user_id</span><span class="p">,</span>
                 <span class="n">chat_id</span><span class="p">,</span>
-                <span class="n">m</span><span class="p">[</span><span class="s2">&quot;role&quot;</span><span class="p">],</span>
-                <span class="n">m</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">],</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_json_dumps</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})),</span>
+                <span class="n">m</span><span class="p">[</span><span class="s2">"role"</span><span class="p">],</span>
+                <span class="n">m</span><span class="p">[</span><span class="s2">"content"</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_json_dumps</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metadata"</span><span class="p">,</span> <span class="p">{})),</span>
                 <span class="n">now</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span>
         <span class="p">]</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span>
-                <span class="s2">&quot;INSERT INTO messages (user_id, chat_id, role, content, metadata, created_at) &quot;</span>
-                <span class="s2">&quot;VALUES (?, ?, ?, ?, ?, ?)&quot;</span><span class="p">,</span>
+                <span class="s2">"INSERT INTO messages (user_id, chat_id, role, content, metadata, created_at) "</span>
+                <span class="s2">"VALUES (?, ?, ?, ?, ?, ?)"</span><span class="p">,</span>
                 <span class="n">batch</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;add_messages(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> message(s)&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="s2">"add_messages(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> message(s)"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
         <span class="p">)</span></div>
 
 
@@ -672,9 +672,9 @@
 <div class="viewcode-block" id="SessionStore.close">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sessions_db.SessionStore.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close the underlying SQLite connection.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Close the underlying SQLite connection."""</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;SessionStore closed (</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"SessionStore closed (</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

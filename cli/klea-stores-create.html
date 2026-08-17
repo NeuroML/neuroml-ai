@@ -359,15 +359,15 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  Example metadata-map.json::                                          
                                                                       
      {                                                                
-         &quot;PrimerOnCElegans.md&quot;: {                                     
-             &quot;DEFAULT&quot;: {},                                           
-             &quot;C. elegans tissue morphology&quot;: {                        
-                 &quot;url&quot;: &quot;https://example.com/worm&quot;                    
+         "PrimerOnCElegans.md": {                                     
+             "DEFAULT": {},                                           
+             "C. elegans tissue morphology": {                        
+                 "url": "https://example.com/worm"                    
              }                                                        
          },                                                           
-         &quot;c302-paper.pdf&quot;: {                                          
-             &quot;DEFAULT&quot;: {                                             
-                 &quot;url&quot;: &quot;https://example.com/c302&quot;                    
+         "c302-paper.pdf": {                                          
+             "DEFAULT": {                                             
+                 "url": "https://example.com/c302"                    
              }                                                        
          }                                                            
      }                                                                
@@ -380,7 +380,7 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │ *  --collection        -n              TEXT     Collection name    │
 │                                                 for the vector     │
 │                                                 store. Must match  │
-│                                                 the &#39;name&#39; of the  │
+│                                                 the 'name' of the  │
 │                                                 corresponding      │
 │                                                 vector_stores/bm2… │
 │                                                 entry in the RAG   │
@@ -542,7 +542,7 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 ╭─ Options ──────────────────────────────────────────────────────────╮
 │ *  --collection        -n      TEXT     Collection name for the    │
 │                                         vector store. Must match   │
-│                                         the &#39;name&#39; of the          │
+│                                         the 'name' of the          │
 │                                         corresponding              │
 │                                         vector_stores/bm25_stores  │
 │                                         entry in the RAG config    │
@@ -569,7 +569,7 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                         per-file DEFAULT           │
 │                                         fallback). Defaults to     │
 │                                         metadata-map.template.json │
-│                                         in the source directory&#39;s  │
+│                                         in the source directory's  │
 │                                         cache folder; required     │
 │                                         when no template exists    │
 │    --bm25-store                TEXT     Write the combined         │
@@ -605,7 +605,7 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                         in place.  Does not        │
 │                                         reconvert: files must      │
 │                                         already be cached by       │
-│                                         &#39;chunk&#39;                    │
+│                                         'chunk'                    │
 │    --help                               Show this message and      │
 │                                         exit.                      │
 ╰────────────────────────────────────────────────────────────────────╯
@@ -619,10 +619,10 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  Report issues in a metadata map so it can be reviewed efficiently.   
                                                                       
  Runs only deterministic checks (missing fields, suspicious titles or 
- DOIs, year/filename mismatches, stale &#39;venue&#39; keys, excess url*      
+ DOIs, year/filename mismatches, stale 'venue' keys, excess url*      
  keys,                                                                
  placeholder counts) -- no LLM is needed.  Useful after editing the   
- map by hand, and printed automatically at the end of &#39;chunk&#39;.        
+ map by hand, and printed automatically at the end of 'chunk'.        
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
 │ *    source_dir      TEXT  Directory containing the metadata map   │

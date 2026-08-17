@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.tools</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Tool-related utilities for Klea</span>
 
 <span class="sd">File: klea_utils/tools.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
@@ -303,17 +303,17 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_textualize_content_block</span><span class="p">(</span><span class="n">block</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract text from a single ContentBlock.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Extract text from a single ContentBlock."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">TextContent</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">block</span><span class="o">.</span><span class="n">text</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">EmbeddedResource</span><span class="p">):</span>
         <span class="n">resource</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">resource</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">&quot;blob&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">resource</span><span class="o">.</span><span class="n">blob</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Blob resource not processed: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">resource</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">&quot;blob&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[Resource: </span><span class="si">{</span><span class="n">resource</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">]</span><span class="se">\n</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">"blob"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">resource</span><span class="o">.</span><span class="n">blob</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Blob resource not processed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">resource</span><span class="o">.</span><span class="n">uri</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s2">"blob"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"[Resource: </span><span class="si">{</span><span class="n">resource</span><span class="o">.</span><span class="n">uri</span><span class="si">}</span><span class="s2">]</span><span class="se">\n</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Unhandled content block type: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">block</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Unhandled content block type: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">block</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
 
 
@@ -322,7 +322,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">textualize_tool_results</span><span class="p">(</span>
     <span class="n">tool_results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">CallToolResult</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format tool call results as LLM-ready text for use in prompt context.</span>
+<span class="w">    </span><span class="sd">"""Format tool call results as LLM-ready text for use in prompt context.</span>
 
 <span class="sd">    Tool return values are typically JSON-structured data (dicts, lists) which</span>
 <span class="sd">    LLMs handle naturally. We wrap them in markdown code blocks for clear</span>
@@ -330,82 +330,82 @@
 
 <span class="sd">    :param tool_results: List of tool call results</span>
 <span class="sd">    :returns: Formatted string suitable for inclusion in an LLM prompt</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">tool_results</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">""</span>
 
-    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;## Tool Results</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">"## Tool Results</span><span class="se">\n</span><span class="s2">"</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tool_results</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-        <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">### Result </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tool_results</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">### Result </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tool_results</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_error</span><span class="p">:</span>
             <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">_textualize_content_block</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">]</span>
-            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;**Error:** &quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">"**Error:** "</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">_textualize_content_block</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">]</span>
-            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;```</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">```</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">"```</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">```</span><span class="se">\n</span><span class="s2">"</span>
 
     <span class="k">return</span> <span class="n">text</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_collapse_schema_type</span><span class="p">(</span><span class="n">schema</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Collapse a JSON Schema type spec into a single compact type name.</span>
+<span class="w">    </span><span class="sd">"""Collapse a JSON Schema type spec into a single compact type name.</span>
 
-<span class="sd">    Handles ``anyOf`` unions (e.g. ``[{&quot;type&quot;: &quot;integer&quot;}, {&quot;type&quot;: &quot;null&quot;}]``</span>
+<span class="sd">    Handles ``anyOf`` unions (e.g. ``[{"type": "integer"}, {"type": "null"}]``</span>
 <span class="sd">    collapses to ``integer``) and plain ``type`` strings.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s2">&quot;anyOf&quot;</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"anyOf"</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">:</span>
         <span class="n">types</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s2">&quot;anyOf&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;null&quot;</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"type"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s2">"anyOf"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"type"</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">"null"</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="n">types</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;|&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">types</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;any&quot;</span>
+            <span class="k">return</span> <span class="s2">"|"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">types</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"type"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"any"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_tool_parameters</span><span class="p">(</span><span class="n">input_schema</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a compact one-line-per-parameter summary of an MCP tool schema.</span>
+<span class="w">    </span><span class="sd">"""Return a compact one-line-per-parameter summary of an MCP tool schema.</span>
 
 <span class="sd">    The raw JSON Schema ``properties`` dict is verbose (defaults, length and</span>
 <span class="sd">    range validators, ``anyOf`` unions); only the parameter name, type,</span>
 <span class="sd">    required flag, and description are useful for tool selection, so the</span>
 <span class="sd">    rest is dropped and whitespace is normalised.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">input_schema</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">properties</span> <span class="o">=</span> <span class="n">input_schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;properties&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">properties</span> <span class="o">=</span> <span class="n">input_schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"properties"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">properties</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">required</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">input_schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">input_schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"required"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">schema</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">continue</span>
         <span class="n">ptype</span> <span class="o">=</span> <span class="n">_collapse_schema_type</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span>
-        <span class="n">desc</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
-        <span class="n">flag</span> <span class="o">=</span> <span class="s2">&quot;, required&quot;</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">required</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ptype</span><span class="si">}{</span><span class="n">flag</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">rstrip</span><span class="p">())</span>
+        <span class="n">desc</span> <span class="o">=</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"description"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="s2">", required"</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">required</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"- </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ptype</span><span class="si">}{</span><span class="n">flag</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">rstrip</span><span class="p">())</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">lines</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;Parameters:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="s2">"Parameters:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="build_tool_description">
 <a class="viewcode-back" href="../../api/utils/tools.html#klea_utils.tools.build_tool_description">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">build_tool_description</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Tool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build the compact LLM-facing description for an MCP tool.</span>
+<span class="w">    </span><span class="sd">"""Build the compact LLM-facing description for an MCP tool.</span>
 
 <span class="sd">    Used to populate :class:`klea_utils.mcp.schemas.ToolInfo.description`</span>
-<span class="sd">    so the tool picker&#39;s prompt stays small as more tools are added.</span>
+<span class="sd">    so the tool picker's prompt stays small as more tools are added.</span>
 
 <span class="sd">    Klea expects MCP tool descriptions to follow the *docstring-first*</span>
-<span class="sd">    convention (see ``docs/concepts/mcp.rst``, &quot;Tool description length and</span>
-<span class="sd">    style&quot;): the LLM-facing description is the opening text block of the</span>
+<span class="sd">    convention (see ``docs/concepts/mcp.rst``, "Tool description length and</span>
+<span class="sd">    style"): the LLM-facing description is the opening text block of the</span>
 <span class="sd">    function docstring, written as a one-sentence summary followed by</span>
-<span class="sd">    &quot;Use when:&quot; / &quot;Do not use for:&quot; bullet sections and a single example</span>
+<span class="sd">    "Use when:" / "Do not use for:" bullet sections and a single example</span>
 <span class="sd">    line, bounded to roughly 100-250 tokens.  Anthropic recommends at</span>
 <span class="sd">    least 3-4 sentences covering what a tool does and when it should (and</span>
 <span class="sd">    should not) be used; opencode keeps its tool descriptions to roughly</span>
@@ -417,34 +417,34 @@
 <span class="sd">    raw full docstring (see ``neuroml_mcp.utils.register_tools``),</span>
 <span class="sd">    otherwise the prompt carries duplicated ``Args:``/``Returns:`` prose</span>
 <span class="sd">    in both the description and the compact parameter list built here.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;## </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"## </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">description</span><span class="p">:</span>
         <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
     <span class="n">params</span> <span class="o">=</span> <span class="n">_format_tool_parameters</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">inputSchema</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">params</span><span class="p">:</span>
         <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
-    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="clean_tool_meta">
 <a class="viewcode-back" href="../../api/utils/tools.html#klea_utils.tools.clean_tool_meta">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">clean_tool_meta</span><span class="p">(</span><span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop developer tags from tool metadata before storing it.</span>
+<span class="w">    </span><span class="sd">"""Drop developer tags from tool metadata before storing it.</span>
 
-<span class="sd">    FastMCP populates ``meta`` with ``{&quot;fastmcp&quot;: {&quot;tags&quot;: [...]}}``; the</span>
+<span class="sd">    FastMCP populates ``meta`` with ``{"fastmcp": {"tags": [...]}}``; the</span>
 <span class="sd">    tags are mostly developer labels (e.g. ``testing``) that are not used</span>
 <span class="sd">    by the tool picker, so they are stripped to keep stored metadata lean.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">cleaned</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">meta</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
-    <span class="n">fastmcp_meta</span> <span class="o">=</span> <span class="n">cleaned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fastmcp&quot;</span><span class="p">)</span>
+    <span class="n">fastmcp_meta</span> <span class="o">=</span> <span class="n">cleaned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"fastmcp"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fastmcp_meta</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="n">fastmcp_meta</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">fastmcp_meta</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"tags"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">fastmcp_meta</span><span class="p">:</span>
-            <span class="n">cleaned</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;fastmcp&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">cleaned</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"fastmcp"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">cleaned</span> <span class="ow">or</span> <span class="kc">None</span></div>
 
 </pre></div>

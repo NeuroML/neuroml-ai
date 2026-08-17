@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.tui.repl</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Shared async REPL for Klea chat interfaces.</span>
 
 <span class="sd">File: klea_utils/ui/tui/repl.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
@@ -301,13 +301,13 @@
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_repl</span><span class="p">(</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">single_query</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-    <span class="n">app_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea&quot;</span><span class="p">,</span>
-    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;klea-tui&quot;</span><span class="p">,</span>
+    <span class="n">single_query</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+    <span class="n">app_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"klea"</span><span class="p">,</span>
+    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"klea-tui"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run an interactive or single-query chat REPL.</span>
+<span class="w">    </span><span class="sd">"""Run an interactive or single-query chat REPL.</span>
 
-<span class="sd">    Connects to the API server&#39;s SSE ``/query/stream`` endpoint and</span>
+<span class="sd">    Connects to the API server's SSE ``/query/stream`` endpoint and</span>
 <span class="sd">    displays progress labels and the final answer.</span>
 
 <span class="sd">    In interactive mode each query is sent as the user types it;</span>
@@ -316,10 +316,10 @@
 <span class="sd">    :param url: Base URL of the API server (e.g. ``http://127.0.0.1:8005``)</span>
 <span class="sd">    :param title: Application title displayed on start</span>
 <span class="sd">    :param single_query: If set, run one query and exit instead of REPL loop</span>
-<span class="sd">    :param app_prefix: Prefix for user/assistant labels (e.g. ``&quot;klea&quot;``)</span>
+<span class="sd">    :param app_prefix: Prefix for user/assistant labels (e.g. ``"klea"``)</span>
 <span class="sd">    :param app_name: Log identity for this frontend, used as the log file</span>
-<span class="sd">        name so each process keeps its own logs (e.g. ``&quot;klea-rag-tui&quot;``)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        name so each process keeps its own logs (e.g. ``"klea-rag-tui"``)</span>
+<span class="sd">    """</span>
     <span class="c1"># Configure process-wide logging for this client process.  Lazy:</span>
     <span class="c1"># platformdirs / plogging imports are cheap, and everything else is</span>
     <span class="c1"># deferred below so --help stays fast.</span>
@@ -342,49 +342,49 @@
 
     <span class="n">chat_id</span> <span class="o">=</span> <span class="n">coolname</span><span class="o">.</span><span class="n">generate_slug</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 
-    <span class="k">with</span> <span class="n">yaspin</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">&quot;Waiting for API...&quot;</span><span class="p">):</span>
-        <span class="k">await</span> <span class="n">check_api_is_ready</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">/health/ready&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">yaspin</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"Waiting for API..."</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">check_api_is_ready</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">/health/ready"</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_query_one</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">full_response</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-        <span class="n">error_msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">full_response</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="n">error_msg</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="nb">print</span><span class="p">()</span>
 
-        <span class="k">with</span> <span class="n">yaspin</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">&quot;Working ...&quot;</span><span class="p">,</span> <span class="n">timer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">spinner</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">yaspin</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"Working ..."</span><span class="p">,</span> <span class="n">timer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">spinner</span><span class="p">:</span>
             <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">stream_events</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
-                    <span class="n">spinner</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
-                <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;complete&quot;</span><span class="p">:</span>
-                    <span class="n">full_response</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-                    <span class="n">spinner</span><span class="o">.</span><span class="n">ok</span><span class="p">(</span><span class="s2">&quot;[OK]&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
-                    <span class="n">error_msg</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown server error&quot;</span><span class="p">)</span>
-                    <span class="n">spinner</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s2">&quot;[ERROR]&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">event</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"progress"</span><span class="p">:</span>
+                    <span class="n">spinner</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"node"</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"complete"</span><span class="p">:</span>
+                    <span class="n">full_response</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message_for_user"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+                    <span class="n">spinner</span><span class="o">.</span><span class="n">ok</span><span class="p">(</span><span class="s2">"[OK]"</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">event</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"error"</span><span class="p">:</span>
+                    <span class="n">error_msg</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message"</span><span class="p">,</span> <span class="s2">"Unknown server error"</span><span class="p">)</span>
+                    <span class="n">spinner</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s2">"[ERROR]"</span><span class="p">)</span>
                     <span class="k">break</span>
 
         <span class="n">output</span> <span class="o">=</span> <span class="n">error_msg</span> <span class="ow">or</span> <span class="n">full_response</span>
-        <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;(ERROR)&quot;</span> <span class="k">if</span> <span class="n">error_msg</span> <span class="k">else</span> <span class="s2">&quot;(AI)&quot;</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">40</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="s2">"(ERROR)"</span> <span class="k">if</span> <span class="n">error_msg</span> <span class="k">else</span> <span class="s2">"(AI)"</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; </span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"-"</span> <span class="o">*</span> <span class="mi">40</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">single_query</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> (USER) &gt;&gt;&gt; </span><span class="si">{</span><span class="n">single_query</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> (USER) &gt;&gt;&gt; </span><span class="si">{</span><span class="n">single_query</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">await</span> <span class="n">_query_one</span><span class="p">(</span><span class="n">single_query</span><span class="p">)</span>
         <span class="k">return</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;*** </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">) ***&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Please note that answers are generated by LLMs and may be incorrect.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"*** </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">) ***"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Please note that answers are generated by LLMs and may be incorrect."</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Type &#39;quit&#39; to exit.&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">40</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Type 'quit' to exit."</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"-"</span> <span class="o">*</span> <span class="mi">40</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="n">q</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> (USER) &gt;&gt;&gt; &quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">q</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;quit&quot;</span><span class="p">:</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> (USER) &gt;&gt;&gt; "</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">q</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"quit"</span><span class="p">:</span>
             <span class="k">break</span>
         <span class="k">await</span> <span class="n">_query_one</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; Bye!&quot;</span><span class="p">)</span></div>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="si">{</span><span class="n">app_prefix</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; Bye!"</span><span class="p">)</span></div>
 
 </pre></div>
         </article>

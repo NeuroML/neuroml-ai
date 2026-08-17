@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.web.nicegui.client</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Server API client for the NiceGUI frontend.</span>
 
 <span class="sd">All functions accept the *server_url* as their first argument so the</span>
@@ -294,7 +294,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
@@ -309,7 +309,7 @@
 <div class="viewcode-block" id="hydrate_chats">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.client.hydrate_chats">[docs]</a>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">hydrate_chats</span><span class="p">(</span><span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch all chats and their messages from the server into the local state.</span>
+<span class="w">    </span><span class="sd">"""Fetch all chats and their messages from the server into the local state.</span>
 
 <span class="sd">    Populates the in-memory ``chats`` dict with every conversation belonging</span>
 <span class="sd">    to *user_id*, including the full message history for each chat.</span>
@@ -317,83 +317,83 @@
 <span class="sd">    After this call the frontend can switch between any chat without</span>
 <span class="sd">    additional server round-trips.  If the server has no data for this</span>
 <span class="sd">    user yet the local store stays empty.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;GET /chat/</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
-            <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;status=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"GET /chat/</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"status=</span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
                 <span class="n">chats_from_server</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                    <span class="s2">&quot;server returned </span><span class="si">%d</span><span class="s2"> chat(s): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">"server returned </span><span class="si">%d</span><span class="s2"> chat(s): </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                     <span class="nb">len</span><span class="p">(</span><span class="n">chats_from_server</span><span class="p">),</span>
-                    <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chat_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chats_from_server</span><span class="p">],</span>
+                    <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"chat_id"</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chats_from_server</span><span class="p">],</span>
                 <span class="p">)</span>
                 <span class="k">for</span> <span class="n">chat_data</span> <span class="ow">in</span> <span class="n">chats_from_server</span><span class="p">:</span>
-                    <span class="n">chat_id</span> <span class="o">=</span> <span class="n">chat_data</span><span class="p">[</span><span class="s2">&quot;chat_id&quot;</span><span class="p">]</span>
-                    <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">chat_id</span> <span class="o">=</span> <span class="n">chat_data</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span>
                     <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-                    <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-                    <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;created&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_at&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+                    <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">"created"</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"created_at"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
 
                 <span class="c1"># Fetch messages for every chat returned by the server.</span>
                 <span class="k">for</span> <span class="n">chat_data</span> <span class="ow">in</span> <span class="n">chats_from_server</span><span class="p">:</span>
-                    <span class="n">chat_id</span> <span class="o">=</span> <span class="n">chat_data</span><span class="p">[</span><span class="s2">&quot;chat_id&quot;</span><span class="p">]</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;GET /chat/</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">/messages&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+                    <span class="n">chat_id</span> <span class="o">=</span> <span class="n">chat_data</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"GET /chat/</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">/messages"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
                     <span class="n">msg_resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/messages&quot;</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/messages"</span>
                     <span class="p">)</span>
                     <span class="k">if</span> <span class="n">msg_resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
-                        <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span>
                         <span class="n">current_chat</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
                         <span class="k">if</span> <span class="n">current_chat</span><span class="p">:</span>
-                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">&quot;messages&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">current_chat</span><span class="p">[</span><span class="s2">"messages"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
                                 <span class="p">(</span>
-                                    <span class="n">msg</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">],</span>
-                                    <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s2">&quot;created_at&quot;</span><span class="p">])</span>
+                                    <span class="n">msg</span><span class="p">[</span><span class="s2">"content"</span><span class="p">],</span>
+                                    <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">msg</span><span class="p">[</span><span class="s2">"created_at"</span><span class="p">])</span>
                                     <span class="o">.</span><span class="n">astimezone</span><span class="p">()</span>
-                                    <span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%X</span><span class="s2">&quot;</span><span class="p">),</span>
-                                    <span class="n">msg</span><span class="p">[</span><span class="s2">&quot;role&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span>
+                                    <span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"</span><span class="si">%X</span><span class="s2">"</span><span class="p">),</span>
+                                    <span class="n">msg</span><span class="p">[</span><span class="s2">"role"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"user"</span><span class="p">,</span>
                                 <span class="p">)</span>
                                 <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">msg_resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                             <span class="p">]</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to hydrate chats from server: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to hydrate chats from server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="create_chat_on_server">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.client.create_chat_on_server">[docs]</a>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;POST a new chat to the server so it persists.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""POST a new chat to the server so it persists."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-            <span class="n">title</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">chats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">},</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"chat_id"</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">},</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
                 <span class="n">chat_data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-                <span class="n">chats</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+                <span class="n">chats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to create chat on server: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to create chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="delete_chat_on_server">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.client.delete_chat_on_server">[docs]</a>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;DELETE the chat on the server.&quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;DELETE /chat/</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""DELETE the chat on the server."""</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"DELETE /chat/</span><span class="si">%s</span><span class="s2">/</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-            <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;status=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"status=</span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to delete chat on server: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to delete chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
 
@@ -402,15 +402,15 @@
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">rename_chat_on_server</span><span class="p">(</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;PATCH the chat title on the server.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""PATCH the chat title on the server."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">},</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">},</span>
             <span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to rename chat on server: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to rename chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
 
@@ -419,16 +419,16 @@
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">set_model_override</span><span class="p">(</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;POST a model override for a chat role.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""POST a model override for a chat role."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/overrides/</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/overrides/</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to set model override: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to set model override: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span></div>
 
 
@@ -438,15 +438,15 @@
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clear_model_override</span><span class="p">(</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;DELETE the model override for a chat role.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""DELETE the model override for a chat role."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/overrides/</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/overrides/</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to clear model override: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to clear model override: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span></div>
 
 </pre></div>

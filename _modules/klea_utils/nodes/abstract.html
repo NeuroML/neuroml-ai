@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.nodes.abstract</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Abstract node classes for LangGraph processing nodes</span>
 
 <span class="sd">File: klea_utils/nodes/abstract.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -312,25 +312,25 @@
 <div class="viewcode-block" id="NodeStreamData">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.NodeStreamData">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NodeStreamData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data payload for node streaming events.</span>
+<span class="w">    </span><span class="sd">"""Data payload for node streaming events.</span>
 
 <span class="sd">    This is the contract between nodes and the frontend.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">heading</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Section heading for the inspector panel (right pane)&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Section heading for the inspector panel (right pane)"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">summary</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Human-readable summary, always rendered by frontend&quot;</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Human-readable summary, always rendered by frontend"</span>
     <span class="p">)</span>
     <span class="n">details</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
         <span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Structured data, rendered as collapsible JSON&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Structured data, rendered as collapsible JSON"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">display</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Pre-formatted markdown content for the status pane&quot;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">"Pre-formatted markdown content for the status pane"</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -338,60 +338,60 @@
 <div class="viewcode-block" id="NodeStreamEvent">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.NodeStreamEvent">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NodeStreamEvent</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Full streaming event emitted by nodes.</span>
+<span class="w">    </span><span class="sd">"""Full streaming event emitted by nodes.</span>
 
 <span class="sd">    This is the contract between the graph infrastructure and the frontend.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;usage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Event type&quot;</span><span class="p">)</span>
-    <span class="n">node</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Node label&quot;</span><span class="p">)</span>
-    <span class="n">data</span><span class="p">:</span> <span class="n">NodeStreamData</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Event payload&quot;</span><span class="p">)</span></div>
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"info"</span><span class="p">,</span> <span class="s2">"debug"</span><span class="p">,</span> <span class="s2">"state"</span><span class="p">,</span> <span class="s2">"usage"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Event type"</span><span class="p">)</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Node label"</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">NodeStreamData</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Event payload"</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="AbstractLangGraphNode">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AbstractLangGraphNode</span><span class="p">[</span><span class="n">TSchema</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">TReturn</span><span class="p">](</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for all LangGraph nodes.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for all LangGraph nodes.</span>
 
 <span class="sd">    Generic over TReturn to support both state-updating nodes (Dict[str, Any])</span>
 <span class="sd">    and other nodes, e.g., router nodes (str) and tool caller nodes.</span>
 
 <span class="sd">    Provides a consistent interface: all nodes have a logger and an</span>
 <span class="sd">    execute(state) method.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise</span>
+<span class="w">        </span><span class="sd">"""Initialise</span>
 
 <span class="sd">        Creates a new hierarchical logger.</span>
 
 <span class="sd">        :param logger: Parent logger instance (used to derive child logger name)</span>
 <span class="sd">        :param label: Human-readable label for this node, used as the</span>
 <span class="sd">            LangGraph node name for UI progress display</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Child logger -- inherits the parent&#39;s dual-stream + file handlers</span>
+<span class="sd">        """</span>
+        <span class="c1"># Child logger -- inherits the parent's dual-stream + file handlers</span>
         <span class="c1"># (set up by BaseLangGraph via plogging.setup_root_logger on the</span>
         <span class="c1"># root logger) through propagation, so this class does NOT configure</span>
         <span class="c1"># its own handlers.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">logger</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">label</span>
 
 <div class="viewcode-block" id="AbstractLangGraphNode.write_custom_stream">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.write_custom_stream">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">write_custom_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit a custom event to the LangGraph v3 stream.</span>
+<span class="w">        </span><span class="sd">"""Emit a custom event to the LangGraph v3 stream.</span>
 
 <span class="sd">        Writes to the ``custom`` channel via ``get_stream_writer()``.</span>
 <span class="sd">        Requires a ``StreamTransformer`` with ``required_stream_modes =</span>
-<span class="sd">        (&quot;custom&quot;,)`` registered so the channel is enabled (done by</span>
+<span class="sd">        ("custom",)`` registered so the channel is enabled (done by</span>
 <span class="sd">        ``BaseLangGraph.run_graph_astream_events()``).</span>
 
 <span class="sd">        Call this at the top of ``execute()`` to emit progress, or</span>
 <span class="sd">        anywhere to emit debug or intermediate data for UI consumers.</span>
 
 <span class="sd">        :param event: Dict to emit as a custom protocol event</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_stream_writer</span>
 
         <span class="n">get_stream_writer</span><span class="p">()(</span><span class="n">event</span><span class="p">)</span></div>
@@ -401,11 +401,11 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.execute">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">TSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TReturn</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute this node and return the result.</span>
+<span class="w">        </span><span class="sd">"""Execute this node and return the result.</span>
 
 <span class="sd">        :param state: Current graph state</span>
 <span class="sd">        :returns: State updates (dict) or routing label (str)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span></div>
 
 
@@ -427,45 +427,45 @@
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pre-execution check. Override to conditionally skip execution.</span>
+<span class="w">        </span><span class="sd">"""Pre-execution check. Override to conditionally skip execution.</span>
 
 <span class="sd">        Return False to skip execution (``execute`` returns an empty dict).</span>
 <span class="sd">        Return True (default) to proceed with the standard flow.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming event before node execution.</span>
+<span class="w">        </span><span class="sd">"""Emit streaming event before node execution.</span>
 
 <span class="sd">        Default: emits a ``progress`` event with the node label.</span>
 <span class="sd">        Override to customise pre-execution streaming.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"progress"</span><span class="p">,</span> <span class="s2">"node"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_post_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming events after node execution.</span>
+<span class="w">        </span><span class="sd">"""Emit streaming events after node execution.</span>
 
 <span class="sd">        Default: emits ``info``, ``debug``, and ``state`` events from</span>
 <span class="sd">        ``_get_info``, ``_get_debug``, and ``_get_status`` if they return</span>
 <span class="sd">        non-None values.  ``AbstractLLMNode`` overrides this to also emit</span>
 <span class="sd">        the token-usage event, which is LLM-specific.</span>
 <span class="sd">        Override to customise post-execution streaming.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_info</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">info</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"info"</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">info</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
         <span class="n">debug</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_debug</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">debug</span><span class="p">)</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"debug"</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">debug</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
         <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_status</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">status</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"state"</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured summary data for an ``info`` stream event.</span>
+<span class="w">        </span><span class="sd">"""Return structured summary data for an ``info`` stream event.</span>
 
 <span class="sd">        Override in subclasses to provide node-specific summary data.</span>
 <span class="sd">        Has access to all ``self._last_*`` values.</span>
@@ -475,14 +475,14 @@
 <span class="sd">        Example::</span>
 
 <span class="sd">            return NodeStreamData(</span>
-<span class="sd">                summary=&quot;Classified into: neuron, morphology&quot;,</span>
-<span class="sd">                details={&quot;classified_domains&quot;: [&quot;neuron&quot;, &quot;morphology&quot;]}</span>
+<span class="sd">                summary="Classified into: neuron, morphology",</span>
+<span class="sd">                details={"classified_domains": ["neuron", "morphology"]}</span>
 <span class="sd">            )</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured debug data for a ``debug`` stream event.</span>
+<span class="w">        </span><span class="sd">"""Return structured debug data for a ``debug`` stream event.</span>
 
 <span class="sd">        Override in subclasses to provide node-specific debug data.</span>
 <span class="sd">        Has access to all ``self._last_*`` values.</span>
@@ -495,13 +495,13 @@
 <span class="sd">            details = info.details.copy()</span>
 <span class="sd">            # ``_last_system_prompt`` may be a list when the node keeps a</span>
 <span class="sd">            # verbatim memory window; use the formatted prompt instead.</span>
-<span class="sd">            details[&quot;input_prompt&quot;] = prompt_value_to_messages(self._last_prompt)</span>
+<span class="sd">            details["input_prompt"] = prompt_value_to_messages(self._last_prompt)</span>
 <span class="sd">            return NodeStreamData(summary=info.summary, details=details)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return status pane content for this node.</span>
+<span class="w">        </span><span class="sd">"""Return status pane content for this node.</span>
 
 <span class="sd">        Override to populate the status pane with display-ready</span>
 <span class="sd">        markdown content.  The ``display`` field of the returned</span>
@@ -510,7 +510,7 @@
 <span class="sd">        accumulate.</span>
 
 <span class="sd">        :returns: NodeStreamData with display content, or None to skip</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 
 
@@ -520,10 +520,10 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">AbstractLLMNode</span><span class="p">[</span><span class="n">TSchema</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">](</span>
     <span class="n">AbstractLangGraphNode</span><span class="p">[</span><span class="n">TSchema</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for LangGraph nodes that use LLMs.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for LangGraph nodes that use LLMs.</span>
 
 <span class="sd">    Subclasses **must** set :attr:`model_type` to a key present in the</span>
-<span class="sd">    ``llm_models`` dict (e.g. ``&quot;chat&quot;``, ``&quot;plan&quot;``, ``&quot;guard&quot;``).</span>
+<span class="sd">    ``llm_models`` dict (e.g. ``"chat"``, ``"plan"``, ``"guard"``).</span>
 
 <span class="sd">    Implements a template execution flow:</span>
 <span class="sd">    1. Pre-execution check (optional skip)</span>
@@ -531,17 +531,17 @@
 <span class="sd">    3. Invoke LLM</span>
 <span class="sd">    4. Process output (structured or raw)</span>
 <span class="sd">    5. Update state</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Key into ``llm_models`` dict (e.g. ``\&quot;chat\&quot;``, ``\&quot;plan\&quot;``, ``\&quot;guard\&quot;``).</span>
+    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+<span class="w">    </span><span class="sd">"""Key into ``llm_models`` dict (e.g. ``\"chat\"``, ``\"plan\"``, ``\"guard\"``).</span>
 
-<span class="sd">    Determines which ``LLMModel`` entry from the graph&#39;s ``llm_models``</span>
+<span class="sd">    Determines which ``LLMModel`` entry from the graph's ``llm_models``</span>
 <span class="sd">    this node uses.  Must match a key set up by the orchestrator in</span>
 <span class="sd">    ``_setup_models()``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">model_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Node-level model configuration defaults.</span>
+<span class="w">    </span><span class="sd">"""Node-level model configuration defaults.</span>
 
 <span class="sd">    These are **frozen**  ---  user context overrides cannot change them.</span>
 <span class="sd">    Set this as a class attribute on each subclass to pin model params</span>
@@ -550,7 +550,7 @@
 
 <span class="sd">    Subclasses that need dynamic initialisation may also set</span>
 <span class="sd">    ``self.model_defaults`` in ``__init__``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -559,21 +559,21 @@
         <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
         <span class="n">output_schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize with logger and model.</span>
+<span class="w">        </span><span class="sd">"""Initialize with logger and model.</span>
 
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
 <span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
 <span class="sd">        :param output_schema: Pydantic schema for structured output</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span> <span class="o">=</span> <span class="n">llm_models</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_llm_entry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Node &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39; has model_type=&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">&#39;, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;but llm_models only has keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Node '</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">' has model_type='</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">', "</span>
+                <span class="sa">f</span><span class="s2">"but llm_models only has keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_output_schema</span> <span class="o">=</span> <span class="n">output_schema</span>
 
@@ -581,7 +581,7 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLLMNode.execute">[docs]</a>
     <span class="nd">@final</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Template method defining standard execution flow&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Template method defining standard execution flow"""</span>
         <span class="c1"># Clear previous execution context to prevent stale data.</span>
         <span class="c1"># These are instance variables (not locals) so that streaming hooks</span>
         <span class="c1"># (_pre_exec_stream, _post_exec_stream, _get_info, _get_debug) can</span>
@@ -600,10 +600,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">state</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">state</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pre_exec</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Pre-exec check failed, skipping execution&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Pre-exec check failed, skipping execution"</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">{}</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state</span> <span class="o">=</span> <span class="n">state</span>
@@ -619,13 +619,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_last_template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_variables</span>
         <span class="p">)</span>
         <span class="n">chars_sent</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">chars_sent</span><span class="w"> </span><span class="si">= }</span><span class="s2"> characters sent to LLM&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">chars_sent</span><span class="w"> </span><span class="si">= }</span><span class="s2"> characters sent to LLM"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configure_llm</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invoke_llm</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_last_llm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_config</span>
         <span class="p">)</span>
         <span class="n">chars_received</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">extract_llm_output_content</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">chars_received</span><span class="w"> </span><span class="si">= }</span><span class="s2"> characters received from LLM&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">chars_received</span><span class="w"> </span><span class="si">= }</span><span class="s2"> characters received from LLM"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_output</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_last_state_updates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_result</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
 
@@ -637,58 +637,58 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_post_exec_stream</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_final_state</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_post_exec_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Emit streaming events after LLM invocation.</span>
+<span class="w">        </span><span class="sd">"""Emit streaming events after LLM invocation.</span>
 
 <span class="sd">        Emits the shared ``info``, ``debug``, and ``state`` events (via the</span>
 <span class="sd">        base) plus the ``usage`` event, which is LLM-specific: non-LLM</span>
 <span class="sd">        nodes have no token usage, so this stays in ``AbstractLLMNode``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_post_exec_stream</span><span class="p">()</span>
         <span class="n">usage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_usage</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">usage</span><span class="p">:</span>
-            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">&quot;usage&quot;</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
+            <span class="n">event</span> <span class="o">=</span> <span class="n">NodeStreamEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"usage"</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">usage</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">model_dump</span><span class="p">())</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_extract_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract this node&#39;s token usage from the LLM output.</span>
+<span class="w">        </span><span class="sd">"""Extract this node's token usage from the LLM output.</span>
 
 <span class="sd">        :param output: The raw LLM output (``AIMessage`` with ``usage_metadata``,</span>
-<span class="sd">            or a structured-output dict with a ``&quot;raw&quot;`` key)</span>
+<span class="sd">            or a structured-output dict with a ``"raw"`` key)</span>
 <span class="sd">        :returns: ``TokenUsage`` for this node, or ``None`` if usage information is</span>
 <span class="sd">            unavailable</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;raw&quot;</span> <span class="ow">in</span> <span class="n">output</span><span class="p">:</span>
-            <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">&quot;raw&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;usage_metadata&quot;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No message/metadata to get token usage from&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"raw"</span> <span class="ow">in</span> <span class="n">output</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">"raw"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">"usage_metadata"</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"No message/metadata to get token usage from"</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">meta</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">usage_metadata</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">meta</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;usage_metadata is empty&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"usage_metadata is empty"</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">token_usage</span> <span class="o">=</span> <span class="n">TokenUsage</span><span class="p">(</span>
-            <span class="n">input_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="n">output_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="n">total_tokens</span><span class="o">=</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output_tokens&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+            <span class="n">input_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"input_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">output_tokens</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="n">total_tokens</span><span class="o">=</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"input_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Node token usage: </span><span class="si">{</span><span class="n">token_usage</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Node token usage: </span><span class="si">{</span><span class="n">token_usage</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">token_usage</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a ``NodeStreamData`` wrapper for the current node&#39;s token usage.</span>
+<span class="w">        </span><span class="sd">"""Build a ``NodeStreamData`` wrapper for the current node's token usage.</span>
 
 <span class="sd">        :returns: ``NodeStreamData`` with numeric token details, or ``None`` if no</span>
 <span class="sd">            usage recorded</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_token_usage</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">details</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="n">details</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">details</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">NodeStreamData</span><span class="p">(</span><span class="n">summary</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="n">details</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_usage_metrics</span><span class="p">(</span>
@@ -696,24 +696,24 @@
         <span class="n">token_usage</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">current_state_updates</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add this node&#39;s token usage delta to the state updates dict.</span>
+<span class="w">        </span><span class="sd">"""Add this node's token usage delta to the state updates dict.</span>
 
 <span class="sd">        :param token_usage: Usage for this node (returned by</span>
 <span class="sd">            :meth:`_extract_usage`)</span>
 <span class="sd">        :param current_state_updates: The dict returned by :meth:`_update_state`</span>
 <span class="sd">        :returns: ``current_state_updates`` with ``usage_metrics`` injected,</span>
 <span class="sd">            or an empty dict if both arguments are falsy</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">current_state_updates</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="n">token_usage</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;usage_metrics&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">token_usage</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">"usage_metrics"</span><span class="p">]</span> <span class="o">=</span> <span class="n">token_usage</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Injected token usage into state updates: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">token_usage</span>
+                <span class="s2">"Injected token usage into state updates: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">token_usage</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured summary data for an ``info`` stream event.</span>
+<span class="w">        </span><span class="sd">"""Return structured summary data for an ``info`` stream event.</span>
 
 <span class="sd">        Override in subclasses to provide node-specific summary data.</span>
 <span class="sd">        Has access to all ``self._last_*`` values.</span>
@@ -723,14 +723,14 @@
 <span class="sd">        Example::</span>
 
 <span class="sd">            return NodeStreamData(</span>
-<span class="sd">                summary=&quot;Classified into: neuron, morphology&quot;,</span>
-<span class="sd">                details={&quot;classified_domains&quot;: [&quot;neuron&quot;, &quot;morphology&quot;]}</span>
+<span class="sd">                summary="Classified into: neuron, morphology",</span>
+<span class="sd">                details={"classified_domains": ["neuron", "morphology"]}</span>
 <span class="sd">            )</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return structured debug data for a ``debug`` stream event.</span>
+<span class="w">        </span><span class="sd">"""Return structured debug data for a ``debug`` stream event.</span>
 
 <span class="sd">        Override in subclasses to provide node-specific debug data.</span>
 <span class="sd">        Has access to all ``self._last_*`` values.</span>
@@ -743,13 +743,13 @@
 <span class="sd">            details = info.details.copy()</span>
 <span class="sd">            # ``_last_system_prompt`` may be a list when the node keeps a</span>
 <span class="sd">            # verbatim memory window; use the formatted prompt instead.</span>
-<span class="sd">            details[&quot;input_prompt&quot;] = prompt_value_to_messages(self._last_prompt)</span>
+<span class="sd">            details["input_prompt"] = prompt_value_to_messages(self._last_prompt)</span>
 <span class="sd">            return NodeStreamData(summary=info.summary, details=details)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return status pane content for this node.</span>
+<span class="w">        </span><span class="sd">"""Return status pane content for this node.</span>
 
 <span class="sd">        Override to populate the status pane with display-ready</span>
 <span class="sd">        markdown content.  The ``display`` field of the returned</span>
@@ -758,80 +758,80 @@
 <span class="sd">        accumulate.</span>
 
 <span class="sd">        :returns: NodeStreamData with display content, or None to skip</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_configure_llm</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Runnable</span><span class="p">,</span> <span class="n">RunnableConfig</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure LLM with structured output and build per-invoke config.</span>
+<span class="w">        </span><span class="sd">"""Configure LLM with structured output and build per-invoke config.</span>
 
 <span class="sd">        :returns: (llm_with_structured_output, config_dict) where</span>
 <span class="sd">            config_dict is a ``RunnableConfig`` with the ``configurable``</span>
 <span class="sd">            key populated for ``llm.ainvoke()``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_invoke_llm</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">llm</span><span class="p">:</span> <span class="n">Runnable</span><span class="p">,</span> <span class="n">prompt</span><span class="p">:</span> <span class="n">PromptValue</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Async invoke LLM  ---  must use ``await llm.ainvoke()`` so the</span>
+<span class="w">        </span><span class="sd">"""Async invoke LLM  ---  must use ``await llm.ainvoke()`` so the</span>
 <span class="sd">        event loop can process streaming callbacks (waiter pattern)</span>
 <span class="sd">        during the LLM call rather than blocking until it completes.</span>
 
 <span class="sd">        :param config: ``RunnableConfig`` (including the ``configurable``</span>
 <span class="sd">            key) produced by ``_configure_llm``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_process_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Common output processing with error handling&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Common output processing with error handling"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_invoke_prompt</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">prompt_template</span><span class="p">:</span> <span class="n">ChatPromptTemplate</span><span class="p">,</span> <span class="n">variables</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PromptValue</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format prompt with state-specific parameters&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Format prompt with state-specific parameters"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_human_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return human prompt for this node&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return human prompt for this node"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return system prompt for this node.</span>
+<span class="w">        </span><span class="sd">"""Return system prompt for this node.</span>
 
-<span class="sd">        May return a list of ``(&quot;system&quot;, text)`` plus recent history</span>
+<span class="sd">        May return a list of ``("system", text)`` plus recent history</span>
 <span class="sd">        message objects (when the node keeps a verbatim memory window),</span>
 <span class="sd">        which ``_create_prompt_template`` places between the system and</span>
 <span class="sd">        human prompts.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_prompt_template</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">human_prompt</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChatPromptTemplate</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create ChatPromptTemplate for this node&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create ChatPromptTemplate for this node"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_prompt_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format prompt with state-specific parameters&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Format prompt with state-specific parameters"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update and return state dictionary&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Update and return state dictionary"""</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_error_result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return default result when processing fails&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return default result when processing fails"""</span>
         <span class="o">...</span></div>
 
 
@@ -839,17 +839,17 @@
 <div class="viewcode-block" id="AbstractRouterNode">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractRouterNode">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AbstractRouterNode</span><span class="p">[</span><span class="n">TSchema</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">](</span><span class="n">AbstractLangGraphNode</span><span class="p">[</span><span class="n">TSchema</span><span class="p">,</span> <span class="nb">str</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract class for LangGraph router nodes.</span>
+<span class="w">    </span><span class="sd">"""Abstract class for LangGraph router nodes.</span>
 
 <span class="sd">    Router nodes inspect the state and return a string label that determines</span>
 <span class="sd">    which edge to follow next. Used with ``add_conditional_edges()``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="AbstractRouterNode.execute">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.abstract.AbstractRouterNode.execute">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">TSchema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the routing label (edge name) based on state.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Return the routing label (edge name) based on state."""</span>
         <span class="o">...</span></div>
 </div>
 

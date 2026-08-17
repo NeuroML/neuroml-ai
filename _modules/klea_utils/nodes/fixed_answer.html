@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.nodes.fixed_answer</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Provide a fixed answer.</span>
 
 <span class="sd">File: rag_pkg/klea_rag/nodes/fixed_answer.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">override</span>
@@ -304,17 +304,17 @@
 <div class="viewcode-block" id="FixedAnswer">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.fixed_answer.FixedAnswer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">FixedAnswer</span><span class="p">(</span><span class="n">AbstractLangGraphNode</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provide a fixed answer&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Provide a fixed answer"""</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">state_attr</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise with logger and message to return.</span>
+<span class="w">        </span><span class="sd">"""Initialise with logger and message to return.</span>
 
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
 <span class="sd">        :param message: str message to return</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state_attr</span> <span class="o">=</span> <span class="n">state_attr</span>
@@ -323,8 +323,8 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.fixed_answer.FixedAnswer.execute">[docs]</a>
     <span class="nd">@override</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return fixed message.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
+<span class="w">        </span><span class="sd">"""Return fixed message."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"progress"</span><span class="p">,</span> <span class="s2">"node"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">state_attr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">})</span>
         <span class="k">return</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state_attr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">}</span></div>
 </div>

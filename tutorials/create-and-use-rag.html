@@ -434,32 +434,31 @@ the same folder; the file is always named <code class="docutils literal notransl
 <div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">KLEA_RAG_CHAT_MODEL</span><span class="o">=</span><span class="s">ollama:qwen3:0.6b</span>
 <span class="na">KLEA_RAG_GUARD_MODEL</span><span class="o">=</span><span class="s">ollama:llama-guard3:1b</span>
 <span class="na">KLEA_RAG_EMBEDDING_MODEL</span><span class="o">=</span><span class="s">ollama:bge-m3:latest</span>
-<span class="na">KLEA_RAG_APP_CONFIG_FILE</span><span class="o">=</span><span class="s">my-config.json</span>
 </pre></div>
 </div>
 <p>Create the JSON configuration file (<code class="docutils literal notranslate"><span class="pre">my-config.json</span></code>) that wires the
 vector store to a domain:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">     </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">     </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">     </span><span class="nt">&quot;max_refs_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;non_domain_chat&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;fallback_to_training_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="nt">"general"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">     </span><span class="nt">"default_k"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">     </span><span class="nt">"k_max"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">     </span><span class="nt">"max_refs_size"</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"non_domain_chat"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"fallback_to_training_data"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;domains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;MyDomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Documents related to my project&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;vector_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="nt">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"MyDomain"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Documents related to my project"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"vector_stores"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-docs&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/my-store&quot;</span>
+<span class="w">                    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-docs"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chroma:/path/to/my-store"</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;bm25_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="nt">"bm25_stores"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-docs-bm25&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/path/to/my-bm25-corpus.pkl&quot;</span>
+<span class="w">                    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-docs-bm25"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/my-bm25-corpus.pkl"</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">]</span>
 <span class="w">        </span><span class="p">}</span>
@@ -467,6 +466,11 @@ vector store to a domain:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>The config file is selected by its <em>profile</em> name: pass <code class="docutils literal notranslate"><span class="pre">--profile</span>
+<span class="pre">my-config</span></code> to load <code class="docutils literal notranslate"><span class="pre">my-config.json</span></code> from the current directory (or from
+the config directory; see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a>).  To scaffold a ready-to-fill
+config instead of writing one by hand, run
+<code class="docutils literal notranslate"><span class="pre">klea-rag-serve</span> <span class="pre">--profile</span> <span class="pre">template</span></code> once in your project directory.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">general</span></code> section controls retrieval behaviour:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">default_k</span></code> – number of documents to retrieve per query.  This is the
@@ -511,26 +515,26 @@ that set their own <code class="docutils literal notranslate"><span class="pre">
 values instead of the <code class="docutils literal notranslate"><span class="pre">general</span></code> fallbacks, which is useful when stores
 cover corpora of very different sizes:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;general&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;max_refs_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span>
+<span class="w">    </span><span class="nt">"general"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"default_k"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"k_max"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"k_inc"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"max_refs_size"</span><span class="p">:</span><span class="w"> </span><span class="mi">20000</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;domains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;MyDomain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Documents related to my project&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;vector_stores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="nt">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"MyDomain"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Documents related to my project"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"vector_stores"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;large-corpus&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/large-store&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;default_k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;k_max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;k_inc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">                    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"large-corpus"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chroma:/path/to/large-store"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"default_k"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"k_max"</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"k_inc"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="w">                </span><span class="p">},</span>
 <span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;small-corpus&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chroma:/path/to/small-store&quot;</span>
+<span class="w">                    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"small-corpus"</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chroma:/path/to/small-store"</span>
 <span class="w">                </span><span class="p">}</span>
 <span class="w">            </span><span class="p">]</span>
 <span class="w">        </span><span class="p">}</span>
@@ -557,10 +561,10 @@ provider model naming conventions.</p>
 <h2>Step 4: Start the RAG server<a class="headerlink" href="#step-4-start-the-rag-server" title="Link to this heading">¶</a></h2>
 <p>For local single-user use this step is optional: the client commands in
 Step 5 start a server on the local machine automatically when none is
-already running.  Run <code class="docutils literal notranslate"><span class="pre">klea-rag-serve</span> <span class="pre">serve</span></code> instead when you want a
+already running.  Run <code class="docutils literal notranslate"><span class="pre">klea-rag-serve</span></code> instead when you want a
 persistent backend, for example to share one server between several
 clients or to run it in a separate terminal:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">KLEA_RAG_ENV_FILE</span><span class="o">=</span>my-rag.env<span class="w"> </span>klea-rag-serve<span class="w"> </span>serve
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">KLEA_RAG_ENV_FILE</span><span class="o">=</span>my-rag.env<span class="w"> </span>klea-rag-serve<span class="w"> </span>--profile<span class="w"> </span>my-config
 </pre></div>
 </div>
 <p>The server loads the configuration, initialises the embedding model,
@@ -578,7 +582,7 @@ the session and stop it when they exit; if a server is already running
 (for example from Step 4) they reuse it.  Pointing <code class="docutils literal notranslate"><span class="pre">--server</span></code> at a
 remote host connects without starting anything.</p>
 <p>Single-query mode is the quickest way to test:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-rag<span class="w"> </span>cli<span class="w"> </span>--single-query<span class="w"> </span><span class="s2">&quot;What does my collection of documents cover?&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-rag<span class="w"> </span>cli<span class="w"> </span>--single-query<span class="w"> </span><span class="s2">"What does my collection of documents cover?"</span>
 </pre></div>
 </div>
 <p>For an interactive session:</p>
@@ -667,8 +671,9 @@ for details.</p>
 Run <code class="docutils literal notranslate"><span class="pre">ollama</span> <span class="pre">list</span></code> to see what is available.</p>
 </dd>
 <dt><strong>Server fails to start</strong></dt><dd><p>Check that <code class="docutils literal notranslate"><span class="pre">KLEA_RAG_ENV_FILE</span></code> points to a valid env file and that
-the JSON config file path inside it is correct.  Look for JSON syntax
-errors (trailing commas, missing quotes).</p>
+the <code class="docutils literal notranslate"><span class="pre">--profile</span></code> name resolves to a config file in the current
+directory or the config directory.  Look for JSON syntax errors
+(trailing commas, missing quotes).</p>
 </dd>
 <dt><strong>Queries return empty or irrelevant results</strong></dt><dd><p>Increase <code class="docutils literal notranslate"><span class="pre">default_k</span></code> in the JSON config.  Verify the vector store
 path and collection name match.  Check that your source files are in

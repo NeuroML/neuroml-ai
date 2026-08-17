@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.api.sse</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Shared SSE streaming client for Klea frontends.</span>
 
 <span class="sd">Provides both an async generator (for NiceGUI and TUI) and a synchronous</span>
@@ -295,7 +295,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -314,43 +314,43 @@
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncGenerator</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;POST to ``/query/stream`` and yield parsed SSE event dicts.</span>
+<span class="w">    </span><span class="sd">"""POST to ``/query/stream`` and yield parsed SSE event dicts.</span>
 
-<span class="sd">    Each yielded dict has at least a ``&quot;type&quot;`` key.  Known types::</span>
+<span class="sd">    Each yielded dict has at least a ``"type"`` key.  Known types::</span>
 
-<span class="sd">        progress    {&quot;type&quot;: &quot;progress&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}</span>
-<span class="sd">        info        {&quot;type&quot;: &quot;info&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}</span>
-<span class="sd">        debug       {&quot;type&quot;: &quot;debug&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}</span>
-<span class="sd">        token       {&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;&lt;chunk&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}</span>
-<span class="sd">        usage       {&quot;type&quot;: &quot;usage&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}</span>
-<span class="sd">        complete    {&quot;type&quot;: &quot;complete&quot;, &quot;message_for_user&quot;: &quot;&lt;text&gt;&quot;}</span>
-<span class="sd">        error       {&quot;type&quot;: &quot;error&quot;, &quot;message&quot;: &quot;&lt;text&gt;&quot;, &quot;error_type&quot;: &quot;&lt;class&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}</span>
+<span class="sd">        progress    {"type": "progress", "node": "&lt;label&gt;"}</span>
+<span class="sd">        info        {"type": "info", "node": "&lt;label&gt;", "data": {...}}</span>
+<span class="sd">        debug       {"type": "debug", "node": "&lt;label&gt;", "data": {...}}</span>
+<span class="sd">        token       {"type": "token", "content": "&lt;chunk&gt;", "node": "&lt;label&gt;"}</span>
+<span class="sd">        usage       {"type": "usage", "node": "&lt;label&gt;", "data": {...}}</span>
+<span class="sd">        complete    {"type": "complete", "message_for_user": "&lt;text&gt;"}</span>
+<span class="sd">        error       {"type": "error", "message": "&lt;text&gt;", "error_type": "&lt;class&gt;", "node": "&lt;label&gt;"}</span>
 
 <span class="sd">    This async generator is intended for NiceGUI and TUI frontends.</span>
 
-<span class="sd">    :param query: User&#39;s query string.</span>
+<span class="sd">    :param query: User's query string.</span>
 <span class="sd">    :param chat_id: Chat conversation identifier.</span>
 <span class="sd">    :param server_url: Base URL of the backend API server.</span>
 <span class="sd">    :param user_id: Opaque persistent user identifier.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/query/stream&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/query/stream"</span>
     <span class="k">async</span> <span class="k">with</span> <span class="p">(</span>
         <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">,</span>
         <span class="n">client</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
-            <span class="s2">&quot;POST&quot;</span><span class="p">,</span>
+            <span class="s2">"POST"</span><span class="p">,</span>
             <span class="n">url</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">},</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">"chat_id"</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">"user_id"</span><span class="p">:</span> <span class="n">user_id</span><span class="p">},</span>
         <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
         <span class="k">async</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">aiter_lines</span><span class="p">():</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;data: &quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"data: "</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping non-data line: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">80</span><span class="p">])</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Skipping non-data line: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">80</span><span class="p">])</span>
                 <span class="k">continue</span>
-            <span class="c1"># Strip the SSE &quot;data: &quot; prefix (6 chars) to get raw JSON.</span>
+            <span class="c1"># Strip the SSE "data: " prefix (6 chars) to get raw JSON.</span>
             <span class="k">yield</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">6</span><span class="p">:])</span></div>
 
 
@@ -365,7 +365,7 @@
     <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch the resolved model config per role for a chat.</span>
+<span class="w">    </span><span class="sd">"""Fetch the resolved model config per role for a chat.</span>
 
 <span class="sd">    Calls ``GET /chat/{user_id}/{chat_id}/models/active`` and returns the</span>
 <span class="sd">    merged default + override config dict.</span>
@@ -373,25 +373,25 @@
 <span class="sd">    :param server_url: Base URL of the backend API server.</span>
 <span class="sd">    :param user_id: Opaque persistent user identifier.</span>
 <span class="sd">    :param chat_id: Chat conversation identifier.</span>
-<span class="sd">    :returns: ``{&quot;chat&quot;: {&quot;model&quot;: &quot;...&quot;, &quot;provider&quot;: &quot;...&quot;}, &quot;guard&quot;: ..., &quot;embedding&quot;: ...}``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/active&quot;</span>
+<span class="sd">    :returns: ``{"chat": {"model": "...", "provider": "..."}, "guard": ..., "embedding": ...}``</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/active"</span>
     <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;Failed to fetch active models: HTTP </span><span class="si">%s</span><span class="s2"> from </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">"Failed to fetch active models: HTTP </span><span class="si">%s</span><span class="s2"> from </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                     <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
                     <span class="n">url</span><span class="p">,</span>
                 <span class="p">)</span>
                 <span class="k">return</span> <span class="p">{}</span>
             <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Active models for </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Active models for </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">&quot;Failed to fetch active models from </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">"Failed to fetch active models from </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">url</span><span class="p">,</span>
                 <span class="n">e</span><span class="p">,</span>
             <span class="p">)</span>
@@ -406,31 +406,31 @@
     <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous counterpart of :func:`fetch_active_models`.</span>
+<span class="w">    </span><span class="sd">"""Synchronous counterpart of :func:`fetch_active_models`.</span>
 
 <span class="sd">    Intended for frontends that cannot use asyncio.</span>
 
 <span class="sd">    :param server_url: Base URL of the backend API server.</span>
 <span class="sd">    :param user_id: Opaque persistent user identifier.</span>
 <span class="sd">    :param chat_id: Chat conversation identifier.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/active&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/active"</span>
     <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;Failed to fetch active models: HTTP </span><span class="si">%s</span><span class="s2"> from </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">"Failed to fetch active models: HTTP </span><span class="si">%s</span><span class="s2"> from </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                     <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
                     <span class="n">url</span><span class="p">,</span>
                 <span class="p">)</span>
                 <span class="k">return</span> <span class="p">{}</span>
             <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Active models for </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Active models for </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">&quot;Failed to fetch active models from </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">"Failed to fetch active models from </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">url</span><span class="p">,</span>
                 <span class="n">e</span><span class="p">,</span>
             <span class="p">)</span>
@@ -441,7 +441,7 @@
 <div class="viewcode-block" id="format_model_info">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.sse.format_model_info">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">format_model_info</span><span class="p">(</span><span class="n">info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a compact one-line model summary from active models config.</span>
+<span class="w">    </span><span class="sd">"""Build a compact one-line model summary from active models config.</span>
 
 <span class="sd">    Strips provider prefixes and joins roles, e.g.::</span>
 
@@ -450,18 +450,18 @@
 <span class="sd">    :param info: The dict returned by ``fetch_active_models`` /</span>
 <span class="sd">        ``fetch_active_models_sync``.</span>
 <span class="sd">    :returns: Empty string if no models are configured.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">cfg</span> <span class="ow">in</span> <span class="n">info</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">raw</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">raw</span><span class="p">:</span>
             <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
             <span class="n">name_short</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span> <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span> <span class="k">else</span> <span class="n">raw</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">name_short</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
-        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">role</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">name_short</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Formatted model info: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="n">name_short</span> <span class="o">=</span> <span class="s2">"?"</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">role</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">name_short</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="s2">" | "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Formatted model info: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span></div>
 
 
@@ -472,34 +472,34 @@
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronous counterpart of :func:`stream_events`.</span>
+<span class="w">    </span><span class="sd">"""Synchronous counterpart of :func:`stream_events`.</span>
 
 <span class="sd">    Intended for frontends that cannot use asyncio.  Async frontends</span>
 <span class="sd">    (NiceGUI, TUI) should use :func:`stream_events` instead.</span>
 
-<span class="sd">    :param query: User&#39;s query string.</span>
+<span class="sd">    :param query: User's query string.</span>
 <span class="sd">    :param chat_id: Chat conversation identifier.</span>
 <span class="sd">    :param server_url: Base URL of the backend API server.</span>
 <span class="sd">    :param user_id: Opaque persistent user identifier.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/query/stream&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/query/stream"</span>
     <span class="k">with</span> <span class="p">(</span>
         <span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">,</span>
         <span class="n">client</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
-            <span class="s2">&quot;POST&quot;</span><span class="p">,</span>
+            <span class="s2">"POST"</span><span class="p">,</span>
             <span class="n">url</span><span class="p">,</span>
-            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">&quot;chat_id&quot;</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">},</span>
+            <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">"chat_id"</span><span class="p">:</span> <span class="n">chat_id</span><span class="p">,</span> <span class="s2">"user_id"</span><span class="p">:</span> <span class="n">user_id</span><span class="p">},</span>
         <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">iter_lines</span><span class="p">():</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;data: &quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"data: "</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping non-data line: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">80</span><span class="p">])</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Skipping non-data line: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">line</span><span class="p">[:</span><span class="mi">80</span><span class="p">])</span>
                 <span class="k">continue</span>
-            <span class="c1"># Strip the SSE &quot;data: &quot; prefix (6 chars) to get raw JSON.</span>
+            <span class="c1"># Strip the SSE "data: " prefix (6 chars) to get raw JSON.</span>
             <span class="k">yield</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">6</span><span class="p">:])</span></div>
 
 </pre></div>

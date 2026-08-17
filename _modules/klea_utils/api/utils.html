@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.api.utils</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Utility functions for the Klea API layer.</span>
 
 <span class="sd">File: klea_utils/api/utils.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 
@@ -309,11 +309,11 @@
 <div class="viewcode-block" id="validate_url">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.utils.validate_url">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">validate_url</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return *value* if it is a valid HTTP(S) URL, else raise ``ValueError``.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return *value* if it is a valid HTTP(S) URL, else raise ``ValueError``."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">AnyUrl</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">PydanticValidationError</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&#39; is not a valid HTTP(S) URL&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">' is not a valid HTTP(S) URL"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">value</span></div>
 
 
@@ -321,7 +321,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_make_retryer_httpx</span><span class="p">(</span>
     <span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncRetrying</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an ``AsyncRetrying`` that retries transient httpx errors.</span>
+<span class="w">    </span><span class="sd">"""Create an ``AsyncRetrying`` that retries transient httpx errors.</span>
 
 <span class="sd">    Retries transient httpx failures: connection errors, read errors,</span>
 <span class="sd">    timeouts, and HTTP 5xx/429 responses.  Other 4xx client errors are not</span>
@@ -334,7 +334,7 @@
 <span class="sd">        to initialize (MCP servers, embedding model downloads) is not given</span>
 <span class="sd">        up on prematurely.</span>
 <span class="sd">    :returns: A configured :class:`tenacity.AsyncRetrying` instance</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Import lazily so importing this module never requires httpx.</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
@@ -362,7 +362,7 @@
 
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_ready</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;GET the health endpoint and return its JSON, raising on non-2xx.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""GET the health endpoint and return its JSON, raising on non-2xx."""</span>
     <span class="c1"># Deferred so importing this module never requires httpx.</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
@@ -377,14 +377,14 @@
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">check_api_is_ready</span><span class="p">(</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">attempts</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Exponentially back off checking that the API is ready.</span>
+<span class="w">    </span><span class="sd">"""Exponentially back off checking that the API is ready.</span>
 
 <span class="sd">    :param url: Health check endpoint URL</span>
 <span class="sd">    :param attempts: If set, maximum number of probe attempts (overrides</span>
 <span class="sd">        *timeout*)</span>
 <span class="sd">    :param timeout: Total wall-clock seconds to keep probing when</span>
 <span class="sd">        *attempts* is unset</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">retryer</span> <span class="o">=</span> <span class="n">_make_retryer_httpx</span><span class="p">(</span><span class="n">attempts</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
     <span class="k">return</span> <span class="k">await</span> <span class="n">retryer</span><span class="p">(</span><span class="n">_get_ready</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span></div>
 

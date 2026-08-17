@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.graph.reducers</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Reducers shared by LangGraph orchestrators.</span>
 
 <span class="sd">File: klea_utils/graph/reducers.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenUsage</span>
 
@@ -301,7 +301,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">add_token_usage</span><span class="p">(</span>
     <span class="n">left</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">right</span><span class="p">:</span> <span class="n">TokenUsage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TokenUsage</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add token usage updates from sequential or concurrent graph nodes.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Add token usage updates from sequential or concurrent graph nodes."""</span>
     <span class="n">left</span> <span class="o">=</span> <span class="n">TokenUsage</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">left</span><span class="p">)</span>
     <span class="n">right</span> <span class="o">=</span> <span class="n">TokenUsage</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">TokenUsage</span><span class="p">(</span>

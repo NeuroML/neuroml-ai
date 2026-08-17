@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.graph.base</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Base class for LangGraph-based orchestrators</span>
 
 <span class="sd">File: klea_utils/graph/base.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">contextvars</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -316,7 +316,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_dir</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_config_dir</span><span class="p">,</span> <span class="n">init_dir</span><span class="p">,</span> <span class="n">resolve_app_config_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">RetrieverConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.bm25</span><span class="w"> </span><span class="kn">import</span> <span class="n">BM25RetrieverManager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.vs</span><span class="w"> </span><span class="kn">import</span> <span class="n">VSRetriever</span>
@@ -324,23 +324,23 @@
 
 <span class="c1"># Per-request context variable carrying per-session model overrides (api_key,</span>
 <span class="c1"># model, provider, etc.).  Set by the API layer before graph.ainvoke() and</span>
-<span class="c1"># read by _invoke_llm() so that nodes don&#39;t need to thread overrides through</span>
+<span class="c1"># read by _invoke_llm() so that nodes don't need to thread overrides through</span>
 <span class="c1"># their signatures.  Falls back to an empty dict if not set.</span>
 <span class="n">model_overrides_ctx</span><span class="p">:</span> <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">(</span>
-    <span class="s2">&quot;model_overrides&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">{}</span>
+    <span class="s2">"model_overrides"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">{}</span>
 <span class="p">)</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">_CustomChannelEnabler</span><span class="p">(</span><span class="n">StreamTransformer</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Enables the ``custom`` channel in LangGraph v3 event streams.</span>
+<span class="w">    </span><span class="sd">"""Enables the ``custom`` channel in LangGraph v3 event streams.</span>
 
 <span class="sd">    Non-LLM nodes use ``get_stream_writer()`` to emit progress events on the</span>
 <span class="sd">    custom channel.  LangGraph requires a ``StreamTransformer`` declaring</span>
-<span class="sd">    ``required_stream_modes = (&quot;custom&quot;,)`` for that channel to be enabled.</span>
+<span class="sd">    ``required_stream_modes = ("custom",)`` for that channel to be enabled.</span>
 <span class="sd">    This no-op transformer satisfies that requirement.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">required_stream_modes</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;custom&quot;</span><span class="p">,)</span>
+    <span class="n">required_stream_modes</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"custom"</span><span class="p">,)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="p">()):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">scope</span><span class="p">)</span>
@@ -355,7 +355,7 @@
 <div class="viewcode-block" id="BaseLangGraph">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BaseLangGraph</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for LangGraph-based orchestrators.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for LangGraph-based orchestrators.</span>
 
 <span class="sd">    Provides common infrastructure for:</span>
 <span class="sd">    - Configuration loading from env files</span>
@@ -369,7 +369,7 @@
 <span class="sd">    - :meth:`_setup_models`: Create LLM model instances</span>
 <span class="sd">    - :meth:`_create_graph`: Build and compile the LangGraph</span>
 <span class="sd">    - Set ``env_class`` to the appropriate Pydantic settings class</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="c1">#: Pydantic BaseSettings class for env loading.</span>
     <span class="c1">#: Subclasses must set this to their AppEnv class.</span>
@@ -380,34 +380,34 @@
     <span class="n">config_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span>
 
     <span class="c1">#: Name of the environment variable that controls the env file path.</span>
-    <span class="n">env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ENV_FILE&quot;</span>
+    <span class="n">env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"ENV_FILE"</span>
 
     <span class="c1">#: Default config file name if the environment variable is not set.</span>
-    <span class="n">env_file_default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;config.env&quot;</span>
+    <span class="n">env_file_default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"config.env"</span>
 
     <span class="c1">#: Logger name for this orchestrator, also used as the app name</span>
     <span class="c1">#: for ``platformdirs`` data/cache directories.</span>
-    <span class="n">graph_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;BaseLangGraph&quot;</span>
+    <span class="n">graph_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"BaseLangGraph"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">logging_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
-        <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;inmemory&quot;</span><span class="p">,</span>
+        <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"inmemory"</span><span class="p">,</span>
         <span class="n">log_file</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the base orchestrator.</span>
+<span class="w">        </span><span class="sd">"""Initialise the base orchestrator.</span>
 
 <span class="sd">        :param logging_level: Logging level for the orchestrator</span>
-<span class="sd">        :param checkpoint: Checkpointer mode  ---  ``&quot;inmemory&quot;`` (volatile, default),</span>
-<span class="sd">            ``&quot;sqlite&quot;`` (persistent via ``self.paths.user_data_dir``),</span>
-<span class="sd">            or ``&quot;none&quot;`` (no checkpointing).  When set to ``&quot;none&quot;``, nodes</span>
+<span class="sd">        :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),</span>
+<span class="sd">            ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),</span>
+<span class="sd">            or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes</span>
 <span class="sd">            that need conversation history receive ``memory=False``.</span>
 <span class="sd">        :param log_file: When ``True`` (default), configure the process-wide</span>
 <span class="sd">            root logger with a rotating file handler writing to</span>
 <span class="sd">            ``{self.paths.user_data_dir}/{self.graph_name}.log``, alongside</span>
 <span class="sd">            the checkpoints and session database.  Set to ``False`` in</span>
 <span class="sd">            short-lived processes (e.g. tests) to avoid writing log files.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_file_default</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="p">:</span> <span class="n">BaseModel</span>
 
@@ -419,7 +419,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ToolInfo</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">domain_mcp_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MCPConfig</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">=</span> <span class="n">checkpoint</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">!=</span> <span class="s2">&quot;none&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">!=</span> <span class="s2">"none"</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">PlatformDirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
@@ -454,61 +454,75 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load env file, and configuration</span>
+<span class="w">        </span><span class="sd">"""Load env file, and configuration</span>
 
 <span class="sd">        Uses ``self.env_class`` and ``self.env_file`` to locate and parse</span>
-<span class="sd">        the configuration file. Raises FileNotFoundError if the file does not exist.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        the env file, then resolves the application config file (from</span>
+<span class="sd">        ``self.app_env.app_config_file``) via</span>
+<span class="sd">        :func:`klea_utils.paths.resolve_app_config_path` -- the working</span>
+<span class="sd">        directory first, then the per-app config directory.  Raises</span>
+<span class="sd">        ``FileNotFoundError`` if either file does not exist.</span>
+<span class="sd">        """</span>
         <span class="n">env_file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">env_file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;&quot;&quot;Could not find env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">. You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file.&quot;&quot;&quot;</span>
+                <span class="sa">f</span><span class="s2">"""Could not find env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">. You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file."""</span>
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="p">(</span><span class="n">_env_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="p">)</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;env: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"env: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="s2">&quot;app_config_file&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">:</span>
-            <span class="n">config_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="o">.</span><span class="n">app_config_file</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">config_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find config file: </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                    <span class="n">config_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">config_dict</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">app_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_class</span><span class="p">(</span><span class="o">**</span><span class="n">config_dict</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"app_config_file"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No config file provided. Please provide one in the env file (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">).&quot;</span>
-                <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No config file provided. Please provide one in the env file (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">)."</span>
+                <span class="o">+</span> <span class="sa">f</span><span class="s2">"You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file."</span>
             <span class="p">)</span>
 
+        <span class="c1"># An explicit empty value means "not set" -- fall back to the field</span>
+        <span class="c1"># default so a line like ``KLEA_AGENT_APP_CONFIG_FILE=`` does not</span>
+        <span class="c1"># resolve to the current directory itself.</span>
+        <span class="n">app_config_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="o">.</span><span class="n">app_config_file</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">app_config_file</span><span class="p">:</span>
+            <span class="n">app_config_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">[</span><span class="s2">"app_config_file"</span><span class="p">]</span><span class="o">.</span><span class="n">default</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"empty app_config_file -- using default </span><span class="si">{</span><span class="n">app_config_file</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+        <span class="n">config_file</span> <span class="o">=</span> <span class="n">resolve_app_config_path</span><span class="p">(</span>
+            <span class="n">app_config_file</span><span class="p">,</span> <span class="n">get_config_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"config file: </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">config_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">config_dict</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">app_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_class</span><span class="p">(</span><span class="o">**</span><span class="n">config_dict</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_mcp_client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create MCP client from the JSON config file.</span>
+<span class="w">        </span><span class="sd">"""Create MCP client from the JSON config file.</span>
 
 <span class="sd">        Reads the MCP server configurations from ``self.app_env.mcp_config_file``</span>
 <span class="sd">        and creates a ``fastmcp.Client`` instance.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_config</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_config</span><span class="o">.</span><span class="n">mcpServers</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_config</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_config</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_config</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No MCP server configured.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No MCP server configured."</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_mcp_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get MCP tools.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Get MCP tools."""</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span><span class="p">:</span>
             <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_client</span><span class="o">.</span><span class="n">list_tools</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_build_tools_info</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_build_tools_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build per-domain tool metadata from fetched MCP tools.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Build per-domain tool metadata from fetched MCP tools."""</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain_mcp_configs</span><span class="p">:</span>
             <span class="k">return</span>
@@ -524,14 +538,14 @@
         <span class="k">for</span> <span class="n">domain</span><span class="p">,</span> <span class="n">server_names</span> <span class="ow">in</span> <span class="n">domain_servers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">domain_tools_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ToolInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="p">:</span>
-                <span class="k">if</span> <span class="s2">&quot;dummy&quot;</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">"dummy"</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="c1"># tools will be prefixed with server names</span>
                 <span class="k">if</span> <span class="n">num_servers</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span>
-                    <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">server_names</span>
+                    <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s2">"_"</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">server_names</span>
                 <span class="p">):</span>
                     <span class="k">continue</span>
-                <span class="c1"># otherwise, there&#39;s only one server</span>
+                <span class="c1"># otherwise, there's only one server</span>
                 <span class="c1"># Klea expects MCP tools to follow the docstring-first</span>
                 <span class="c1"># convention (summary + Use when / Do not use for bullets +</span>
                 <span class="c1"># one example; params via Args:), see build_tool_description</span>
@@ -542,11 +556,11 @@
                     <span class="n">meta</span><span class="o">=</span><span class="n">clean_tool_meta</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">meta</span><span class="p">),</span>
                 <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">domain_tools_info</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tools_info</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_get_vector_stores</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get vector stores&quot;&quot;&quot;</span>
-        <span class="n">emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;embedding&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Get vector stores"""</span>
+        <span class="n">emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"embedding"</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span> <span class="ow">and</span> <span class="n">emb</span> <span class="ow">and</span> <span class="n">emb</span><span class="o">.</span><span class="n">model_name</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stores</span> <span class="o">=</span> <span class="n">VSRetriever</span><span class="p">(</span>
                 <span class="n">config</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span><span class="p">,</span>
@@ -557,21 +571,21 @@
                 <span class="n">k_inc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Vector stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Vector stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
             <span class="c1"># dynamically generate schema for domains</span>
             <span class="n">all_domains</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">all_domains</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;undefined&quot;</span><span class="p">)</span>
+            <span class="n">all_domains</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"undefined"</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span> <span class="o">=</span> <span class="n">create_model</span><span class="p">(</span>
-                <span class="s2">&quot;QueryDomainSchema&quot;</span><span class="p">,</span>
+                <span class="s2">"QueryDomainSchema"</span><span class="p">,</span>
                 <span class="n">query_domains</span><span class="o">=</span><span class="p">(</span>
                     <span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">all_domains</span><span class="p">)]],</span>
-                    <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;undefined&quot;</span><span class="p">],</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                    <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">"undefined"</span><span class="p">],</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
                 <span class="p">),</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No vector stores configured.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No vector stores configured."</span><span class="p">)</span>
 
         <span class="c1"># BM25 keyword stores need no embedding model, so build them whenever</span>
         <span class="c1"># any domain configures bm25_stores.</span>
@@ -585,22 +599,22 @@
                 <span class="n">k_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_max</span><span class="p">,</span>
                 <span class="n">k_inc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BM25 stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bm25_stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bm25_stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_export_graph_png</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export the LangGraph as a Mermaid PNG diagram.</span>
+<span class="w">        </span><span class="sd">"""Export the LangGraph as a Mermaid PNG diagram.</span>
 
 <span class="sd">        Skipped when running inside Docker (``RUNNING_IN_DOCKER`` env var set).</span>
 
 <span class="sd">        :param filename: Output file path for the PNG</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;RUNNING_IN_DOCKER&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"RUNNING_IN_DOCKER"</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
             <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_graph</span><span class="p">()</span><span class="o">.</span><span class="n">draw_mermaid_png</span><span class="p">(</span><span class="n">output_file_path</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Something went wrong generating lang graph png&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Something went wrong generating lang graph png"</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -609,31 +623,31 @@
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_configure_resources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure vector stores and MCP servers</span>
+<span class="w">        </span><span class="sd">"""Configure vector stores and MCP servers</span>
 
 <span class="sd">        Subclasses should implement this to populate ``self.retriever_config``,</span>
 <span class="sd">        ``self.mcp_config``, and ``self.domain_mcp_configs``, which will be used</span>
 <span class="sd">        to create the vector store class, mcp client, and per-domain tool descriptions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup_models</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up LLM model instances.</span>
+<span class="w">        </span><span class="sd">"""Set up LLM model instances.</span>
 
 <span class="sd">        Subclasses should populate ``self.llm_models`` with ``LLMModel``</span>
-<span class="sd">        entries keyed by role (e.g. ``&quot;chat&quot;``, ``&quot;plan&quot;``, ``&quot;guard&quot;``).</span>
+<span class="sd">        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).</span>
 <span class="sd">        These are graph-wide defaults; per-request overrides are applied</span>
 <span class="sd">        at runtime via ``model_overrides_ctx``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_provider_defaults_for_role</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return per-provider default params for *role* from the config.</span>
+<span class="w">        </span><span class="sd">"""Return per-provider default params for *role* from the config.</span>
 
 <span class="sd">        Reads the optional ``providers`` config section, e.g.::</span>
 
-<span class="sd">            {&quot;huggingface&quot;: {&quot;chat&quot;: {&quot;max_output_tokens&quot;: 2048}}}</span>
+<span class="sd">            {"huggingface": {"chat": {"max_output_tokens": 2048}}}</span>
 
 <span class="sd">        and returns just the entries relevant to *role*, so each</span>
 <span class="sd">        ``LLMModel`` carries the defaults for its own role.  Shared by all</span>
@@ -641,11 +655,11 @@
 
 <span class="sd">        :param role: Model role (``chat``, ``plan``, ``guard``, ...).</span>
 <span class="sd">        :returns: ``{provider: {param: value}}`` for *role*.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="c1"># ``app_config`` is the concrete ``config_class`` instance; access</span>
         <span class="c1"># via getattr so this works for any subclass without extra typing.</span>
-        <span class="n">providers</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="p">,</span> <span class="s2">&quot;providers&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">providers</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_config</span><span class="p">,</span> <span class="s2">"providers"</span><span class="p">,</span> <span class="p">{})</span>
         <span class="k">for</span> <span class="n">provider</span><span class="p">,</span> <span class="n">role_configs</span> <span class="ow">in</span> <span class="n">providers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">role</span> <span class="ow">in</span> <span class="n">role_configs</span><span class="p">:</span>
                 <span class="n">result</span><span class="p">[</span><span class="n">provider</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">role_configs</span><span class="p">[</span><span class="n">role</span><span class="p">])</span>
@@ -653,11 +667,11 @@
 
     <span class="nd">@abstractmethod</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_create_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build and compile the LangGraph, storing it in ``self.graph``.</span>
+<span class="w">        </span><span class="sd">"""Build and compile the LangGraph, storing it in ``self.graph``.</span>
 
 <span class="sd">        This is where subclasses define their nodes, edges, and conditional</span>
 <span class="sd">        routing logic.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="o">...</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -665,37 +679,37 @@
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hook called before the standard setup sequence.</span>
+<span class="w">        </span><span class="sd">"""Hook called before the standard setup sequence.</span>
 
 <span class="sd">        Override to perform subclass-specific initialisation before</span>
 <span class="sd">        config loading and model setup.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">pass</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_setup_checkpointer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up the checkpointer.</span>
+<span class="w">        </span><span class="sd">"""Set up the checkpointer.</span>
 
 <span class="sd">        ``setup()`` calls this hook before ``_load_env()``.</span>
-<span class="sd">        The checkpointer is ``None`` when ``checkpoint=&quot;none&quot;``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">&quot;sqlite&quot;</span><span class="p">:</span>
+<span class="sd">        The checkpointer is ``None`` when ``checkpoint="none"``.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">"sqlite"</span><span class="p">:</span>
             <span class="kn">import</span><span class="w"> </span><span class="nn">aiosqlite</span>
 
-            <span class="n">db_path</span> <span class="o">=</span> <span class="n">init_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;checkpoints.db&quot;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Opening sqlite checkpointer at </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">db_path</span><span class="p">)</span>
+            <span class="n">db_path</span> <span class="o">=</span> <span class="n">init_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"checkpoints.db"</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Opening sqlite checkpointer at </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">db_path</span><span class="p">)</span>
             <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">aiosqlite</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">AsyncSqliteSaver</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sqlite checkpointer ready&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">&quot;inmemory&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Sqlite checkpointer ready"</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">"inmemory"</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;In-memory checkpointer ready&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"In-memory checkpointer ready"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_post_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hook called after the standard setup sequence.</span>
+<span class="w">        </span><span class="sd">"""Hook called after the standard setup sequence.</span>
 
 <span class="sd">        Override to perform subclass-specific finalisation after</span>
 <span class="sd">        the LangGraph has been compiled.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">pass</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>
@@ -703,18 +717,18 @@
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_pre_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Hook called after MCP client setup but before graph compilation.</span>
+<span class="w">        </span><span class="sd">"""Hook called after MCP client setup but before graph compilation.</span>
 
 <span class="sd">        Override to perform subclass-specific initialisation that depends</span>
 <span class="sd">        on config and MCP client but must happen         before the LangGraph is built.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">pass</span>
 
 <div class="viewcode-block" id="BaseLangGraph.setup">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.setup">[docs]</a>
     <span class="nd">@final</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up the orchestrator.</span>
+<span class="w">        </span><span class="sd">"""Set up the orchestrator.</span>
 
 <span class="sd">        Calls hooks and template methods in this order:</span>
 <span class="sd">        1. ``_pre_setup()``</span>
@@ -725,7 +739,7 @@
 <span class="sd">        6. ``_pre_graph()``</span>
 <span class="sd">        7. ``_create_graph()``</span>
 <span class="sd">        8. ``_post_setup()``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_pre_setup</span><span class="p">()</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_checkpointer</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_load_env</span><span class="p">()</span>
@@ -746,18 +760,18 @@
 <div class="viewcode-block" id="BaseLangGraph.run_graph_invoke_state">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_invoke_state">[docs]</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_graph_invoke_state</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default_thread&quot;</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default_thread"</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the graph, accepting and returning full state dicts.</span>
+<span class="w">        </span><span class="sd">"""Run the graph, accepting and returning full state dicts.</span>
 
 <span class="sd">        :param state: Initial graph state (must contain ``query`` key)</span>
 <span class="sd">        :param thread_id: Session/thread identifier for checkpointing</span>
 <span class="sd">        :returns: Final graph state</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+<span class="sd">        """</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="k">if</span> <span class="s2">&quot;query&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provided state should include the key &#39;query&#39;: </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"query"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Provided state should include the key 'query': </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="n">final_state</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
@@ -770,84 +784,84 @@
 <div class="viewcode-block" id="BaseLangGraph.run_graph_invoke">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_invoke">[docs]</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_graph_invoke</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default_thread&quot;</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default_thread"</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the graph with a simple string query.</span>
+<span class="w">        </span><span class="sd">"""Run the graph with a simple string query.</span>
 
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param thread_id: Session/thread identifier for checkpointing</span>
 <span class="sd">        :returns: The ``message_for_user`` field from the final state</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+<span class="sd">        """</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="n">final_state</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">({</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">final_state</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">final_state</span><span class="w"> </span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">message</span> <span class="o">:=</span> <span class="n">final_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">final_state</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">message</span> <span class="o">:=</span> <span class="n">final_state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message_for_user"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">message</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;I was unable to answer&quot;</span></div>
+            <span class="k">return</span> <span class="s2">"I was unable to answer"</span></div>
 
 
 <div class="viewcode-block" id="BaseLangGraph.run_graph_stream">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_stream">[docs]</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_graph_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default_thread&quot;</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the graph and yield intermediate ``message_for_user`` values.</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_graph_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default_thread"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run the graph and yield intermediate ``message_for_user`` values.</span>
 
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param thread_id: Session/thread identifier for checkpointing</span>
 <span class="sd">        :yields: ``message_for_user`` strings from each node</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+<span class="sd">        """</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">chunk</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">state</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">message</span> <span class="o">:=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;User message: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">state</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">message</span> <span class="o">:=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message_for_user"</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"User message: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="k">yield</span> <span class="n">message</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Working in node: </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Working in node: </span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="BaseLangGraph.graph_stream">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.graph_stream">[docs]</a>
-    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">graph_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default_thread&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the graph and return the raw astream result.</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">graph_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default_thread"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Run the graph and return the raw astream result.</span>
 
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param thread_id: Session/thread identifier for checkpointing</span>
 <span class="sd">        :returns: Raw async generator from ``graph.astream()``</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+<span class="sd">        """</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="n">res</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span></div>
 
 
 <div class="viewcode-block" id="BaseLangGraph.run_graph_astream_events">
 <a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events">[docs]</a>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_graph_astream_events</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default_thread&quot;</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default_thread"</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the graph and yield structured streaming events.</span>
+<span class="w">        </span><span class="sd">"""Run the graph and yield structured streaming events.</span>
 
 <span class="sd">        Yields dicts with:</span>
 
-<span class="sd">        ``{&quot;type&quot;: &quot;progress&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
+<span class="sd">        ``{"type": "progress", "node": "&lt;label&gt;"}``</span>
 <span class="sd">            When the graph enters a new node (via ``write_custom_stream``)</span>
-<span class="sd">        ``{&quot;type&quot;: &quot;info&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">        ``{"type": "info", "node": "&lt;label&gt;", "data": {...}}``</span>
 <span class="sd">            Structured summary data from a node after execution</span>
-<span class="sd">        ``{&quot;type&quot;: &quot;debug&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">        ``{"type": "debug", "node": "&lt;label&gt;", "data": {...}}``</span>
 <span class="sd">            Full data dump from a node after execution</span>
-<span class="sd">        ``{&quot;type&quot;: &quot;token&quot;, &quot;content&quot;: &quot;&lt;chunk&gt;&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;}``</span>
+<span class="sd">        ``{"type": "token", "content": "&lt;chunk&gt;", "node": "&lt;label&gt;"}``</span>
 <span class="sd">            LLM token chunk from the current node</span>
-<span class="sd">        ``{&quot;type&quot;: &quot;usage&quot;, &quot;node&quot;: &quot;&lt;label&gt;&quot;, &quot;data&quot;: {...}}``</span>
+<span class="sd">        ``{"type": "usage", "node": "&lt;label&gt;", "data": {...}}``</span>
 <span class="sd">            Per-node token usage (input / output / total tokens)</span>
-<span class="sd">        ``{&quot;type&quot;: &quot;complete&quot;, &quot;message_for_user&quot;: &quot;&lt;answer&gt;&quot;}``</span>
+<span class="sd">        ``{"type": "complete", "message_for_user": "&lt;answer&gt;"}``</span>
 <span class="sd">            Final answer from the completed graph</span>
 
-<span class="sd">        Uses LangGraph&#39;s ``astream_events`` v3 protocol.  Progress events</span>
+<span class="sd">        Uses LangGraph's ``astream_events`` v3 protocol.  Progress events</span>
 <span class="sd">        from all nodes (LLM and non-LLM) arrive via the ``custom`` channel.</span>
 <span class="sd">        LLM token output is read from the ``messages`` channel.</span>
 <span class="sd">        A ``StreamTransformer`` enables the custom channel so those events</span>
@@ -858,91 +872,91 @@
 <span class="sd">        :param query: User query string</span>
 <span class="sd">        :param thread_id: Session/thread identifier for checkpointing</span>
 <span class="sd">        :yields: Structured event dicts</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+<span class="sd">        """</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="s2">&quot;Graph not compiled. Call setup() first.&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="s2">"Graph not compiled. Call setup() first."</span>
 
         <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream_events</span><span class="p">(</span>
-            <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span>
             <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
-            <span class="n">version</span><span class="o">=</span><span class="s2">&quot;v3&quot;</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="s2">"v3"</span><span class="p">,</span>
             <span class="n">transformers</span><span class="o">=</span><span class="p">[</span><span class="n">_CustomChannelEnabler</span><span class="p">],</span>
         <span class="p">)</span>
 
-        <span class="n">current_node</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">current_node</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="n">node_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
         <span class="n">total_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
         <span class="n">last_values</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
-            <span class="n">method</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"method"</span><span class="p">]</span>
 
-            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"custom"</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"params"</span><span class="p">][</span><span class="s2">"data"</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"node"</span><span class="p">):</span>
                     <span class="k">continue</span>
 
-                <span class="n">event_type</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+                <span class="n">event_type</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"type"</span><span class="p">)</span>
 
-                <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="s2">&quot;progress&quot;</span><span class="p">:</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="s2">"progress"</span><span class="p">:</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">"node"</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">node</span> <span class="o">!=</span> <span class="n">current_node</span><span class="p">:</span>
                         <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
                         <span class="k">if</span> <span class="n">current_node</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                <span class="s2">&quot;Node [</span><span class="si">%s</span><span class="s2">] took </span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span>
+                                <span class="s2">"Node [</span><span class="si">%s</span><span class="s2">] took </span><span class="si">%.2f</span><span class="s2">s"</span><span class="p">,</span>
                                 <span class="n">current_node</span><span class="p">,</span>
                                 <span class="n">now</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span>
                             <span class="p">)</span>
                         <span class="n">node_start</span> <span class="o">=</span> <span class="n">now</span>
                         <span class="n">current_node</span> <span class="o">=</span> <span class="n">node</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Progress: </span><span class="si">{</span><span class="n">current_node</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                        <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">current_node</span><span class="p">}</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Progress: </span><span class="si">{</span><span class="n">current_node</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                        <span class="k">yield</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"progress"</span><span class="p">,</span> <span class="s2">"node"</span><span class="p">:</span> <span class="n">current_node</span><span class="p">}</span>
 
-                <span class="k">elif</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;debug&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;usage&quot;</span><span class="p">):</span>
-                    <span class="n">data_out</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-                    <span class="n">data_out</span><span class="p">[</span><span class="s2">&quot;timing_seconds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"info"</span><span class="p">,</span> <span class="s2">"debug"</span><span class="p">,</span> <span class="s2">"state"</span><span class="p">,</span> <span class="s2">"usage"</span><span class="p">):</span>
+                    <span class="n">data_out</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">data_out</span><span class="p">[</span><span class="s2">"timing_seconds"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
                     <span class="k">yield</span> <span class="p">{</span>
-                        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">event_type</span><span class="p">,</span>
-                        <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>
-                        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data_out</span><span class="p">,</span>
+                        <span class="s2">"type"</span><span class="p">:</span> <span class="n">event_type</span><span class="p">,</span>
+                        <span class="s2">"node"</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s2">"node"</span><span class="p">],</span>
+                        <span class="s2">"data"</span><span class="p">:</span> <span class="n">data_out</span><span class="p">,</span>
                     <span class="p">}</span>
 
-            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;messages&quot;</span><span class="p">:</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"messages"</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"params"</span><span class="p">][</span><span class="s2">"data"</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                         <span class="k">continue</span>
 
-                    <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;content-block-delta&quot;</span><span class="p">:</span>
-                        <span class="n">delta</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="p">{})</span>
-                        <span class="k">if</span> <span class="s2">&quot;text&quot;</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"event"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"content-block-delta"</span><span class="p">:</span>
+                        <span class="n">delta</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"delta"</span><span class="p">,</span> <span class="p">{})</span>
+                        <span class="k">if</span> <span class="s2">"text"</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">:</span>
                             <span class="k">yield</span> <span class="p">{</span>
-                                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;token&quot;</span><span class="p">,</span>
-                                <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">],</span>
-                                <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="n">current_node</span><span class="p">,</span>
+                                <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"token"</span><span class="p">,</span>
+                                <span class="s2">"content"</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">"text"</span><span class="p">],</span>
+                                <span class="s2">"node"</span><span class="p">:</span> <span class="n">current_node</span><span class="p">,</span>
                             <span class="p">}</span>
 
-            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;values&quot;</span><span class="p">:</span>
-                <span class="n">last_values</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"values"</span><span class="p">:</span>
+                <span class="n">last_values</span> <span class="o">=</span> <span class="n">event</span><span class="p">[</span><span class="s2">"params"</span><span class="p">][</span><span class="s2">"data"</span><span class="p">]</span>
 
         <span class="n">total_elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">total_start</span>
         <span class="k">if</span> <span class="n">current_node</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Node [</span><span class="si">%s</span><span class="s2">] took </span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span>
+                <span class="s2">"Node [</span><span class="si">%s</span><span class="s2">] took </span><span class="si">%.2f</span><span class="s2">s"</span><span class="p">,</span>
                 <span class="n">current_node</span><span class="p">,</span>
                 <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">node_start</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Graph completed in </span><span class="si">%.2f</span><span class="s2">s&quot;</span><span class="p">,</span> <span class="n">total_elapsed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Graph completed in </span><span class="si">%.2f</span><span class="s2">s"</span><span class="p">,</span> <span class="n">total_elapsed</span><span class="p">)</span>
 
-        <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="k">if</span> <span class="n">last_values</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">last_values</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                <span class="n">message</span> <span class="o">=</span> <span class="n">last_values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_for_user&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">last_values</span><span class="p">,</span> <span class="s2">&quot;message_for_user&quot;</span><span class="p">):</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">last_values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message_for_user"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">last_values</span><span class="p">,</span> <span class="s2">"message_for_user"</span><span class="p">):</span>
                 <span class="n">message</span> <span class="o">=</span> <span class="n">last_values</span><span class="o">.</span><span class="n">message_for_user</span>
-        <span class="k">yield</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;complete&quot;</span><span class="p">,</span> <span class="s2">&quot;message_for_user&quot;</span><span class="p">:</span> <span class="n">message</span><span class="p">}</span></div>
+        <span class="k">yield</span> <span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"complete"</span><span class="p">,</span> <span class="s2">"message_for_user"</span><span class="p">:</span> <span class="n">message</span><span class="p">}</span></div>
 </div>
 
 </pre></div>

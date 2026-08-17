@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.errors</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Custom errors.</span>
 
 <span class="sd">File: utils_pkg/klea_utils/errors.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
 
@@ -313,23 +313,23 @@
 <div class="viewcode-block" id="LLMInvocationErrorCategory">
 <a class="viewcode-back" href="../../api/utils/errors.html#klea_utils.errors.LLMInvocationErrorCategory">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LLMInvocationErrorCategory</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Classification of LLM invocation failures.</span>
+<span class="w">    </span><span class="sd">"""Classification of LLM invocation failures.</span>
 
 <span class="sd">    Providers report errors inconsistently, so the classification is a</span>
 <span class="sd">    best-effort heuristic driven by tolerant regex matching (see</span>
 <span class="sd">    ``klea_utils.llm.classify_llm_invocation_error``).  The category</span>
 <span class="sd">    drives retry behaviour in the LLM nodes: some categories are retried</span>
 <span class="sd">    with adjusted parameters, others surface immediately.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">CONTEXT_OVERFLOW</span> <span class="o">=</span> <span class="s2">&quot;context_overflow&quot;</span>
-    <span class="n">LENGTH_TRUNCATION</span> <span class="o">=</span> <span class="s2">&quot;length_truncation&quot;</span>
-    <span class="n">RATE_LIMITED</span> <span class="o">=</span> <span class="s2">&quot;rate_limited&quot;</span>
-    <span class="n">AUTH_FAILED</span> <span class="o">=</span> <span class="s2">&quot;auth_failed&quot;</span>
-    <span class="n">MODEL_NOT_FOUND</span> <span class="o">=</span> <span class="s2">&quot;model_not_found&quot;</span>
-    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">&quot;timeout&quot;</span>
-    <span class="n">STRUCTURED_OUTPUT_REJECTED</span> <span class="o">=</span> <span class="s2">&quot;structured_output_rejected&quot;</span>
-    <span class="n">UNKNOWN</span> <span class="o">=</span> <span class="s2">&quot;unknown&quot;</span></div>
+    <span class="n">CONTEXT_OVERFLOW</span> <span class="o">=</span> <span class="s2">"context_overflow"</span>
+    <span class="n">LENGTH_TRUNCATION</span> <span class="o">=</span> <span class="s2">"length_truncation"</span>
+    <span class="n">RATE_LIMITED</span> <span class="o">=</span> <span class="s2">"rate_limited"</span>
+    <span class="n">AUTH_FAILED</span> <span class="o">=</span> <span class="s2">"auth_failed"</span>
+    <span class="n">MODEL_NOT_FOUND</span> <span class="o">=</span> <span class="s2">"model_not_found"</span>
+    <span class="n">TIMEOUT</span> <span class="o">=</span> <span class="s2">"timeout"</span>
+    <span class="n">STRUCTURED_OUTPUT_REJECTED</span> <span class="o">=</span> <span class="s2">"structured_output_rejected"</span>
+    <span class="n">UNKNOWN</span> <span class="o">=</span> <span class="s2">"unknown"</span></div>
 
 </pre></div>
         </article>

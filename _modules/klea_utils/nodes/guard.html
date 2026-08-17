@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.nodes.guard</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Guard node for safety checking</span>
 
 <span class="sd">File: klea_utils/nodes/guard.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">override</span>
@@ -306,17 +306,17 @@
 <div class="viewcode-block" id="GuardNode">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.guard.GuardNode">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GuardNode</span><span class="p">(</span><span class="n">BaseLLMNode</span><span class="p">):</span>
-    <span class="n">model_type</span> <span class="o">=</span> <span class="s2">&quot;guard&quot;</span>
-    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">&quot;max_output_tokens&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">}</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Safety guard node that checks if user queries are safe to process.</span>
+    <span class="n">model_type</span> <span class="o">=</span> <span class="s2">"guard"</span>
+    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"temperature"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"max_output_tokens"</span><span class="p">:</span> <span class="mi">1024</span><span class="p">}</span>
+<span class="w">    </span><span class="sd">"""Safety guard node that checks if user queries are safe to process.</span>
 
 <span class="sd">    Evaluates whether a query contains potentially harmful content</span>
-<span class="sd">    and returns a routing decision (&quot;safe&quot; or &quot;unsafe&quot;).</span>
+<span class="sd">    and returns a routing decision ("safe" or "unsafe").</span>
 
 <span class="sd">    Note: to be used with llama-guard, which always returns safe/unsafe.</span>
 
 <span class="sd">    To skip, do not set a model.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -325,13 +325,13 @@
         <span class="n">llm_models</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
         <span class="n">memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the guard node.</span>
+<span class="w">        </span><span class="sd">"""Initialise the guard node.</span>
 
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
 <span class="sd">        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)</span>
 <span class="sd">        :param memory: Whether to include conversation history in the prompt</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
             <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
@@ -342,33 +342,33 @@
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_exec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Skip execution if no guard model is configured.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Skip execution if no guard model is configured."""</span>
         <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_llm_entry</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_prompt_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format prompt with the user&#39;s query.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;query&quot;</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">query</span><span class="p">}</span>  <span class="c1"># type: ignore</span>
+<span class="w">        </span><span class="sd">"""Format prompt with the user's query."""</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">query</span><span class="p">}</span>  <span class="c1"># type: ignore</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_system_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">""</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check result for safety and return routing decision.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">result</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">"""Check result for safety and return routing decision."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">result</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;unsafe&quot;</span> <span class="ow">in</span> <span class="n">content</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;guard_decision&quot;</span><span class="p">:</span> <span class="s2">&quot;unsafe&quot;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="s2">"unsafe"</span> <span class="ow">in</span> <span class="n">content</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"guard_decision"</span><span class="p">:</span> <span class="s2">"unsafe"</span><span class="p">}</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;guard_decision&quot;</span><span class="p">:</span> <span class="s2">&quot;safe&quot;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"guard_decision"</span><span class="p">:</span> <span class="s2">"safe"</span><span class="p">}</span>
 
     <span class="nd">@override</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_default_error_result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Unused: no schema in this node.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="s2">&quot;safe&quot;</span></div>
+<span class="w">        </span><span class="sd">"""Unused: no schema in this node."""</span>
+        <span class="k">return</span> <span class="s2">"safe"</span></div>
 
 </pre></div>
         </article>

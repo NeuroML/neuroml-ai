@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.biblio.extract</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Bibliographic metadata extraction cascade</span>
 
 <span class="sd">File: klea_utils/biblio/extract.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
@@ -309,17 +309,17 @@
 <div class="viewcode-block" id="Resolver">
 <a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.extract.Resolver">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Resolver</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Protocol for objects that can resolve a DOI to a record.</span>
+<span class="w">    </span><span class="sd">"""Protocol for objects that can resolve a DOI to a record.</span>
 
 <span class="sd">    :class:`~klea_utils.biblio.doi.DoiResolver` implements this; tests</span>
 <span class="sd">    and other callers may substitute any object with a compatible</span>
 <span class="sd">    ``resolve`` method.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
 <div class="viewcode-block" id="Resolver.resolve">
 <a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.extract.Resolver.resolve">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doi</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve *doi* to a record, or ``None`` on failure.&quot;&quot;&quot;</span></div>
+<span class="w">        </span><span class="sd">"""Resolve *doi* to a record, or ``None`` on failure."""</span></div>
 </div>
 
 
@@ -332,7 +332,7 @@
     <span class="n">pdf_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract bibliographic metadata for a converted document.</span>
+<span class="w">    </span><span class="sd">"""Extract bibliographic metadata for a converted document.</span>
 
 <span class="sd">    The full-cascade entry point, used when a Docling document is</span>
 <span class="sd">    available (fresh conversion).  Tiers are applied in **precedence</span>
@@ -348,7 +348,7 @@
 <span class="sd">    2. ``pdf-info`` -- the PDF Info dict (title, authors, keywords, doi,</span>
 <span class="sd">       url), read with pypdfium2.  Local and fast, but often empty: many</span>
 <span class="sd">       publishers ship no bibliographic fields in it.</span>
-<span class="sd">    3. ``docling`` -- the free structured signals from Docling&#39;s layout</span>
+<span class="sd">    3. ``docling`` -- the free structured signals from Docling's layout</span>
 <span class="sd">       model: the title item, the origin mimetype/URI, and the</span>
 <span class="sd">       hyperlinks on text items.</span>
 <span class="sd">    4. ``layout-regex`` -- regex over the focused first-page header</span>
@@ -368,7 +368,7 @@
 <span class="sd">      keywords) was obtained; otherwise ``False``, signalling the</span>
 <span class="sd">      researcher to review the pre-populated map.</span>
 <span class="sd">    - ``_sources`` -- the tiers that contributed at least one field, in</span>
-<span class="sd">      precedence order (e.g. ``[&quot;doi-service&quot;, &quot;regex&quot;]``).</span>
+<span class="sd">      precedence order (e.g. ``["doi-service", "regex"]``).</span>
 
 <span class="sd">    The abstract of a resolved record is used only as completeness</span>
 <span class="sd">    evidence and is deliberately NOT included in the output: the abstract</span>
@@ -382,27 +382,27 @@
 <span class="sd">        DOI-service tier is skipped (no network)</span>
 <span class="sd">    :returns: Flat metadata dict including the ``_metadata_complete``</span>
 <span class="sd">        and ``_sources`` internal keys</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;extracting metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">pdf_path</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"extracting metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">pdf_path</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="c1"># Join the document&#39;s text items for the regex tiers.</span>
+    <span class="c1"># Join the document's text items for the regex tiers.</span>
     <span class="n">full_text</span> <span class="o">=</span> <span class="n">_document_text</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span>
 
     <span class="n">pdf_fields</span> <span class="o">=</span> <span class="n">_pdf_fields</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pdf-info tier: </span><span class="si">{</span><span class="n">pdf_fields</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"pdf-info tier: </span><span class="si">{</span><span class="n">pdf_fields</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">docling_info</span> <span class="o">=</span> <span class="n">extract_docling_structured</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docling tier: </span><span class="si">{</span><span class="n">docling_info</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"docling tier: </span><span class="si">{</span><span class="n">docling_info</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">layout_text</span> <span class="o">=</span> <span class="n">extract_layout_region</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span>
     <span class="n">layout_regex</span> <span class="o">=</span> <span class="n">extract_regex_metadata</span><span class="p">(</span><span class="n">layout_text</span><span class="p">)</span> <span class="k">if</span> <span class="n">layout_text</span> <span class="k">else</span> <span class="p">{}</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;layout-regex tier: </span><span class="si">{</span><span class="n">layout_regex</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"layout-regex tier: </span><span class="si">{</span><span class="n">layout_regex</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">regex_fields</span> <span class="o">=</span> <span class="n">extract_regex_metadata</span><span class="p">(</span><span class="n">full_text</span><span class="p">)</span> <span class="k">if</span> <span class="n">full_text</span> <span class="k">else</span> <span class="p">{}</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;regex tier: </span><span class="si">{</span><span class="n">regex_fields</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"regex tier: </span><span class="si">{</span><span class="n">regex_fields</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">doi</span> <span class="o">=</span> <span class="n">_discover_doi</span><span class="p">(</span><span class="n">pdf_fields</span><span class="p">,</span> <span class="n">layout_regex</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;discovered </span><span class="si">{</span><span class="n">doi</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"discovered </span><span class="si">{</span><span class="n">doi</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">candidates</span> <span class="o">=</span> <span class="n">_doi_candidates</span><span class="p">(</span><span class="n">full_text</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">)</span>
     <span class="n">record</span> <span class="o">=</span> <span class="n">_resolve_record</span><span class="p">(</span><span class="n">doi</span><span class="p">,</span> <span class="n">resolver</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span>
@@ -410,11 +410,11 @@
     <span class="c1"># Most authoritative first.</span>
     <span class="n">tiers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;doi-service&quot;</span><span class="p">,</span> <span class="n">_record_fields</span><span class="p">(</span><span class="n">record</span><span class="p">)))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;pdf-info&quot;</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;docling&quot;</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;layout-regex&quot;</span><span class="p">,</span> <span class="n">layout_regex</span><span class="p">))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">))</span>
+        <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"doi-service"</span><span class="p">,</span> <span class="n">_record_fields</span><span class="p">(</span><span class="n">record</span><span class="p">)))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"pdf-info"</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"docling"</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"layout-regex"</span><span class="p">,</span> <span class="n">layout_regex</span><span class="p">))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"regex"</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">_merge_tiers</span><span class="p">(</span><span class="n">tiers</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span></div>
 
@@ -428,7 +428,7 @@
     <span class="n">pdf_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract bibliographic metadata from document text.</span>
+<span class="w">    </span><span class="sd">"""Extract bibliographic metadata from document text.</span>
 
 <span class="sd">    The text-only entry point of the cascade, used when no Docling</span>
 <span class="sd">    document is available (e.g. cached chunks).  Tiers are applied in</span>
@@ -449,26 +449,26 @@
 <span class="sd">        DOI-service tier is skipped (no network)</span>
 <span class="sd">    :returns: Flat metadata dict including the ``_metadata_complete``</span>
 <span class="sd">        and ``_sources`` internal keys</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;extracting metadata from text for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">pdf_path</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"extracting metadata from text for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">pdf_path</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">pdf_fields</span> <span class="o">=</span> <span class="n">_pdf_fields</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pdf-info tier: </span><span class="si">{</span><span class="n">pdf_fields</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"pdf-info tier: </span><span class="si">{</span><span class="n">pdf_fields</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">regex_fields</span> <span class="o">=</span> <span class="n">extract_regex_metadata</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">if</span> <span class="n">text</span> <span class="k">else</span> <span class="p">{}</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;regex tier: </span><span class="si">{</span><span class="n">regex_fields</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"regex tier: </span><span class="si">{</span><span class="n">regex_fields</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">doi</span> <span class="o">=</span> <span class="n">_discover_doi</span><span class="p">(</span><span class="n">pdf_fields</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;discovered </span><span class="si">{</span><span class="n">doi</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"discovered </span><span class="si">{</span><span class="n">doi</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">record</span> <span class="o">=</span> <span class="n">_resolve_record</span><span class="p">(</span><span class="n">doi</span><span class="p">,</span> <span class="n">resolver</span><span class="p">)</span>
 
     <span class="c1"># Most authoritative first.</span>
     <span class="n">tiers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;doi-service&quot;</span><span class="p">,</span> <span class="n">_record_fields</span><span class="p">(</span><span class="n">record</span><span class="p">)))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;pdf-info&quot;</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">))</span>
-    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">&quot;regex&quot;</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">))</span>
+        <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"doi-service"</span><span class="p">,</span> <span class="n">_record_fields</span><span class="p">(</span><span class="n">record</span><span class="p">)))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"pdf-info"</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">))</span>
+    <span class="n">tiers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s2">"regex"</span><span class="p">,</span> <span class="n">regex_fields</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">_merge_tiers</span><span class="p">(</span><span class="n">tiers</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">pdf_fields</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span></div>
 
@@ -479,7 +479,7 @@
     <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve *doi* via *resolver*, falling back to *candidates*.</span>
+<span class="w">    </span><span class="sd">"""Resolve *doi* via *resolver*, falling back to *candidates*.</span>
 
 <span class="sd">    The primary *doi* is tried first.  If it resolves to a record *with</span>
 <span class="sd">    authors* (a paper record), that is used.  Otherwise -- or when the</span>
@@ -498,11 +498,11 @@
 <span class="sd">    :param candidates: Additional DOI candidates to try when the primary</span>
 <span class="sd">        does not resolve to a paper record</span>
 <span class="sd">    :returns: Resolved record, or ``None``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">resolver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> discovered but DOI resolution skipped (no resolver)&quot;</span>
+                <span class="sa">f</span><span class="s2">"DOI </span><span class="si">{</span><span class="n">doi</span><span class="si">}</span><span class="s2"> discovered but DOI resolution skipped (no resolver)"</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
@@ -517,36 +517,36 @@
 
     <span class="n">first_resolved</span><span class="p">:</span> <span class="n">BiblioRecord</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">ordered</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;trying DOI candidate </span><span class="si">{</span><span class="n">candidate</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"trying DOI candidate </span><span class="si">{</span><span class="n">candidate</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">record</span> <span class="o">=</span> <span class="n">resolver</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not resolve DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (see DOI resolver logs)&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not resolve DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (see DOI resolver logs)"</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">if</span> <span class="n">first_resolved</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">first_resolved</span> <span class="o">=</span> <span class="n">record</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;resolved DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> via DOI services</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"resolved DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> via DOI services</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;using DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (record has authors)</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"using DOI </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2"> (record has authors)</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">record</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-        <span class="s2">&quot;No DOI candidate resolved to a paper record; &quot;</span>
-        <span class="s2">&quot;falling back to the first resolved record&quot;</span>
+        <span class="s2">"No DOI candidate resolved to a paper record; "</span>
+        <span class="s2">"falling back to the first resolved record"</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">first_resolved</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_doi_candidates</span><span class="p">(</span><span class="n">full_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">docling_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return deduplicated DOI candidates from text and docling URLs.</span>
+<span class="w">    </span><span class="sd">"""Return deduplicated DOI candidates from text and docling URLs.</span>
 
 <span class="sd">    The primary DOI (from the labeled tiers) may be broken or a</span>
 <span class="sd">    journal-level stub; these additional candidates give the resolver</span>
@@ -558,13 +558,13 @@
 <span class="sd">    :param full_text: Joined document text</span>
 <span class="sd">    :param docling_info: Docling tier output (may carry a ``urls`` list)</span>
 <span class="sd">    :returns: Deduplicated list of sanitized DOI strings</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="n">text_candidates</span> <span class="o">=</span> <span class="n">_scan_dois</span><span class="p">(</span><span class="n">full_text</span><span class="p">)</span>
     <span class="n">url_candidates</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">candidate</span>
-        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="p">(</span><span class="n">docling_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;urls&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="p">(</span><span class="n">docling_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"urls"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
         <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">_scan_dois</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
     <span class="p">]</span>
     <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">text_candidates</span> <span class="o">+</span> <span class="n">url_candidates</span><span class="p">:</span>
@@ -576,56 +576,56 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_document_text</span><span class="p">(</span><span class="n">dl_doc</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Join the document&#39;s text items into a single string.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">texts</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+<span class="w">    </span><span class="sd">"""Join the document's text items into a single string."""</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">dl_doc</span><span class="o">.</span><span class="n">texts</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_pdf_fields</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract and normalise the pdf-info tier, or ``{}``.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Extract and normalise the pdf-info tier, or ``{}``."""</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">pdf_path</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">{}</span>
     <span class="k">return</span> <span class="n">_normalize_pdf_info</span><span class="p">(</span><span class="n">extract_pdf_info</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">))</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_pdf_info</span><span class="p">(</span><span class="n">pdf_info</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalise PDF Info fields to the canonical metadata key set.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Normalise PDF Info fields to the canonical metadata key set."""</span>
     <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">):</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;author&quot;</span><span class="p">):</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;authors&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_split_terms</span><span class="p">(</span><span class="n">pdf_info</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keywords&quot;</span><span class="p">):</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;keywords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_split_terms</span><span class="p">(</span><span class="n">pdf_info</span><span class="p">[</span><span class="s2">&quot;keywords&quot;</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi&quot;</span><span class="p">):</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;doi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">&quot;doi&quot;</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">):</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"author"</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"authors"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_split_terms</span><span class="p">(</span><span class="n">pdf_info</span><span class="p">[</span><span class="s2">"author"</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"keywords"</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"keywords"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_split_terms</span><span class="p">(</span><span class="n">pdf_info</span><span class="p">[</span><span class="s2">"keywords"</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"doi"</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"doi"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">"doi"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pdf_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">):</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pdf_info</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">result</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_discover_doi</span><span class="p">(</span><span class="o">*</span><span class="n">sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the first DOI found across *sources*.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the first DOI found across *sources*."""</span>
     <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
-        <span class="n">doi</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doi&quot;</span><span class="p">)</span>
+        <span class="n">doi</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"doi"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">doi</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_record_fields</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="n">BiblioRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a resolved record to canonical metadata fields.</span>
+<span class="w">    </span><span class="sd">"""Convert a resolved record to canonical metadata fields.</span>
 
 <span class="sd">    The abstract is deliberately excluded (it is already part of the</span>
 <span class="sd">    chunked document).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">fields</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
-        <span class="s2">&quot;authors&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="p">,</span>
-        <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="p">,</span>
-        <span class="s2">&quot;journal&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">journal</span><span class="p">,</span>
-        <span class="s2">&quot;doi&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">doi</span><span class="p">,</span>
+        <span class="s2">"title"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="s2">"authors"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span><span class="p">,</span>
+        <span class="s2">"year"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="p">,</span>
+        <span class="s2">"journal"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">journal</span><span class="p">,</span>
+        <span class="s2">"doi"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">doi</span><span class="p">,</span>
     <span class="p">}</span>
-    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[],</span> <span class="s2">&quot;&quot;</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[],</span> <span class="s2">""</span><span class="p">)}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_merge_tiers</span><span class="p">(</span>
@@ -634,7 +634,7 @@
     <span class="n">pdf_fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Merge the tier contributions into the final metadata dict.</span>
+<span class="w">    </span><span class="sd">"""Merge the tier contributions into the final metadata dict.</span>
 
 <span class="sd">    *tiers* is an ordered ``(label, fields)`` list in **precedence</span>
 <span class="sd">    order, highest authority first** (``doi-service`` &gt; ``pdf-info`` &gt;</span>
@@ -650,52 +650,52 @@
 <span class="sd">        completeness check)</span>
 <span class="sd">    :param file_path: Source file path (for the stem title fallback)</span>
 <span class="sd">    :returns: Flat metadata dict with the internal keys</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">fields</span> <span class="ow">in</span> <span class="n">tiers</span><span class="p">:</span>
         <span class="n">_gap_fill</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">sources</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="s2">&quot;title&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
-        <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+    <span class="k">if</span> <span class="s2">"title"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadata</span><span class="p">:</span>
+        <span class="n">metadata</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
 
     <span class="k">if</span> <span class="n">record</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">title</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">authors</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
-            <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authors&quot;</span><span class="p">)</span>
-            <span class="ow">and</span> <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keywords&quot;</span><span class="p">)</span>
+            <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"authors"</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">pdf_fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"keywords"</span><span class="p">)</span>
         <span class="p">)</span>
-    <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;_metadata_complete&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">complete</span>
-    <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;_sources&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sources</span>
+    <span class="n">metadata</span><span class="p">[</span><span class="s2">"_metadata_complete"</span><span class="p">]</span> <span class="o">=</span> <span class="n">complete</span>
+    <span class="n">metadata</span><span class="p">[</span><span class="s2">"_sources"</span><span class="p">]</span> <span class="o">=</span> <span class="n">sources</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">complete</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;metadata extraction incomplete for </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;review the pre-populated template&quot;</span>
+            <span class="sa">f</span><span class="s2">"metadata extraction incomplete for </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">; "</span>
+            <span class="sa">f</span><span class="s2">"review the pre-populated template"</span>
         <span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;extracted metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">: &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;doi=</span><span class="si">{</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;doi&#39;</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> complete=</span><span class="si">{</span><span class="n">complete</span><span class="si">}</span><span class="s2"> sources=</span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"extracted metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">: "</span>
+        <span class="sa">f</span><span class="s2">"doi=</span><span class="si">{</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'doi'</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> complete=</span><span class="si">{</span><span class="n">complete</span><span class="si">}</span><span class="s2"> sources=</span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;metadata extraction done for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metadata</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sources</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">complete</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"metadata extraction done for </span><span class="si">{</span><span class="n">file_path</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metadata</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">sources</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">complete</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
     <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">metadata</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_gap_fill</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fill unset *metadata* fields from *source*, recording *label*.</span>
+<span class="w">    </span><span class="sd">"""Fill unset *metadata* fields from *source*, recording *label*.</span>
 
 <span class="sd">    Fields already present in *metadata* are never overwritten, which is</span>
 <span class="sd">    what gives the cascade its most-authoritative-first precedence.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">added</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">metadata</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">value</span><span class="p">:</span>
@@ -707,8 +707,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_split_terms</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split a comma/semicolon-separated term list.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[,;]&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+<span class="w">    </span><span class="sd">"""Split a comma/semicolon-separated term list."""</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[,;]"</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
 </pre></div>
         </article>
       </div>

@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.llm</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">LLM related utils</span>
 
 <span class="sd">File: klea_rag/llm.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -319,7 +319,7 @@
 <div class="viewcode-block" id="ParsedModelName">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.ParsedModelName">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ParsedModelName</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parsed components of a model name string.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Parsed components of a model name string."""</span>
 
     <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span>
@@ -330,7 +330,7 @@
 <div class="viewcode-block" id="parse_model_name">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.parse_model_name">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParsedModelName</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split a model name into provider, model identifier, and suffix.</span>
+<span class="w">    </span><span class="sd">"""Split a model name into provider, model identifier, and suffix.</span>
 
 <span class="sd">    Follows the ``provider:model_id`` convention.  The provider is</span>
 <span class="sd">    expected to be explicitly included; no provider inference is done.</span>
@@ -350,8 +350,8 @@
 
 <span class="sd">    :param raw: Model name with optional provider prefix</span>
 <span class="sd">    :returns: Parsed model name components</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">ParsedModelName</span><span class="p">(</span><span class="n">provider</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="n">raw</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
@@ -361,9 +361,9 @@
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">ParsedModelName</span><span class="p">(</span><span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">"ollama"</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">ParsedModelName</span><span class="p">(</span>
-            <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span>
+            <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="kc">None</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">ParsedModelName</span><span class="p">(</span><span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">suffix</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span></div>
@@ -373,7 +373,7 @@
 <div class="viewcode-block" id="check_ollama_model">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.check_ollama_model">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">check_ollama_model</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">exit</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if ollama model is available</span>
+<span class="w">    </span><span class="sd">"""Check if ollama model is available</span>
 
 <span class="sd">    :param logger: logger instance</span>
 <span class="sd">    :type logger: logging</span>
@@ -386,18 +386,18 @@
 <span class="sd">    :throws ollama.ResponseError: if `model` is not available</span>
 <span class="sd">    :throws ConnectionError: if cannot connect to an Ollama server</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">ollama</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">_</span> <span class="o">=</span> <span class="n">ollama</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">ollama</span><span class="o">.</span><span class="n">ResponseError</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find ollama model: </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Please ensure you have pulled the model&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find ollama model: </span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Please ensure you have pulled the model"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">exit</span><span class="p">:</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ConnectionError</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Could not connect to Ollama.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Could not connect to Ollama."</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">exit</span><span class="p">:</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
 
@@ -408,16 +408,16 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_output_with_thought</span><span class="p">[</span><span class="n">TSchema</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">](</span>
     <span class="n">message</span><span class="p">:</span> <span class="n">AIMessage</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">TSchema</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TSchema</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse AI message with thought to a dict based on given schema&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Parse AI message with thought to a dict based on given schema"""</span>
     <span class="c1"># Lazy: JsonOutputParser pulls in langchain parsers</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.output_parsers</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonOutputParser</span>
 
-    <span class="n">thought</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    <span class="n">answer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">thought</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="s2">""</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s2">&quot;&lt;/think&gt;&quot;</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
-            <span class="n">splits</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;&lt;/think&gt;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"&lt;/think&gt;"</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&lt;/think&gt;"</span><span class="p">)</span>
             <span class="n">thought</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="n">answer</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
@@ -429,8 +429,8 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">message</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
         <span class="c1"># Now a string -- re-run the string parsing above.</span>
-        <span class="k">if</span> <span class="s2">&quot;&lt;/think&gt;&quot;</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
-            <span class="n">splits</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;&lt;/think&gt;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"&lt;/think&gt;"</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"&lt;/think&gt;"</span><span class="p">)</span>
             <span class="n">thought</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="n">answer</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
@@ -440,8 +440,8 @@
         <span class="n">parser</span><span class="o">.</span><span class="n">pydantic_object</span> <span class="o">=</span> <span class="n">schema</span><span class="p">()</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">answer</span><span class="p">)</span>
 
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">thought</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">answer</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">thought</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">answer</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">thought</span></div>
 
@@ -452,14 +452,14 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">split_output_by_section</span><span class="p">(</span>
     <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">section_start_marker</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">section_end_marker</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split out thoughts and actual responses from AI responses&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Split out thoughts and actual responses from AI responses"""</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Empty message.content. Nothing to do.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Empty message.content. Nothing to do."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">""</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">section_start_marker</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No starting marker. Nothing to do.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No starting marker. Nothing to do."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">""</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">section_end_marker</span><span class="p">:</span>
         <span class="n">section_end_marker</span> <span class="o">=</span> <span class="kc">None</span>
@@ -470,13 +470,13 @@
     <span class="n">markers</span> <span class="o">=</span> <span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">section_start_marker</span><span class="p">)]</span>
     <span class="k">if</span> <span class="n">section_end_marker</span><span class="p">:</span>
         <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">section_end_marker</span><span class="p">))</span>
-    <span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="s1">'|'</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
 
     <span class="c1"># split</span>
     <span class="n">splits</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
 
     <span class="c1"># process splits</span>
-    <span class="c1"># by default, we&#39;re outside the delimiters to begin with</span>
+    <span class="c1"># by default, we're outside the delimiters to begin with</span>
     <span class="n">is_in</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="c1"># do we have both markers?</span>
@@ -484,8 +484,8 @@
     <span class="n">found_end_marker</span> <span class="o">=</span> <span class="n">section_end_marker</span> <span class="ow">in</span> <span class="n">text</span> <span class="k">if</span> <span class="n">section_end_marker</span> <span class="k">else</span> <span class="kc">False</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">found_start_marker</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found_end_marker</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No markers found. Nothing to do.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">text</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"No markers found. Nothing to do."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="n">text</span>
 
     <span class="c1"># end marker, but no start: we start inside the delimted region</span>
     <span class="k">if</span> <span class="n">found_end_marker</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found_start_marker</span><span class="p">:</span>
@@ -502,14 +502,14 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">other</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
 
-    <span class="n">delimited_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">delimited</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="n">other_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">delimited_text</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">delimited</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">other_text</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
     <span class="c1"># Add notes</span>
     <span class="k">if</span> <span class="n">found_start_marker</span> <span class="ow">and</span> <span class="p">(</span><span class="n">section_end_marker</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found_end_marker</span><span class="p">):</span>
-        <span class="n">other_text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">NOTE: NO END MARKER FOUND&quot;</span>
+        <span class="n">other_text</span> <span class="o">+=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">NOTE: NO END MARKER FOUND"</span>
     <span class="k">elif</span> <span class="n">found_end_marker</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found_start_marker</span><span class="p">:</span>
-        <span class="n">other_text</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">NOTE: NO START MARKER FOUND&quot;</span>
+        <span class="n">other_text</span> <span class="o">+=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">NOTE: NO START MARKER FOUND"</span>
 
     <span class="k">return</span> <span class="n">delimited_text</span><span class="p">,</span> <span class="n">other_text</span></div>
 
@@ -520,7 +520,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">content_to_str</span><span class="p">(</span>
     <span class="n">content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span> <span class="o">|</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalise an ``AIMessage.content`` value to a plain string.</span>
+<span class="w">    </span><span class="sd">"""Normalise an ``AIMessage.content`` value to a plain string.</span>
 
 <span class="sd">    AIMessage.content can be a plain string, a list of content blocks</span>
 <span class="sd">    (when the LLM returns tool calls or structured output), or ``None``.</span>
@@ -529,12 +529,12 @@
 
 <span class="sd">    :param content: The raw ``.content`` value from an AIMessage.</span>
 <span class="sd">    :returns: A plain string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="n">b</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">content</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">b</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"text"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">content</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></div>
 
@@ -542,8 +542,8 @@
 
 <div class="viewcode-block" id="format_alert">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.format_alert">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">format_alert</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;warning&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Wrap *text* as a GitHub-style markdown alert (e.g. ``&gt; [!WARNING]``).</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_alert</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"warning"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Wrap *text* as a GitHub-style markdown alert (e.g. ``&gt; [!WARNING]``).</span>
 
 <span class="sd">    Multi-line text is prefixed per line so the whole thing stays inside the</span>
 <span class="sd">    blockquote.  Renderers with the markdown2 ``alerts`` extra (the NiceGUI</span>
@@ -553,26 +553,26 @@
 <span class="sd">    :param text: Alert body text</span>
 <span class="sd">    :param level: Alert level (note, tip, important, warning, caution)</span>
 <span class="sd">    :returns: Markdown alert blockquote</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&gt; &quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&gt; [!</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&gt; </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="s2">&quot;</span></div>
+<span class="sd">    """</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">&gt; "</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"&gt; [!</span><span class="si">{</span><span class="n">level</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&gt; </span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="s2">"</span></div>
 
 
 
 <div class="viewcode-block" id="prompt_value_to_messages">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.prompt_value_to_messages">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">prompt_value_to_messages</span><span class="p">(</span><span class="n">prompt</span><span class="p">:</span> <span class="n">PromptValue</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a ``PromptValue`` to a clean list of message dicts.</span>
+<span class="w">    </span><span class="sd">"""Convert a ``PromptValue`` to a clean list of message dicts.</span>
 
 <span class="sd">    Each dict has ``role`` and ``content`` keys, suitable for JSON</span>
 <span class="sd">    serialisation in the inspector debug panel.</span>
 
 <span class="sd">    :param prompt: The LangChain ``PromptValue`` (filled, variables</span>
 <span class="sd">        already substituted).</span>
-<span class="sd">    :returns: A list of ``{&quot;role&quot;: &quot;...&quot;, &quot;content&quot;: &quot;...&quot;}`` dicts.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    :returns: A list of ``{"role": "...", "content": "..."}`` dicts.</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="p">[</span>
-        <span class="p">{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">content</span><span class="p">)}</span>
+        <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="n">msg</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">content</span><span class="p">)}</span>
         <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">prompt</span><span class="o">.</span><span class="n">to_messages</span><span class="p">()</span>
     <span class="p">]</span></div>
 
@@ -581,7 +581,7 @@
 <div class="viewcode-block" id="extract_llm_output_content">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.extract_llm_output_content">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">extract_llm_output_content</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract plain-text content from an LLM output.</span>
+<span class="w">    </span><span class="sd">"""Extract plain-text content from an LLM output.</span>
 
 <span class="sd">    Handles both ``AIMessage`` (non-structured output) and</span>
 <span class="sd">    ``dict`` (structured output with ``raw`` / ``parsed`` keys):</span>
@@ -589,18 +589,18 @@
 <span class="sd">    * ``AIMessage`` -- returns ``content_to_str(message.content)``.</span>
 <span class="sd">    * ``dict`` -- extracts the ``raw`` ``AIMessage`` from a structured</span>
 <span class="sd">      output response and returns its content; falls back to</span>
-<span class="sd">      ``output[&quot;parsed&quot;]`` and finally ``str(output)``.</span>
+<span class="sd">      ``output["parsed"]`` and finally ``str(output)``.</span>
 
 <span class="sd">    :param output: The raw output from ``llm.invoke()``.</span>
 <span class="sd">    :returns: A plain-text string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="n">raw</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"raw"</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-        <span class="n">parsed</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parsed&quot;</span><span class="p">)</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"parsed"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">parsed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">)</span></div>
@@ -610,37 +610,37 @@
 <div class="viewcode-block" id="is_output_truncated">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.is_output_truncated">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_output_truncated</span><span class="p">(</span><span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if an LLM output was truncated by the max-token limit.</span>
+<span class="w">    </span><span class="sd">"""Return True if an LLM output was truncated by the max-token limit.</span>
 
-<span class="sd">    Providers signal truncation via ``finish_reason == &quot;length&quot;`` on the</span>
+<span class="sd">    Providers signal truncation via ``finish_reason == "length"`` on the</span>
 <span class="sd">    message metadata.  Handles both plain ``AIMessage`` outputs and</span>
-<span class="sd">    structured-output dicts (``{&quot;raw&quot;: AIMessage, ...}``), and the</span>
+<span class="sd">    structured-output dicts (``{"raw": AIMessage, ...}``), and the</span>
 <span class="sd">    list-form ``finish_reason`` some providers return.</span>
 
 <span class="sd">    :param output: The raw output from ``llm.invoke()``.</span>
 <span class="sd">    :returns: True when the model stopped because it hit the output cap.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="n">raw</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raw&quot;</span><span class="p">)</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"raw"</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
             <span class="n">output</span> <span class="o">=</span> <span class="n">raw</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="n">metadata</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">response_metadata</span> <span class="ow">or</span> <span class="p">{}</span>
-    <span class="n">finish_reason</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;finish_reason&quot;</span><span class="p">)</span>
+    <span class="n">finish_reason</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"finish_reason"</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">finish_reason</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
         <span class="n">finish_reason</span> <span class="o">=</span> <span class="n">finish_reason</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">finish_reason</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">finish_reason</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;length&quot;</span></div>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">finish_reason</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"length"</span></div>
 
 
 
 <div class="viewcode-block" id="get_token_limit_param">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_token_limit_param">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the max-output token parameter name for a provider.</span>
+<span class="w">    </span><span class="sd">"""Return the max-output token parameter name for a provider.</span>
 
 <span class="sd">    Providers disagree on the parameter name for the maximum number of</span>
-<span class="sd">    output tokens: Ollama uses ``num_predict``, while HuggingFace&#39;s</span>
+<span class="sd">    output tokens: Ollama uses ``num_predict``, while HuggingFace's</span>
 <span class="sd">    ``ChatHuggingFace`` (which internally maps it to ``max_new_tokens``)</span>
 <span class="sd">    and other OpenAI-compatible providers all use ``max_tokens``.</span>
 
@@ -653,15 +653,15 @@
 <span class="sd">       into ``model_kwargs``.  This is a false positive: the limit is still</span>
 <span class="sd">       delivered correctly as ``max_tokens`` to ``InferenceClient.chat_completion``</span>
 <span class="sd">       via the outer ``ChatHuggingFace``, which is the parameter the</span>
-<span class="sd">       HuggingFace Inference API actually accepts.  Do not &quot;fix&quot; it by</span>
+<span class="sd">       HuggingFace Inference API actually accepts.  Do not "fix" it by</span>
 <span class="sd">       switching to ``max_new_tokens`` here.</span>
 
 <span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...)</span>
 <span class="sd">    :returns: The token parameter name to send in the invoke config.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;num_predict&quot;</span>
-    <span class="k">return</span> <span class="s2">&quot;max_tokens&quot;</span></div>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">provider</span> <span class="o">==</span> <span class="s2">"ollama"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"num_predict"</span>
+    <span class="k">return</span> <span class="s2">"max_tokens"</span></div>
 
 
 
@@ -673,28 +673,28 @@
 <span class="c1">#: admins may override them per provider via the ``providers`` config</span>
 <span class="c1">#: section.</span>
 <span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;chat&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
-    <span class="s2">&quot;plan&quot;</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
-    <span class="s2">&quot;guard&quot;</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
+    <span class="s2">"chat"</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+    <span class="s2">"plan"</span><span class="p">:</span> <span class="mi">4096</span><span class="p">,</span>
+    <span class="s2">"guard"</span><span class="p">:</span> <span class="mi">1024</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="c1">#: The three max-output token parameter names used across providers.</span>
-<span class="n">_TOKEN_PARAMS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;max_tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;max_new_tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;num_predict&quot;</span><span class="p">)</span>
+<span class="n">_TOKEN_PARAMS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"max_tokens"</span><span class="p">,</span> <span class="s2">"max_new_tokens"</span><span class="p">,</span> <span class="s2">"num_predict"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="estimate_input_tokens">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.estimate_input_tokens">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">estimate_input_tokens</span><span class="p">(</span><span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rough token estimate for a prompt&#39;s character count.</span>
+<span class="w">    </span><span class="sd">"""Rough token estimate for a prompt's character count.</span>
 
-<span class="sd">    Used only to keep the reserved output window within a model&#39;s total</span>
+<span class="sd">    Used only to keep the reserved output window within a model's total</span>
 <span class="sd">    budget (input + output &lt;= context).  ~4 characters per token is a</span>
 <span class="sd">    reasonable average for mixed English/code text; an exact count would</span>
 <span class="sd">    require provider-specific tokenizers.</span>
 
 <span class="sd">    :param input_chars: Number of characters in the prompt.</span>
 <span class="sd">    :returns: Estimated token count.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">input_chars</span> <span class="o">//</span> <span class="mi">4</span></div>
 
 
@@ -707,10 +707,10 @@
     <span class="n">role</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensure a bounded max-output token param is set in *overrides*.</span>
+<span class="w">    </span><span class="sd">"""Ensure a bounded max-output token param is set in *overrides*.</span>
 
 <span class="sd">    HuggingFace-style providers apply a *total budget*: the reserved</span>
-<span class="sd">    output window (``max_new_tokens``) is accounted against the model&#39;s</span>
+<span class="sd">    output window (``max_new_tokens``) is accounted against the model's</span>
 <span class="sd">    context window alongside the input, and an unset value makes them</span>
 <span class="sd">    reserve the entire remaining window (causing spurious usage limits</span>
 <span class="sd">    and rate limiting).  This helper guarantees a finite, clamped value.</span>
@@ -726,15 +726,15 @@
 <span class="sd">    The resolved value is clamped to ``min(value, catalog limit.output)``</span>
 <span class="sd">    and, when the catalog exposes a context window and *input_chars* is</span>
 <span class="sd">    given, to the remaining budget (``context - estimated input tokens``)</span>
-<span class="sd">    so HuggingFace&#39;s total-budget check is never exceeded.</span>
+<span class="sd">    so HuggingFace's total-budget check is never exceeded.</span>
 
 <span class="sd">    :param overrides: The merged ``configurable`` dict to update in place.</span>
 <span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...).</span>
-<span class="sd">    :param role: Model role (e.g. ``&quot;chat&quot;``), used for the built-in</span>
+<span class="sd">    :param role: Model role (e.g. ``"chat"``), used for the built-in</span>
 <span class="sd">        per-role fallback.</span>
 <span class="sd">    :param input_chars: Character count of the prompt, to bound the output</span>
 <span class="sd">        within the total budget.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
 
     <span class="c1"># Resolve the configured value, preferring an explicit provider-specific</span>
@@ -745,13 +745,13 @@
             <span class="n">value</span> <span class="o">=</span> <span class="n">overrides</span><span class="p">[</span><span class="n">param</span><span class="p">]</span>
             <span class="k">break</span>
     <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">value</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_output_tokens&quot;</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_output_tokens"</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">value</span> <span class="o">=</span> <span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">role</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">role</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span><span class="p">)</span>
     <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
-    <span class="c1"># Clamp to the model&#39;s catalog output limit and total budget, if known.</span>
-    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+    <span class="c1"># Clamp to the model's catalog output limit and total budget, if known.</span>
+    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="ow">and</span> <span class="n">input_chars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -760,13 +760,13 @@
             <span class="n">value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">headroom</span><span class="p">)</span>
 
     <span class="c1"># Remove the generic and any stale token params; set the provider one.</span>
-    <span class="n">overrides</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;max_output_tokens&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">overrides</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"max_output_tokens"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">_TOKEN_PARAMS</span><span class="p">:</span>
         <span class="n">overrides</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="n">overrides</span><span class="p">[</span><span class="n">token_param</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Resolved </span><span class="si">{</span><span class="n">token_param</span><span class="w"> </span><span class="si">= }</span><span class="s2"> for </span><span class="si">{</span><span class="n">provider</span><span class="w"> </span><span class="si">= }</span><span class="s2"> </span><span class="si">{</span><span class="n">role</span><span class="w"> </span><span class="si">= }</span><span class="s2">: &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="w"> </span><span class="si">= }</span><span class="s2"> (input_chars = </span><span class="si">{</span><span class="n">input_chars</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="sa">f</span><span class="s2">"Resolved </span><span class="si">{</span><span class="n">token_param</span><span class="w"> </span><span class="si">= }</span><span class="s2"> for </span><span class="si">{</span><span class="n">provider</span><span class="w"> </span><span class="si">= }</span><span class="s2"> </span><span class="si">{</span><span class="n">role</span><span class="w"> </span><span class="si">= }</span><span class="s2">: "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="w"> </span><span class="si">= }</span><span class="s2"> (input_chars = </span><span class="si">{</span><span class="n">input_chars</span><span class="si">}</span><span class="s2">)"</span>
     <span class="p">)</span></div>
 
 
@@ -774,18 +774,18 @@
 <div class="viewcode-block" id="check_model_works">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.check_model_works">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">check_model_works</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a model works since it is not tested when loaded&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Check if a model works since it is not tested when loaded"""</span>
     <span class="k">assert</span> <span class="n">timeout</span> <span class="o">&gt;=</span> <span class="mi">0</span>
 
     <span class="c1"># Pick the right token-limit param for the provider so we keep the health</span>
     <span class="c1"># check cheap without triggering warnings about unknown kwargs.</span>
-    <span class="n">llm_type</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;_llm_type&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s2">&quot;huggingface&quot;</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
-        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;huggingface&quot;</span>
-    <span class="k">elif</span> <span class="s2">&quot;ollama&quot;</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
-        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;ollama&quot;</span>
+    <span class="n">llm_type</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"_llm_type"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"huggingface"</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">"huggingface"</span>
+    <span class="k">elif</span> <span class="s2">"ollama"</span> <span class="ow">in</span> <span class="n">llm_type</span><span class="p">:</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">"ollama"</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;openai&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="s2">"openai"</span>
     <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
 
     <span class="n">configurable</span> <span class="o">=</span> <span class="p">{</span><span class="n">token_param</span><span class="p">:</span> <span class="mi">5</span><span class="p">}</span>
@@ -801,49 +801,49 @@
             <span class="n">answer</span><span class="p">:</span> <span class="nb">str</span>
 
         <span class="n">probe</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">with_structured_output</span><span class="p">(</span>
-            <span class="n">_ProbeSchema</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span> <span class="n">include_raw</span><span class="o">=</span><span class="kc">False</span>
+            <span class="n">_ProbeSchema</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"json_schema"</span><span class="p">,</span> <span class="n">include_raw</span><span class="o">=</span><span class="kc">False</span>
         <span class="p">)</span>
         <span class="n">probe</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
-            <span class="s2">&quot;ping&quot;</span><span class="p">,</span>
-            <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="n">timeout</span><span class="p">,</span> <span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="n">configurable</span><span class="p">},</span>
+            <span class="s2">"ping"</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">"timeout"</span><span class="p">:</span> <span class="n">timeout</span><span class="p">,</span> <span class="s2">"configurable"</span><span class="p">:</span> <span class="n">configurable</span><span class="p">},</span>
         <span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_supports_structured_output</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Model supports structured output&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Model supports structured output"</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="n">model</span><span class="o">.</span><span class="n">_supports_structured_output</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">retries</span><span class="p">):</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Checking model. Attempt #</span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Checking model. Attempt #</span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
-                <span class="s2">&quot;ping&quot;</span><span class="p">,</span>
+                <span class="s2">"ping"</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">=</span><span class="p">{</span>
-                    <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="n">timeout</span><span class="p">,</span>
-                    <span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="n">configurable</span><span class="p">,</span>
+                    <span class="s2">"timeout"</span><span class="p">:</span> <span class="n">timeout</span><span class="p">,</span>
+                    <span class="s2">"configurable"</span><span class="p">:</span> <span class="n">configurable</span><span class="p">,</span>
                 <span class="p">},</span>
             <span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model available (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Model available (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Model available (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Model available (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">except</span> <span class="ne">StopIteration</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span>
                 <span class="kc">False</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: check if any inference providers are available for the selected model&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: check if any inference providers are available for the selected model"</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">error_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Attempt #</span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">: model unavailable: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Attempt #</span><span class="si">{</span><span class="n">attempt</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2">: model unavailable: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">retries</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">attempt</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model unavailable after </span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2"> attempts: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Model unavailable after </span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2"> attempts: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="k">return</span> <span class="p">(</span>
                     <span class="kc">False</span><span class="p">,</span>
-                    <span class="sa">f</span><span class="s2">&quot;Model unavailable after </span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2"> attempts: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">"Model unavailable after </span><span class="si">{</span><span class="n">retries</span><span class="si">}</span><span class="s2"> attempts: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
                 <span class="p">)</span>
 
-    <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Unknown error&quot;</span></div>
+    <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"Unknown error"</span></div>
 
 
 
@@ -854,23 +854,23 @@
 
     <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">"custom"</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;Using openai-compatible embedding model </span><span class="si">%s</span><span class="s2"> at endpoint </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">"Using openai-compatible embedding model </span><span class="si">%s</span><span class="s2"> at endpoint </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
             <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
             <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_embeddings</span><span class="p">(</span>
             <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-            <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;openai&quot;</span><span class="p">,</span>
+            <span class="n">provider</span><span class="o">=</span><span class="s2">"openai"</span><span class="p">,</span>
             <span class="n">base_url</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span>
-        <span class="c1"># &quot;local&quot; suffix -&gt; HuggingFaceEmbeddings (local sentence-transformers).</span>
+    <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">"huggingface"</span><span class="p">:</span>
+        <span class="c1"># "local" suffix -&gt; HuggingFaceEmbeddings (local sentence-transformers).</span>
         <span class="c1"># Any other suffix -&gt; HuggingFaceEndpointEmbeddings (HF Inference API).</span>
-        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">"local"</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Using huggingface local embedding model: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">"Using huggingface local embedding model: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_huggingface</span><span class="w"> </span><span class="kn">import</span> <span class="n">HuggingFaceEmbeddings</span>
@@ -878,99 +878,99 @@
             <span class="n">model_var</span> <span class="o">=</span> <span class="n">HuggingFaceEmbeddings</span><span class="p">(</span><span class="n">model_name</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;Using huggingface endpoint embedding model: </span><span class="si">%s</span><span class="s2"> (provider: </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+                <span class="s2">"Using huggingface endpoint embedding model: </span><span class="si">%s</span><span class="s2"> (provider: </span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span>
                 <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-                <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">"auto"</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_huggingface</span><span class="w"> </span><span class="kn">import</span> <span class="n">HuggingFaceEndpointEmbeddings</span>
 
             <span class="n">model_var</span> <span class="o">=</span> <span class="n">HuggingFaceEndpointEmbeddings</span><span class="p">(</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
-                <span class="n">provider</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-                <span class="n">task</span><span class="o">=</span><span class="s2">&quot;feature-extraction&quot;</span><span class="p">,</span>
+                <span class="n">provider</span><span class="o">=</span><span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">or</span> <span class="s2">"auto"</span><span class="p">,</span>
+                <span class="n">task</span><span class="o">=</span><span class="s2">"feature-extraction"</span><span class="p">,</span>
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Using embedding model: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">model_name_full</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;ollama&quot;</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Using embedding model: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">model_name_full</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">"ollama"</span><span class="p">:</span>
             <span class="n">check_ollama_model</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
         <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_embeddings</span><span class="p">(</span><span class="n">model_name_full</span><span class="p">)</span>
 
     <span class="k">assert</span> <span class="n">model_var</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using embedding model: </span><span class="si">{</span><span class="n">model_name_full</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using embedding model: </span><span class="si">{</span><span class="n">model_name_full</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">model_var</span>
 
 
-<span class="c1">#: Tolerant patterns for &quot;the prompt/context does not fit&quot; errors.  Based on</span>
+<span class="c1">#: Tolerant patterns for "the prompt/context does not fit" errors.  Based on</span>
 <span class="c1">#: the error strings seen from OpenAI-compatible, HuggingFace, and vLLM</span>
-<span class="c1">#: providers (and informed by opencode&#39;s ``provider-error.ts``).  Patterns</span>
+<span class="c1">#: providers (and informed by opencode's ``provider-error.ts``).  Patterns</span>
 <span class="c1">#: are matched case-insensitively over the whole exception message.</span>
 <span class="n">_CONTEXT_OVERFLOW_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context[ _-]*length[ _-]*exceed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context[ _-]*window[ _-]*exceed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;context_length_exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;prompt is too long&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;input is too long&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;too many tokens&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;token limit exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;exceed[s]? the limit of \d+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;maximum context length&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;maximum length is \d+&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;must be &lt;= \d+ tokens&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;requested token count&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"context[ _-]*length[ _-]*exceed"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"context[ _-]*window[ _-]*exceed"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"context_length_exceeded"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"prompt is too long"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"input is too long"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"too many tokens"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"token limit exceeded"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"exceed[s]? the limit of \d+"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"maximum context length"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"maximum length is \d+"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"must be &lt;= \d+ tokens"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"requested token count"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
 <span class="c1">#: Tolerant patterns for rate-limit / quota errors.</span>
 <span class="n">_RATE_LIMIT_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b429\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;rate[ _-]*limit&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;rate_limit_exceeded&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;too many requests&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;quota&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;usage limit&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b429\b"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"rate[ _-]*limit"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"rate_limit_exceeded"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"too many requests"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"quota"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"usage limit"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
 <span class="c1">#: Tolerant patterns for authentication / authorisation failures.</span>
 <span class="n">_AUTH_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b401\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b403\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;unauthori[sz]ed&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;invalid api key&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;incorrect api key&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;api key.*must be set&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;authentication&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;authorization&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;forbidden&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b401\b"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b403\b"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"unauthori[sz]ed"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"invalid api key"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"incorrect api key"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"api key.*must be set"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"authentication"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"authorization"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"forbidden"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
-<span class="c1">#: Tolerant patterns for &quot;model does not exist&quot; errors.</span>
+<span class="c1">#: Tolerant patterns for "model does not exist" errors.</span>
 <span class="n">_MODEL_NOT_FOUND_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b404\b&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;model[ _-]*not[ _-]*found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;does not exist&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;model.*not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;a valid model was not found&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b404\b"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"model[ _-]*not[ _-]*found"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"does not exist"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"model.*not found"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"not found"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"a valid model was not found"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
 <span class="c1">#: Tolerant patterns for timeout errors.</span>
 <span class="n">_TIMEOUT_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;timeout&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;timed out&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"timeout"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"timed out"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
 <span class="c1">#: Tolerant patterns for providers rejecting the structured-output</span>
 <span class="c1">#: ``response_format`` / ``json_schema`` parameter.  Fall back to</span>
 <span class="c1">#: prompt-based structured output when these match.</span>
 <span class="n">_STRUCTURED_OUTPUT_REJECTED_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;response_format&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;json_schema&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;structured output&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
-    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b400\b[^\n]*invalid_request_error&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"response_format"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"json_schema"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"structured output"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b400\b[^\n]*invalid_request_error"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_flatten_exception_messages</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Collect the message from an exception and its cause chain.</span>
+<span class="w">    </span><span class="sd">"""Collect the message from an exception and its cause chain.</span>
 
 <span class="sd">    LangChain and httpx wrap underlying provider errors, so a bare</span>
 <span class="sd">    ``str(exc)`` may miss the informative inner message.  This walks the</span>
@@ -978,7 +978,7 @@
 
 <span class="sd">    :param exc: The exception to flatten.</span>
 <span class="sd">    :returns: A list of message strings, outermost first.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">current</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">exc</span>
     <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -990,14 +990,14 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_matches_any</span><span class="p">(</span><span class="n">patterns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if any pattern matches anywhere in *text*.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return True if any pattern matches anywhere in *text*."""</span>
     <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="classify_llm_invocation_error">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.classify_llm_invocation_error">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">classify_llm_invocation_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LLMInvocationErrorCategory</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Classify an LLM invocation exception into a category.</span>
+<span class="w">    </span><span class="sd">"""Classify an LLM invocation exception into a category.</span>
 
 <span class="sd">    Providers report failures inconsistently, so this uses tolerant regex</span>
 <span class="sd">    matching over the exception message and its cause chain.  Categories</span>
@@ -1007,8 +1007,8 @@
 
 <span class="sd">    :param exc: The exception raised by an LLM invocation.</span>
 <span class="sd">    :returns: The best-effort :class:`klea_utils.errors.LLMInvocationErrorCategory`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_flatten_exception_messages</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_flatten_exception_messages</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_CONTEXT_OVERFLOW_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">CONTEXT_OVERFLOW</span>
@@ -1032,38 +1032,38 @@
     <span class="c1"># ChatHuggingFace.from_model_id() accepts backend, provider, etc.</span>
     <span class="c1"># which flow through to HuggingFaceEndpoint but are not fields on</span>
     <span class="c1"># ChatHuggingFace itself.</span>
-    <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;provider&quot;</span><span class="p">},</span>
+    <span class="s2">"huggingface"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"backend"</span><span class="p">,</span> <span class="s2">"provider"</span><span class="p">},</span>
 <span class="p">}</span>
 
 
 <div class="viewcode-block" id="get_provider_allowed_fields">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.get_provider_allowed_fields">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_provider_allowed_fields</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the set of init-param names accepted by a given provider&#39;s model class.</span>
+<span class="w">    </span><span class="sd">"""Return the set of init-param names accepted by a given provider's model class.</span>
 
-<span class="sd">    Uses LangChain&#39;s internal provider registry to look up the Pydantic</span>
+<span class="sd">    Uses LangChain's internal provider registry to look up the Pydantic</span>
 <span class="sd">    model class and introspect its fields (including aliases so that</span>
 <span class="sd">    both ``api_key`` and ``openai_api_key`` pass through).</span>
 
 <span class="sd">    Falls back to an empty set if the provider is not registered in</span>
-<span class="sd">    LangChain&#39;s built-in providers.  Raises ``ImportError`` if the</span>
-<span class="sd">    provider&#39;s integration package is not installed  ---  callers should</span>
+<span class="sd">    LangChain's built-in providers.  Raises ``ImportError`` if the</span>
+<span class="sd">    provider's integration package is not installed  ---  callers should</span>
 <span class="sd">    handle this at configuration time, not silently fall through.</span>
 
-<span class="sd">    The caller should always include ``{&quot;model&quot;, &quot;model_provider&quot;}`` on</span>
+<span class="sd">    The caller should always include ``{"model", "model_provider"}`` on</span>
 <span class="sd">    top of the returned set since those are consumed by</span>
 <span class="sd">    ``_ConfigurableModel`` before reaching the model constructor.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">_get_chat_model_creator</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">creator</span> <span class="o">=</span> <span class="n">_get_chat_model_creator</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-        <span class="c1"># Provider not in LangChain&#39;s built-in registry  ---  not an error,</span>
+        <span class="c1"># Provider not in LangChain's built-in registry  ---  not an error,</span>
         <span class="c1"># the caller will include model/model_provider which is sufficient.</span>
         <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
 
-    <span class="bp">cls</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">creator</span><span class="p">,</span> <span class="s2">&quot;keywords&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cls&quot;</span><span class="p">)</span>
+    <span class="bp">cls</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">creator</span><span class="p">,</span> <span class="s2">"keywords"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cls"</span><span class="p">)</span>
     <span class="k">if</span> <span class="bp">cls</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
 
@@ -1079,28 +1079,28 @@
 <div class="viewcode-block" id="create_configurable_model">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.create_configurable_model">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_configurable_model</span><span class="p">(</span><span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up a configurable chat model.</span>
+<span class="w">    </span><span class="sd">"""Set up a configurable chat model.</span>
 
 <span class="sd">    Creates a ``_ConfigurableModel`` with no default model.  Model,</span>
 <span class="sd">    provider, and all other parameters (``base_url``, ``api_key``,</span>
 <span class="sd">    ``temperature``, etc.) are specified per-invoke via the</span>
-<span class="sd">    ``config[&quot;configurable&quot;]`` dict passed to ``ainvoke()``.</span>
+<span class="sd">    ``config["configurable"]`` dict passed to ``ainvoke()``.</span>
 
 <span class="sd">    This enables runtime model switching  ---  each ``ainvoke()`` call</span>
 <span class="sd">    creates a fresh underlying model instance for the given provider,</span>
 <span class="sd">    so there is no stale configuration leakage between calls.</span>
 
 <span class="sd">    The lookup function ``check_model_works`` is deliberately **not**</span>
-<span class="sd">    called here  ---  we prefer a &quot;leap before you look&quot; approach so that</span>
+<span class="sd">    called here  ---  we prefer a "leap before you look" approach so that</span>
 <span class="sd">    startup is fast and model availability is checked only at query time.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">langchain.chat_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_chat_model</span>
 
     <span class="n">model_var</span> <span class="o">=</span> <span class="n">init_chat_model</span><span class="p">(</span>
         <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">configurable_fields</span><span class="o">=</span><span class="s2">&quot;any&quot;</span><span class="p">,</span>
+        <span class="n">configurable_fields</span><span class="o">=</span><span class="s2">"any"</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Configurable chat model created (provider/model set per invoke)&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Configurable chat model created (provider/model set per invoke)"</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">model_var</span></div>
 
@@ -1109,7 +1109,7 @@
 <div class="viewcode-block" id="LLMModel">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.LLMModel">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LLMModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for a single LLM model instance and its runtime configuration.</span>
+<span class="w">    </span><span class="sd">"""Container for a single LLM model instance and its runtime configuration.</span>
 
 <span class="sd">    ``instance`` holds the model object (typically a ``_ConfigurableModel``</span>
 <span class="sd">    returned by ``init_chat_model``).  ``role_defaults`` stores role-wide</span>
@@ -1119,7 +1119,7 @@
 <span class="sd">    ``build_config()`` performs a five-layer merge:</span>
 
 <span class="sd">    **Layer 0**  ---  ``role_defaults``: role-wide parameters (e.g.</span>
-<span class="sd">    ``{&quot;max_tokens&quot;: 4096}``).</span>
+<span class="sd">    ``{"max_tokens": 4096}``).</span>
 
 <span class="sd">    **Layer 1**  ---  ``model_name``: the default model identifier from</span>
 <span class="sd">    the graph config.</span>
@@ -1139,9 +1139,9 @@
 <span class="sd">    (both the API and web UI reject modifications to locked roles).</span>
 <span class="sd">    Set to ``False`` to lock a role (e.g. guard) against user overrides</span>
 <span class="sd">    in managed deployments.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="n">instance</span><span class="p">:</span> <span class="n">Any</span>
     <span class="n">role_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">provider_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1154,7 +1154,7 @@
         <span class="n">context_overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">node_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunnableConfig</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge up to five layers of model configuration into a ``RunnableConfig``.</span>
+<span class="w">        </span><span class="sd">"""Merge up to five layers of model configuration into a ``RunnableConfig``.</span>
 
 <span class="sd">        Layer order (lowest -&gt; highest priority):</span>
 
@@ -1169,25 +1169,25 @@
 <span class="sd">            ``self.modifiable is True``, and skipping any keys</span>
 <span class="sd">            present in ``node_defaults``.</span>
 <span class="sd">        :param node_defaults: Frozen per-node defaults (e.g.</span>
-<span class="sd">            ``{&quot;temperature&quot;: 0.3}``).  Always win.</span>
+<span class="sd">            ``{"temperature": 0.3}``).  Always win.</span>
 <span class="sd">        :returns: A ``RunnableConfig`` with the ``configurable`` key</span>
 <span class="sd">            populated.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">modifiable</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">role_defaults</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">context_overrides</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">node_defaults</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">modifiable</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">role_defaults</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">context_overrides</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">node_defaults</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
         <span class="p">)</span>
 
         <span class="c1"># Layer 0: role-wide defaults from graph config</span>
         <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">role_defaults</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 0 (role defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Layer 0 (role defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Layer 1: role model identifier</span>
-        <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 1 (model):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">overrides</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Layer 1 (model):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Layer 2: context overrides (only if modifiable).</span>
         <span class="c1"># Skip any keys the node has frozen in model_defaults.</span>
@@ -1195,66 +1195,66 @@
             <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">context_overrides</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">node_defaults</span> <span class="ow">and</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">node_defaults</span><span class="p">:</span>
                     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Skipping context override &#39;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&#39; (frozen by node defaults)&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Skipping context override '</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">' (frozen by node defaults)"</span>
                     <span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="n">overrides</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 2 (context):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Layer 2 (context):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Layer 3: node defaults  ---  always win</span>
         <span class="k">if</span> <span class="n">node_defaults</span><span class="p">:</span>
             <span class="n">overrides</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">node_defaults</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Layer 3 (node defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Layer 3 (node defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Parse the final model string into LangChain-compatible components.</span>
         <span class="c1"># Klea stores full provider-prefixed model strings internally (e.g.</span>
-        <span class="c1"># &quot;custom:gpt-4o:https://endpoint/v1&quot;), but the _ConfigurableModel</span>
+        <span class="c1"># "custom:gpt-4o:https://endpoint/v1"), but the _ConfigurableModel</span>
         <span class="c1"># expects the bare model name plus separate model_provider and base_url.</span>
         <span class="c1"># parse_model_name is defined in this module  ---  no lazy import needed.</span>
-        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
-        <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span>
-        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">&quot;custom&quot;</span><span class="p">:</span>
-            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model_provider&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;openai&quot;</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">overrides</span><span class="p">[</span><span class="s2">"model"</span><span class="p">])</span>
+        <span class="n">overrides</span><span class="p">[</span><span class="s2">"model"</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">model_name</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span> <span class="o">==</span> <span class="s2">"custom"</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">"model_provider"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"openai"</span>
         <span class="k">elif</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span><span class="p">:</span>
-            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;model_provider&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">"model_provider"</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">provider</span>
         <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
-            <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;base_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After model string parse:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">overrides</span><span class="p">[</span><span class="s2">"base_url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After model string parse:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="c1"># Inject HuggingFace from_model_id kwargs derived from the model</span>
         <span class="c1"># string suffix.  These are not fields on ChatHuggingFace itself</span>
-        <span class="c1"># (they flow through to HuggingFaceEndpoint) so they&#39;d be filtered</span>
+        <span class="c1"># (they flow through to HuggingFaceEndpoint) so they'd be filtered</span>
         <span class="c1"># out later  ---  we set them here so they survive provider filtering.</span>
-        <span class="k">if</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;huggingface&quot;</span> <span class="ow">and</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
-                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_provider"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"huggingface"</span> <span class="ow">and</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">"local"</span><span class="p">:</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"backend"</span><span class="p">,</span> <span class="s2">"pipeline"</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;endpoint&quot;</span><span class="p">)</span>
-                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"backend"</span><span class="p">,</span> <span class="s2">"endpoint"</span><span class="p">)</span>
+                <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"provider"</span><span class="p">,</span> <span class="n">parsed</span><span class="o">.</span><span class="n">suffix</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;HuggingFace kwargs injected:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"HuggingFace kwargs injected:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span>
 
         <span class="c1"># Layer 4: per-provider defaults from graph config.  Only fills in</span>
         <span class="c1"># keys not already set by role/context/node layers (setdefault), so</span>
         <span class="c1"># explicit values always win.  The provider is resolved by now.</span>
-        <span class="n">provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_provider&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;openai&quot;</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_provider"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"openai"</span>
         <span class="n">provider_defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">provider_defaults</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">provider_defaults</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">provider_defaults</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Layer 4 (provider defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Layer 4 (provider defaults):</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
             <span class="p">)</span>
 
-        <span class="c1"># Map generic &quot;api_key&quot; to provider-specific token field names so a</span>
+        <span class="c1"># Map generic "api_key" to provider-specific token field names so a</span>
         <span class="c1"># single user-facing field works across all providers.</span>
-        <span class="k">if</span> <span class="s2">&quot;api_key&quot;</span> <span class="ow">in</span> <span class="n">overrides</span><span class="p">:</span>
-            <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;huggingfacehub_api_token&quot;</span><span class="p">,</span> <span class="n">overrides</span><span class="p">[</span><span class="s2">&quot;api_key&quot;</span><span class="p">])</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After api_key mapping:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"api_key"</span> <span class="ow">in</span> <span class="n">overrides</span><span class="p">:</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"huggingfacehub_api_token"</span><span class="p">,</span> <span class="n">overrides</span><span class="p">[</span><span class="s2">"api_key"</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"After api_key mapping:</span><span class="se">\n</span><span class="si">{</span><span class="n">mask_sensitive</span><span class="p">(</span><span class="n">overrides</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="c1"># Wrap in the &quot;configurable&quot; key expected by _ConfigurableModel.</span>
-        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">RunnableConfig</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;configurable&quot;</span><span class="p">:</span> <span class="n">overrides</span><span class="p">})</span></div>
+        <span class="c1"># Wrap in the "configurable" key expected by _ConfigurableModel.</span>
+        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">RunnableConfig</span><span class="p">,</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="n">overrides</span><span class="p">})</span></div>
 </div>
 
 
@@ -1264,7 +1264,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">get_last_n_conversations</span><span class="p">(</span>
     <span class="n">all_messages</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">stop</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get recent conversations between start and stop indices.</span>
+<span class="w">    </span><span class="sd">"""Get recent conversations between start and stop indices.</span>
 
 <span class="sd">    Returns the conversation as a single text block (used as prompt/summary</span>
 <span class="sd">    input) along with the ordered ``BaseMessage`` objects, preserving the</span>
@@ -1275,23 +1275,23 @@
 <span class="sd">    :param stop: stop index</span>
 <span class="sd">    :returns: (conversation, ordered list of human/ai messages)</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">start</span><span class="w"> </span><span class="si">= }</span><span class="s2">; </span><span class="si">{</span><span class="n">stop</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">start</span><span class="w"> </span><span class="si">= }</span><span class="s2">; </span><span class="si">{</span><span class="n">stop</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">conv_messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">msg</span>
         <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">all_messages</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="p">(</span><span class="n">HumanMessage</span><span class="p">,</span> <span class="n">AIMessage</span><span class="p">))</span>
     <span class="p">]</span>
-    <span class="n">conversation</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">conversation</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">conv_messages</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">HumanMessage</span><span class="p">):</span>
-            <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;: </span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">conversation</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">": </span><span class="si">{</span><span class="n">msg</span><span class="o">.</span><span class="n">pretty_repr</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
 
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">conversation</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">conversation</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="p">(</span><span class="n">conversation</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;{{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">,</span> <span class="s2">&quot;}}&quot;</span><span class="p">),</span> <span class="n">conv_messages</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">conversation</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{"</span><span class="p">,</span> <span class="s2">"{{"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"}"</span><span class="p">,</span> <span class="s2">"}}"</span><span class="p">),</span> <span class="n">conv_messages</span><span class="p">)</span></div>
 
 
 
@@ -1300,7 +1300,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">get_recent_messages</span><span class="p">(</span>
     <span class="n">messages</span><span class="p">,</span> <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">keep_at_least</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the most recent human/ai messages bounded by *max_chars*.</span>
+<span class="w">    </span><span class="sd">"""Return the most recent human/ai messages bounded by *max_chars*.</span>
 
 <span class="sd">    Walks backwards through *messages* (in their original interleaved order)</span>
 <span class="sd">    accumulating ``pretty_repr()`` length until *max_chars* would be</span>
@@ -1312,7 +1312,7 @@
 <span class="sd">    :param max_chars: Maximum total characters of the returned window.</span>
 <span class="sd">    :param keep_at_least: Minimum number of messages to always include.</span>
 <span class="sd">    :returns: Ordered list of recent human/ai messages.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">recent</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseMessage</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">messages</span><span class="p">):</span>
@@ -1324,7 +1324,7 @@
         <span class="n">recent</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="n">total</span> <span class="o">+=</span> <span class="n">length</span>
     <span class="n">recent</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2"> recent messages, </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> chars&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">recent</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="s2"> recent messages, </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> chars"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">recent</span></div>
 
 
@@ -1332,19 +1332,19 @@
 <div class="viewcode-block" id="add_memory_to_prompt">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.add_memory_to_prompt">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">add_memory_to_prompt</span><span class="p">(</span><span class="n">context_summary</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add the context summary to the system prompt.</span>
+<span class="w">    </span><span class="sd">"""Add the context summary to the system prompt.</span>
 
 <span class="sd">    Returns a text block framing the previous-context summary.  Recent</span>
 <span class="sd">    conversation messages are no longer flattened into this block: they are</span>
-<span class="sd">    injected as real message objects by the node&#39;s prompt assembly (see</span>
+<span class="sd">    injected as real message objects by the node's prompt assembly (see</span>
 <span class="sd">    ``klea_utils.nodes.base``).</span>
 
 <span class="sd">    :param context_summary: Summary of the past conversation.</span>
-<span class="sd">    :returns: Prompt text block, or ``&quot;&quot;`` when there is no summary.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">ret_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="sd">    :returns: Prompt text block, or ``""`` when there is no summary.</span>
+<span class="sd">    """</span>
+    <span class="n">ret_string</span> <span class="o">=</span> <span class="s2">""</span>
 
-    <span class="n">directive</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">directive</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span><span class="s2">"""</span>
 
 <span class="s2">        ## Previous context</span>
 
@@ -1352,10 +1352,10 @@
 
 <span class="s2">        - Consider both the latest user message AND the conversation history.</span>
 
-<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s2">    """</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">context_summary</span><span class="p">):</span>
-        <span class="n">ret_string</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+        <span class="n">ret_string</span> <span class="o">+=</span> <span class="n">dedent</span><span class="p">(</span><span class="sa">f</span><span class="s2">"""</span>
 
 <span class="s2">        ### Context summary</span>
 
@@ -1363,7 +1363,7 @@
 
 <span class="s2">        </span><span class="si">{</span><span class="n">context_summary</span><span class="si">}</span>
 
-<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+<span class="s2">        """</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret_string</span><span class="p">):</span>
         <span class="n">ret_string</span> <span class="o">+=</span> <span class="n">directive</span>
@@ -1376,18 +1376,18 @@
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.load_prompt">[docs]</a>
 <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_prompt</span><span class="p">(</span><span class="n">prompt_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">prompt_registry_location</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a prompt from file called prompt_name.md</span>
+<span class="w">    </span><span class="sd">"""Load a prompt from file called prompt_name.md</span>
 
 <span class="sd">    :param str: prompt file name</span>
 <span class="sd">    :param prompt_registry_location: location of prompts folder/registry</span>
 <span class="sd">    :returns: loaded prompt text</span>
 
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">prompt_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prompt_registry_location</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prompt_name</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">prompt_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prompt_registry_location</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prompt_name</span><span class="si">}</span><span class="s2">.md"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prompt_path</span><span class="si">}</span><span class="s2"> was not found&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prompt_path</span><span class="si">}</span><span class="s2"> was not found"</span><span class="p">)</span>
 
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">prompt_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">prompt_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></div>
 
 </pre></div>

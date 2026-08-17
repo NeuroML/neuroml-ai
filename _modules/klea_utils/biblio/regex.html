@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.biblio.regex</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Regex-based bibliographic metadata extraction</span>
 
 <span class="sd">File: klea_utils/biblio/regex.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
@@ -299,27 +299,27 @@
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-<span class="c1">#: Loose DOI pattern: a DOI begins with &quot;10.&quot; followed by a 4-9 digit</span>
+<span class="c1">#: Loose DOI pattern: a DOI begins with "10." followed by a 4-9 digit</span>
 <span class="c1">#: registrant prefix and a slash.</span>
-<span class="n">DOI_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b10\.\d{4,9}/[^\s,;]+&quot;</span><span class="p">)</span>
+<span class="n">DOI_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b10\.\d{4,9}/[^\s,;]+"</span><span class="p">)</span>
 <span class="c1">#: Loose URL pattern.</span>
-<span class="n">URL_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;https?://[^\s,;]+&quot;</span><span class="p">)</span>
+<span class="n">URL_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"https?://[^\s,;]+"</span><span class="p">)</span>
 
 <span class="c1">#: Labeled keyword list header.  Accepts an optional colon and the list</span>
 <span class="c1">#: on the same line or the following line, since publishers format these</span>
 <span class="c1">#: in several ways (e.g. ``Keywords: a, b``, ``KEYWORDS`` then the list,</span>
 <span class="c1">#: ``Keywords :`` then the list on the next line).</span>
 <span class="n">_KEYWORDS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-    <span class="sa">r</span><span class="s2">&quot;(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:?\s*(.+)$&quot;</span>
+    <span class="sa">r</span><span class="s2">"(?im)^\s*(?:key\s*words?\s*(?:and\s*phrases?)?|key\s*terms?)\s*:?\s*(.+)$"</span>
 <span class="p">)</span>
-<span class="c1">#: Labeled author list header, without the bare &quot;By:&quot; variant.</span>
-<span class="n">_AUTHORS_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?im)^\s*authors?\s*\(?s?\)?\s*:\s*(.{3,500})$&quot;</span><span class="p">)</span>
-<span class="c1">#: Bare &quot;By:&quot; author line, only consulted when no labeled header matched.</span>
-<span class="n">_AUTHORS_BY_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?im)^\s*by\s*:\s*(.{3,500})$&quot;</span><span class="p">)</span>
+<span class="c1">#: Labeled author list header, without the bare "By:" variant.</span>
+<span class="n">_AUTHORS_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?im)^\s*authors?\s*\(?s?\)?\s*:\s*(.{3,500})$"</span><span class="p">)</span>
+<span class="c1">#: Bare "By:" author line, only consulted when no labeled header matched.</span>
+<span class="n">_AUTHORS_BY_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?im)^\s*by\s*:\s*(.{3,500})$"</span><span class="p">)</span>
 <span class="c1">#: Labeled DOI line.</span>
-<span class="n">_DOI_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?im)^\s*doi\s*:\s*(10\.\d{4,9}/[^\s,;]+)&quot;</span><span class="p">)</span>
+<span class="n">_DOI_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?im)^\s*doi\s*:\s*(10\.\d{4,9}/[^\s,;]+)"</span><span class="p">)</span>
 <span class="c1">#: Labeled URL line (URL:, Website:, Homepage:, Webpage:).</span>
-<span class="n">_URL_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(?im)^\s*(?:url|website|homepage|webpage)\s*:\s*(\S+)&quot;</span><span class="p">)</span>
+<span class="n">_URL_LABELED_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?im)^\s*(?:url|website|homepage|webpage)\s*:\s*(\S+)"</span><span class="p">)</span>
 
 <span class="c1">#: Default number of leading characters scanned.  Bibliographic headers</span>
 <span class="c1">#: (authors, keywords, DOI, URL) live on the first page, so scanning the</span>
@@ -338,7 +338,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">extract_regex_metadata</span><span class="p">(</span>
     <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_SCAN_LIMIT</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract bibliographic fields from *text* with regex heuristics.</span>
+<span class="w">    </span><span class="sd">"""Extract bibliographic fields from *text* with regex heuristics.</span>
 
 <span class="sd">    Scans the first *limit* characters of *text* for labeled keyword and</span>
 <span class="sd">    author lists, and for a DOI (labeled or loose pattern) and a labeled</span>
@@ -351,7 +351,7 @@
 <span class="sd">    :param limit: Number of leading characters to scan</span>
 <span class="sd">    :returns: Mapping with any of ``keywords`` (list), ``authors``</span>
 <span class="sd">        (list), ``doi`` (str), ``url`` (str)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">scan_text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span>
 
     <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -359,27 +359,27 @@
     <span class="c1"># the abstract); the other fields stay within *limit*.</span>
     <span class="n">keywords</span> <span class="o">=</span> <span class="n">_scan_keywords</span><span class="p">(</span><span class="n">text</span><span class="p">[:</span><span class="n">KEYWORD_SCAN_LIMIT</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">keywords</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;keywords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">keywords</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"keywords"</span><span class="p">]</span> <span class="o">=</span> <span class="n">keywords</span>
     <span class="n">authors</span> <span class="o">=</span> <span class="n">_scan_authors</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">authors</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;authors&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">authors</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"authors"</span><span class="p">]</span> <span class="o">=</span> <span class="n">authors</span>
     <span class="n">doi</span> <span class="o">=</span> <span class="n">_scan_doi</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;doi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doi</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"doi"</span><span class="p">]</span> <span class="o">=</span> <span class="n">doi</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">_scan_url</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;regex extraction over </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"regex extraction over </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">scan_text</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_keywords</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the keyword list from a labeled keyword header, if any.</span>
+<span class="w">    </span><span class="sd">"""Return the keyword list from a labeled keyword header, if any.</span>
 
 <span class="sd">    Accepts ``Keywords: a, b``, ``KEYWORDS`` with the list on the next</span>
 <span class="sd">    line, and ``Keywords :`` with the list on the next line.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_KEYWORDS_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
@@ -387,8 +387,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_authors</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the author list from a labeled header, preferring</span>
-<span class="sd">    ``Author(s):``/``Authors:`` over a bare ``By:`` line.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the author list from a labeled header, preferring</span>
+<span class="sd">    ``Author(s):``/``Authors:`` over a bare ``By:`` line."""</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_AUTHORS_LABELED_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="n">match</span> <span class="o">=</span> <span class="n">_AUTHORS_BY_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
@@ -398,7 +398,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_doi</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a DOI from a labeled line, or from the loose pattern.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a DOI from a labeled line, or from the loose pattern."""</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_DOI_LABELED_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_rstrip_punct</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
@@ -409,7 +409,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_doi</span><span class="p">(</span><span class="n">doi</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a valid DOI from a possibly-garbled match, or ``None``.</span>
+<span class="w">    </span><span class="sd">"""Return a valid DOI from a possibly-garbled match, or ``None``.</span>
 
 <span class="sd">    A DOI is ``10.&lt;registrant&gt;/&lt;suffix&gt;`` where the suffix contains no</span>
 <span class="sd">    further ``/``.  URL-based matches often drag in a trailing path</span>
@@ -418,7 +418,7 @@
 <span class="sd">    truncated by whitespace Docling inserted mid-DOI; this keeps only</span>
 <span class="sd">    the ``prefix/suffix`` part.  Returns ``None`` when *doi* is not a</span>
 <span class="sd">    well-formed DOI after sanitizing.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cleaned</span> <span class="o">=</span> <span class="n">_rstrip_punct</span><span class="p">(</span><span class="n">doi</span><span class="p">)</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">DOI_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
@@ -427,16 +427,16 @@
     <span class="c1"># Bound the suffix at markdown/URL continuations and trailing</span>
     <span class="c1"># punctuation, then strip a trailing URL path (a valid DOI suffix</span>
     <span class="c1"># has no further slash).</span>
-    <span class="n">candidate</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[\])}\s]&quot;</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-        <span class="n">candidate</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\])}\s]"</span><span class="p">,</span> <span class="n">candidate</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">".,;:)]}"</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s2">"/"</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"/"</span> <span class="o">+</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">candidate</span> <span class="ow">or</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_dois</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all distinct DOI candidates found in *text*.</span>
+<span class="w">    </span><span class="sd">"""Return all distinct DOI candidates found in *text*.</span>
 
 <span class="sd">    Unlike :func:`_scan_doi`, which returns a single match, this returns</span>
 <span class="sd">    every DOI-like match (sanitized and deduplicated) so the extraction</span>
@@ -445,7 +445,7 @@
 
 <span class="sd">    :param text: Text to scan</span>
 <span class="sd">    :returns: Deduplicated list of sanitized DOI strings</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">seen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">seen_set</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">DOI_RE</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
@@ -457,7 +457,7 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_scan_url</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a URL from a labeled line (URL:, Website:, ...).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a URL from a labeled line (URL:, Website:, ...)."""</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_URL_LABELED_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -465,20 +465,20 @@
     <span class="n">url_match</span> <span class="o">=</span> <span class="n">URL_RE</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">url_match</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_rstrip_punct</span><span class="p">(</span><span class="n">url_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;www.&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"www."</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">candidate</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_split_terms</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split a comma/semicolon/newline-separated term list.&quot;&quot;&quot;</span>
-    <span class="n">terms</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[,;\n]&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">terms</span> <span class="k">if</span> <span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+<span class="w">    </span><span class="sd">"""Split a comma/semicolon/newline-separated term list."""</span>
+    <span class="n">terms</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[,;\n]"</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">terms</span> <span class="k">if</span> <span class="n">term</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_rstrip_punct</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strip trailing punctuation that may follow a DOI/URL in a value.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Strip trailing punctuation that may follow a DOI/URL in a value."""</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">".,;:)]}"</span><span class="p">)</span>
 </pre></div>
         </article>
       </div>

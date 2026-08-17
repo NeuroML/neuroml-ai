@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.biblio.pdf</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">PDF bibliographic metadata extraction</span>
 
 <span class="sd">File: klea_utils/biblio/pdf.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -302,22 +302,22 @@
 
 <span class="c1">#: PDF Info-dict fields with bibliographic value, in preference order.</span>
 <span class="c1">#: Date and tooling fields (Creator, Producer) are omitted.</span>
-<span class="n">_BIBLIO_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Author&quot;</span><span class="p">,</span> <span class="s2">&quot;Keywords&quot;</span><span class="p">,</span> <span class="s2">&quot;Subject&quot;</span><span class="p">)</span>
+<span class="n">_BIBLIO_FIELDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Title"</span><span class="p">,</span> <span class="s2">"Author"</span><span class="p">,</span> <span class="s2">"Keywords"</span><span class="p">,</span> <span class="s2">"Subject"</span><span class="p">)</span>
 
 <span class="c1">#: Standard Info-dict keys that pypdfium2 returns, scanned in this order</span>
 <span class="c1">#: for an embedded DOI/URL.  pdfium only exposes these standard keys --</span>
 <span class="c1">#: arbitrary custom keys (e.g. ``DOI``/``URL``) are dropped, so a DOI or</span>
 <span class="c1">#: URL is picked up from the *value* of these fields (journals commonly</span>
 <span class="c1">#: place the DOI in ``Subject``).</span>
-<span class="n">_SCAN_ORDER</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Subject&quot;</span><span class="p">,</span> <span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Author&quot;</span><span class="p">,</span> <span class="s2">&quot;Keywords&quot;</span><span class="p">,</span> <span class="s2">&quot;Creator&quot;</span><span class="p">,</span> <span class="s2">&quot;Producer&quot;</span><span class="p">)</span>
+<span class="n">_SCAN_ORDER</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Subject"</span><span class="p">,</span> <span class="s2">"Title"</span><span class="p">,</span> <span class="s2">"Author"</span><span class="p">,</span> <span class="s2">"Keywords"</span><span class="p">,</span> <span class="s2">"Creator"</span><span class="p">,</span> <span class="s2">"Producer"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="extract_pdf_info">
 <a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.pdf.extract_pdf_info">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">extract_pdf_info</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract bibliographic metadata from a PDF&#39;s Info dict.</span>
+<span class="w">    </span><span class="sd">"""Extract bibliographic metadata from a PDF's Info dict.</span>
 
-<span class="sd">    Reads the document&#39;s metadata fields (Title, Author, Keywords,</span>
+<span class="sd">    Reads the document's metadata fields (Title, Author, Keywords,</span>
 <span class="sd">    Subject) with pypdfium2, which is already installed as a Docling</span>
 <span class="sd">    dependency.  A DOI or URL is also picked up from the values of the</span>
 <span class="sd">    standard fields (journals commonly embed the DOI in ``Subject``).</span>
@@ -331,29 +331,29 @@
 <span class="sd">    :param path: Path to the PDF file</span>
 <span class="sd">    :returns: Lower-case mapping of bibliographic PDF metadata fields to</span>
 <span class="sd">        their string values (only non-empty fields)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Lazy: importing pypdfium2 loads the native pdfium bindings.  It is</span>
     <span class="c1"># only needed when a PDF is being ingested, so defer the import.</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">pypdfium2</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pdfium</span>
     <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;pypdfium2 not available, skipping PDF metadata&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"pypdfium2 not available, skipping PDF metadata"</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{}</span>
 
     <span class="n">pdf_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">pdf_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;.pdf&quot;</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">pdf_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">pdf_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">".pdf"</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">pdf_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
         <span class="k">return</span> <span class="p">{}</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">doc</span> <span class="o">=</span> <span class="n">pdfium</span><span class="o">.</span><span class="n">PdfDocument</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">))</span>
     <span class="k">except</span> <span class="p">(</span><span class="n">pdfium</span><span class="o">.</span><span class="n">PdfiumError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not open PDF </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not open PDF </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{}</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">metadata</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get_metadata_dict</span><span class="p">()</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="k">except</span> <span class="p">(</span><span class="n">pdfium</span><span class="o">.</span><span class="n">PdfiumError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not read metadata from </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not read metadata from </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{}</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="n">doc</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -366,16 +366,16 @@
 
     <span class="n">doi</span><span class="p">,</span> <span class="n">url</span> <span class="o">=</span> <span class="n">_find_doi_url</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">doi</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;doi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doi</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"doi"</span><span class="p">]</span> <span class="o">=</span> <span class="n">doi</span>
     <span class="k">if</span> <span class="n">url</span><span class="p">:</span>
-        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;extracted PDF Info dict for </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"extracted PDF Info dict for </span><span class="si">{</span><span class="n">pdf_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_find_doi_url</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pick a DOI and URL out of a PDF Info dict.</span>
+<span class="w">    </span><span class="sd">"""Pick a DOI and URL out of a PDF Info dict.</span>
 
 <span class="sd">    Scans the standard metadata field values (Subject first -- journals</span>
 <span class="sd">    commonly embed the DOI there) for a DOI or URL pattern.  pypdfium2</span>
@@ -384,7 +384,7 @@
 
 <span class="sd">    :param metadata: Metadata dict from pypdfium2</span>
 <span class="sd">    :returns: ``(doi, url)``, either or both possibly ``None``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">doi</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -408,8 +408,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_rstrip_punct</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Strip trailing punctuation that may follow a DOI/URL in a value.&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.,;:)]}&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Strip trailing punctuation that may follow a DOI/URL in a value."""</span>
+    <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">".,;:)]}"</span><span class="p">)</span>
 </pre></div>
         </article>
       </div>

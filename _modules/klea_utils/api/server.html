@@ -284,49 +284,149 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.api.server</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Shared server launcher factory for Klea packages.</span>
 
 <span class="sd">File: klea_utils/api/server.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">subprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">Popen</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlsplit</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typer</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_app_config_path</span>
+
+
+<div class="viewcode-block" id="configure_profile">
+<a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.configure_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">configure_profile</span><span class="p">(</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Apply a ``--profile`` value for the current process.</span>
+
+<span class="sd">    The profile is carried into the app module through the environment:</span>
+<span class="sd">    *config_env_var* is set to ``&lt;name&gt;.json`` and left in place (the env</span>
+<span class="sd">    var takes precedence over the env file in pydantic-settings).  The</span>
+<span class="sd">    profile name is validated against the working directory / *config_dir*</span>
+<span class="sd">    first so a typo fails fast.</span>
+
+<span class="sd">    ``template`` is special: it writes a scaffold config into the working</span>
+<span class="sd">    directory and exits, never launching anything.</span>
+
+<span class="sd">    :param profile: Raw ``--profile`` value (a trailing ``.json`` is</span>
+<span class="sd">        stripped); ``None`` is a no-op</span>
+<span class="sd">    :param config_env_var: Environment variable that names the config</span>
+<span class="sd">        file, or ``None`` to skip setting one</span>
+<span class="sd">    :param config_dir: Config directory used for validation; ``None``</span>
+<span class="sd">        skips the fast-fail check</span>
+<span class="sd">    :param template_writer: Callable that writes a config template into</span>
+<span class="sd">        the working directory and returns its path; ``None`` disables</span>
+<span class="sd">        ``--profile template``</span>
+<span class="sd">    :raises typer.BadParameter: If the profile does not resolve to a file</span>
+<span class="sd">    :raises typer.Exit: After writing a template</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">profile</span> <span class="o">==</span> <span class="s2">"template"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">template_writer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span><span class="s2">"--profile template is not supported here."</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">template_writer</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">FileExistsError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Template config written to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">Fill it in, then re-run."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">stem</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">".json"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="n">resolve_app_config_path</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">}</span><span class="s2">.json"</span><span class="p">,</span> <span class="n">config_dir</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Config profile: </span><span class="si">{</span><span class="n">stem</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">resolved</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">config_env_var</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">config_env_var</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stem</span><span class="si">}</span><span class="s2">.json"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Warning: --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2"> has no effect here "</span>
+            <span class="s2">"(no config environment variable is configured)."</span>
+        <span class="p">)</span></div>
+
+
 
 <div class="viewcode-block" id="make_serve_app">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.make_serve_app">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">make_serve_app</span><span class="p">(</span><span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a Typer app that runs uvicorn on the given *app_module*.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_serve_app</span><span class="p">(</span>
+    <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">default_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Create a Typer app that runs uvicorn on the given *app_module*.</span>
 
 <span class="sd">    The module string should be the importable path to a FastAPI ``app``</span>
-<span class="sd">    instance, e.g. ``&quot;klea_rag.api.main:app&quot;``.</span>
+<span class="sd">    instance, e.g. ``"klea_rag.api.main:app"``.</span>
+
+<span class="sd">    The ``serve`` command accepts a ``--profile`` option that selects the</span>
+<span class="sd">    JSON config file for the app.  The value is validated (see</span>
+<span class="sd">    :func:`configure_profile`); when *config_env_var* is given it is</span>
+<span class="sd">    forwarded to the app module through that environment variable, so a</span>
+<span class="sd">    profile dropped in the working directory or the config directory is</span>
+<span class="sd">    used without any other wiring.  The special profile ``template``</span>
+<span class="sd">    scaffolds a new config and exits instead of launching.</span>
 
 <span class="sd">    :param app_module: Uvicorn module string</span>
 <span class="sd">    :param default_port: Default port number</span>
+<span class="sd">    :param config_env_var: Environment variable that carries the config</span>
+<span class="sd">        file name into the app process (e.g. ``"KLEA_RAG_APP_CONFIG_FILE"``)</span>
+<span class="sd">    :param config_dir: Config directory searched after the working</span>
+<span class="sd">        directory when validating ``--profile``</span>
+<span class="sd">    :param template_writer: Callable that writes a config template into</span>
+<span class="sd">        the working directory for ``--profile template``</span>
 <span class="sd">    :returns: A :class:`typer.Typer` app for use as a CLI entry point</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">serve_app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">()</span>
 
+    <span class="c1"># With exactly one registered command typer collapses the app into that</span>
+    <span class="c1"># command (see ``typer.main.get_command``): the ``serve`` name never</span>
+    <span class="c1"># appears in the CLI, so the options below are the top-level options of</span>
+    <span class="c1"># ``klea-serve`` / ``klea-rag-serve``.  The decorator still registers the</span>
+    <span class="c1"># command -- adding a second one would turn the app into a command group.</span>
     <span class="nd">@serve_app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">serve</span><span class="p">(</span>
-        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+        <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"127.0.0.1"</span><span class="p">,</span>
         <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">default_port</span><span class="p">,</span>
         <span class="n">dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--dev&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable auto-reload (like fastapi dev)&quot;</span>
+            <span class="kc">False</span><span class="p">,</span> <span class="s2">"--dev"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Enable auto-reload (like fastapi dev)"</span>
+        <span class="p">),</span>
+        <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+            <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">"--profile"</span><span class="p">,</span>
+            <span class="s2">"-p"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Config profile name: loads &lt;name&gt;.json from the current "</span>
+            <span class="s2">"directory or the config dir. Use 'template' to scaffold a "</span>
+            <span class="s2">"new config and exit."</span><span class="p">,</span>
         <span class="p">),</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the API server.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Run the API server."""</span>
+        <span class="n">configure_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">config_env_var</span><span class="p">,</span> <span class="n">config_dir</span><span class="p">,</span> <span class="n">template_writer</span><span class="p">)</span>
+
         <span class="c1"># Lazy: uvicorn pulls in starlette/httptools/websockets etc.</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">uvicorn</span>
 
@@ -344,7 +444,7 @@
 <div class="viewcode-block" id="split_server_url">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.split_server_url">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">split_server_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``(host, port)`` parsed from *url*.</span>
+<span class="w">    </span><span class="sd">"""Return ``(host, port)`` parsed from *url*.</span>
 
 <span class="sd">    Falls back to ``127.0.0.1`` and *default_port* when the URL does not</span>
 <span class="sd">    carry a hostname or port.</span>
@@ -352,9 +452,9 @@
 <span class="sd">    :param url: Server URL (e.g. ``http://127.0.0.1:8005``)</span>
 <span class="sd">    :param default_port: Port to use when the URL omits one</span>
 <span class="sd">    :returns: ``(host, port)`` suitable for binding a local server</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">parts</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-    <span class="n">host</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="s2">"127.0.0.1"</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">port</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">port</span> <span class="ow">or</span> <span class="n">default_port</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
@@ -366,12 +466,12 @@
 <div class="viewcode-block" id="is_loopback_host">
 <a class="viewcode-back" href="../../../api/utils/api.html#klea_utils.api.server.is_loopback_host">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">is_loopback_host</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``True`` when *host* refers to the local machine.</span>
+<span class="w">    </span><span class="sd">"""Return ``True`` when *host* refers to the local machine.</span>
 
-<span class="sd">    :param host: Hostname from a server URL (e.g. ``&quot;127.0.0.1&quot;``)</span>
+<span class="sd">    :param host: Hostname from a server URL (e.g. ``"127.0.0.1"``)</span>
 <span class="sd">    :returns: ``True`` for loopback addresses, ``False`` otherwise</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">host</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="s2">&quot;::1&quot;</span><span class="p">}</span></div>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">host</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"127.0.0.1"</span><span class="p">,</span> <span class="s2">"localhost"</span><span class="p">,</span> <span class="s2">"::1"</span><span class="p">}</span></div>
 
 
 
@@ -380,28 +480,35 @@
 <span class="nd">@contextmanager</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">spawn_server</span><span class="p">(</span>
     <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span>
+    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"127.0.0.1"</span><span class="p">,</span>
     <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8005</span><span class="p">,</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">180.0</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Popen</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Context manager that runs an API server in a subprocess.</span>
+<span class="w">    </span><span class="sd">"""Context manager that runs an API server in a subprocess.</span>
 
 <span class="sd">    If a healthy server is already listening at ``host:port`` (probed via</span>
 <span class="sd">    ``/health/ready``), nothing is spawned and ``None`` is yielded, so the</span>
-<span class="sd">    caller does not own the server&#39;s lifecycle.  Otherwise a uvicorn</span>
+<span class="sd">    caller does not own the server's lifecycle.  Otherwise a uvicorn</span>
 <span class="sd">    subprocess is spawned (stdout and stderr inherited so startup errors and</span>
 <span class="sd">    app output are visible; access logs are disabled to keep the shared</span>
-<span class="sd">    terminal clean, with full logging preserved in the server&#39;s rotating log</span>
+<span class="sd">    terminal clean, with full logging preserved in the server's rotating log</span>
 <span class="sd">    file), readiness is waited on, and the subprocess is terminated when the</span>
 <span class="sd">    ``with`` block exits.</span>
 
-<span class="sd">    :param app_module: Uvicorn module string (e.g. ``&quot;klea_rag.api.main:app&quot;``)</span>
+<span class="sd">    When *profile* is given but a server is already running, the profile</span>
+<span class="sd">    cannot take effect (the running server was started with its own</span>
+<span class="sd">    config) and a warning is printed.</span>
+
+<span class="sd">    :param app_module: Uvicorn module string (e.g. ``"klea_rag.api.main:app"``)</span>
 <span class="sd">    :param host: Host to bind</span>
 <span class="sd">    :param port: Port to bind</span>
 <span class="sd">    :param timeout: Total seconds to wait for readiness after spawning</span>
+<span class="sd">    :param profile: Config profile the caller requested (used only to warn</span>
+<span class="sd">        when the requested profile cannot apply)</span>
 <span class="sd">    :returns: The spawned :class:`subprocess.Popen` (or ``None`` if an</span>
 <span class="sd">        existing server was reused)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Lazy: asyncio/httpx and the api utils pull in heavy deps; keep --help fast.</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 
@@ -409,7 +516,7 @@
 
     <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_api_is_ready</span>
 
-    <span class="n">health_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">/health/ready&quot;</span>
+    <span class="n">health_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"http://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">/health/ready"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_probe_once</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -419,20 +526,26 @@
             <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">if</span> <span class="n">_probe_once</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">profile</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Warning: a server is already running at </span><span class="si">{</span><span class="n">health_url</span><span class="si">}</span><span class="s2"> -- "</span>
+                <span class="sa">f</span><span class="s2">"--profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2"> is ignored (restart the server to "</span>
+                <span class="s2">"change its config)."</span>
+            <span class="p">)</span>
         <span class="k">yield</span> <span class="kc">None</span>
         <span class="k">return</span>
 
     <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
         <span class="p">[</span>
             <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
-            <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;uvicorn&quot;</span><span class="p">,</span>
+            <span class="s2">"-m"</span><span class="p">,</span>
+            <span class="s2">"uvicorn"</span><span class="p">,</span>
             <span class="n">app_module</span><span class="p">,</span>
-            <span class="s2">&quot;--host&quot;</span><span class="p">,</span>
+            <span class="s2">"--host"</span><span class="p">,</span>
             <span class="n">host</span><span class="p">,</span>
-            <span class="s2">&quot;--port&quot;</span><span class="p">,</span>
+            <span class="s2">"--port"</span><span class="p">,</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">port</span><span class="p">),</span>
-            <span class="s2">&quot;--no-access-log&quot;</span><span class="p">,</span>
+            <span class="s2">"--no-access-log"</span><span class="p">,</span>
         <span class="p">],</span>
     <span class="p">)</span>
 
@@ -443,10 +556,10 @@
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Server process exited immediately (code </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">). &quot;</span>
-                    <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
-                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-serve serve&#39; &quot;</span>
-                    <span class="s2">&quot;to see the error.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Server process exited immediately (code </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s2">). "</span>
+                    <span class="s2">"Check the server's log file, or run the server directly "</span>
+                    <span class="s2">"with 'klea-rag-serve' / 'klea-serve' "</span>
+                    <span class="s2">"to see the error."</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="n">_probe_once</span><span class="p">():</span>
                 <span class="k">break</span>
@@ -456,10 +569,10 @@
                 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">check_api_is_ready</span><span class="p">(</span><span class="n">health_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">))</span>
             <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Server at </span><span class="si">{</span><span class="n">health_url</span><span class="si">}</span><span class="s2"> did not become ready within </span><span class="si">{</span><span class="n">timeout</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">s. &quot;</span>
-                    <span class="s2">&quot;Check the server&#39;s log file, or run the server directly &quot;</span>
-                    <span class="s2">&quot;with &#39;klea-rag-serve serve&#39; / &#39;klea-serve serve&#39; &quot;</span>
-                    <span class="s2">&quot;to see the error.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Server at </span><span class="si">{</span><span class="n">health_url</span><span class="si">}</span><span class="s2"> did not become ready within </span><span class="si">{</span><span class="n">timeout</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">s. "</span>
+                    <span class="s2">"Check the server's log file, or run the server directly "</span>
+                    <span class="s2">"with 'klea-rag-serve' / 'klea-serve' "</span>
+                    <span class="s2">"to see the error."</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 
         <span class="k">yield</span> <span class="n">proc</span>

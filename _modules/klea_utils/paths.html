@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.paths</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Shared user-level directory utilities for Klea packages.</span>
 
 <span class="sd">Wraps ``platformdirs.PlatformDirs`` to provide OS-appropriate paths for</span>
@@ -298,7 +298,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -308,12 +308,12 @@
 <div class="viewcode-block" id="get_cache_dir">
 <a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.get_cache_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_cache_dir</span><span class="p">(</span><span class="n">dirs</span><span class="p">:</span> <span class="n">PlatformDirs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the OS-appropriate per-user cache directory for *dirs*.</span>
+<span class="w">    </span><span class="sd">"""Return the OS-appropriate per-user cache directory for *dirs*.</span>
 
 <span class="sd">    On Linux: ``~/.cache/{app_name}/``</span>
 <span class="sd">    On macOS: ``~/Library/Caches/{app_name}/``</span>
 <span class="sd">    On Windows: ``C:\\Users\\&lt;user&gt;\\AppData\\Local\\{app_name}\\cache\\``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">user_cache_dir</span><span class="p">)</span></div>
 
 
@@ -321,12 +321,12 @@
 <div class="viewcode-block" id="get_data_dir">
 <a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.get_data_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_data_dir</span><span class="p">(</span><span class="n">dirs</span><span class="p">:</span> <span class="n">PlatformDirs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the OS-appropriate per-user data directory for *dirs*.</span>
+<span class="w">    </span><span class="sd">"""Return the OS-appropriate per-user data directory for *dirs*.</span>
 
 <span class="sd">    On Linux: ``~/.local/share/{app_name}/``</span>
 <span class="sd">    On macOS: ``~/Library/Application Support/{app_name}/``</span>
 <span class="sd">    On Windows: ``C:\\Users\\&lt;user&gt;\\AppData\\Local\\{app_name}\\``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span></div>
 
 
@@ -334,23 +334,73 @@
 <div class="viewcode-block" id="get_config_dir">
 <a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.get_config_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_config_dir</span><span class="p">(</span><span class="n">dirs</span><span class="p">:</span> <span class="n">PlatformDirs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the OS-appropriate per-user config directory for *dirs*.</span>
+<span class="w">    </span><span class="sd">"""Return the OS-appropriate per-user config directory for *dirs*.</span>
 
 <span class="sd">    On Linux: ``~/.config/{app_name}/``</span>
 <span class="sd">    On macOS: ``~/Library/Preferences/{app_name}/``</span>
 <span class="sd">    On Windows: ``C:\\Users\\&lt;user&gt;\\AppData\\Roaming\\{app_name}\\``</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">dirs</span><span class="o">.</span><span class="n">user_config_dir</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_app_config_path">
+<a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.resolve_app_config_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_app_config_path</span><span class="p">(</span>
+    <span class="n">config_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">conf_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">cwd</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Locate the application config file, checking the working directory first.</span>
+
+<span class="sd">    ``config_file`` may be an absolute path or a relative name/path.  The</span>
+<span class="sd">    working directory is searched before *conf_dir* (the per-app config</span>
+<span class="sd">    directory), so a profile dropped in ``CWD`` overrides one installed in</span>
+<span class="sd">    the config directory.</span>
+
+<span class="sd">    :param config_file: App config file path or bare filename</span>
+<span class="sd">    :param conf_dir: Config directory searched after the working directory</span>
+<span class="sd">    :param cwd: Working directory to search first (defaults to ``Path.cwd()``)</span>
+<span class="sd">    :returns: The first existing match</span>
+<span class="sd">    :raises FileNotFoundError: If no existing file matches</span>
+<span class="sd">    :raises ValueError: If *config_file* is empty</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">config_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Empty config file name"</span><span class="p">)</span>
+
+    <span class="n">cwd_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span> <span class="k">if</span> <span class="n">cwd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span>
+    <span class="n">conf_dir_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">)</span>
+
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">candidate</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find config file: </span><span class="si">{</span><span class="n">candidate</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">cwd_candidate</span> <span class="o">=</span> <span class="n">cwd_path</span> <span class="o">/</span> <span class="n">candidate</span>
+    <span class="k">if</span> <span class="n">cwd_candidate</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">cwd_candidate</span>
+
+    <span class="n">conf_candidate</span> <span class="o">=</span> <span class="n">conf_dir_path</span> <span class="o">/</span> <span class="n">candidate</span>
+    <span class="k">if</span> <span class="n">conf_candidate</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">conf_candidate</span>
+
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Could not find config file '</span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">' in:</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">cwd_path</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">conf_dir_path</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="s2">"Create it there, or select another config with --profile &lt;name&gt;."</span>
+    <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="init_dir">
 <a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.init_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">init_dir</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create *path* (and parents) if it doesn&#39;t exist.</span>
+<span class="w">    </span><span class="sd">"""Create *path* (and parents) if it doesn't exist.</span>
 
 <span class="sd">    :returns: The same *path* as a ``Path`` for chaining.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="n">p</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">p</span></div>
@@ -360,7 +410,7 @@
 <div class="viewcode-block" id="cleanup_dir">
 <a class="viewcode-back" href="../../api/utils/paths.html#klea_utils.paths.cleanup_dir">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_dir</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove all *contents* of *path* but keep the directory itself.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Remove all *contents* of *path* but keep the directory itself."""</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">return</span>

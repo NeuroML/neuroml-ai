@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.plogging</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Logging related utils</span>
 
 <span class="sd">File: klea_utils/plogging.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
@@ -301,20 +301,20 @@
 
 <span class="c1">#: Klea logger namespaces that are turned up to DEBUG by</span>
 <span class="c1">#: ``setup_root_logger``.  Everything else (third-party libraries) inherits</span>
-<span class="c1">#: the root logger&#39;s INFO level, so their DEBUG output is filtered at the</span>
+<span class="c1">#: the root logger's INFO level, so their DEBUG output is filtered at the</span>
 <span class="c1">#: source without having to enumerate them.</span>
 <span class="n">KLEA_LOG_NAMESPACES</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s2">&quot;klea_utils&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;klea_rag&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;klea_agent&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;neuroml_mcp&quot;</span><span class="p">,</span>
+    <span class="s2">"klea_utils"</span><span class="p">,</span>
+    <span class="s2">"klea_rag"</span><span class="p">,</span>
+    <span class="s2">"klea_agent"</span><span class="p">,</span>
+    <span class="s2">"neuroml_mcp"</span><span class="p">,</span>
 <span class="p">)</span>
 
 
 <div class="viewcode-block" id="LoggerNotInfoFilter">
 <a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerNotInfoFilter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LoggerNotInfoFilter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Filter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Allow only non INFO messages&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Allow only non INFO messages"""</span>
 
 <div class="viewcode-block" id="LoggerNotInfoFilter.filter">
 <a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerNotInfoFilter.filter">[docs]</a>
@@ -327,7 +327,7 @@
 <div class="viewcode-block" id="LoggerInfoFilter">
 <a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerInfoFilter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LoggerInfoFilter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Filter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Allow only INFO messages&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Allow only INFO messages"""</span>
 
 <div class="viewcode-block" id="LoggerInfoFilter.filter">
 <a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.LoggerInfoFilter.filter">[docs]</a>
@@ -338,13 +338,13 @@
 
 
 <span class="n">logger_formatter_info</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
 <span class="p">)</span>
 <span class="n">logger_formatter_other</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in &#39;</span><span class="si">%(funcName)s</span><span class="s2">&#39; &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in '</span><span class="si">%(funcName)s</span><span class="s2">' &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
 <span class="p">)</span>
 <span class="n">logger_formatter_file</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in &#39;</span><span class="si">%(funcName)s</span><span class="s2">&#39; &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="s2">&quot;</span>
+    <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in '</span><span class="si">%(funcName)s</span><span class="s2">' &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="s2">"</span>
 <span class="p">)</span>
 
 
@@ -355,7 +355,7 @@
     <span class="n">stderr_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
     <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configure the root logger once per process.</span>
+<span class="w">    </span><span class="sd">"""Configure the root logger once per process.</span>
 
 <span class="sd">    Idempotent: if the root logger already has handlers, this is a no-op</span>
 <span class="sd">    and the existing configuration is returned unchanged.</span>
@@ -374,16 +374,16 @@
 <span class="sd">    loggers propagate to the root logger by default, a single call from each</span>
 <span class="sd">    application entry point routes all Klea logs (library modules, graph</span>
 <span class="sd">    nodes, API routers) through the same console and file handlers.</span>
-<span class="sd">    Third-party libraries inherit the root&#39;s INFO level, so their DEBUG</span>
+<span class="sd">    Third-party libraries inherit the root's INFO level, so their DEBUG</span>
 <span class="sd">    output is filtered at the source without enumerating them.</span>
 
 <span class="sd">    :param app_name: Application name, used as the log file name to keep</span>
-<span class="sd">        per-app logs separate (e.g. ``&quot;klea-rag&quot;``).</span>
+<span class="sd">        per-app logs separate (e.g. ``"klea-rag"``).</span>
 <span class="sd">    :param stderr_level: Level for the stderr handler (default ``DEBUG``)</span>
 <span class="sd">    :param log_dir: Directory for the log file.  ``None`` disables file</span>
 <span class="sd">        logging.</span>
 <span class="sd">    :returns: The configured root logger</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">handlers</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">root</span>
@@ -406,7 +406,7 @@
         <span class="n">log_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">log_dir</span><span class="p">)</span>
         <span class="n">log_path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">file_handler</span> <span class="o">=</span> <span class="n">RotatingFileHandler</span><span class="p">(</span>
-            <span class="n">log_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">.log&quot;</span><span class="p">,</span>
+            <span class="n">log_path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">.log"</span><span class="p">,</span>
             <span class="n">maxBytes</span><span class="o">=</span><span class="mi">1_000_000</span><span class="p">,</span>
             <span class="n">backupCount</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
         <span class="p">)</span>
@@ -415,8 +415,8 @@
         <span class="n">root</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">)</span>
 
     <span class="c1"># Turn up verbosity for our own namespaces only.  Third-party libraries</span>
-    <span class="c1"># inherit root&#39;s INFO level, so their DEBUG is filtered without listing</span>
-    <span class="c1"># them.  Only applied when the logger&#39;s level is still NOTSET so an</span>
+    <span class="c1"># inherit root's INFO level, so their DEBUG is filtered without listing</span>
+    <span class="c1"># them.  Only applied when the logger's level is still NOTSET so an</span>
     <span class="c1"># explicit configuration always wins.</span>
     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="n">KLEA_LOG_NAMESPACES</span><span class="p">,</span> <span class="n">app_name</span><span class="p">):</span>
         <span class="n">klea_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
@@ -433,21 +433,21 @@
     <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">sensitive_keys</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy with sensitive values masked for logging.</span>
+<span class="w">    </span><span class="sd">"""Return a copy with sensitive values masked for logging.</span>
 
 <span class="sd">    Shows only the last 4 characters of each value to prevent secrets</span>
 <span class="sd">    (API keys, tokens) from appearing in plaintext in log output.</span>
 
 <span class="sd">    :param data: The dict to sanitize.</span>
 <span class="sd">    :param sensitive_keys: Keys whose values should be masked.</span>
-<span class="sd">        Defaults to ``{&quot;api_key&quot;}``.</span>
+<span class="sd">        Defaults to ``{"api_key"}``.</span>
 <span class="sd">    :returns: New dict with masked values.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">safe</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sensitive_keys</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;api_key&quot;</span><span class="p">}:</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sensitive_keys</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">"api_key"</span><span class="p">}:</span>
         <span class="k">if</span> <span class="n">safe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
             <span class="n">val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">safe</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
-            <span class="n">safe</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;...</span><span class="si">{</span><span class="n">val</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">safe</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"...</span><span class="si">{</span><span class="n">val</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span><span class="si">}</span><span class="s2">"</span>
     <span class="k">return</span> <span class="n">safe</span></div>
 
 </pre></div>

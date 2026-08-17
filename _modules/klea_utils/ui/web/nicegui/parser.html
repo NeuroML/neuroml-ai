@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.web.nicegui.parser</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Argparse parser for the Klea NiceGUI frontend entry point.</span>
 
 <span class="sd">Provides a standard :mod:`argparse` parser for the arguments passed by</span>
@@ -296,7 +296,7 @@
 
 <span class="sd">    from klea_utils.ui.web.nicegui.parser import make_parser</span>
 
-<span class="sd">    args = make_parser(&quot;My frontend&quot;).parse_args()</span>
+<span class="sd">    args = make_parser("My frontend").parse_args()</span>
 <span class="sd">    run_app(</span>
 <span class="sd">        args.title, args.url,</span>
 <span class="sd">        subtitle=args.subtitle,</span>
@@ -308,7 +308,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
 
@@ -316,47 +316,47 @@
 <div class="viewcode-block" id="make_parser">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.parser.make_parser">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">make_parser</span><span class="p">(</span>
-    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Klea web interface&quot;</span><span class="p">,</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Klea web interface"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a preconfigured :class:`argparse.ArgumentParser`.</span>
+<span class="w">    </span><span class="sd">"""Return a preconfigured :class:`argparse.ArgumentParser`.</span>
 
 <span class="sd">    :param description: Description shown in ``--help``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Application title (shown in header)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Application title (shown in header)"</span><span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;subtitle&quot;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Text shown next to title in header&quot;</span>
+        <span class="s2">"subtitle"</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s2">"?"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Text shown next to title in header"</span>
     <span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Backend server URL&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">"url"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Backend server URL"</span><span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--disclaimer&quot;</span><span class="p">,</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Disclaimer text shown below the chat area&quot;</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--footer&quot;</span><span class="p">,</span>
-        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;Powered by &lt;a href=&quot;https://github.com/neuroml/klea&quot;&gt;Klea&lt;/a&gt;&#39;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Footer HTML content&quot;</span><span class="p">,</span>
+        <span class="s2">"--disclaimer"</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Disclaimer text shown below the chat area"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--nicegui-url&quot;</span><span class="p">,</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;0.0.0.0:7860&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Host:port to bind the NiceGUI web server to (default: 0.0.0.0:7860)&quot;</span><span class="p">,</span>
+        <span class="s2">"--footer"</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s1">'Powered by &lt;a href="https://github.com/neuroml/klea"&gt;Klea&lt;/a&gt;'</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Footer HTML content"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--storage-secret&quot;</span><span class="p">,</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;klea-nicegui-secret-change-me&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;NiceGUI storage secret for session persistence&quot;</span><span class="p">,</span>
+        <span class="s2">"--nicegui-url"</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"0.0.0.0:7860"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Host:port to bind the NiceGUI web server to (default: 0.0.0.0:7860)"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable auto-reload on file changes (supported by nicegui only)&quot;</span><span class="p">,</span>
+        <span class="s2">"--storage-secret"</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"klea-nicegui-secret-change-me"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"NiceGUI storage secret for session persistence"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">&quot;--app-name&quot;</span><span class="p">,</span>
-        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;klea-web&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Log identity for this frontend process (used for the log file name)&quot;</span><span class="p">,</span>
+        <span class="s2">"--debug"</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Enable auto-reload on file changes (supported by nicegui only)"</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">"--app-name"</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">"klea-web"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Log identity for this frontend process (used for the log file name)"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">parser</span></div>
 

@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.nodes.guard_router</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Guard router node for routing based on guard decision</span>
 
 <span class="sd">File: klea_utils/nodes/guard_router.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">override</span>
@@ -304,35 +304,35 @@
 <div class="viewcode-block" id="GuardRouterNode">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.guard_router.GuardRouterNode">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GuardRouterNode</span><span class="p">(</span><span class="n">AbstractRouterNode</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Router node that routes based on guard decision.</span>
+<span class="w">    </span><span class="sd">"""Router node that routes based on guard decision.</span>
 
 <span class="sd">    Reads the guard_decision from state and returns routing label:</span>
-<span class="sd">    - &quot;safe&quot; -&gt; continue to next node</span>
-<span class="sd">    - &quot;unsafe&quot; -&gt; decline to respond node</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    - "safe" -&gt; continue to next node</span>
+<span class="sd">    - "unsafe" -&gt; decline to respond node</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the guard router.</span>
+<span class="w">        </span><span class="sd">"""Initialise the guard router.</span>
 
 <span class="sd">        :param logger: Logger instance</span>
 <span class="sd">        :param label: Human-readable label for UI progress display</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
 
 <div class="viewcode-block" id="GuardRouterNode.execute">
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.guard_router.GuardRouterNode.execute">[docs]</a>
     <span class="nd">@override</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">BaseModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Route based on guard_decision in state.</span>
+<span class="w">        </span><span class="sd">"""Route based on guard_decision in state.</span>
 
 <span class="sd">        :param state: Current graph state</span>
-<span class="sd">        :returns: Routing label (&quot;safe&quot; or &quot;unsafe&quot;)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;progress&quot;</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">state</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">        :returns: Routing label ("safe" or "unsafe")</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_custom_stream</span><span class="p">({</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"progress"</span><span class="p">,</span> <span class="s2">"node"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">state</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="n">guard_decision</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;guard_decision&quot;</span><span class="p">,</span> <span class="s2">&quot;safe&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">guard_decision</span><span class="w"> </span><span class="si">= }</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">guard_decision</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s2">"guard_decision"</span><span class="p">,</span> <span class="s2">"safe"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">guard_decision</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">guard_decision</span></div>
 </div>

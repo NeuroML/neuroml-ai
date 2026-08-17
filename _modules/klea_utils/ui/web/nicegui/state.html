@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.web.nicegui.state</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">In-memory chat state for the NiceGUI frontend.</span>
 
 <span class="sd">Keyed by ``{user_id}:{chat_id}`` so that colliding chat_ids across</span>
@@ -294,7 +294,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
@@ -315,7 +315,7 @@
 <div class="viewcode-block" id="ensure_chat">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.state.ensure_chat">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the chat session dict for *user_id* / *chat_id*, creating it if missing.</span>
+<span class="w">    </span><span class="sd">"""Return the chat session dict for *user_id* / *chat_id*, creating it if missing.</span>
 
 <span class="sd">    Each chat session dict has the following keys::</span>
 
@@ -335,28 +335,28 @@
 <span class="sd">                            (from ``fetch_active_models``).</span>
 <span class="sd">        token_usage         Numeric token totals accumulated for this in-memory</span>
 <span class="sd">                            chat session.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span>
     <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">chats</span><span class="p">:</span>
         <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">astimezone</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;creating </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"creating </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
         <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">chat_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">title</span><span class="p">(),</span>
-            <span class="s2">&quot;created&quot;</span><span class="p">:</span> <span class="n">now</span><span class="o">.</span><span class="n">timestamp</span><span class="p">(),</span>
-            <span class="s2">&quot;pinned&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="s2">&quot;messages&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;inspector_entries&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;inspector_expanded&quot;</span><span class="p">:</span> <span class="nb">set</span><span class="p">(),</span>
-            <span class="s2">&quot;state_sections&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;model_info&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;token_usage&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;input_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                <span class="s2">&quot;output_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-                <span class="s2">&quot;total_tokens&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">chat_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">title</span><span class="p">(),</span>
+            <span class="s2">"created"</span><span class="p">:</span> <span class="n">now</span><span class="o">.</span><span class="n">timestamp</span><span class="p">(),</span>
+            <span class="s2">"pinned"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">"messages"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"inspector_entries"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"inspector_expanded"</span><span class="p">:</span> <span class="nb">set</span><span class="p">(),</span>
+            <span class="s2">"state_sections"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"model_info"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"token_usage"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"input_tokens"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s2">"output_tokens"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s2">"total_tokens"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
             <span class="p">},</span>
         <span class="p">}</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;found existing </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"found existing </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">chats</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
 
 
@@ -364,23 +364,23 @@
 <div class="viewcode-block" id="get_chats_sorted">
 <a class="viewcode-back" href="../../../../../api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.state.get_chats_sorted">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_chats_sorted</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return (chat_id, data) pairs for *user_id*, pinned first, then by creation desc.</span>
+<span class="w">    </span><span class="sd">"""Return (chat_id, data) pairs for *user_id*, pinned first, then by creation desc.</span>
 
 <span class="sd">    Filters by the user_id prefix so that in a multi-browser scenario</span>
 <span class="sd">    (same NiceGUI process) each user only sees their own chats.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:"</span>
     <span class="n">all_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chats</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="n">matched</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">all_keys</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">)]</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-        <span class="s2">&quot;user_id=</span><span class="si">%s</span><span class="s2"> prefix=</span><span class="si">%r</span><span class="s2"> chats_keys=</span><span class="si">%s</span><span class="s2"> matched=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">"user_id=</span><span class="si">%s</span><span class="s2"> prefix=</span><span class="si">%r</span><span class="s2"> chats_keys=</span><span class="si">%s</span><span class="s2"> matched=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">user_id</span><span class="p">,</span>
         <span class="n">prefix</span><span class="p">,</span>
         <span class="n">all_keys</span><span class="p">,</span>
         <span class="n">matched</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">items</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chats</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">)]</span>
-    <span class="n">items</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="ow">not</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;pinned&quot;</span><span class="p">],</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;created&quot;</span><span class="p">]))</span>
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chats</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span><span class="p">)]</span>
+    <span class="n">items</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="ow">not</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">"pinned"</span><span class="p">],</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">"created"</span><span class="p">]))</span>
     <span class="k">return</span> <span class="n">items</span></div>
 
 </pre></div>

@@ -385,10 +385,10 @@ button, and an expand / collapse toggle – all flowing naturally
 inside the bubble (no CSS hacks).</p>
 <p>Usage inside a <code class="docutils literal notranslate"><span class="pre">&#64;ui.refreshable</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ChatBubble</span><span class="p">(</span>
-    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;Hello&quot;</span><span class="p">,</span> <span class="n">stamp</span><span class="o">=</span><span class="s2">&quot;12:00&quot;</span><span class="p">,</span> <span class="n">is_user</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">text</span><span class="o">=</span><span class="s2">"Hello"</span><span class="p">,</span> <span class="n">stamp</span><span class="o">=</span><span class="s2">"12:00"</span><span class="p">,</span> <span class="n">is_user</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">collapsed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-    <span class="n">on_expand</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;toggle&quot;</span><span class="p">),</span>
-    <span class="n">on_copy</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;copy&quot;</span><span class="p">),</span>
+    <span class="n">on_expand</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">"toggle"</span><span class="p">),</span>
+    <span class="n">on_copy</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">"copy"</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -488,7 +488,7 @@ arguments it needs.</p>
 <p>Usage:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.ui.web.nicegui.parser</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_parser</span>
 
-<span class="n">args</span> <span class="o">=</span> <span class="n">make_parser</span><span class="p">(</span><span class="s2">&quot;My frontend&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">make_parser</span><span class="p">(</span><span class="s2">"My frontend"</span><span class="p">)</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
 <span class="n">run_app</span><span class="p">(</span>
     <span class="n">args</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">url</span><span class="p">,</span>
     <span class="n">subtitle</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">subtitle</span><span class="p">,</span>

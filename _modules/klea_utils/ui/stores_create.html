@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.stores_create</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">CLI for creating stores from documents</span>
 
 <span class="sd">File: klea_utils/ui/stores_create.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -300,11 +300,11 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
 
-<span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Create stores from documents&quot;</span><span class="p">)</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Create stores from documents"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_store_dir</span><span class="p">(</span><span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the local directory of a store URI, or ``None``.</span>
+<span class="w">    </span><span class="sd">"""Return the local directory of a store URI, or ``None``.</span>
 
 <span class="sd">    Backends with a local store folder (e.g. ``chroma:/path/to/store``,</span>
 <span class="sd">    or any future filesystem-backed scheme) have a directory that may</span>
@@ -315,11 +315,11 @@
 
 <span class="sd">    :param store_path: Vector store URI (``scheme:location``)</span>
 <span class="sd">    :returns: Resolved local directory, or ``None`` for remote schemes</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">store_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">store_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">sep</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="s2">&quot;postgresql://&quot;</span><span class="p">,</span> <span class="s2">&quot;postgres://&quot;</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"http://"</span><span class="p">,</span> <span class="s2">"https://"</span><span class="p">,</span> <span class="s2">"postgresql://"</span><span class="p">,</span> <span class="s2">"postgres://"</span><span class="p">)):</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
@@ -328,71 +328,71 @@
 <a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.build">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
-    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing source documents&quot;</span><span class="p">),</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents"</span><span class="p">),</span>
     <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="s2">&quot;--collection&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-n&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store. Must match the &quot;</span>
-        <span class="s2">&quot;&#39;name&#39; of the corresponding vector_stores/bm25_stores entry in &quot;</span>
-        <span class="s2">&quot;the RAG config file (e.g. klea.json); a different name on an &quot;</span>
-        <span class="s2">&quot;existing store file creates a new collection&quot;</span><span class="p">,</span>
+        <span class="s2">"--collection"</span><span class="p">,</span>
+        <span class="s2">"-n"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Collection name for the vector store. Must match the "</span>
+        <span class="s2">"'name' of the corresponding vector_stores/bm25_stores entry in "</span>
+        <span class="s2">"the RAG config file (e.g. klea.json); a different name on an "</span>
+        <span class="s2">"existing store file creates a new collection"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="s2">&quot;--store&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-s&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store). For local &quot;</span>
-        <span class="s2">&quot;Chroma stores, point at the store folder: the database file &quot;</span>
-        <span class="s2">&quot;inside it is always named chroma.sqlite3&quot;</span><span class="p">,</span>
+        <span class="s2">"--store"</span><span class="p">,</span>
+        <span class="s2">"-s"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Vector store URI (e.g. chroma:/path/to/store). For local "</span>
+        <span class="s2">"Chroma stores, point at the store folder: the database file "</span>
+        <span class="s2">"inside it is always named chroma.sqlite3"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="s2">&quot;ollama:bge-m3:latest&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;--model&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Embedding model identifier&quot;</span><span class="p">,</span>
+        <span class="s2">"ollama:bge-m3:latest"</span><span class="p">,</span>
+        <span class="s2">"--model"</span><span class="p">,</span>
+        <span class="s2">"-m"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Embedding model identifier"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="mi">450</span><span class="p">,</span> <span class="s2">&quot;--max-tokens&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Maximum tokens per chunk&quot;</span>
+        <span class="mi">450</span><span class="p">,</span> <span class="s2">"--max-tokens"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Maximum tokens per chunk"</span>
     <span class="p">),</span>
     <span class="n">ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">&quot;--ocr/--no-ocr&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Whether to perform optical character recognition (OCR) &quot;</span>
-        <span class="s2">&quot;during PDF conversion (default: on). Keep for scanned/image &quot;</span>
-        <span class="s2">&quot;PDFs; disable for text-based PDFs to speed up conversion &quot;</span>
-        <span class="s2">&quot;significantly&quot;</span><span class="p">,</span>
+        <span class="s2">"--ocr/--no-ocr"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Whether to perform optical character recognition (OCR) "</span>
+        <span class="s2">"during PDF conversion (default: on). Keep for scanned/image "</span>
+        <span class="s2">"PDFs; disable for text-based PDFs to speed up conversion "</span>
+        <span class="s2">"significantly"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;JSON file keyed by source filename; each file entry maps &quot;</span>
-        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback). &quot;</span>
-        <span class="s2">&quot;If not given, build generates metadata-map.template.json from the &quot;</span>
-        <span class="s2">&quot;extraction and uses it without a review step&quot;</span><span class="p">,</span>
+        <span class="s2">"--metadata-map"</span><span class="p">,</span>
+        <span class="s2">"-M"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"JSON file keyed by source filename; each file entry maps "</span>
+        <span class="s2">"heading chains to metadata dicts (with per-file DEFAULT fallback). "</span>
+        <span class="s2">"If not given, build generates metadata-map.template.json from the "</span>
+        <span class="s2">"extraction and uses it without a review step"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">&quot;--bm25-store&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write the combined document corpus to this path for BM25 &quot;</span>
-        <span class="s2">&quot;retrieval (a pickle of all chunked documents). Defaults to &quot;</span>
-        <span class="s2">&quot;&lt;collection&gt;.pkl in the current directory; the file can be &quot;</span>
-        <span class="s2">&quot;moved after creation&quot;</span><span class="p">,</span>
-        <span class="n">show_default</span><span class="o">=</span><span class="s2">&quot;&lt;collection&gt;.pkl&quot;</span><span class="p">,</span>
+        <span class="s2">"--bm25-store"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Write the combined document corpus to this path for BM25 "</span>
+        <span class="s2">"retrieval (a pickle of all chunked documents). Defaults to "</span>
+        <span class="s2">"&lt;collection&gt;.pkl in the current directory; the file can be "</span>
+        <span class="s2">"moved after creation"</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="s2">"&lt;collection&gt;.pkl"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embed_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="mi">256</span><span class="p">,</span>
-        <span class="s2">&quot;--embed-batch-size&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of chunks embedded per store write call. Smaller &quot;</span>
-        <span class="s2">&quot;values report progress more frequently; larger values reduce &quot;</span>
-        <span class="s2">&quot;per-request overhead on very large corpora&quot;</span><span class="p">,</span>
+        <span class="s2">"--embed-batch-size"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of chunks embedded per store write call. Smaller "</span>
+        <span class="s2">"values report progress more frequently; larger values reduce "</span>
+        <span class="s2">"per-request overhead on very large corpora"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-process all files even if unchanged&quot;</span>
+        <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Full pipeline: chunk, embed, and write to a vector store.</span>
+<span class="w">    </span><span class="sd">"""Full pipeline: chunk, embed, and write to a vector store.</span>
 
 <span class="sd">    Processes all files in SOURCE_DIR: converts them with Docling,</span>
 <span class="sd">    chunks them, embeds them, and writes to the vector store.</span>
@@ -411,35 +411,35 @@
 <span class="sd">    Example metadata-map.json::</span>
 
 <span class="sd">        {</span>
-<span class="sd">            &quot;PrimerOnCElegans.md&quot;: {</span>
-<span class="sd">                &quot;DEFAULT&quot;: {},</span>
-<span class="sd">                &quot;C. elegans tissue morphology&quot;: {</span>
-<span class="sd">                    &quot;url&quot;: &quot;https://example.com/worm&quot;</span>
+<span class="sd">            "PrimerOnCElegans.md": {</span>
+<span class="sd">                "DEFAULT": {},</span>
+<span class="sd">                "C. elegans tissue morphology": {</span>
+<span class="sd">                    "url": "https://example.com/worm"</span>
 <span class="sd">                }</span>
 <span class="sd">            },</span>
-<span class="sd">            &quot;c302-paper.pdf&quot;: {</span>
-<span class="sd">                &quot;DEFAULT&quot;: {</span>
-<span class="sd">                    &quot;url&quot;: &quot;https://example.com/c302&quot;</span>
+<span class="sd">            "c302-paper.pdf": {</span>
+<span class="sd">                "DEFAULT": {</span>
+<span class="sd">                    "url": "https://example.com/c302"</span>
 <span class="sd">                }</span>
 <span class="sd">            }</span>
 <span class="sd">        }</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Building vector store &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;(none)&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"Building vector store '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
     <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
     <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
     <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl"</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># Lazy: importing StoresBuilder pulls in ingestion.py -&gt; llm.py -&gt;</span>
@@ -464,9 +464,9 @@
             <span class="n">metadata_map_path</span><span class="o">=</span><span class="n">metadata_map_path</span><span class="p">,</span>
             <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done -- collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; is ready&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Done -- collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' is ready"</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
 
@@ -475,23 +475,23 @@
 <a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.chunk">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">chunk</span><span class="p">(</span>
-    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing source documents&quot;</span><span class="p">),</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents"</span><span class="p">),</span>
     <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="mi">450</span><span class="p">,</span> <span class="s2">&quot;--max-tokens&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Maximum tokens per chunk&quot;</span>
+        <span class="mi">450</span><span class="p">,</span> <span class="s2">"--max-tokens"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Maximum tokens per chunk"</span>
     <span class="p">),</span>
     <span class="n">ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">&quot;--ocr/--no-ocr&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Whether to perform optical character recognition (OCR) &quot;</span>
-        <span class="s2">&quot;during PDF conversion (default: on). Keep for scanned/image &quot;</span>
-        <span class="s2">&quot;PDFs; disable for text-based PDFs to speed up conversion &quot;</span>
-        <span class="s2">&quot;significantly&quot;</span><span class="p">,</span>
+        <span class="s2">"--ocr/--no-ocr"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Whether to perform optical character recognition (OCR) "</span>
+        <span class="s2">"during PDF conversion (default: on). Keep for scanned/image "</span>
+        <span class="s2">"PDFs; disable for text-based PDFs to speed up conversion "</span>
+        <span class="s2">"significantly"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Re-process all files even if unchanged&quot;</span>
+        <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Chunk and cache documents without writing to a vector store.</span>
+<span class="w">    </span><span class="sd">"""Chunk and cache documents without writing to a vector store.</span>
 
 <span class="sd">    Converts all files in SOURCE_DIR with Docling, chunks them, and</span>
 <span class="sd">    caches the result in ``&lt;source_dir&gt;/.klea-cache/``.  Also writes a</span>
@@ -499,11 +499,11 @@
 <span class="sd">    empty ``{}`` placeholders for each heading chain.  Fill in the</span>
 <span class="sd">    metadata values and pass the file to</span>
 <span class="sd">    ``klea-stores-create store --metadata-map``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Chunking documents in </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Chunking documents in </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># Lazy: importing StoresBuilder pulls in ingestion.py -&gt; llm.py -&gt;</span>
@@ -519,36 +519,36 @@
         <span class="p">)</span>
 
         <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
-            <span class="n">embedding_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>  <span class="c1"># not needed for chunking only</span>
+            <span class="n">embedding_model</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>  <span class="c1"># not needed for chunking only</span>
             <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
             <span class="n">max_tokens</span><span class="o">=</span><span class="n">max_tokens</span><span class="p">,</span>
             <span class="n">do_ocr</span><span class="o">=</span><span class="n">ocr</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">_</span><span class="p">,</span> <span class="n">file_headings</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">)</span>
         <span class="n">builder</span><span class="o">.</span><span class="n">write_heading_template</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">file_headings</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above&quot;</span>
+            <span class="sa">f</span><span class="s2">"No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above"</span>
         <span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Chunking complete -- cache is ready&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Chunking complete -- cache is ready"</span><span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Review/update the metadata map before storing: &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">CACHE_DIR_NAME</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> -- copy it out, &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;fill in per-heading entries, then run &#39;klea-stores-create store&#39; &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;with --metadata-map&quot;</span>
+        <span class="sa">f</span><span class="s2">"Review/update the metadata map before storing: "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">CACHE_DIR_NAME</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> -- copy it out, "</span>
+        <span class="sa">f</span><span class="s2">"fill in per-heading entries, then run 'klea-stores-create store' "</span>
+        <span class="sa">f</span><span class="s2">"with --metadata-map"</span>
     <span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Metadata map summary:&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Metadata map summary:"</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 
@@ -562,7 +562,7 @@
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not lint metadata map: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not lint metadata map: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 
 
@@ -570,68 +570,68 @@
 <a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.store">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">store</span><span class="p">(</span>
-    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing source documents&quot;</span><span class="p">),</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents"</span><span class="p">),</span>
     <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="s2">&quot;--collection&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-n&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Collection name for the vector store. Must match the &quot;</span>
-        <span class="s2">&quot;&#39;name&#39; of the corresponding vector_stores/bm25_stores entry in &quot;</span>
-        <span class="s2">&quot;the RAG config file (e.g. klea.json); a different name on an &quot;</span>
-        <span class="s2">&quot;existing store file creates a new collection&quot;</span><span class="p">,</span>
+        <span class="s2">"--collection"</span><span class="p">,</span>
+        <span class="s2">"-n"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Collection name for the vector store. Must match the "</span>
+        <span class="s2">"'name' of the corresponding vector_stores/bm25_stores entry in "</span>
+        <span class="s2">"the RAG config file (e.g. klea.json); a different name on an "</span>
+        <span class="s2">"existing store file creates a new collection"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="o">...</span><span class="p">,</span>
-        <span class="s2">&quot;--store&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-s&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Vector store URI (e.g. chroma:/path/to/store). For local &quot;</span>
-        <span class="s2">&quot;Chroma stores, point at the store folder: the database file &quot;</span>
-        <span class="s2">&quot;inside it is always named chroma.sqlite3&quot;</span><span class="p">,</span>
+        <span class="s2">"--store"</span><span class="p">,</span>
+        <span class="s2">"-s"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Vector store URI (e.g. chroma:/path/to/store). For local "</span>
+        <span class="s2">"Chroma stores, point at the store folder: the database file "</span>
+        <span class="s2">"inside it is always named chroma.sqlite3"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="s2">&quot;ollama:bge-m3:latest&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;--model&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Embedding model identifier&quot;</span><span class="p">,</span>
+        <span class="s2">"ollama:bge-m3:latest"</span><span class="p">,</span>
+        <span class="s2">"--model"</span><span class="p">,</span>
+        <span class="s2">"-m"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Embedding model identifier"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;JSON file keyed by source filename; each file entry maps &quot;</span>
-        <span class="s2">&quot;heading chains to metadata dicts (with per-file DEFAULT fallback). &quot;</span>
-        <span class="s2">&quot;Defaults to metadata-map.template.json in the source &quot;</span>
-        <span class="s2">&quot;directory&#39;s cache folder; required when no template exists&quot;</span><span class="p">,</span>
+        <span class="s2">"--metadata-map"</span><span class="p">,</span>
+        <span class="s2">"-M"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"JSON file keyed by source filename; each file entry maps "</span>
+        <span class="s2">"heading chains to metadata dicts (with per-file DEFAULT fallback). "</span>
+        <span class="s2">"Defaults to metadata-map.template.json in the source "</span>
+        <span class="s2">"directory's cache folder; required when no template exists"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">&quot;--bm25-store&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write the combined document corpus to this path for BM25 &quot;</span>
-        <span class="s2">&quot;retrieval (a pickle of all chunked documents). Defaults to &quot;</span>
-        <span class="s2">&quot;&lt;collection&gt;.pkl in the current directory; the file can be &quot;</span>
-        <span class="s2">&quot;moved after creation&quot;</span><span class="p">,</span>
-        <span class="n">show_default</span><span class="o">=</span><span class="s2">&quot;&lt;collection&gt;.pkl&quot;</span><span class="p">,</span>
+        <span class="s2">"--bm25-store"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Write the combined document corpus to this path for BM25 "</span>
+        <span class="s2">"retrieval (a pickle of all chunked documents). Defaults to "</span>
+        <span class="s2">"&lt;collection&gt;.pkl in the current directory; the file can be "</span>
+        <span class="s2">"moved after creation"</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="s2">"&lt;collection&gt;.pkl"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">embed_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="mi">256</span><span class="p">,</span>
-        <span class="s2">&quot;--embed-batch-size&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of chunks embedded per store write call. Smaller &quot;</span>
-        <span class="s2">&quot;values report progress more frequently; larger values reduce &quot;</span>
-        <span class="s2">&quot;per-request overhead on very large corpora&quot;</span><span class="p">,</span>
+        <span class="s2">"--embed-batch-size"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of chunks embedded per store write call. Smaller "</span>
+        <span class="s2">"values report progress more frequently; larger values reduce "</span>
+        <span class="s2">"per-request overhead on very large corpora"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span>
-        <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Drop the collection and re-store all files from scratch &quot;</span>
-        <span class="s2">&quot;(the portable way to update a collection; documents within a &quot;</span>
-        <span class="s2">&quot;collection cannot be updated in place).  Without --force, &quot;</span>
-        <span class="s2">&quot;`store` is incremental: unchanged files are skipped and changed &quot;</span>
-        <span class="s2">&quot;files are updated in place.  Does not reconvert: files must &quot;</span>
-        <span class="s2">&quot;already be cached by &#39;chunk&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">"--force"</span><span class="p">,</span>
+        <span class="s2">"-f"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Drop the collection and re-store all files from scratch "</span>
+        <span class="s2">"(the portable way to update a collection; documents within a "</span>
+        <span class="s2">"collection cannot be updated in place).  Without --force, "</span>
+        <span class="s2">"`store` is incremental: unchanged files are skipped and changed "</span>
+        <span class="s2">"files are updated in place.  Does not reconvert: files must "</span>
+        <span class="s2">"already be cached by 'chunk'"</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write cached document chunks to a vector store.</span>
+<span class="w">    </span><span class="sd">"""Write cached document chunks to a vector store.</span>
 
 <span class="sd">    Cache-only: every source file must already have a cache entry (run</span>
 <span class="sd">    ``klea-stores-create chunk`` first).  Reads the cached chunks from</span>
@@ -652,22 +652,22 @@
 
 <span class="sd">    Run ``klea-stores-create chunk`` first to populate the cache and</span>
 <span class="sd">    generate a ``metadata-map.template.json``.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Storing cached chunks to &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;(none)&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">"Storing cached chunks to '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span>
     <span class="p">)</span>
 
     <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
     <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
     <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl"</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -682,7 +682,7 @@
         <span class="p">)</span>
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">metadata_map</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">_resolve_metadata_map</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">metadata_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -690,17 +690,17 @@
             <span class="c1"># prior chunk run wrote (or an explicit --metadata-map), so a</span>
             <span class="c1"># missing map here is a misconfiguration, not a silent fallback.</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No metadata map found for </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">. Run &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;&#39;klea-stores-create chunk&#39; to generate &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> in the source directory&#39;s cache &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;folder, or pass --metadata-map.&quot;</span>
+                <span class="sa">f</span><span class="s2">"No metadata map found for </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">. Run "</span>
+                <span class="sa">f</span><span class="s2">"'klea-stores-create chunk' to generate "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">TEMPLATE_FILE_NAME</span><span class="si">}</span><span class="s2"> in the source directory's cache "</span>
+                <span class="sa">f</span><span class="s2">"folder, or pass --metadata-map."</span>
             <span class="p">)</span>
 
         <span class="n">results</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">_load_and_fold_results</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No files were successfully chunked from &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above&quot;</span>
+                <span class="sa">f</span><span class="s2">"No files were successfully chunked from "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2"> -- see errors above"</span>
             <span class="p">)</span>
             <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">builder</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span>
@@ -711,19 +711,19 @@
             <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
             <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done -- collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; is ready&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Done -- collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' is ready"</span><span class="p">)</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;The chunk cache and store manifest in &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">CACHE_DIR_NAME</span><span class="si">}</span><span class="s2"> are reused for incremental &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;updates -- keep them to avoid re-converting and re-storing &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;everything.&quot;</span>
+            <span class="sa">f</span><span class="s2">"The chunk cache and store manifest in "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source_path</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">CACHE_DIR_NAME</span><span class="si">}</span><span class="s2"> are reused for incremental "</span>
+            <span class="sa">f</span><span class="s2">"updates -- keep them to avoid re-converting and re-storing "</span>
+            <span class="sa">f</span><span class="s2">"everything."</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
         <span class="k">raise</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
 
@@ -733,27 +733,27 @@
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">map_lint</span><span class="p">(</span>
     <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory containing the metadata map (uses &quot;</span>
-        <span class="s2">&quot;metadata-map.template.json in the .klea-cache folder unless &quot;</span>
-        <span class="s2">&quot;--metadata-map is given)&quot;</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing the metadata map (uses "</span>
+        <span class="s2">"metadata-map.template.json in the .klea-cache folder unless "</span>
+        <span class="s2">"--metadata-map is given)"</span>
     <span class="p">),</span>
     <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">&quot;--metadata-map&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-M&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Explicit metadata-map JSON file to lint, instead of the &quot;</span>
-        <span class="s2">&quot;template in SOURCE_DIR&quot;</span><span class="p">,</span>
+        <span class="s2">"--metadata-map"</span><span class="p">,</span>
+        <span class="s2">"-M"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Explicit metadata-map JSON file to lint, instead of the "</span>
+        <span class="s2">"template in SOURCE_DIR"</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Report issues in a metadata map so it can be reviewed efficiently.</span>
+<span class="w">    </span><span class="sd">"""Report issues in a metadata map so it can be reviewed efficiently.</span>
 
 <span class="sd">    Runs only deterministic checks (missing fields, suspicious titles or</span>
-<span class="sd">    DOIs, year/filename mismatches, stale &#39;venue&#39; keys, excess url* keys,</span>
+<span class="sd">    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,</span>
 <span class="sd">    placeholder counts) -- no LLM is needed.  Useful after editing the</span>
-<span class="sd">    map by hand, and printed automatically at the end of &#39;chunk&#39;.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;klea-stores-create&quot;</span><span class="p">)</span>
+<span class="sd">    map by hand, and printed automatically at the end of 'chunk'.</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
@@ -767,26 +767,26 @@
 
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
             <span class="n">map_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">map_path</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">CACHE_DIR_NAME</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">map_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metadata map not found: </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Metadata map not found: </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">))</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
     <span class="n">app</span><span class="p">()</span>
 </pre></div>
         </article>

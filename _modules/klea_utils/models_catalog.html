@@ -284,7 +284,7 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.models_catalog</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Client for the models.dev model catalog.</span>
 
 <span class="sd">Fetches ``https://models.dev/api.json`` (a ~3MB JSON mapping of provider -&gt;</span>
@@ -307,7 +307,7 @@
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -326,13 +326,13 @@
 
 <span class="c1">#: Default models.dev catalog URL.  Overridable via the KLEA_MODELS_DEV_URL</span>
 <span class="c1">#: environment variable (e.g. for offline mirrors or enterprise proxies).</span>
-<span class="n">DEFAULT_MODELS_DEV_URL</span> <span class="o">=</span> <span class="s2">&quot;https://models.dev/api.json&quot;</span>
+<span class="n">DEFAULT_MODELS_DEV_URL</span> <span class="o">=</span> <span class="s2">"https://models.dev/api.json"</span>
 
 <span class="c1">#: Time-to-live for the on-disk catalog cache, in seconds (1 day).</span>
 <span class="n">DISK_CACHE_TTL_SECONDS</span> <span class="o">=</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">60</span>
 
 <span class="c1">#: File name of the on-disk catalog cache, under the platformdirs cache dir.</span>
-<span class="n">DISK_CACHE_FILE</span> <span class="o">=</span> <span class="s2">&quot;models-dev.json&quot;</span>
+<span class="n">DISK_CACHE_FILE</span> <span class="o">=</span> <span class="s2">"models-dev.json"</span>
 
 <span class="c1">#: HTTP timeout for fetching the catalog.  Short: this is only hit on the</span>
 <span class="c1">#: first use after the disk cache expires.</span>
@@ -340,29 +340,29 @@
 
 <span class="c1">#: Klea provider id -&gt; models.dev catalog provider key.  Providers mapped</span>
 <span class="c1">#: to ``None`` have no catalog entry (local ollama) and are handled as</span>
-<span class="c1">#: &quot;no information&quot;.  ``custom`` resolves to ``openai`` to mirror</span>
+<span class="c1">#: "no information".  ``custom`` resolves to ``openai`` to mirror</span>
 <span class="c1">#: ``LLMModel.build_config()``, which maps ``custom:`` model strings to</span>
-<span class="c1">#: ``model_provider=&quot;openai&quot;``.  Unknown providers are passed through</span>
+<span class="c1">#: ``model_provider="openai"``.  Unknown providers are passed through</span>
 <span class="c1">#: as-is and simply miss if the catalog does not contain them.</span>
 <span class="n">_MODELS_DEV_PROVIDER_KEYS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;huggingface&quot;</span><span class="p">:</span> <span class="s2">&quot;huggingface&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;openai&quot;</span><span class="p">:</span> <span class="s2">&quot;openai&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;anthropic&quot;</span><span class="p">:</span> <span class="s2">&quot;anthropic&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;google_genai&quot;</span><span class="p">:</span> <span class="s2">&quot;google&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;google&quot;</span><span class="p">:</span> <span class="s2">&quot;google&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;custom&quot;</span><span class="p">:</span> <span class="s2">&quot;openai&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;ollama&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s2">"huggingface"</span><span class="p">:</span> <span class="s2">"huggingface"</span><span class="p">,</span>
+    <span class="s2">"openai"</span><span class="p">:</span> <span class="s2">"openai"</span><span class="p">,</span>
+    <span class="s2">"anthropic"</span><span class="p">:</span> <span class="s2">"anthropic"</span><span class="p">,</span>
+    <span class="s2">"google_genai"</span><span class="p">:</span> <span class="s2">"google"</span><span class="p">,</span>
+    <span class="s2">"google"</span><span class="p">:</span> <span class="s2">"google"</span><span class="p">,</span>
+    <span class="s2">"custom"</span><span class="p">:</span> <span class="s2">"openai"</span><span class="p">,</span>
+    <span class="s2">"ollama"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">}</span>
 
 
 <div class="viewcode-block" id="ModelLimits">
 <a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.ModelLimits">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ModelLimits</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Token limits for a single model from the catalog.</span>
+<span class="w">    </span><span class="sd">"""Token limits for a single model from the catalog.</span>
 
 <span class="sd">    All fields are optional: the catalog always carries ``context`` and</span>
 <span class="sd">    ``output``, while ``input`` is only defined for a subset of models.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">context</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="nb">input</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -371,12 +371,12 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_catalog_provider_key</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map a Klea provider id to its models.dev catalog key.</span>
+<span class="w">    </span><span class="sd">"""Map a Klea provider id to its models.dev catalog key.</span>
 
 <span class="sd">    :param provider: Klea provider id (``huggingface``, ``openai``, ...)</span>
 <span class="sd">    :returns: The models.dev catalog key, or ``None`` if the provider is</span>
 <span class="sd">        known to have no catalog entry.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">key</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_MODELS_DEV_PROVIDER_KEYS</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_MODELS_DEV_PROVIDER_KEYS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
@@ -386,82 +386,82 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_catalog_url</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the models.dev catalog URL (env override or default).&quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;KLEA_MODELS_DEV_URL&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODELS_DEV_URL</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Return the models.dev catalog URL (env override or default)."""</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">"KLEA_MODELS_DEV_URL"</span><span class="p">,</span> <span class="n">DEFAULT_MODELS_DEV_URL</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_disk_cache_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the on-disk cache path for the models.dev catalog.</span>
+<span class="w">    </span><span class="sd">"""Return the on-disk cache path for the models.dev catalog.</span>
 
 <span class="sd">    Shared by all Klea packages (``~/.cache/klea/models-dev.json`` on</span>
 <span class="sd">    Linux) so a single download serves rag, code, and mcp processes.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="s2">&quot;klea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">user_cache_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">DISK_CACHE_FILE</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="s2">"klea"</span><span class="p">)</span><span class="o">.</span><span class="n">user_cache_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">DISK_CACHE_FILE</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_load_catalog_from_disk</span><span class="p">(</span><span class="n">cache_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">allow_stale</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the catalog from the on-disk cache.</span>
+<span class="w">    </span><span class="sd">"""Load the catalog from the on-disk cache.</span>
 
 <span class="sd">    :param cache_path: Path to the cache file.</span>
 <span class="sd">    :param allow_stale: When ``False`` (default), return ``None`` for</span>
 <span class="sd">        missing or expired caches.  When ``True``, also return expired</span>
 <span class="sd">        caches (used as an offline fallback).</span>
 <span class="sd">    :returns: The catalog dict, or ``None`` if it could not be loaded.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">cache_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">age_seconds</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">cache_path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_stale</span> <span class="ow">and</span> <span class="n">age_seconds</span> <span class="o">&gt;</span> <span class="n">DISK_CACHE_TTL_SECONDS</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;models.dev catalog cache is stale (</span><span class="si">%d</span><span class="s2">s old), refetching&quot;</span><span class="p">,</span>
+                <span class="s2">"models.dev catalog cache is stale (</span><span class="si">%d</span><span class="s2">s old), refetching"</span><span class="p">,</span>
                 <span class="nb">int</span><span class="p">(</span><span class="n">age_seconds</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;models.dev disk cache </span><span class="si">%s</span><span class="s2"> is not a JSON object&quot;</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"models.dev disk cache </span><span class="si">%s</span><span class="s2"> is not a JSON object"</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loaded models.dev catalog from disk cache: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Loaded models.dev catalog from disk cache: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to read models.dev disk cache </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to read models.dev disk cache </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_write_catalog_to_disk</span><span class="p">(</span><span class="n">cache_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the catalog to the on-disk cache (best-effort).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Write the catalog to the on-disk cache (best-effort)."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">cache_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Wrote models.dev catalog to disk cache: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Wrote models.dev catalog to disk cache: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to write models.dev disk cache </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to write models.dev disk cache </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">cache_path</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_fetch_catalog</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch the models.dev catalog from the network.</span>
+<span class="w">    </span><span class="sd">"""Fetch the models.dev catalog from the network.</span>
 
 <span class="sd">    Blocking with a short timeout: called only on first use after the</span>
 <span class="sd">    disk cache expires.  Raises on network or parse failure.</span>
 
 <span class="sd">    :returns: The catalog dict.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">url</span> <span class="o">=</span> <span class="n">_catalog_url</span><span class="p">()</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Fetching models.dev catalog from </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Fetching models.dev catalog from </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
     <span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">FETCH_TIMEOUT_SECONDS</span><span class="p">,</span> <span class="n">follow_redirects</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;models.dev catalog is not a JSON object&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"models.dev catalog is not a JSON object"</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">data</span>
 
 
 <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_catalog</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the models.dev catalog, loading from cache or network.</span>
+<span class="w">    </span><span class="sd">"""Return the models.dev catalog, loading from cache or network.</span>
 
 <span class="sd">    Cached in memory for the process lifetime (``lru_cache``), so the</span>
 <span class="sd">    catalog is downloaded at most once per process.  A fresh disk cache</span>
@@ -470,7 +470,7 @@
 
 <span class="sd">    :returns: The catalog dict.</span>
 <span class="sd">    :raises: The underlying network/parse error if no disk copy exists.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cache_path</span> <span class="o">=</span> <span class="n">_disk_cache_path</span><span class="p">()</span>
 
     <span class="n">data</span> <span class="o">=</span> <span class="n">_load_catalog_from_disk</span><span class="p">(</span><span class="n">cache_path</span><span class="p">)</span>
@@ -480,10 +480,10 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">_fetch_catalog</span><span class="p">()</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to fetch models.dev catalog: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to fetch models.dev catalog: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="n">stale</span> <span class="o">=</span> <span class="n">_load_catalog_from_disk</span><span class="p">(</span><span class="n">cache_path</span><span class="p">,</span> <span class="n">allow_stale</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">stale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Falling back to stale models.dev catalog from disk&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Falling back to stale models.dev catalog from disk"</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">stale</span>
         <span class="k">raise</span>
 
@@ -494,18 +494,18 @@
 <div class="viewcode-block" id="get_model_limits">
 <a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_limits">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelLimits</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the token limits for a provider + model, or ``None``.</span>
+<span class="w">    </span><span class="sd">"""Return the token limits for a provider + model, or ``None``.</span>
 
 <span class="sd">    Returns ``None`` when the provider has no catalog entry (local</span>
 <span class="sd">    ollama, custom endpoints), the model is missing from the catalog, or</span>
 <span class="sd">    the catalog could not be fetched.  Callers should treat ``None`` as</span>
-<span class="sd">    &quot;no information available&quot;.</span>
+<span class="sd">    "no information available".</span>
 
-<span class="sd">    :param provider: Klea provider id (e.g. ``&quot;huggingface&quot;``).</span>
-<span class="sd">    :param model_name: Model identifier, e.g. ``&quot;gpt-4o&quot;`` or</span>
-<span class="sd">        ``&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct&quot;``.</span>
+<span class="sd">    :param provider: Klea provider id (e.g. ``"huggingface"``).</span>
+<span class="sd">    :param model_name: Model identifier, e.g. ``"gpt-4o"`` or</span>
+<span class="sd">        ``"Qwen/Qwen3-Coder-30B-A3B-Instruct"``.</span>
 <span class="sd">    :returns: ``ModelLimits`` with whatever fields the catalog defines.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">catalog_key</span> <span class="o">=</span> <span class="n">_catalog_provider_key</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">catalog_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -513,23 +513,23 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="n">catalog</span> <span class="o">=</span> <span class="n">_catalog</span><span class="p">()</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;models.dev catalog unavailable: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"models.dev catalog unavailable: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="n">provider_entry</span> <span class="o">=</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">catalog_key</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">provider_entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">model_entry</span> <span class="o">=</span> <span class="n">provider_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+    <span class="n">model_entry</span> <span class="o">=</span> <span class="n">provider_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">limit</span> <span class="o">=</span> <span class="n">model_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;limit&quot;</span><span class="p">)</span>
+    <span class="n">limit</span> <span class="o">=</span> <span class="n">model_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"limit"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">return</span> <span class="n">ModelLimits</span><span class="p">(</span>
-        <span class="n">context</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;context&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;context&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="nb">input</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">output</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">context</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"context"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"input"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"input"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output</span><span class="o">=</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -537,14 +537,14 @@
 <div class="viewcode-block" id="get_model_output_limit">
 <a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_output_limit">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_model_output_limit</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the max output token limit for a provider + model.</span>
+<span class="w">    </span><span class="sd">"""Return the max output token limit for a provider + model.</span>
 
 <span class="sd">    Convenience wrapper around :func:`get_model_limits`.</span>
 
 <span class="sd">    :param provider: Klea provider id.</span>
 <span class="sd">    :param model_name: Model identifier.</span>
-<span class="sd">    :returns: The model&#39;s ``limit.output``, or ``None`` if unknown.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    :returns: The model's ``limit.output``, or ``None`` if unknown.</span>
+<span class="sd">    """</span>
     <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span> <span class="k">if</span> <span class="n">limits</span> <span class="k">else</span> <span class="kc">None</span></div>
 
@@ -553,14 +553,14 @@
 <div class="viewcode-block" id="get_model_context_limit">
 <a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_context_limit">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_model_context_limit</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the context window size for a provider + model.</span>
+<span class="w">    </span><span class="sd">"""Return the context window size for a provider + model.</span>
 
 <span class="sd">    Convenience wrapper around :func:`get_model_limits`.</span>
 
 <span class="sd">    :param provider: Klea provider id.</span>
 <span class="sd">    :param model_name: Model identifier.</span>
-<span class="sd">    :returns: The model&#39;s ``limit.context``, or ``None`` if unknown.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    :returns: The model's ``limit.context``, or ``None`` if unknown.</span>
+<span class="sd">    """</span>
     <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="k">if</span> <span class="n">limits</span> <span class="k">else</span> <span class="kc">None</span></div>
 

@@ -325,6 +325,11 @@
 │                               [default: KLEA RAG]                  │
 │ --single-query  -q      TEXT  Single query mode: answer a query    │
 │                               and exit                             │
+│ --profile       -p      TEXT  Config profile name: loads           │
+│                               &lt;name&gt;.json from the current         │
+│                               directory or the config dir. Use     │
+│                               'template' to scaffold a new config  │
+│                               and exit.                            │
 │ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
@@ -350,7 +355,7 @@
 │                                 Please re-confirm.]                │
 │ --footer                  TEXT  Footer HTML content                │
 │                                 [default: Powered by &lt;a            │
-│                                 href=&quot;https://github.com/neuroml/… │
+│                                 href="https://github.com/neuroml/… │
 │ --nicegui-url             TEXT  Host:port to bind the NiceGUI web  │
 │                                 server to                          │
 │                                 [default: 0.0.0.0:7860]            │
@@ -359,6 +364,11 @@
 │                                 [default:                          │
 │                                 klea-nicegui-secret-change-me]     │
 │ --debug           -d            Enable auto-reload on file changes │
+│ --profile         -p      TEXT  Config profile name: loads         │
+│                                 &lt;name&gt;.json from the current       │
+│                                 directory or the config dir. Use   │
+│                                 'template' to scaffold a new       │
+│                                 config and exit.                   │
 │ --help                          Show this message and exit.        │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
@@ -370,7 +380,14 @@
 <dl class="simple">
 <dt><code class="docutils literal notranslate"><span class="pre">KLEA_RAG_ENV_FILE</span></code></dt><dd><p>Path to environment file (default: <code class="docutils literal notranslate"><span class="pre">rag.env</span></code>).</p>
 </dd>
+<dt><code class="docutils literal notranslate"><span class="pre">KLEA_RAG_APP_CONFIG_FILE</span></code></dt><dd><p>Config file used when <code class="docutils literal notranslate"><span class="pre">--profile</span></code> is not given (from the env file,
+the environment, or the default <code class="docutils literal notranslate"><span class="pre">klea_rag.json</span></code>).</p>
+</dd>
 </dl>
+<p>Pass <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">&lt;name&gt;</span></code> to load <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;.json</span></code> from the current
+directory or the config directory; <code class="docutils literal notranslate"><span class="pre">--profile</span> <span class="pre">template</span></code> scaffolds a
+new config.  A profile only applies to a server the client spawns
+itself – a server that is already running keeps its own config.</p>
 </section>
 </section>
 

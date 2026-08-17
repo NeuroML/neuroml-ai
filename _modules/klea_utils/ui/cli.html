@@ -284,19 +284,20 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.ui.cli</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Shared Typer client CLI factory for Klea packages.</span>
 
 <span class="sd">File: klea_utils/ui/cli.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">chdir</span><span class="p">,</span> <span class="n">nullcontext</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -312,8 +313,15 @@
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">BadParameter</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_maybe_spawn_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Context manager spawning a local server when none is running.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_maybe_spawn_server</span><span class="p">(</span>
+    <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Context manager spawning a local server when none is running.</span>
 
 <span class="sd">    Shared by the cli and web clients.  Auto-starting only makes sense for</span>
 <span class="sd">    a server on the local machine, so this is a no-op when *server_url*</span>
@@ -321,16 +329,43 @@
 <span class="sd">    is reused and left running (no-op), otherwise one is spawned and</span>
 <span class="sd">    stopped when the ``with`` block exits.</span>
 
+<span class="sd">    A ``--profile`` value is applied before any spawn decision: the</span>
+<span class="sd">    special value ``template`` scaffolds a config and exits, any other</span>
+<span class="sd">    name is validated and forwarded to the spawned server through</span>
+<span class="sd">    *config_env_var* (see</span>
+<span class="sd">    :func:`klea_utils.api.server.configure_profile`).  A profile cannot</span>
+<span class="sd">    affect a server that already exists or one on a remote host, so a</span>
+<span class="sd">    warning is printed in those cases.</span>
+
 <span class="sd">    :param server_url: Base URL of the API server (e.g. ``http://127.0.0.1:8005``)</span>
 <span class="sd">    :param app_module: Uvicorn module string for the server (e.g.</span>
-<span class="sd">        ``&quot;klea_rag.api.main:app&quot;``)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        ``"klea_rag.api.main:app"``)</span>
+<span class="sd">    :param profile: Config profile name, or ``None``</span>
+<span class="sd">    :param config_env_var: Env var carrying the config file into the server</span>
+<span class="sd">    :param config_dir: Config directory used for profile validation</span>
+<span class="sd">    :param template_writer: Callable that writes a config template for</span>
+<span class="sd">        ``--profile template``</span>
+<span class="sd">    """</span>
     <span class="c1"># Lazy: spawn_server pulls in the klea_utils.api machinery.</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_loopback_host</span><span class="p">,</span> <span class="n">spawn_server</span><span class="p">,</span> <span class="n">split_server_url</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.server</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+        <span class="n">configure_profile</span><span class="p">,</span>
+        <span class="n">is_loopback_host</span><span class="p">,</span>
+        <span class="n">spawn_server</span><span class="p">,</span>
+        <span class="n">split_server_url</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">configure_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">config_env_var</span><span class="p">,</span> <span class="n">config_dir</span><span class="p">,</span> <span class="n">template_writer</span><span class="p">)</span>
 
     <span class="n">host</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="n">split_server_url</span><span class="p">(</span><span class="n">server_url</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">is_loopback_host</span><span class="p">(</span><span class="n">host</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">profile</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Warning: --profile </span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s2"> is ignored when connecting to a "</span>
+                <span class="sa">f</span><span class="s2">"remote server (</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">nullcontext</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">profile</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">spawn_server</span><span class="p">(</span><span class="n">app_module</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">spawn_server</span><span class="p">(</span><span class="n">app_module</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
 
 
@@ -340,9 +375,20 @@
     <span class="n">single_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">tui_app_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the interactive terminal (cli) client.&quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="n">_maybe_spawn_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">app_module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Run the interactive terminal (cli) client."""</span>
+    <span class="k">with</span> <span class="n">_maybe_spawn_server</span><span class="p">(</span>
+        <span class="n">server_url</span><span class="p">,</span>
+        <span class="n">app_module</span><span class="p">,</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+        <span class="n">config_env_var</span><span class="o">=</span><span class="n">config_env_var</span><span class="p">,</span>
+        <span class="n">config_dir</span><span class="o">=</span><span class="n">config_dir</span><span class="p">,</span>
+        <span class="n">template_writer</span><span class="o">=</span><span class="n">template_writer</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.ui.tui.repl</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_repl</span>
 
         <span class="k">try</span><span class="p">:</span>
@@ -351,12 +397,12 @@
                     <span class="n">url</span><span class="o">=</span><span class="n">server_url</span><span class="p">,</span>
                     <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
                     <span class="n">single_query</span><span class="o">=</span><span class="n">single_query</span><span class="p">,</span>
-                    <span class="n">app_prefix</span><span class="o">=</span><span class="s2">&quot;klea&quot;</span><span class="p">,</span>
+                    <span class="n">app_prefix</span><span class="o">=</span><span class="s2">"klea"</span><span class="p">,</span>
                     <span class="n">app_name</span><span class="o">=</span><span class="n">tui_app_name</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Interrupted. Exiting.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Interrupted. Exiting."</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_web</span><span class="p">(</span>
@@ -370,22 +416,33 @@
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="n">web_app_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the NiceGUI web client.&quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="n">_maybe_spawn_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">app_module</span><span class="p">):</span>
-        <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">&quot;klea_utils.ui.web.nicegui.app&quot;</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">spec</span> <span class="ow">and</span> <span class="n">spec</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Could not locate nicegui app entry point&quot;</span>
+<span class="w">    </span><span class="sd">"""Run the NiceGUI web client."""</span>
+    <span class="k">with</span> <span class="n">_maybe_spawn_server</span><span class="p">(</span>
+        <span class="n">server_url</span><span class="p">,</span>
+        <span class="n">app_module</span><span class="p">,</span>
+        <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+        <span class="n">config_env_var</span><span class="o">=</span><span class="n">config_env_var</span><span class="p">,</span>
+        <span class="n">config_dir</span><span class="o">=</span><span class="n">config_dir</span><span class="p">,</span>
+        <span class="n">template_writer</span><span class="o">=</span><span class="n">template_writer</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s2">"klea_utils.ui.web.nicegui.app"</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">spec</span> <span class="ow">and</span> <span class="n">spec</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="s2">"Could not locate nicegui app entry point"</span>
         <span class="n">cwd</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">origin</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
         <span class="k">with</span> <span class="n">chdir</span><span class="p">(</span><span class="n">cwd</span><span class="p">):</span>
             <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
                 <span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;python app.py &#39;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">&#39; &#39;</span><span class="si">{</span><span class="n">subtitle</span><span class="si">}</span><span class="s2">&#39; &#39;</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; --disclaimer &#39;</span><span class="si">{</span><span class="n">disclaimer</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; --footer &#39;</span><span class="si">{</span><span class="n">footer_text</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; --nicegui-url &#39;</span><span class="si">{</span><span class="n">nicegui_url</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; --storage-secret &#39;</span><span class="si">{</span><span class="n">storage_secret</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; --app-name &#39;</span><span class="si">{</span><span class="n">web_app_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-                    <span class="o">+</span> <span class="p">(</span><span class="s2">&quot; --debug&quot;</span> <span class="k">if</span> <span class="n">debug</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                    <span class="sa">f</span><span class="s2">"python app.py '</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">' '</span><span class="si">{</span><span class="n">subtitle</span><span class="si">}</span><span class="s2">' '</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">" --disclaimer '</span><span class="si">{</span><span class="n">disclaimer</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">" --footer '</span><span class="si">{</span><span class="n">footer_text</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">" --nicegui-url '</span><span class="si">{</span><span class="n">nicegui_url</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">" --storage-secret '</span><span class="si">{</span><span class="n">storage_secret</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">" --app-name '</span><span class="si">{</span><span class="n">web_app_name</span><span class="si">}</span><span class="s2">'"</span>
+                    <span class="o">+</span> <span class="p">(</span><span class="s2">" --debug"</span> <span class="k">if</span> <span class="n">debug</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span>
                 <span class="p">),</span>
                 <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="p">)</span>
@@ -400,8 +457,11 @@
     <span class="n">app_module</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">tui_app_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">web_app_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">config_env_var</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">template_writer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">],</span> <span class="n">Path</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a Typer app for a Klea user client (cli + web).</span>
+<span class="w">    </span><span class="sd">"""Create a Typer app for a Klea user client (cli + web).</span>
 
 <span class="sd">    The app exposes ``cli`` / ``web`` subcommands for the terminal and</span>
 <span class="sd">    NiceGUI clients respectively, each carrying its own options so</span>
@@ -410,40 +470,62 @@
 <span class="sd">    values are passed as parameters, so the rag and code entry points</span>
 <span class="sd">    stay thin wrappers.</span>
 
-<span class="sd">    :param label: Short package name used in help text (e.g. ``&quot;RAG&quot;``)</span>
-<span class="sd">    :param server_url_default: Default server URL (e.g.</span>
-<span class="sd">        ``&quot;http://127.0.0.1:8005&quot;``)</span>
-<span class="sd">    :param app_module: Uvicorn module string for the server this client</span>
-<span class="sd">        talks to (e.g. ``&quot;klea_rag.api.main:app&quot;``)</span>
-<span class="sd">    :param tui_app_name: Log identity for the terminal client (e.g.</span>
-<span class="sd">        ``&quot;klea-rag-tui&quot;``)</span>
-<span class="sd">    :param web_app_name: Log identity for the web client (e.g.</span>
-<span class="sd">        ``&quot;klea-rag-web&quot;``)</span>
-<span class="sd">    :returns: A :class:`typer.Typer` app for use as a CLI entry point</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Simple KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> user client&quot;</span><span class="p">)</span>
+<span class="sd">    Both subcommands accept ``--profile``: the value is validated and</span>
+<span class="sd">    forwarded to a spawned local server through *config_env_var* (see</span>
+<span class="sd">    :func:`klea_utils.api.server.configure_profile`), so the config file</span>
+<span class="sd">    is chosen per invocation.  A profile only applies to a server the</span>
+<span class="sd">    client spawns itself; reusing an already-running server or pointing at</span>
+<span class="sd">    a remote host ignores it with a warning.  The special profile</span>
+<span class="sd">    ``template`` scaffolds a new config and exits.</span>
 
-    <span class="n">cli_help</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Klea </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> cli client&quot;</span>
-    <span class="n">web_help</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Klea </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> web client (NiceGUI)&quot;</span>
+<span class="sd">    :param label: Short package name used in help text (e.g. ``"RAG"``)</span>
+<span class="sd">    :param server_url_default: Default server URL (e.g.</span>
+<span class="sd">        ``"http://127.0.0.1:8005"``)</span>
+<span class="sd">    :param app_module: Uvicorn module string for the server this client</span>
+<span class="sd">        talks to (e.g. ``"klea_rag.api.main:app"``)</span>
+<span class="sd">    :param tui_app_name: Log identity for the terminal client (e.g.</span>
+<span class="sd">        ``"klea-rag-tui"``)</span>
+<span class="sd">    :param web_app_name: Log identity for the web client (e.g.</span>
+<span class="sd">        ``"klea-rag-web"``)</span>
+<span class="sd">    :param config_env_var: Environment variable that carries the config</span>
+<span class="sd">        file name into the spawned server (e.g. ``"KLEA_RAG_APP_CONFIG_FILE"``)</span>
+<span class="sd">    :param config_dir: Config directory searched after the working</span>
+<span class="sd">        directory when validating ``--profile``</span>
+<span class="sd">    :param template_writer: Callable that writes a config template into</span>
+<span class="sd">        the working directory for ``--profile template``</span>
+<span class="sd">    :returns: A :class:`typer.Typer` app for use as a CLI entry point</span>
+<span class="sd">    """</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Simple KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> user client"</span><span class="p">)</span>
+
+    <span class="n">cli_help</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Klea </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> cli client"</span>
+    <span class="n">web_help</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Klea </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> web client (NiceGUI)"</span>
 
     <span class="c1"># Shared options are defined once and attached to both subcommands so</span>
-    <span class="c1"># each command&#39;s --help lists everything it accepts.</span>
+    <span class="c1"># each command's --help lists everything it accepts.</span>
     <span class="n">server_option</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="n">server_url_default</span><span class="p">,</span>
-        <span class="s2">&quot;--server&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;-s&quot;</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> server (URL:port)&quot;</span><span class="p">,</span>
+        <span class="s2">"--server"</span><span class="p">,</span>
+        <span class="s2">"-s"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="sa">f</span><span class="s2">"KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> server (URL:port)"</span><span class="p">,</span>
         <span class="n">callback</span><span class="o">=</span><span class="n">_validate_url</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">title_option</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;--title&quot;</span><span class="p">,</span> <span class="s2">&quot;-t&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Title for application&quot;</span>
+        <span class="sa">f</span><span class="s2">"KLEA </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"--title"</span><span class="p">,</span> <span class="s2">"-t"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Title for application"</span>
+    <span class="p">)</span>
+    <span class="n">profile_option</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"--profile"</span><span class="p">,</span>
+        <span class="s2">"-p"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Config profile name: loads &lt;name&gt;.json from the current "</span>
+        <span class="s2">"directory or the config dir. Use 'template' to scaffold a "</span>
+        <span class="s2">"new config and exit."</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span><span class="n">invoke_without_command</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print usage help when no subcommand is given.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Print usage help when no subcommand is given."""</span>
         <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">invoked_subcommand</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Please specify a subcommand (cli | web).&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Please specify a subcommand (cli | web)."</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">get_help</span><span class="p">())</span>
             <span class="n">ctx</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
 
@@ -453,17 +535,22 @@
         <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">title_option</span><span class="p">,</span>
         <span class="n">single_query</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
             <span class="kc">None</span><span class="p">,</span>
-            <span class="s2">&quot;--single-query&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;-q&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Single query mode: answer a query and exit&quot;</span><span class="p">,</span>
+            <span class="s2">"--single-query"</span><span class="p">,</span>
+            <span class="s2">"-q"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Single query mode: answer a query and exit"</span><span class="p">,</span>
         <span class="p">),</span>
+        <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">profile_option</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">_run_cli</span><span class="p">(</span>
             <span class="n">server_url</span><span class="o">=</span><span class="n">server_url</span><span class="p">,</span>
             <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
-            <span class="n">single_query</span><span class="o">=</span><span class="n">single_query</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="n">single_query</span><span class="o">=</span><span class="n">single_query</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span>
             <span class="n">tui_app_name</span><span class="o">=</span><span class="n">tui_app_name</span><span class="p">,</span>
             <span class="n">app_module</span><span class="o">=</span><span class="n">app_module</span><span class="p">,</span>
+            <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+            <span class="n">config_env_var</span><span class="o">=</span><span class="n">config_env_var</span><span class="p">,</span>
+            <span class="n">config_dir</span><span class="o">=</span><span class="n">config_dir</span><span class="p">,</span>
+            <span class="n">template_writer</span><span class="o">=</span><span class="n">template_writer</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="n">cli</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">cli_help</span>
@@ -473,35 +560,36 @@
         <span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">server_option</span><span class="p">,</span>
         <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">title_option</span><span class="p">,</span>
         <span class="n">subtitle</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="s2">&quot;&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;--subtitle&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;-b&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Subtitle shown next to title in header&quot;</span><span class="p">,</span>
+            <span class="s2">""</span><span class="p">,</span>
+            <span class="s2">"--subtitle"</span><span class="p">,</span>
+            <span class="s2">"-b"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Subtitle shown next to title in header"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">disclaimer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="s2">&quot;Answers use LLM technology and may be incorrect. Please re-confirm.&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;--disclaimer&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;-c&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Disclaimer text shown below the chat area&quot;</span><span class="p">,</span>
+            <span class="s2">"Answers use LLM technology and may be incorrect. Please re-confirm."</span><span class="p">,</span>
+            <span class="s2">"--disclaimer"</span><span class="p">,</span>
+            <span class="s2">"-c"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Disclaimer text shown below the chat area"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">footer_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="s1">&#39;Powered by &lt;a href=&quot;https://github.com/neuroml/klea&quot;&gt;Klea&lt;/a&gt;&#39;</span><span class="p">,</span>
-            <span class="s2">&quot;--footer&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Footer HTML content&quot;</span><span class="p">,</span>
+            <span class="s1">'Powered by &lt;a href="https://github.com/neuroml/klea"&gt;Klea&lt;/a&gt;'</span><span class="p">,</span>
+            <span class="s2">"--footer"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Footer HTML content"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">nicegui_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="s2">&quot;0.0.0.0:7860&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;--nicegui-url&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Host:port to bind the NiceGUI web server to&quot;</span><span class="p">,</span>
+            <span class="s2">"0.0.0.0:7860"</span><span class="p">,</span>
+            <span class="s2">"--nicegui-url"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"Host:port to bind the NiceGUI web server to"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">storage_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="s2">&quot;klea-nicegui-secret-change-me&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;--storage-secret&quot;</span><span class="p">,</span>
-            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;NiceGUI storage secret for session persistence&quot;</span><span class="p">,</span>
+            <span class="s2">"klea-nicegui-secret-change-me"</span><span class="p">,</span>
+            <span class="s2">"--storage-secret"</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">"NiceGUI storage secret for session persistence"</span><span class="p">,</span>
         <span class="p">),</span>
         <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-            <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;--debug&quot;</span><span class="p">,</span> <span class="s2">&quot;-d&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable auto-reload on file changes&quot;</span>
+            <span class="kc">False</span><span class="p">,</span> <span class="s2">"--debug"</span><span class="p">,</span> <span class="s2">"-d"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Enable auto-reload on file changes"</span>
         <span class="p">),</span>
+        <span class="n">profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">profile_option</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">_run_web</span><span class="p">(</span>
             <span class="n">server_url</span><span class="o">=</span><span class="n">server_url</span><span class="p">,</span>
@@ -514,6 +602,10 @@
             <span class="n">debug</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span>
             <span class="n">web_app_name</span><span class="o">=</span><span class="n">web_app_name</span><span class="p">,</span>
             <span class="n">app_module</span><span class="o">=</span><span class="n">app_module</span><span class="p">,</span>
+            <span class="n">profile</span><span class="o">=</span><span class="n">profile</span><span class="p">,</span>
+            <span class="n">config_env_var</span><span class="o">=</span><span class="n">config_env_var</span><span class="p">,</span>
+            <span class="n">config_dir</span><span class="o">=</span><span class="n">config_dir</span><span class="p">,</span>
+            <span class="n">template_writer</span><span class="o">=</span><span class="n">template_writer</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="n">web</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">web_help</span>

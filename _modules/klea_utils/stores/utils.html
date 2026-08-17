@@ -284,14 +284,14 @@
         <article role="main" id="furo-main-content">
           <h1>Source code for klea_utils.stores.utils</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 <span class="sd">Vector store utilities</span>
 
 <span class="sd">File: klea_utils/stores/utils.py</span>
 
 <span class="sd">Copyright 2026 Ankur Sinha</span>
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
@@ -302,18 +302,18 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
 
-<span class="c1">#: Metadata key holding each document&#39;s original per-source scores (e.g.</span>
-<span class="c1">#: ``{&quot;vector store&quot;: 0.87, &quot;BM25&quot;: 3.21}``), set by :func:`rrf_merge`.</span>
-<span class="n">SOURCE_SCORES_KEY</span> <span class="o">=</span> <span class="s2">&quot;_source_scores&quot;</span>
+<span class="c1">#: Metadata key holding each document's original per-source scores (e.g.</span>
+<span class="c1">#: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.</span>
+<span class="n">SOURCE_SCORES_KEY</span> <span class="o">=</span> <span class="s2">"_source_scores"</span>
 
 <span class="c1">#: HNSW distance space used for Chroma collections created by Klea.  Cosine</span>
 <span class="c1">#: makes the vector-store relevance scores true cosine similarities</span>
 <span class="c1">#: (``1 - cosine_distance``), so a ``score_threshold`` reads as a minimum</span>
 <span class="c1">#: cosine similarity.</span>
-<span class="n">CHROMA_HNSW_SPACE</span> <span class="o">=</span> <span class="s2">&quot;cosine&quot;</span>
+<span class="n">CHROMA_HNSW_SPACE</span> <span class="o">=</span> <span class="s2">"cosine"</span>
 
 <span class="c1">#: Rank offset for Reciprocal Rank Fusion.  A document at rank *r* within a</span>
-<span class="c1">#: source&#39;s result list contributes ``1 / (RRF_K + r)`` to its fused score.</span>
+<span class="c1">#: source's result list contributes ``1 / (RRF_K + r)`` to its fused score.</span>
 <span class="n">RRF_K</span> <span class="o">=</span> <span class="mi">60</span>
 
 <span class="c1">#: Per-document character overhead attributed by :func:`truncate_reference_material`</span>
@@ -323,34 +323,34 @@
 <span class="n">REF_DOC_OVERHEAD</span> <span class="o">=</span> <span class="mi">200</span>
 
 <span class="n">_INTERNAL_META_KEYS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;file_name&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;file_hash&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;headings&quot;</span><span class="p">,</span>
+    <span class="s2">"file_name"</span><span class="p">,</span>
+    <span class="s2">"file_hash"</span><span class="p">,</span>
+    <span class="s2">"headings"</span><span class="p">,</span>
     <span class="n">SOURCE_SCORES_KEY</span><span class="p">,</span>
     <span class="c1"># Bibliographic extraction provenance (see klea_utils/biblio).  These</span>
     <span class="c1"># guide the researcher reviewing metadata-map.template.json but carry</span>
     <span class="c1"># no meaning for the answer LLM, so they are never serialized to it.</span>
-    <span class="s2">&quot;_metadata_complete&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;_sources&quot;</span><span class="p">,</span>
+    <span class="s2">"_metadata_complete"</span><span class="p">,</span>
+    <span class="s2">"_sources"</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="c1">#: No-break space variants mapped to a regular space by :func:`normalize_text`</span>
 <span class="c1">#: (NFKC also folds these, but the explicit mapping keeps the intent visible).</span>
-<span class="n">_NO_BREAK_SPACES</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\u00a0\u2007\u202f</span><span class="s2">&quot;</span>
+<span class="n">_NO_BREAK_SPACES</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\u00a0\u2007\u202f</span><span class="s2">"</span>
 
 <span class="c1">#: Zero-width / invisible characters stripped by :func:`normalize_text`.</span>
 <span class="c1">#: ``\ufeff`` is the byte-order mark emitted at the start of extracted text;</span>
 <span class="c1">#: ``\u200e``/``\u200f`` are bidi marks; ``\ufe00``-``\ufe0f`` are variation</span>
 <span class="c1">#: selectors.</span>
-<span class="n">_ZERO_WIDTH_CHARS</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\ufeff\u200b\u200c\u200d\u200e\u200f\u2060\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f</span><span class="s2">&quot;</span>
+<span class="n">_ZERO_WIDTH_CHARS</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\ufeff\u200b\u200c\u200d\u200e\u200f\u2060\ufe00\ufe01\ufe02\ufe03\ufe04\ufe05\ufe06\ufe07\ufe08\ufe09\ufe0a\ufe0b\ufe0c\ufe0d\ufe0e\ufe0f</span><span class="s2">"</span>
 
 
 <div class="viewcode-block" id="normalize_text">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.normalize_text">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">normalize_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalise free text for consistent indexing and retrieval.</span>
+<span class="w">    </span><span class="sd">"""Normalise free text for consistent indexing and retrieval.</span>
 
-<span class="sd">    Document conversion (e.g. Docling&#39;s PDF extraction) embeds</span>
+<span class="sd">    Document conversion (e.g. Docling's PDF extraction) embeds</span>
 <span class="sd">    typographic artifacts that hurt search: soft hyphens (``\\u00ad``)</span>
 <span class="sd">    split words mid-token, no-break / zero-width characters distort</span>
 <span class="sd">    embeddings and BM25 keyword matching, and ligatures / full-width</span>
@@ -359,29 +359,29 @@
 <span class="sd">    chunks and retrieval queries share the same plain-text form.</span>
 
 <span class="sd">    The final pass uses NFKC compatibility composition, which (unlike NFC)</span>
-<span class="sd">    also folds ligatures (``\\ufb01`` -&gt; &quot;fi&quot;), full-width forms</span>
-<span class="sd">    (``\\uff21`` -&gt; &quot;A&quot;), superscripts (``\\u00b2`` -&gt; &quot;2&quot;), typographic</span>
+<span class="sd">    also folds ligatures (``\\ufb01`` -&gt; "fi"), full-width forms</span>
+<span class="sd">    (``\\uff21`` -&gt; "A"), superscripts (``\\u00b2`` -&gt; "2"), typographic</span>
 <span class="sd">    spaces (en/em/thin/ideographic), and the non-breaking hyphen</span>
 <span class="sd">    (``\\u2011`` -&gt; ``\\u2010``).  Typographic em/en dashes are kept</span>
 <span class="sd">    unchanged.</span>
 
 <span class="sd">    :param text: Raw text, possibly containing typographic artifacts</span>
 <span class="sd">    :returns: Normalised plain text</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># Soft hyphen: an invisible line-break hint; dropping it rejoins the</span>
-    <span class="c1"># split word (e.g. &quot;multi-\\u00adscale&quot; -&gt; &quot;multi-scale&quot;).</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\u00ad</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="c1"># split word (e.g. "multi-\\u00adscale" -&gt; "multi-scale").</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\u00ad</span><span class="s2">"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
     <span class="c1"># No-break space variants -&gt; regular space.</span>
     <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">_NO_BREAK_SPACES</span><span class="p">:</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span>
     <span class="c1"># Byte-order mark and zero-width characters carry no meaning.</span>
     <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">_ZERO_WIDTH_CHARS</span><span class="p">:</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ch</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
     <span class="c1"># NFKC: canonical + compatibility composition (ligatures, full-width</span>
     <span class="c1"># forms, superscripts, typographic spaces; see docstring).</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">&quot;NFKC&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">"NFKC"</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="c1"># Collapse repeated horizontal whitespace and trim.</span>
-    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[ \t]{2,}&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[ \t]{2,}"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
 
 
 
@@ -391,12 +391,12 @@
     <span class="n">result_sets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]],</span>
     <span class="n">num_refs_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fuse per-source retrieval results with Reciprocal Rank Fusion.</span>
+<span class="w">    </span><span class="sd">"""Fuse per-source retrieval results with Reciprocal Rank Fusion.</span>
 
 <span class="sd">    Scores from different retrievers (e.g. cosine similarity vs BM25) are not</span>
 <span class="sd">    comparable, so each document is scored purely by its rank within each</span>
-<span class="sd">    source&#39;s result list.  The original per-source scores are preserved in</span>
-<span class="sd">    each document&#39;s :data:`SOURCE_SCORES_KEY` metadata for display.</span>
+<span class="sd">    source's result list.  The original per-source scores are preserved in</span>
+<span class="sd">    each document's :data:`SOURCE_SCORES_KEY` metadata for display.</span>
 
 <span class="sd">    :param result_sets: List of ``(source_label, results)`` pairs, where each</span>
 <span class="sd">        *results* is a list of ``(document, score)`` tuples already ranked by</span>
@@ -407,7 +407,7 @@
 <span class="sd">        :func:`truncate_reference_material` instead of by document count.</span>
 <span class="sd">    :returns: Documents ordered by RRF score, deduplicated by content, capped</span>
 <span class="sd">        at *num_refs_max* when set</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">rrf_scores</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">doc_by_key</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Document</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
@@ -420,7 +420,7 @@
                 <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="c1"># Cast to Python floats: BM25 and vector-store scores are numpy</span>
             <span class="c1"># scalars (np.float64/np.float32).  The scores are persisted in</span>
-            <span class="c1"># doc metadata, which ends up inside the graph state; LangGraph&#39;s</span>
+            <span class="c1"># doc metadata, which ends up inside the graph state; LangGraph's</span>
             <span class="c1"># msgpack checkpoint serializer cannot encode numpy scalars, so</span>
             <span class="c1"># plain floats keep the state checkpoint-serializable.</span>
             <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">][</span><span class="n">source_label</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
@@ -442,7 +442,7 @@
     <span class="n">reference_material</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]],</span>
     <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Truncate reference material to a global character budget.</span>
+<span class="w">    </span><span class="sd">"""Truncate reference material to a global character budget.</span>
 
 <span class="sd">    The RRF merge orders documents by fused rank but does not bound how</span>
 <span class="sd">    much context the answer LLM receives; that is what this function does.</span>
@@ -456,7 +456,7 @@
 <span class="sd">    :param max_chars: Total character budget across all domains</span>
 <span class="sd">    :returns: New mapping with the same domain keys, lists truncated to the</span>
 <span class="sd">        budget</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">budgeted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">crossed</span> <span class="o">=</span> <span class="kc">False</span>
@@ -478,22 +478,22 @@
 <div class="viewcode-block" id="format_source_scores">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.format_source_scores">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">precision</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format a document&#39;s original per-source scores for display.</span>
+<span class="w">    </span><span class="sd">"""Format a document's original per-source scores for display.</span>
 
 <span class="sd">    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata</span>
 <span class="sd">    :param precision: Number of decimal places per score</span>
-<span class="sd">    :returns: Joined string like ``&quot;vector store 0.87, BM25 3.21&quot;``, or</span>
+<span class="sd">    :returns: Joined string like ``"vector store 0.87, BM25 3.21"``, or</span>
 <span class="sd">        ``None`` if the document has no per-source scores</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">source_scores</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">source_scores</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">source_scores</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
+    <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">source_scores</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">score</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Format a document&#39;s relevance scores for prompt context.</span>
+<span class="w">    </span><span class="sd">"""Format a document's relevance scores for prompt context.</span>
 
 <span class="sd">    Shows the original per-source scores (e.g. ``vector store 0.8723,</span>
 <span class="sd">    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM</span>
@@ -503,11 +503,11 @@
 <span class="sd">    :param doc: Document to format</span>
 <span class="sd">    :param score: Relevance score for *doc*</span>
 <span class="sd">    :returns: Score string to append to a document heading</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">source_scores</span> <span class="o">=</span> <span class="n">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">source_scores</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; (relevance: </span><span class="si">{</span><span class="n">source_scores</span><span class="si">}</span><span class="s2">)&quot;</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot; (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">" (relevance: </span><span class="si">{</span><span class="n">source_scores</span><span class="si">}</span><span class="s2">)"</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">" (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)"</span>
 
 
 <div class="viewcode-block" id="serialize_reference_material">
@@ -515,17 +515,17 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">serialize_reference_material</span><span class="p">(</span>
     <span class="n">reference_material</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialize reference material into text for use in prompt context.</span>
+<span class="w">    </span><span class="sd">"""Serialize reference material into text for use in prompt context.</span>
 
 <span class="sd">    Documents are grouped by their source file (``file_name`` metadata)</span>
-<span class="sd">    and each source file&#39;s document-level metadata is emitted once, with</span>
-<span class="sd">    the file&#39;s chunks listed underneath.  The shared bibliographic</span>
+<span class="sd">    and each source file's document-level metadata is emitted once, with</span>
+<span class="sd">    the file's chunks listed underneath.  The shared bibliographic</span>
 <span class="sd">    fields (authors, year, journal, ...) are identical on every chunk of</span>
 <span class="sd">    a file, so they are listed once on the source header; a ``url*`` key</span>
 <span class="sd">    is also hoisted to the header when the whole file shares the same</span>
 <span class="sd">    value.  Per-chunk metadata that differs (e.g. a heading-specific</span>
 <span class="sd">    ``url``) is emitted inline so no chunk is misattributed.  Files are</span>
-<span class="sd">    ordered by their best chunk&#39;s relevance score; chunks within a file</span>
+<span class="sd">    ordered by their best chunk's relevance score; chunks within a file</span>
 <span class="sd">    by score.</span>
 
 <span class="sd">    Uses Docling ``HybridChunker`` metadata format:</span>
@@ -537,15 +537,15 @@
 
 <span class="sd">    :param reference_material: Dict mapping query/domain to list of (doc, score) tuples</span>
 <span class="sd">    :returns: Formatted string representation of references</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">serialized</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">serialized</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">sorted_refs</span> <span class="ow">in</span> <span class="n">reference_material</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;## </span><span class="si">{</span><span class="n">q</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"## </span><span class="si">{</span><span class="n">q</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
         <span class="c1"># Group chunks by source file, keeping per-file best score for ordering.</span>
         <span class="n">files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">sorted_refs</span><span class="p">:</span>
-            <span class="n">file_name</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
             <span class="n">files</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">))</span>
 
         <span class="n">ordered_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
@@ -556,7 +556,7 @@
             <span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span> <span class="o">=</span> <span class="n">file_docs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
             <span class="c1"># Document-level metadata: the shared bibliographic fields</span>
-            <span class="c1"># (authors, year, journal, ...) come from the file&#39;s top chunk</span>
+            <span class="c1"># (authors, year, journal, ...) come from the file's top chunk</span>
             <span class="c1"># -- every chunk of the file carries the same values, so they</span>
             <span class="c1"># are emitted once.  A url* key is promoted to the file level</span>
             <span class="c1"># too when every chunk carries the identical value (the common</span>
@@ -567,28 +567,28 @@
                 <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
             <span class="p">}</span>
             <span class="n">url_keys</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+                <span class="n">k</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)</span>
             <span class="p">}</span>
             <span class="k">for</span> <span class="n">url_key</span> <span class="ow">in</span> <span class="n">url_keys</span><span class="p">:</span>
                 <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_key</span><span class="p">)</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span><span class="p">}</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="kc">None</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
                     <span class="n">file_meta</span><span class="p">[</span><span class="n">url_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_key</span><span class="p">)</span>
 
-            <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">if</span> <span class="n">file_name</span> <span class="k">else</span> <span class="s2">&quot;(no file)&quot;</span>
+            <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">]"</span> <span class="k">if</span> <span class="n">file_name</span> <span class="k">else</span> <span class="s2">"(no file)"</span>
             <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span><span class="p">)</span>
             <span class="n">serialized</span> <span class="o">+=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">### Source document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">### Source document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">file_meta</span><span class="p">:</span>
-                <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">" | "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"Metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
             <span class="k">for</span> <span class="n">chunk_ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_docs</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-                <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headings&quot;</span><span class="p">,</span> <span class="p">[])</span>
-                <span class="n">heading_str</span> <span class="o">=</span> <span class="s2">&quot; &gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="k">if</span> <span class="n">headings</span> <span class="k">else</span> <span class="s2">&quot;(no heading)&quot;</span>
+                <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"headings"</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="n">heading_str</span> <span class="o">=</span> <span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="k">if</span> <span class="n">headings</span> <span class="k">else</span> <span class="s2">"(no heading)"</span>
                 <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
-                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Chunk </span><span class="si">{</span><span class="n">chunk_ctr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Chunk </span><span class="si">{</span><span class="n">chunk_ctr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
                 <span class="c1"># Chunk-level metadata: non-internal keys not already on the</span>
                 <span class="c1"># file level (shared bibliographic fields, and url keys the</span>
@@ -602,8 +602,8 @@
                     <span class="ow">and</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="nb">object</span><span class="p">())</span> <span class="o">!=</span> <span class="n">v</span>
                 <span class="p">}</span>
                 <span class="k">if</span> <span class="n">chunk_meta</span><span class="p">:</span>
-                    <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">&quot; | &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chunk_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-                    <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;  Chunk metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">" | "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">chunk_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+                    <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"  Chunk metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
                 <span class="n">serialized</span> <span class="o">+=</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
 
     <span class="k">return</span> <span class="n">serialized</span></div>
@@ -619,9 +619,9 @@
     <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">,</span>
     <span class="n">create</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Instantiate a vector store based on the URI scheme in path.</span>
+<span class="w">    </span><span class="sd">"""Instantiate a vector store based on the URI scheme in path.</span>
 
-<span class="sd">    Expected format: ``&quot;scheme:location&quot;``.</span>
+<span class="sd">    Expected format: ``"scheme:location"``.</span>
 
 <span class="sd">    If ``create`` is ``True``, the store is created if it does not exist</span>
 <span class="sd">    (relevant for ChromaDB which requires a local directory).  For</span>
@@ -643,9 +643,9 @@
 <span class="sd">    distance space.</span>
 
 <span class="sd">    :param path: URI-style string with scheme prefix</span>
-<span class="sd">        (e.g. ``&quot;chroma:/path/to/dir&quot;``,</span>
-<span class="sd">        ``&quot;qdrant:http://localhost:6333&quot;``,</span>
-<span class="sd">        ``&quot;pgvector:postgresql://localhost/db&quot;``)</span>
+<span class="sd">        (e.g. ``"chroma:/path/to/dir"``,</span>
+<span class="sd">        ``"qdrant:http://localhost:6333"``,</span>
+<span class="sd">        ``"pgvector:postgresql://localhost/db"``)</span>
 <span class="sd">    :param name: Collection name for the vector store</span>
 <span class="sd">    :param embeddings: Embedding function to use</span>
 <span class="sd">    :param logger: Logger instance</span>
@@ -654,53 +654,53 @@
 <span class="sd">    :raises ValueError: If the scheme is missing or unknown</span>
 <span class="sd">    :raises FileNotFoundError: If ``create`` is ``False`` and a local</span>
 <span class="sd">        ChromaDB store does not exist</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">location</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">sep</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid vector store path &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;: &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;expected format &#39;scheme:location&#39; (e.g. &#39;chroma:/path/to/store&#39;)&quot;</span>
+            <span class="sa">f</span><span class="s2">"Invalid vector store path '</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">': "</span>
+            <span class="sa">f</span><span class="s2">"expected format 'scheme:location' (e.g. 'chroma:/path/to/store')"</span>
         <span class="p">)</span>
 
     <span class="k">match</span> <span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
-        <span class="k">case</span> <span class="s2">&quot;chroma&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"chroma"</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="kn">import</span><span class="w"> </span><span class="nn">chromadb</span>
                 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_chroma</span><span class="w"> </span><span class="kn">import</span> <span class="n">Chroma</span>
             <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-                    <span class="s2">&quot;ChromaDB backend not installed. &quot;</span>
-                    <span class="s2">&quot;Install: pip install klea_utils[chroma]&quot;</span>
+                    <span class="s2">"ChromaDB backend not installed. "</span>
+                    <span class="s2">"Install: pip install klea_utils[chroma]"</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
 
             <span class="n">store_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
                 <span class="n">store_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="n">store_dir</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Store path made absolute relative to cwd: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Store path made absolute relative to cwd: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
             <span class="c1"># Chroma always stores its database in &lt;folder&gt;/chroma.sqlite3</span>
             <span class="c1"># (the filename is not configurable), so a store is addressed</span>
             <span class="c1"># by its folder, never by the database file.</span>
             <span class="k">if</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&#39; is a file, not a folder. Chroma stores &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;its database in a folder as &#39;chroma.sqlite3&#39;; pass the &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;folder path instead (e.g. &#39;chroma:</span><span class="si">{</span><span class="n">store_dir</span><span class="o">.</span><span class="n">parent</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">' is a file, not a folder. Chroma stores "</span>
+                    <span class="sa">f</span><span class="s2">"its database in a folder as 'chroma.sqlite3'; pass the "</span>
+                    <span class="sa">f</span><span class="s2">"folder path instead (e.g. 'chroma:</span><span class="si">{</span><span class="n">store_dir</span><span class="o">.</span><span class="n">parent</span><span class="si">}</span><span class="s2">')"</span>
                 <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">create</span><span class="p">:</span>
                 <span class="n">store_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find folder: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find folder: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find folder: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find folder: </span><span class="si">{</span><span class="n">store_dir</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-                <span class="n">store_db</span> <span class="o">=</span> <span class="n">store_dir</span> <span class="o">/</span> <span class="s2">&quot;chroma.sqlite3&quot;</span>
+                <span class="n">store_db</span> <span class="o">=</span> <span class="n">store_dir</span> <span class="o">/</span> <span class="s2">"chroma.sqlite3"</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">store_db</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ChromaDB not found at </span><span class="si">{</span><span class="n">store_db</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ChromaDB not found at </span><span class="si">{</span><span class="n">store_db</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Loading Chroma vector store &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="n">store_dir</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Loading Chroma vector store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">' from </span><span class="si">{</span><span class="n">store_dir</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
             <span class="n">settings</span> <span class="o">=</span> <span class="n">chromadb</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">Settings</span><span class="p">(</span>
@@ -712,38 +712,38 @@
                 <span class="n">collection_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">embedding_function</span><span class="o">=</span><span class="n">embeddings</span><span class="p">,</span>
                 <span class="n">client_settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
-                <span class="n">collection_configuration</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;hnsw&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;space&quot;</span><span class="p">:</span> <span class="n">CHROMA_HNSW_SPACE</span><span class="p">}},</span>
+                <span class="n">collection_configuration</span><span class="o">=</span><span class="p">{</span><span class="s2">"hnsw"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"space"</span><span class="p">:</span> <span class="n">CHROMA_HNSW_SPACE</span><span class="p">}},</span>
             <span class="p">)</span>
 
-        <span class="k">case</span> <span class="s2">&quot;qdrant&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"qdrant"</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_qdrant</span><span class="w"> </span><span class="kn">import</span> <span class="n">QdrantVectorStore</span>
                 <span class="kn">from</span><span class="w"> </span><span class="nn">qdrant_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">QdrantClient</span>
             <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-                    <span class="s2">&quot;Qdrant backend not installed. &quot;</span>
-                    <span class="s2">&quot;Install: pip install klea_utils[qdrant]&quot;</span>
+                    <span class="s2">"Qdrant backend not installed. "</span>
+                    <span class="s2">"Install: pip install klea_utils[qdrant]"</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
 
             <span class="n">client</span> <span class="o">=</span> <span class="n">QdrantClient</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="n">location</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading Qdrant vector store &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; at </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loading Qdrant vector store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">QdrantVectorStore</span><span class="p">(</span>
                 <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
                 <span class="n">collection_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                 <span class="n">embedding</span><span class="o">=</span><span class="n">embeddings</span><span class="p">,</span>
             <span class="p">)</span>
 
-        <span class="k">case</span> <span class="s2">&quot;pgvector&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"pgvector"</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_postgres</span><span class="w"> </span><span class="kn">import</span> <span class="n">PGVector</span>
             <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
-                    <span class="s2">&quot;PGVector backend not installed. &quot;</span>
-                    <span class="s2">&quot;Install: pip install klea_utils[pgvector]&quot;</span>
+                    <span class="s2">"PGVector backend not installed. "</span>
+                    <span class="s2">"Install: pip install klea_utils[pgvector]"</span>
                 <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
 
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Loading PGVector vector store &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; with connection </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Loading PGVector vector store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">' with connection </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">PGVector</span><span class="p">(</span>
                 <span class="n">collection_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
@@ -753,8 +753,8 @@
 
         <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Unknown vector store scheme &#39;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Supported: chroma, qdrant, pgvector&quot;</span>
+                <span class="sa">f</span><span class="s2">"Unknown vector store scheme '</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">'. "</span>
+                <span class="sa">f</span><span class="s2">"Supported: chroma, qdrant, pgvector"</span>
             <span class="p">)</span></div>
 
 
@@ -762,34 +762,34 @@
 <div class="viewcode-block" id="drop_collection">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.drop_collection">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">drop_collection</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop a vector store collection (portable across backends).</span>
+<span class="w">    </span><span class="sd">"""Drop a vector store collection (portable across backends).</span>
 
 <span class="sd">    Used by ``store --force`` to replace a collection wholesale, since</span>
 <span class="sd">    documents within a collection cannot be updated in place portably.</span>
 <span class="sd">    Chroma and PGVector expose ``delete_collection`` on their LangChain</span>
-<span class="sd">    wrapper; Qdrant&#39;s wrapper does not, so its raw client is used</span>
+<span class="sd">    wrapper; Qdrant's wrapper does not, so its raw client is used</span>
 <span class="sd">    instead.</span>
 
 <span class="sd">    :param store: Instantiated LangChain vector store</span>
 <span class="sd">    :param store_path: Store URI (``scheme:location``)</span>
 <span class="sd">    :param collection_name: Collection name to drop</span>
 <span class="sd">    :raises ValueError: When the scheme is missing or unknown</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">store_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">scheme</span><span class="p">,</span> <span class="n">sep</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">store_path</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">sep</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid vector store path &#39;</span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">&#39;: expected format &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;&#39;scheme:location&#39; (e.g. &#39;chroma:/path/to/store&#39;)&quot;</span>
+            <span class="sa">f</span><span class="s2">"Invalid vector store path '</span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">': expected format "</span>
+            <span class="sa">f</span><span class="s2">"'scheme:location' (e.g. 'chroma:/path/to/store')"</span>
         <span class="p">)</span>
     <span class="k">match</span> <span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
-        <span class="k">case</span> <span class="s2">&quot;chroma&quot;</span> <span class="o">|</span> <span class="s2">&quot;pgvector&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"chroma"</span> <span class="o">|</span> <span class="s2">"pgvector"</span><span class="p">:</span>
             <span class="n">store</span><span class="o">.</span><span class="n">delete_collection</span><span class="p">()</span>
-        <span class="k">case</span> <span class="s2">&quot;qdrant&quot;</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s2">"qdrant"</span><span class="p">:</span>
             <span class="n">store</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">delete_collection</span><span class="p">(</span><span class="n">collection_name</span><span class="p">)</span>
         <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Unsupported vector store scheme &#39;</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">&#39; for collection &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;drop. Supported: chroma, qdrant, pgvector&quot;</span>
+                <span class="sa">f</span><span class="s2">"Unsupported vector store scheme '</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">' for collection "</span>
+                <span class="sa">f</span><span class="s2">"drop. Supported: chroma, qdrant, pgvector"</span>
             <span class="p">)</span></div>
 
 </pre></div>
