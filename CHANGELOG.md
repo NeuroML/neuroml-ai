@@ -87,6 +87,12 @@
 
 ### Changed
 
+- JSON config files are now selected by profile: `--profile <name>`
+  loads `<name>.json` from the current directory, then the per-app
+  config directory, instead of the `*_APP_CONFIG_FILE` key in the env
+  file (the env var is still honored when set in the environment).
+  `--profile template` scaffolds a ready-to-fill config into the current
+  directory.
 - `neuroml_mcp` and `klea_agent` register their tools through the shared
   `klea_utils.mcp.registry` (`tool_meta` / `register_tools`) instead of
   package-local copies; tools are discovered by their `@tool_meta`

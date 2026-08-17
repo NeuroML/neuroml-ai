@@ -113,6 +113,11 @@ def make_serve_app(
     """
     serve_app = typer.Typer()
 
+    # With exactly one registered command typer collapses the app into that
+    # command (see ``typer.main.get_command``): the ``serve`` name never
+    # appears in the CLI, so the options below are the top-level options of
+    # ``klea-serve`` / ``klea-rag-serve``.  The decorator still registers the
+    # command -- adding a second one would turn the app into a command group.
     @serve_app.command()
     def serve(
         host: str = "127.0.0.1",
@@ -254,7 +259,7 @@ def spawn_server(
                 raise RuntimeError(
                     f"Server process exited immediately (code {proc.returncode}). "
                     "Check the server's log file, or run the server directly "
-                    "with 'klea-rag-serve serve' / 'klea-serve serve' "
+                    "with 'klea-rag-serve' / 'klea-serve' "
                     "to see the error."
                 )
             if _probe_once():
@@ -267,7 +272,7 @@ def spawn_server(
                 raise RuntimeError(
                     f"Server at {health_url} did not become ready within {timeout:g}s. "
                     "Check the server's log file, or run the server directly "
-                    "with 'klea-rag-serve serve' / 'klea-serve serve' "
+                    "with 'klea-rag-serve' / 'klea-serve' "
                     "to see the error."
                 ) from exc
 

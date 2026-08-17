@@ -168,16 +168,32 @@ Both the RAG and Agent packages load configuration from:
    * ``KLEA_RAG_ENV_FILE`` or ``rag.env`` for the RAG system
    * ``KLEA_AGENT_ENV_FILE`` or ``klea_agent.env`` for the Agent system
 
-2. A JSON configuration file referenced inside the env file.
+2. A JSON configuration file selected by a *profile* name.
 
-   * ``rag_pkg/example-configs/klea_rag.json`` or a copy you customise
-   * ``agent_pkg/mcp.json`` for Agent MCP server configuration
+   Each JSON config is identified by a profile: ``--profile <name>`` loads
+   ``<name>.json``.  The file is looked up in the current directory first,
+   then in the per-app config directory (``~/.config/klea/`` for the Agent,
+   ``~/.config/klea-rag/`` for the RAG, honoring ``XDG_CONFIG_HOME``).  The
+   default profile is ``klea_agent`` / ``klea_rag``, so ``klea_agent.json``
+   and ``klea_rag.json`` are loaded when no ``--profile`` is given.
+
+   Use ``--profile template`` on any CLI to scaffold a ready-to-fill config
+   into the current directory (it refuses to overwrite an existing file).
+
+   ``--profile`` takes precedence over the ``KLEA_AGENT_APP_CONFIG_FILE`` /
+   ``KLEA_RAG_APP_CONFIG_FILE`` environment variable, which is still honored
+   when set in the shell or a deployment (and, as a fallback, as a key in
+   the env file).
 
 Example env file::
 
    KLEA_RAG_CHAT_MODEL=ollama:qwen3:0.6b
    KLEA_RAG_EMBEDDING_MODEL=ollama:bge-m3
-   KLEA_RAG_APP_CONFIG_FILE=/path/to/klea_rag.json
+
+Example invocation::
+
+   klea-rag-serve --profile my-config
+   KLEA_RAG_ENV_FILE=rag.env klea-rag cli --profile my-config
 
 Choosing models
 ~~~~~~~~~~~~~~~

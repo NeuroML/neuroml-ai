@@ -99,7 +99,12 @@ pre-commit run --all-files
 
 Both `KleaAgent` and `RAG` orchestrators load configuration via:
 1. An env file (`k=v` format, path from `KLEA_AGENT_ENV_FILE` / `KLEA_RAG_ENV_FILE` or default `klea_agent.env` / `rag.env`)
-2. A JSON config file referenced inside the env file
+2. A JSON config file selected by a *profile*: `--profile <name>` loads
+   `<name>.json` from the current directory or the per-app config
+   directory (platformdirs, honoring `XDG_CONFIG_HOME`).  The
+   `KLEA_AGENT_APP_CONFIG_FILE` / `KLEA_RAG_APP_CONFIG_FILE` env var (or
+   the same key in the env file) still picks the file when `--profile` is
+   not given; `--profile template` scaffolds a new config into the CWD.
 
 `ty.toml` adds `extra-paths` for all four packages so type-checking resolves
 cross-package imports.

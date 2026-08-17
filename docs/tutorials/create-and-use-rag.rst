@@ -163,7 +163,6 @@ Create an environment file (e.g. ``my-rag.env``):
    KLEA_RAG_CHAT_MODEL=ollama:qwen3:0.6b
    KLEA_RAG_GUARD_MODEL=ollama:llama-guard3:1b
    KLEA_RAG_EMBEDDING_MODEL=ollama:bge-m3:latest
-   KLEA_RAG_APP_CONFIG_FILE=my-config.json
 
 Create the JSON configuration file (``my-config.json``) that wires the
 vector store to a domain:
@@ -196,6 +195,12 @@ vector store to a domain:
            }
        }
    }
+
+The config file is selected by its *profile* name: pass ``--profile
+my-config`` to load ``my-config.json`` from the current directory (or from
+the config directory; see :doc:`../install`).  To scaffold a ready-to-fill
+config instead of writing one by hand, run
+``klea-rag-serve --profile template`` once in your project directory.
 
 The ``general`` section controls retrieval behaviour:
 
@@ -294,13 +299,13 @@ Step 4: Start the RAG server
 
 For local single-user use this step is optional: the client commands in
 Step 5 start a server on the local machine automatically when none is
-already running.  Run ``klea-rag-serve serve`` instead when you want a
+already running.  Run ``klea-rag-serve`` instead when you want a
 persistent backend, for example to share one server between several
 clients or to run it in a separate terminal:
 
 .. code-block:: bash
 
-   KLEA_RAG_ENV_FILE=my-rag.env klea-rag-serve serve
+   KLEA_RAG_ENV_FILE=my-rag.env klea-rag-serve --profile my-config
 
 The server loads the configuration, initialises the embedding model,
 and compiles the LangGraph pipeline.  Once ready, check it is alive:
@@ -428,8 +433,9 @@ Troubleshooting
 
 **Server fails to start**
    Check that ``KLEA_RAG_ENV_FILE`` points to a valid env file and that
-   the JSON config file path inside it is correct.  Look for JSON syntax
-   errors (trailing commas, missing quotes).
+   the ``--profile`` name resolves to a config file in the current
+   directory or the config directory.  Look for JSON syntax errors
+   (trailing commas, missing quotes).
 
 **Queries return empty or irrelevant results**
    Increase ``default_k`` in the JSON config.  Verify the vector store
