@@ -75,6 +75,7 @@ def create_models_router() -> APIRouter:
             if parsed.provider:
                 cfg["provider"] = parsed.provider
             cfg["modifiable"] = getattr(entry, "modifiable", True)
+            cfg["required"] = getattr(entry, "required", True)
             defaults[role] = cfg
 
         overrides = store.get_overrides(user_id, chat_id)

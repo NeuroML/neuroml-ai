@@ -845,19 +845,29 @@ def setup_layout(
                     display_parts: list[str] = []
                     for role, cfg in model_info.items():
                         raw = cfg.get("model", "")
-                        short = (
-                            parse_model_name(raw).model_name
-                            if parse_model_name(raw)
-                            else raw
-                        )
                         provider = cfg.get("provider", "")
-                        if provider:
-                            tooltip_short = f"{short} ({provider})"
+                        required = cfg.get("required", True)
+                        if not raw:
+                            # No model set for this role -- show a clear
+                            # placeholder so the user knows it is missing.
+                            display_short = "Not set"
+                            required_mark = " (required)" if required else ""
+                            tooltip_short = f"Not set{required_mark}"
+                            if cfg.get("overridden"):
+                                tooltip_short += " [User]"
                         else:
-                            tooltip_short = short
-                        if cfg.get("overridden"):
-                            tooltip_short += " [User]"
-                        display_short = short
+                            short = (
+                                parse_model_name(raw).model_name
+                                if parse_model_name(raw)
+                                else raw
+                            )
+                            if provider:
+                                tooltip_short = f"{short} ({provider})"
+                            else:
+                                tooltip_short = short
+                            if cfg.get("overridden"):
+                                tooltip_short += " [User]"
+                            display_short = short
                         tooltip_parts.append(f"{role.capitalize()}: {tooltip_short}")
                         display_parts.append(display_short)
                     with ui.label(" | ".join(display_parts)).classes(
@@ -1049,14 +1059,26 @@ def setup_layout(
                                     break
                                 elif t == "error":
                                     pg_row.delete()
+                                    error_msg = event.get("message", "Unknown error")
                                     logger.debug(
                                         "chat=%s stream error: %s",
                                         chat_id,
-                                        event.get("message", "Unknown error"),
+                                        error_msg,
                                     )
                                     with _stream_container:
+                                        message = f"Error: {error_msg}"
+                                        # Missing-model errors are actionable:
+                                        # point the user at the Choose models
+                                        # dialog so they can set a model and
+                                        # retry without leaving the page.
+                                        if "No model configured" in error_msg:
+                                            message += (
+                                                " Use the settings (gear) icon "
+                                                "to choose a model for this "
+                                                "chat, then retry."
+                                            )
                                         ui.notification(
-                                            f"Error: {event.get('message', 'Unknown error')}",
+                                            message,
                                             type="negative",
                                             timeout=10000,
                                             close_button=True,
