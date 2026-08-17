@@ -26,7 +26,7 @@ from .sandbox import nml_mcp_sandbox
 sbox = nml_mcp_sandbox
 
 
-@tool_meta(ToolInfo(title="Echo text", tags={"testing"}))
+@tool_meta(ToolInfo(title="Echo text", tags={"neuroml", "echo"}))
 async def dummy_code(
     astring: str,
 ) -> str:
@@ -49,7 +49,11 @@ async def dummy_code(
 
 
 @tool_meta(
-    ToolInfo(title="List files and directories", tags={"testing"}, checkpaths=["path"])
+    ToolInfo(
+        title="List files and directories",
+        tags={"neuroml", "local", "files"},
+        checkpaths=["path"],
+    )
 )
 async def list_files(
     path: Annotated[str, Field(min_length=1)],
@@ -104,7 +108,7 @@ async def list_files(
     )
 
 
-@tool_meta(ToolInfo(title="Execute Python code", tags={"testing"}))
+@tool_meta(ToolInfo(title="Execute Python code", tags={"neuroml", "local", "code"}))
 async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
 ) -> dict[str, Any]:

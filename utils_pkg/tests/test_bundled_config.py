@@ -109,8 +109,25 @@ def test_filters_yield_transforming_stdio_server():
 
 
 async def test_filtered_stdio_client_lists_only_matching_tags():
-    """End to end: an app config with ``include_tags=["web"]`` exposes only
-    the web_fetch tool to a client connecting over stdio."""
+    """End to end: an app config ``include_tags=["download"]`` exposes only
+    the download_file tool (scoped as web + download) to a client connecting
+    over stdio."""
+    from fastmcp import Client
+    from fastmcp.mcp_config import MCPConfig
+
+    graph = _BundledGraph(BundledToolsConfig(include_tags={"download"}))
+    entry = graph._bundled_server_config()
+    assert entry is not None
+
+    client = Client(MCPConfig(mcpServers={"bundled": entry}))
+    async with client:
+        tools = await client.list_tools()
+    assert [t.name for t in tools] == ["download_file"]
+
+
+async def test_web_scope_exposes_web_tools():
+    """include_tags=["web"] now matches every web-scoped bundled tool
+    (web_fetch and download_file) since the scope tag is ``web``."""
     from fastmcp import Client
     from fastmcp.mcp_config import MCPConfig
 
@@ -121,7 +138,7 @@ async def test_filtered_stdio_client_lists_only_matching_tags():
     client = Client(MCPConfig(mcpServers={"bundled": entry}))
     async with client:
         tools = await client.list_tools()
-    assert [t.name for t in tools] == ["web_fetch"]
+    assert {t.name for t in tools} == {"web_fetch", "download_file"}
 
 
 async def test_disabled_entry_is_never_registered():

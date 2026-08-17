@@ -43,7 +43,7 @@ def test_all_bundled_wrappers_carry_bundled_tag():
 
 
 def test_web_fetch_tags():
-    assert _tags(bundled_tools.web_fetch) == {BUNDLED, "remote", "web"}
+    assert _tags(bundled_tools.web_fetch) == {BUNDLED, "web"}
     assert _tool_info(bundled_tools.web_fetch).checkpaths is None
 
 
@@ -58,7 +58,7 @@ def test_read_file_tags_and_checkpaths():
 
 
 def test_download_file_tags_and_checkpaths():
-    assert _tags(bundled_tools.download_file) == {BUNDLED, "remote", "download"}
+    assert _tags(bundled_tools.download_file) == {BUNDLED, "web", "download"}
     assert _tool_info(bundled_tools.download_file).checkpaths == ["file_path"]
 
 

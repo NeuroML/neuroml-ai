@@ -25,7 +25,7 @@ from klea_utils.mcp.tool_impls.web_fetch import web_fetch as web_fetch_impl
 BUNDLED_TAG = "bundled"
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "remote", "web"}))
+@tool_meta(ToolInfo(tags={BUNDLED_TAG, "web"}))
 async def web_fetch(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],
@@ -200,7 +200,7 @@ async def read_file(
     )
 
 
-@tool_meta(ToolInfo(tags={BUNDLED_TAG, "remote", "download"}, checkpaths=["file_path"]))
+@tool_meta(ToolInfo(tags={BUNDLED_TAG, "web", "download"}, checkpaths=["file_path"]))
 async def download_file(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],

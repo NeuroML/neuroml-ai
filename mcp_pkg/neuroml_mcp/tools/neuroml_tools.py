@@ -107,7 +107,7 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
     return response.json()
 
 
-@tool_meta(ToolInfo(title="Echo text", tags={"testing", "neuroml"}))
+@tool_meta(ToolInfo(title="Echo text", tags={"neuroml", "echo"}))
 async def dummy(astring: str) -> str:
     """Return the input string in a sentence (testing tool only).
 
@@ -127,9 +127,7 @@ async def dummy(astring: str) -> str:
     return f"I got {astring}"
 
 
-@tool_meta(
-    ToolInfo(title="Create a NeuroML model template", tags={"testing", "neuroml"})
-)
+@tool_meta(ToolInfo(title="Create a NeuroML model template", tags={"neuroml"}))
 def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     """Create a new blank NeuroML model template.
 
@@ -170,7 +168,7 @@ def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     return model_str
 
 
-@tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"testing", "neuroml"}))
+@tool_meta(ToolInfo(title="Run a LEMS simulation", tags={"neuroml", "local", "code"}))
 async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
     """Execute a LEMS simulation using pynml and the jLEMS simulator.
 
@@ -207,7 +205,7 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
 @tool_meta(
     ToolInfo(
         title="Find models on NeuroML-db",
-        tags={"testing", "neuroml", "neuroml-db"},
+        tags={"neuroml", "web", "neuroml-db"},
     )
 )
 async def get_models_from_neuromldb(
@@ -305,7 +303,7 @@ async def get_models_from_neuromldb(
 @tool_meta(
     ToolInfo(
         title="Find repositories on Open Source Brain",
-        tags={"testing", "neuroml", "neuroml-db"},
+        tags={"neuroml", "web", "osb"},
     )
 )
 async def get_repositories_from_open_source_brain(
