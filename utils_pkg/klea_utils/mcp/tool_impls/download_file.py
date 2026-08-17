@@ -2,7 +2,7 @@
 """
 File download implementation for Klea MCP tools.
 
-File: klea_utils/mcp/tools/download_file.py
+File: klea_utils/mcp/tool_impls/download_file.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -16,10 +16,10 @@ import httpx
 
 from klea_utils.api.utils import _make_retryer_httpx
 from klea_utils.mcp.errors import PermissionDeniedError
-from klea_utils.mcp.tools.permission import check_path_access
-from klea_utils.mcp.tools.session import SessionLike
-from klea_utils.mcp.tools.ssrf import check_ssrf
-from klea_utils.mcp.tools.web_fetch import _honest_user_agent
+from klea_utils.mcp.tool_impls.permission import check_path_access
+from klea_utils.mcp.tool_impls.session import SessionLike
+from klea_utils.mcp.tool_impls.ssrf import check_ssrf
+from klea_utils.mcp.tool_impls.web_fetch import _honest_user_agent
 
 logger = logging.getLogger(__name__)
 

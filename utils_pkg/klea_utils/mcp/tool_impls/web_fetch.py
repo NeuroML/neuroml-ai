@@ -2,7 +2,7 @@
 """
 Web fetch implementation for Klea MCP tools.
 
-File: klea_utils/mcp/tools/web_fetch.py
+File: klea_utils/mcp/tool_impls/web_fetch.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -22,8 +22,8 @@ from bs4 import BeautifulSoup
 from platformdirs import PlatformDirs
 
 from klea_utils.api.utils import _make_retryer_httpx
-from klea_utils.mcp.tools.session import SessionLike
-from klea_utils.mcp.tools.ssrf import check_ssrf
+from klea_utils.mcp.tool_impls.session import SessionLike
+from klea_utils.mcp.tool_impls.ssrf import check_ssrf
 from klea_utils.paths import get_cache_dir
 
 logger = logging.getLogger(__name__)

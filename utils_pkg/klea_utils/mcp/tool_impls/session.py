@@ -2,7 +2,7 @@
 """
 Shared session protocol for MCP tool implementations.
 
-File: klea_utils/mcp/tools/session.py
+File: klea_utils/mcp/tool_impls/session.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>

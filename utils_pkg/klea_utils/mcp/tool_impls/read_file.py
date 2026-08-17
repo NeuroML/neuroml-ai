@@ -2,7 +2,7 @@
 """
 File reading implementation for Klea MCP tools.
 
-File: klea_utils/mcp/tools/read_file.py
+File: klea_utils/mcp/tool_impls/read_file.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from klea_utils.mcp.errors import DocumentConversionError, PermissionDeniedError
-from klea_utils.mcp.tools.permission import check_path_access
-from klea_utils.mcp.tools.web_fetch import _html_to_text
+from klea_utils.mcp.tool_impls.permission import check_path_access
+from klea_utils.mcp.tool_impls.web_fetch import _html_to_text
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def read_file(
     """Read a file and return a slice of its text content.
 
     Framework-agnostic implementation shared across Klea MCP servers.  Apps
-    wrap this in an MCP tool (see klea_agent.tools.wrappers).
+    wrap this in an MCP tool (see klea_utils.mcp.server.bundled_tools).
 
     Files are converted to plain text first: HTML is stripped with
     BeautifulSoup, and office documents/PDF/EPUB/CSV are converted to

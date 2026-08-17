@@ -2,7 +2,7 @@
 """
 Path permission checking for file-accessing MCP tools.
 
-File: klea_utils/mcp/tools/permission.py
+File: klea_utils/mcp/tool_impls/permission.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>

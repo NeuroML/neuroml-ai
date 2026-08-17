@@ -15,7 +15,7 @@ from typing import Annotated, Any
 
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
-from klea_utils.mcp.tools.list_files import list_files as list_files_impl
+from klea_utils.mcp.tool_impls.list_files import list_files as list_files_impl
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode

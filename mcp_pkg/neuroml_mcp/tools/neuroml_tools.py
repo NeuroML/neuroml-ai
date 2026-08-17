@@ -19,7 +19,7 @@ from cachetools import TTLCache
 from fastmcp import Context
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
-from klea_utils.mcp.tools.download_file import download_file_to_cache
+from klea_utils.mcp.tool_impls.download_file import download_file_to_cache
 from klea_utils.paths import get_cache_dir
 from tenacity import (
     retry,
