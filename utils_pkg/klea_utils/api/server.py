@@ -58,7 +58,10 @@ def configure_profile(
     if profile == "template":
         if template_writer is None:
             raise typer.BadParameter("--profile template is not supported here.")
-        path = template_writer(Path.cwd())
+        try:
+            path = template_writer(Path.cwd())
+        except FileExistsError as e:
+            raise typer.BadParameter(str(e)) from e
         print(f"Template config written to {path}.\nFill it in, then re-run.")
         raise typer.Exit(0)
 
