@@ -112,6 +112,14 @@ tagged.  That is carried by standard MCP tool annotations
 enforce without knowing Klea's tag vocabulary.  Tags answer "which tools to
 expose"; annotations answer "what effects the tool may have".
 
+Klea's own tools set these annotations as part of their declarative
+metadata (``ToolInfo`` fields ``read_only`` / ``destructive`` /
+``idempotent`` / ``open_world``), which ``register_tools`` folds onto the
+registered MCP tool; see the ``ToolInfo`` docstring and
+https://fastmcp.wiki/en/servers/tools#mcp-annotations.  So a generic MCP
+host connecting to a Klea server sees the read-only / destructive contract
+for free, without adopting Klea's tag vocabulary.
+
 The bundled tools server
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
