@@ -556,6 +556,18 @@ class BaseLangGraph(ABC):
         self._load_env()
         self._apply_model_names()
         self._apply_provider_defaults()
+        # ``llm_models`` is now fully populated (roles, model names, required
+        # flags, provider defaults) -- log the resolved config once.
+        self.logger.debug(
+            "Resolved model configuration:\n"
+            + "\n".join(
+                f"  {role}: "
+                f"model={entry.model_name or '<not set>'}, "
+                f"required={entry.required}, "
+                f"modifiable={entry.modifiable}"
+                for role, entry in self.llm_models.items()
+            )
+        )
         self._configure_resources()
         self._check_required_models()
         self._create_mcp_client()

@@ -244,6 +244,18 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         # Get the merged configurable dict for provider field filtering.
         overrides: dict[str, Any] = config["configurable"]
 
+        # A missing model (no env default and no per-chat override) cannot
+        # invoke the LLM.  Raise a clear, actionable error instead of the
+        # confusing provider-level "Missing credentials" error that an empty
+        # model would otherwise produce.
+        if not overrides.get("model"):
+            raise RuntimeError(
+                f"No model configured for role '{self.model_type}'. "
+                f"Set the {self.model_type.upper()}_MODEL environment "
+                "variable (e.g. KLEA_AGENT_CHAT_MODEL) or set a model for "
+                "this chat from the web UI (Choose models)."
+            )
+
         # --- Bounded output tokens ---
         # Guarantee a finite max-output token param for the resolved
         # provider, clamped to the model's catalog output limit and total

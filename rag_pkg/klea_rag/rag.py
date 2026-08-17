@@ -171,10 +171,6 @@ class RAG(BaseLangGraph):
         """Create the LangGraph"""
         self.workflow = StateGraph(RAGState)
 
-        # TODO: should be a check that gives user an error
-        assert self.stores is not None or self.mcp_client is not None
-        assert self.QueryDomainSchema is not None
-
         # Guard nodes
         self._guard_node = GuardNode(
             logger=self.logger,

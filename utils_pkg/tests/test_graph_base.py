@@ -47,8 +47,21 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _load_env(self) -> None:
-        """No-op: skip env file loading."""
-        pass
+        """No-op: skip env file loading, provide minimal app_env/app_config.
+
+        ``setup()`` calls ``_apply_model_names`` and
+        ``_apply_provider_defaults`` after ``_load_env``, so the no-op must
+        still provide the objects those helpers read from.
+        """
+        from types import SimpleNamespace
+        from typing import cast
+
+        from pydantic import BaseModel
+
+        # ``app_env`` is typed ``BaseModel`` on the base class; the generated
+        # settings instance is not available since ``_load_env`` is a no-op.
+        self.app_env = cast(BaseModel, SimpleNamespace(chat_model="ollama:qwen3:0.6b"))
+        self.app_config = cast(BaseModel, SimpleNamespace(providers={}))
 
     @override
     def _configure_resources(self) -> None:

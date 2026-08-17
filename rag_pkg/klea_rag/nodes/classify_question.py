@@ -40,7 +40,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         label: str,
         llm_models: dict[str, Any],
         domains: dict[str, str],
-        output_schema: type[TSchema],
+        output_schema: type[TSchema] | None,
         memory: bool = False,
         pre_prompt: str = "",
     ):

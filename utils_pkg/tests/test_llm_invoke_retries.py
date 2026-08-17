@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from unittest import mock
 
+import pytest
 from klea_utils.llm import LLMModel
 from klea_utils.models_catalog import ModelLimits
 from klea_utils.nodes.base import (
@@ -62,6 +63,41 @@ def make_config(max_tokens=4096, model="gpt-4o", provider="openai"):
             "max_tokens": max_tokens,
         }
     }
+
+
+class TestBuildInvokeConfigNoModel:
+    """Tests for the role-aware 'no model configured' guard."""
+
+    def test_empty_model_raises_clear_error(self):
+        """An empty resolved model raises an actionable error."""
+        node = _MinimalLLMNode(
+            logger=logger,
+            label="test",
+            llm_models={
+                "chat": LLMModel(instance=mock.Mock(), model_name="", required=True)
+            },
+            output_schema=None,
+        )
+
+        with pytest.raises(RuntimeError, match="No model configured for role 'chat'"):
+            node._build_invoke_config()
+
+    def test_set_model_builds_config(self):
+        """A resolved model proceeds past the guard."""
+        node = _MinimalLLMNode(
+            logger=logger,
+            label="test",
+            llm_models={
+                "chat": LLMModel(
+                    instance=mock.Mock(), model_name="openai:gpt-4o", required=True
+                )
+            },
+            output_schema=None,
+        )
+        node._last_prompt = StringPromptValue(text="hi")
+
+        config = node._build_invoke_config()
+        assert config["configurable"]["model"] == "gpt-4o"
 
 
 class TestInvokeWithRetries:
