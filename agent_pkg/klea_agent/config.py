@@ -19,9 +19,9 @@ class AppEnv(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="KLEA_AGENT_")
 
     app_config_file: str = "klea_agent.json"
-    chat_model: str = "ollama:qwen3.5:0.8b"
-    reasoning_model: str = "ollama:qwen3.5:0.8b"
-    guard_model: str = "ollama:llama-guard3:1b"
+    chat_model: str = ""
+    reasoning_model: str = ""
+    guard_model: str = ""
 
 
 class AppConfig(BaseModel):

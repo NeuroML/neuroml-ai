@@ -170,19 +170,27 @@ class BaseLangGraph(ABC):
         """Load env file, and configuration
 
         Uses ``self.env_class`` and ``self.env_file`` to locate and parse
-        the env file, then resolves the application config file (from
-        ``self.app_env.app_config_file``) via
+        the env file (optional -- when missing, process environment
+        variables and class defaults are used), then resolves the
+        application config file (from ``self.app_env.app_config_file``) via
         :func:`klea_utils.paths.resolve_app_config_path` -- the working
         directory first, then the per-app config directory.  Raises
-        ``FileNotFoundError`` if either file does not exist.
+        ``FileNotFoundError`` if the config file does not exist.
         """
         env_file_path = Path(self.env_file)
         if not env_file_path.exists():
-            raise FileNotFoundError(
-                f"""Could not find env file: {self.env_file}. You can use the {self.env_var} environment variable to specify the env file."""
+            # Env files are optional.  With no file, pydantic-settings
+            # falls back to process environment variables and class
+            # defaults, so a clean machine can run with only a JSON config
+            # (models are then set via shell env vars or the web UI).
+            self.logger.warning(
+                f"Env file not found: {self.env_file}. "
+                f"Using process environment variables and defaults only. "
+                f"Set {self.env_var} to specify an env file."
             )
-
-        self.app_env = self.env_class(_env_file=self.env_file)
+            self.app_env = self.env_class()
+        else:
+            self.app_env = self.env_class(_env_file=self.env_file)
         assert self.app_env
         self.logger.debug(f"env file: {self.env_file}")
         self.logger.debug(f"env: {self.app_env}")

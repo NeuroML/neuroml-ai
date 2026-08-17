@@ -226,11 +226,14 @@ class TestLoadEnv:
         with pytest.raises(FileNotFoundError, match="--profile"):
             graph._load_env()
 
-    def test_missing_env_file_raises(self, tmp_path, monkeypatch):
+    def test_missing_env_file_is_optional(self, tmp_path, monkeypatch):
         cwd = tmp_path / "cwd"
         conf_dir = tmp_path / "conf"
         cwd.mkdir()
         conf_dir.mkdir()
+        (conf_dir / "toy.json").write_text(json.dumps({"foo": "from-default"}))
+        # Ensure no leaked process env affects the test.
+        monkeypatch.delenv("TOY_APP_CONFIG_FILE", raising=False)
 
         graph = ToyGraph(logging_level=logging.INFO, checkpoint="none", log_file=False)
         graph.env_file = str(tmp_path / "nope.env")
@@ -239,8 +242,12 @@ class TestLoadEnv:
         )
         monkeypatch.chdir(cwd)
 
-        with pytest.raises(FileNotFoundError, match="TOY_ENV_FILE"):
-            graph._load_env()
+        graph._load_env()
+
+        # ``app_env`` / ``app_config`` are typed ``BaseModel`` on the base
+        # class, so read the concrete fields via getattr.
+        assert getattr(graph.app_env, "chat_model") == "ollama:test"
+        assert getattr(graph.app_config, "foo") == "from-default"
 
 
 if __name__ == "__main__":

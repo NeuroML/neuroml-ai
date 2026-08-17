@@ -19,9 +19,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppEnv(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="KLEA_RAG_")
 
-    chat_model: str = "ollama:qwen2.5-coder:3b"
+    chat_model: str = ""
     guard_model: str = ""
-    embedding_model: str = "ollama:bge-m3:latest"
+    embedding_model: str = ""
     app_config_file: str = "klea_rag.json"
 
 
