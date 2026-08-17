@@ -84,6 +84,25 @@
   refuse out-of-boundary calls without invoking the tool.
 - The agent's bundled tool server now also serves `read_file` (paged
   document and plain-text reading).
+- Standalone `klea-mcp` CLI: runs the shared bundled tools server
+  (web fetch, file list/read, download) over stdio or HTTP, reusing the
+  same server that apps auto-launch in-process.
+- Tag-based MCP tool filtering: a server entry can list
+  `include_tags`/`exclude_tags`, and the shared bundled server is
+  configured under `general.bundled_tools` (`enabled`, `include_tags`,
+  `exclude_tags`) -- enabled for `klea_agent` by default (batteries
+  included) and opt-in for `klea_rag` (RAGs are domain specific).  Tags
+  carry a documented scope (`local`/`web`) and domain/functional
+  vocabulary (`files`, `code`, `download`, `echo`, `neuroml`,
+  `neuroml-db`, `osb`, `bundled`).
+- Standard MCP tool annotations: `ToolInfo` gains `read_only` /
+  `destructive` / `idempotent` / `open_world` flags that `register_tools`
+  folds into the tool's `readOnlyHint` / `destructiveHint` /
+  `idempotentHint` / `openWorldHint`, so any MCP host sees the
+  read-only/destructive contract of Klea's tools without adopting Klea's
+  tag vocabulary.  Read-only tools (search, file read/list, web fetch)
+  and destructive tools (download, code/simulation execution) are
+  annotated accordingly.
 
 ### Changed
 
@@ -114,6 +133,11 @@
 - HTTP stack consolidated on httpx: aiohttp removed everywhere; shared
   sessions use HTTP/2 (`http2=True`) with tuned connection limits; a
   single `_make_retryer_httpx` helper backs the bundled tools.
+- Shared MCP tool implementations moved from `klea_utils.mcp.tools` to
+  `klea_utils.mcp.tool_impls`, and the bundled tools server (wrappers +
+  server) now lives in `klea_utils.mcp.server` (`bundled.py` +
+  `bundled_tools.py`); `neuroml_mcp` tools were retagged with the
+  documented scope/domain vocabulary.
 
 ### Fixed
 
