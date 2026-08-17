@@ -31,6 +31,16 @@ class TestWriteConfigTemplate:
         assert domain.vector_stores[0].path.startswith("chroma:")
         assert domain.bm25_stores[0].name == "my-docs-bm25"
 
+    def test_bundled_tools_disabled_by_default_for_rag(self):
+        from klea_rag.config import GeneralConfig
+
+        assert GeneralConfig().bundled_tools.enabled is False
+
+    def test_template_includes_disabled_bundled_tools(self, tmp_path):
+        target = write_config_template(tmp_path)
+        data = json.loads(target.read_text())
+        assert data["general"]["bundled_tools"]["enabled"] is False
+
     def test_refuses_overwrite(self, tmp_path):
         write_config_template(tmp_path)
         with pytest.raises(FileExistsError):
