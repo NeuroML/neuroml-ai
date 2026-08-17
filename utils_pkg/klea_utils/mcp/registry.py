@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import Any
 
 from fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from klea_utils.mcp.schemas import ToolInfo
 
@@ -75,6 +76,21 @@ def register_tools(mcp: FastMCP, modules: list[ModuleType]):
                 if metadata.checkpaths is not None:
                     tool_meta_dict["checkpaths"] = list(metadata.checkpaths)
                 kwargs["meta"] = tool_meta_dict
+
+            # Fold the standard MCP ToolAnnotations hints.  Only hints that
+            # are explicitly declared (non-None) are expressed; a tool with
+            # no hints carries no annotations object.
+            annotations_kwargs: dict[str, Any] = {}
+            if metadata.read_only is not None:
+                annotations_kwargs["readOnlyHint"] = metadata.read_only
+            if metadata.destructive is not None:
+                annotations_kwargs["destructiveHint"] = metadata.destructive
+            if metadata.idempotent is not None:
+                annotations_kwargs["idempotentHint"] = metadata.idempotent
+            if metadata.open_world is not None:
+                annotations_kwargs["openWorldHint"] = metadata.open_world
+            if annotations_kwargs:
+                kwargs["annotations"] = ToolAnnotations(**annotations_kwargs)
 
             mcp.tool(fn, **kwargs)
             logger.debug(f"Registered MCP tool: {fname}")
