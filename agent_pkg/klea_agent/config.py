@@ -12,16 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class AppEnv(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="KLEA_AGENT_")
-
-    app_config_file: str = "klea_agent.json"
-    chat_model: str = ""
-    reasoning_model: str = ""
-    guard_model: str = ""
 
 
 class AppConfig(BaseModel):

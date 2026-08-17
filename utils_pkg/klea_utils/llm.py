@@ -801,6 +801,12 @@ class LLMModel(BaseModel):
     (both the API and web UI reject modifications to locked roles).
     Set to ``False`` to lock a role (e.g. guard) against user overrides
     in managed deployments.
+
+    ``required`` marks roles that need a default model for the app to
+    function (e.g. ``chat``).  At startup, required roles with an empty
+    model trigger a warning (not a failure) listing the environment
+    variables to set.  Optional roles (e.g. ``guard``) are skipped when
+    their model is empty.
     """
 
     model_name: str = ""
@@ -808,6 +814,7 @@ class LLMModel(BaseModel):
     role_defaults: dict[str, Any] = {}
     provider_defaults: dict[str, dict[str, Any]] = {}
     modifiable: bool = True
+    required: bool = True
 
     def build_config(
         self,

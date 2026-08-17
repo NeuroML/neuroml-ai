@@ -33,7 +33,7 @@ from klea_agent.nodes.init_graph import InitGraphState
 from klea_agent.nodes.planner import Planner
 from klea_agent.nodes.tools_router import ToolsRouter
 
-from .config import AppConfig, AppEnv
+from .config import AppConfig
 from .schemas import GoalSchema, KleaAgentState
 
 
@@ -41,14 +41,14 @@ from .schemas import GoalSchema, KleaAgentState
 class KleaAgent(BaseLangGraph):
     """Klea Agent implementation"""
 
-    env_class = AppEnv
+    env_prefix = "KLEA_AGENT_"
     env_var = "KLEA_AGENT_ENV_FILE"
     env_file_default = "klea_agent.env"
     config_class = AppConfig
+    config_file_default = "klea_agent.json"
     graph_name = "klea"
 
     # type hints
-    app_env: AppEnv
     app_config: AppConfig
 
     def __init__(
@@ -63,9 +63,10 @@ class KleaAgent(BaseLangGraph):
     def _setup_models(self) -> None:
         """Set up the LLM chat model
 
-        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
-        ``model_name`` provides the default that ``_invoke_llm`` uses when no
-        override is active.  The guard role is not modifiable per request.
+        A single ``_ConfigurableModel`` is shared across all roles.  Each
+        role's ``model_name`` is populated by the base class from the
+        ``{role}_model`` env field after the env is loaded.  The guard role
+        is optional and not modifiable per request.
         """
         from klea_utils.llm import LLMModel
 
@@ -74,19 +75,16 @@ class KleaAgent(BaseLangGraph):
         self.llm_models = {
             "chat": LLMModel(
                 instance=model,
-                model_name=self.app_env.chat_model,
-                provider_defaults=self._provider_defaults_for_role("chat"),
+                required=True,
             ),
             "plan": LLMModel(
                 instance=model,
-                model_name=self.app_env.reasoning_model,
-                provider_defaults=self._provider_defaults_for_role("plan"),
+                required=True,
             ),
             "guard": LLMModel(
                 instance=model,
-                model_name=self.app_env.guard_model,
+                required=False,
                 modifiable=False,
-                provider_defaults=self._provider_defaults_for_role("guard"),
             ),
         }
 

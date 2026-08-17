@@ -93,6 +93,59 @@ class ToyGraph(BaseLangGraph):
         self.graph = workflow.compile()
 
 
+class WarningGraph(ToyGraph):
+    """ToyGraph with required model roles and empty model names.
+
+    ``_setup_models`` declares the model roles with their ``required``
+    flags, matching how real graphs declare ``llm_models``.
+    """
+
+    env_prefix = "TOY_"
+
+    def _setup_models(self):
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(instance=model, model_name="", required=True),
+            "plan": LLMModel(instance=model, model_name="", required=True),
+            "guard": LLMModel(instance=model, model_name="", required=False),
+        }
+
+
+class TestCheckRequiredModels:
+    """Tests for the startup missing-model warning."""
+
+    def test_warns_for_missing_models(self, caplog):
+        graph = WarningGraph()
+        graph._setup_models()
+
+        with caplog.at_level(logging.WARNING, logger=graph.graph_name):
+            graph._check_required_models()
+
+        assert "have not been set: chat, plan" in caplog.text
+        assert "have not been set: chat, plan, guard" not in caplog.text
+        assert "TOY_CHAT_MODEL=<not set>" in caplog.text
+        assert "TOY_PLAN_MODEL=<not set>" in caplog.text
+        # Optional roles still appear in the current-state listing.
+        assert "TOY_GUARD_MODEL=<not set>" in caplog.text
+
+    def test_no_warning_when_required_models_set(self, caplog):
+        graph = WarningGraph()
+        graph._setup_models()
+        instance = graph.llm_models["chat"].instance
+        graph.llm_models["chat"] = LLMModel(
+            instance=instance, model_name="ollama:qwen3:0.6b", required=True
+        )
+        graph.llm_models["plan"] = LLMModel(
+            instance=instance, model_name="ollama:qwen3:0.6b", required=True
+        )
+        # guard stays empty but is optional -- must not trigger a warning.
+
+        with caplog.at_level(logging.WARNING, logger=graph.graph_name):
+            graph._check_required_models()
+
+        assert "have not been set" not in caplog.text
+
+
 class TestGraphBase:
     """Test all BaseLangGraph execution methods."""
 

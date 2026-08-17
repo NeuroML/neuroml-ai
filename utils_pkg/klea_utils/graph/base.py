@@ -16,7 +16,7 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Literal, final
+from typing import Any, Literal, cast, final
 
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
@@ -27,7 +27,7 @@ from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
 from platformdirs import PlatformDirs
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from klea_utils.llm import LLMModel
 from klea_utils.mcp.schemas import ToolInfo
@@ -79,14 +79,16 @@ class BaseLangGraph(ABC):
     - Dual-stream logging
 
     Subclasses must implement:
-    - :meth:`_setup_models`: Create LLM model instances
+    - :meth:`_setup_models`: Create ``self.llm_models`` (the env schema is
+      generated from its roles)
     - :meth:`_create_graph`: Build and compile the LangGraph
-    - Set ``env_class`` to the appropriate Pydantic settings class
+    - Declare ``config_class`` for the JSON configuration
     """
 
-    #: Pydantic BaseSettings class for env loading.
-    #: Subclasses must set this to their AppEnv class.
-    env_class: type[BaseModel]
+    #: Pydantic BaseSettings class for env loading.  Subclasses need not
+    #: set this: it is generated at load time from ``self.llm_models`` (see
+    #: :meth:`_build_env_class`).
+    env_class: type[BaseModel] = BaseModel
 
     #: Pydantic BaseModel class for configuration loading.
     #: Subclasses must set this to their AppConfig class.
@@ -97,6 +99,14 @@ class BaseLangGraph(ABC):
 
     #: Default config file name if the environment variable is not set.
     env_file_default: str = "config.env"
+
+    #: Prefix prepended to generated env var names (e.g. ``"KLEA_AGENT_"``).
+    #: Each model role ``r`` becomes the env var ``<env_prefix>R_MODEL``.
+    env_prefix: str = ""
+
+    #: Default JSON config file name, used as the ``app_config_file`` env
+    #: field default when none is set in the env file or process env.
+    config_file_default: str = ""
 
     #: Logger name for this orchestrator, also used as the app name
     #: for ``platformdirs`` data/cache directories.
@@ -166,17 +176,45 @@ class BaseLangGraph(ABC):
         )
         self.logger = logging.getLogger(self.graph_name)
 
+    def _build_env_class(self) -> type[BaseModel]:
+        """Build the pydantic-settings class for this graph's environment.
+
+        The schema is derived from ``self.llm_models``: each model role ``r``
+        becomes a ``{r}_model`` string field (env var ``<env_prefix>R_MODEL``),
+        plus ``app_config_file``.  Generating the class from the model
+        declaration keeps the env schema and the model roles as a single
+        source of truth, so they cannot drift apart.
+
+        :returns: A ``BaseSettings`` subclass configured with ``env_prefix``.
+        """
+        # Lazy: pydantic-settings is only needed when loading the env.
+        from pydantic_settings import BaseSettings, SettingsConfigDict
+
+        fields: dict[str, Any] = {
+            f"{role}_model": (str, "") for role in self.llm_models
+        }
+        fields["app_config_file"] = (str, self.config_file_default)
+        return create_model(
+            f"{self.graph_name}Env",
+            __base__=BaseSettings,
+            __config__=cast(ConfigDict, SettingsConfigDict(env_prefix=self.env_prefix)),
+            **fields,
+        )
+
     def _load_env(self) -> None:
         """Load env file, and configuration
 
-        Uses ``self.env_class`` and ``self.env_file`` to locate and parse
-        the env file (optional -- when missing, process environment
-        variables and class defaults are used), then resolves the
-        application config file (from ``self.app_env.app_config_file``) via
+        Builds the env settings class from ``self.llm_models`` (see
+        :meth:`_build_env_class`) and parses the env file (optional --
+        when missing, process environment variables and class defaults are
+        used), then resolves the application config file (from
+        ``self.app_env.app_config_file``) via
         :func:`klea_utils.paths.resolve_app_config_path` -- the working
         directory first, then the per-app config directory.  Raises
         ``FileNotFoundError`` if the config file does not exist.
         """
+        self.env_class = self._build_env_class()
+
         env_file_path = Path(self.env_file)
         if not env_file_path.exists():
             # Env files are optional.  With no file, pydantic-settings
@@ -194,12 +232,6 @@ class BaseLangGraph(ABC):
         assert self.app_env
         self.logger.debug(f"env file: {self.env_file}")
         self.logger.debug(f"env: {self.app_env}")
-
-        if "app_config_file" not in self.env_class.model_fields:
-            raise FileNotFoundError(
-                f"No config file provided. Please provide one in the env file ({self.env_file})."
-                + f"You can use the {self.env_var} environment variable to specify the env file."
-            )
 
         # An explicit empty value means "not set" -- fall back to the field
         # default so a line like ``KLEA_AGENT_APP_CONFIG_FILE=`` does not
@@ -356,12 +388,67 @@ class BaseLangGraph(ABC):
     def _setup_models(self) -> None:
         """Set up LLM model instances.
 
-        Subclasses should populate ``self.llm_models`` with ``LLMModel``
-        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).
-        These are graph-wide defaults; per-request overrides are applied
-        at runtime via ``model_overrides_ctx``.
+        Subclasses must populate ``self.llm_models`` with ``LLMModel``
+        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``),
+        setting ``required`` on each.  This runs *before* ``_load_env()``,
+        so the roles declared here define the env schema generated by
+        :meth:`_build_env_class`.  ``model_name`` is populated from the env
+        by :meth:`_apply_model_names` after the env is loaded.  These are
+        graph-wide defaults; per-request overrides are applied at runtime
+        via ``model_overrides_ctx``.
         """
         ...
+
+    def _apply_model_names(self) -> None:
+        """Populate ``model_name`` on each LLMModel from the loaded env.
+
+        Called by :meth:`setup` after ``_load_env()``.  Each role ``r``
+        reads its default model from the generated ``app_env.<r>_model``
+        field (env var ``<env_prefix>R_MODEL``).
+        """
+        for role, entry in self.llm_models.items():
+            # The env field is generated from the role declaration, so the
+            # attribute is not statically known on the settings instance.
+            entry.model_name = getattr(self.app_env, f"{role}_model")
+
+    def _apply_provider_defaults(self) -> None:
+        """Populate per-provider defaults on each LLMModel from the config.
+
+        Called by :meth:`setup` after ``_load_env()`` (which loads
+        ``app_config``), since ``_setup_models`` runs before the config is
+        available.
+        """
+        for role, entry in self.llm_models.items():
+            entry.provider_defaults = self._provider_defaults_for_role(role)
+
+    def _check_required_models(self) -> None:
+        """Warn at startup when required model roles have no default model.
+
+        Missing models are not fatal: the server still starts so the
+        frontends can be used to set models per chat.  The warning lists
+        all model env vars (derived as ``<env_prefix><ROLE>_MODEL``) with
+        their current state so users can see exactly what to set.
+        """
+        missing = [
+            role
+            for role, entry in self.llm_models.items()
+            if entry.required and not entry.model_name
+        ]
+        if not missing:
+            return
+
+        lines = [
+            (
+                f"The following models have not been set: {', '.join(missing)}. "
+                "Please set them before running queries (or from the web UI, "
+                "Choose models)."
+            ),
+            "Current configured models:",
+        ]
+        for role, entry in self.llm_models.items():
+            env_var = f"{self.env_prefix}{role.upper()}_MODEL"
+            lines.append(f"  {env_var}={entry.model_name or '<not set>'}")
+        self.logger.warning("\n".join(lines))
 
     def _provider_defaults_for_role(self, role: str) -> dict[str, dict[str, Any]]:
         """Return per-provider default params for *role* from the config.
@@ -452,18 +539,25 @@ class BaseLangGraph(ABC):
         Calls hooks and template methods in this order:
         1. ``_pre_setup()``
         2. ``_setup_checkpointer()``
-        3. ``_load_env()``
-        4. ``_setup_models()``
-        5. ``_create_mcp_client()``
-        6. ``_pre_graph()``
-        7. ``_create_graph()``
-        8. ``_post_setup()``
+        3. ``_setup_models()`` -- builds ``self.llm_models`` (roles and
+           required flags), which the env schema is generated from
+        4. ``_load_env()`` -- parses the env into ``self.app_env`` using
+           the schema generated from ``llm_models``, and loads the JSON config
+        5. ``_configure_resources()``
+        6. ``_check_required_models()``
+        7. ``_create_mcp_client()``
+        8. ``_pre_graph()``
+        9. ``_create_graph()``
+        10. ``_post_setup()``
         """
         self._pre_setup()
         await self._setup_checkpointer()
-        self._load_env()
-        self._configure_resources()
         self._setup_models()
+        self._load_env()
+        self._apply_model_names()
+        self._apply_provider_defaults()
+        self._configure_resources()
+        self._check_required_models()
         self._create_mcp_client()
         await self._get_mcp_tools()
         await self._get_vector_stores()

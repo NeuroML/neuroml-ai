@@ -26,7 +26,7 @@ from klea_utils.stores.config import RetrieverConfig
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
 
-from .config import AppConfig, AppEnv
+from .config import AppConfig
 from .nodes.answer_from_context import AnswerFromContext
 from .nodes.answer_user import AnswerUser
 from .nodes.classify_question import ClassifyQuestion
@@ -43,14 +43,14 @@ from .schemas import RAGState
 class RAG(BaseLangGraph):
     """General RAG implementation"""
 
-    env_class = AppEnv
+    env_prefix = "KLEA_RAG_"
     env_var = "KLEA_RAG_ENV_FILE"
     env_file_default = "rag.env"
     config_class = AppConfig
+    config_file_default = "klea_rag.json"
     graph_name = "klea-rag"
 
     # type hints
-    app_env: AppEnv
     app_config: AppConfig
 
     def __init__(
@@ -61,15 +61,31 @@ class RAG(BaseLangGraph):
         """Initialise"""
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
+    def _has_vector_stores(self) -> bool:
+        """Return whether any configured domain declares vector stores.
+
+        Vector stores load at startup from the embedding model, so an
+        embedding override set later per chat cannot enable retrieval.
+        BM25-only domains need no embedding model.
+        """
+        return bool(
+            self.retriever_config
+            and any(
+                domain.vector_stores
+                for domain in self.retriever_config.domains.values()
+            )
+        )
+
     @override
     def _setup_models(self) -> None:
         """Set up the LLM chat model
 
-        A single ``_ConfigurableModel`` is shared across all roles.  Per-role
-        ``model_name`` provides the default that
-        ``_invoke_llm`` uses when no override is active.  Developers who need
-        a fixed model for a particular role may assign a concrete instance
-        instead of the shared configurable one.
+        A single ``_ConfigurableModel`` is shared across the chat roles.
+        Each role's ``model_name`` is populated by the base class from the
+        ``{role}_model`` env field after the env is loaded.  The embedding
+        role has no chat instance; it only carries the embedding model name
+        used to load vector stores at startup.  The guard role is optional
+        and not modifiable per request.
         """
         from klea_utils.llm import LLMModel
 
@@ -77,18 +93,18 @@ class RAG(BaseLangGraph):
         self.llm_models = {
             "chat": LLMModel(
                 instance=model,
-                model_name=self.app_env.chat_model,
-                provider_defaults=self._provider_defaults_for_role("chat"),
+                required=True,
             ),
             "guard": LLMModel(
                 instance=model,
-                model_name=self.app_env.guard_model,
+                required=False,
                 modifiable=False,
-                provider_defaults=self._provider_defaults_for_role("guard"),
             ),
+            # required is adjusted in ``_configure_resources`` once the
+            # vector store configuration is known.
             "embedding": LLMModel(
                 instance=None,
-                model_name=self.app_env.embedding_model,
+                required=True,
             ),
         }
 
@@ -136,6 +152,12 @@ class RAG(BaseLangGraph):
         self.k_inc = self.app_config.general.k_inc
         self.max_refs_size = self.app_config.general.max_refs_size
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
+
+        # The embedding model is only required when vector stores are
+        # configured.  ``_check_required_models`` runs after this, so adjust
+        # the flag now that the store configuration is known.
+        if "embedding" in self.llm_models:
+            self.llm_models["embedding"].required = self._has_vector_stores()
 
         # store per-domain MCP configs for domain-aware tool descriptions
         self.domain_mcp_configs = {}

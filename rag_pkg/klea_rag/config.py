@@ -13,16 +13,6 @@ from typing import Any
 
 from klea_utils.stores.config import PerDomainConfig as BasePerDomainConfig
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class AppEnv(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="KLEA_RAG_")
-
-    chat_model: str = ""
-    guard_model: str = ""
-    embedding_model: str = ""
-    app_config_file: str = "klea_rag.json"
 
 
 class GeneralConfig(BaseModel):

@@ -16,7 +16,6 @@ import pytest
 from klea_utils.graph.base import BaseLangGraph
 from klea_utils.paths import resolve_app_config_path
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class TestResolveConfigPath:
@@ -84,15 +83,6 @@ class TestResolveConfigPath:
             resolve_app_config_path("", conf_dir)
 
 
-class ToySettings(BaseSettings):
-    """Minimal settings class for graph env loading tests."""
-
-    model_config = SettingsConfigDict(env_prefix="TOY_")
-
-    chat_model: str = "ollama:test"
-    app_config_file: str = "toy.json"
-
-
 class ToyConfig(BaseModel):
     """Minimal app config class for graph env loading tests."""
 
@@ -102,17 +92,22 @@ class ToyConfig(BaseModel):
 class ToyGraph(BaseLangGraph):
     """Minimal graph subclass exposing only ``_load_env``."""
 
-    env_class = ToySettings
     config_class = ToyConfig
+    env_prefix = "TOY_"
     env_var = "TOY_ENV_FILE"
     env_file_default = "toy.env"
+    config_file_default = "toy.json"
     graph_name = "toy_graph"
 
     def _configure_resources(self) -> None:
         pass
 
     def _setup_models(self) -> None:
-        pass
+        from klea_utils.llm import LLMModel
+
+        self.llm_models = {
+            "chat": LLMModel(instance=None, required=True),
+        }
 
     async def _create_graph(self) -> None:
         pass
@@ -128,6 +123,9 @@ class TestLoadEnv:
         monkeypatch.delenv("TOY_APP_CONFIG_FILE", raising=False)
         graph = ToyGraph(logging_level=logging.INFO, checkpoint="none", log_file=False)
         graph.env_file = str(env_file)
+        # ``_setup_models`` declares the model roles that ``_load_env`` uses
+        # to generate the env schema (as ``setup()`` does in sequence).
+        graph._setup_models()
         monkeypatch.setattr(
             graph, "paths", SimpleNamespace(user_config_dir=str(conf_dir))
         )
@@ -232,11 +230,14 @@ class TestLoadEnv:
         cwd.mkdir()
         conf_dir.mkdir()
         (conf_dir / "toy.json").write_text(json.dumps({"foo": "from-default"}))
-        # Ensure no leaked process env affects the test.
+        # Ensure no leaked process env affects the test, and prove model env
+        # vars are read from the process env when no env file exists.
         monkeypatch.delenv("TOY_APP_CONFIG_FILE", raising=False)
+        monkeypatch.setenv("TOY_CHAT_MODEL", "ollama:test")
 
         graph = ToyGraph(logging_level=logging.INFO, checkpoint="none", log_file=False)
         graph.env_file = str(tmp_path / "nope.env")
+        graph._setup_models()
         monkeypatch.setattr(
             graph, "paths", SimpleNamespace(user_config_dir=str(conf_dir))
         )
@@ -246,8 +247,8 @@ class TestLoadEnv:
 
         # ``app_env`` / ``app_config`` are typed ``BaseModel`` on the base
         # class, so read the concrete fields via getattr.
-        assert getattr(graph.app_env, "chat_model") == "ollama:test"
-        assert getattr(graph.app_config, "foo") == "from-default"
+        assert getattr(graph.app_env, "chat_model") == "ollama:test"  # noqa: B009
+        assert getattr(graph.app_config, "foo") == "from-default"  # noqa: B009
 
 
 if __name__ == "__main__":
