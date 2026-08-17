@@ -84,8 +84,19 @@
   refuse out-of-boundary calls without invoking the tool.
 - The agent's bundled tool server now also serves `read_file` (paged
   document and plain-text reading).
+- At startup the server logs a warning listing any required model roles
+  that have no default model set, along with the model env vars to set,
+  instead of crashing; the web UI status pane marks unset roles "Not set".
+- `GET /chat/{user}/{chat}/models/active` now reports whether each model
+  role is `required`.
 
 ### Changed
+
+- Default models are now set per role through environment variables
+  (`KLEA_<APP>_<ROLE>_MODEL`, e.g. `KLEA_AGENT_CHAT_MODEL`); the env file
+  is optional, falling back to shell env vars.  The env schema is generated
+  from the graph's `llm_models` declaration, so roles and env vars cannot
+  drift.  Agent role `reasoning_model` renamed to `plan_model`.
 
 - JSON config files are now selected by profile: `--profile <name>`
   loads `<name>.json` from the current directory, then the per-app
@@ -117,6 +128,9 @@
 
 ### Fixed
 
+- A query with no model configured now returns a clear "No model configured
+  for role 'x'" error instead of a misleading provider-level
+  "Missing credentials" error.
 - `run_graph_stream` now iterates the async generator correctly.
 - `AnswerGeneral` / `GenerateRetrievalQuery` handle list-form content
   blocks from newer langchain-ollama.
