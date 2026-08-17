@@ -378,6 +378,38 @@ class BaseLangGraph(ABC):
                 result[provider] = dict(role_configs[role])
         return result
 
+    def _bundled_server_config(self) -> dict[str, Any] | None:
+        """Build the bundled tools server config entry from the app config.
+
+        Reads ``app_config.general.bundled_tools`` and returns ``None`` when
+        the bundled tools are disabled.  The entry is a *dict*, not a
+        ``StdioMCPServer`` instance, so ``MCPConfig``'s union validator picks
+        ``TransformingStdioMCPServer`` whenever tag filters are present and
+        applies them; without filters it stays a plain ``StdioMCPServer``.
+
+        Apps merge the result into their ``mcpServers`` mapping; when merged
+        into a domain's config the bundled tools become available to that
+        domain's tool picker.
+
+        :returns: Dict-form stdio server config, or ``None`` when disabled.
+        """
+        general = getattr(self.app_config, "general", None)
+        bundled = getattr(general, "bundled_tools", None)
+        if bundled is None or not bundled.enabled:
+            self.logger.debug("Bundled tools server disabled or not configured")
+            return None
+
+        config: dict[str, Any] = {
+            "command": sys.executable,
+            "args": ["-m", "klea_utils.mcp.server.bundled"],
+        }
+        if bundled.include_tags:
+            config["include_tags"] = list(bundled.include_tags)
+        if bundled.exclude_tags:
+            config["exclude_tags"] = list(bundled.exclude_tags)
+        self.logger.debug(f"Bundled tools server config: {config}")
+        return config
+
     @abstractmethod
     async def _create_graph(self) -> None:
         """Build and compile the LangGraph, storing it in ``self.graph``.
