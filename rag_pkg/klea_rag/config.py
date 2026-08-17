@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from pathlib import Path
 from typing import Any
 
 from klea_utils.stores.config import PerDomainConfig as BasePerDomainConfig
@@ -61,3 +62,40 @@ class AppConfig(BaseModel):
     general: GeneralConfig
     providers: dict[str, dict[str, dict[str, Any]]] = Field(default_factory=dict)
     domains: dict[str, PerDomainConfig]
+
+
+def write_config_template(output_dir: str | Path) -> Path:
+    """Write a scaffold ``klea_rag.json`` into *output_dir*.
+
+    The template is built from the schema defaults so every general
+    option is present, plus a placeholder ``ExampleDomain`` showing the
+    shape of a domain entry (description, vector store, BM25 store, MCP
+    servers) for the user to edit.  Refuses to overwrite an existing
+    file so a real config is never clobbered.
+
+    :param output_dir: Directory to write the template into
+    :returns: Path to the written template
+    :raises FileExistsError: If the target file already exists
+    """
+    target = Path(output_dir) / "klea_rag.json"
+    if target.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite existing config: {target}. "
+            "Use --profile <name> with a different name instead."
+        )
+    config = AppConfig(
+        general=GeneralConfig(),
+        domains={
+            "ExampleDomain": PerDomainConfig(
+                description="Documents related to your project",
+                vector_stores=[
+                    {"name": "my-docs", "path": "chroma:/path/to/my-vector-store"}
+                ],
+                bm25_stores=[
+                    {"name": "my-docs-bm25", "path": "/path/to/my-bm25-corpus.pkl"}
+                ],
+            )
+        },
+    )
+    target.write_text(config.model_dump_json(exclude_none=True, indent=2) + "\n")
+    return target
