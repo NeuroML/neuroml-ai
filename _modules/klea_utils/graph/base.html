@@ -301,7 +301,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">final</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">final</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp.mcp_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MCPConfig</span>
@@ -312,7 +312,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunnableConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tool</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">create_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">create_model</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
@@ -366,14 +366,17 @@
 <span class="sd">    - Dual-stream logging</span>
 
 <span class="sd">    Subclasses must implement:</span>
-<span class="sd">    - :meth:`_setup_models`: Create LLM model instances</span>
-<span class="sd">    - :meth:`_create_graph`: Build and compile the LangGraph</span>
-<span class="sd">    - Set ``env_class`` to the appropriate Pydantic settings class</span>
+
+<span class="sd">    - ``_setup_models``: create ``self.llm_models``; the env schema is</span>
+<span class="sd">      generated from its roles.</span>
+<span class="sd">    - ``_create_graph``: build and compile the LangGraph.</span>
+<span class="sd">    - ``config_class``: the Pydantic class for the JSON configuration.</span>
 <span class="sd">    """</span>
 
-    <span class="c1">#: Pydantic BaseSettings class for env loading.</span>
-    <span class="c1">#: Subclasses must set this to their AppEnv class.</span>
-    <span class="n">env_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span>
+    <span class="c1">#: Pydantic BaseSettings class for env loading.  Subclasses need not</span>
+    <span class="c1">#: set this: it is generated at load time from ``self.llm_models`` (see</span>
+    <span class="c1">#: :meth:`_build_env_class`).</span>
+    <span class="n">env_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span> <span class="o">=</span> <span class="n">BaseModel</span>
 
     <span class="c1">#: Pydantic BaseModel class for configuration loading.</span>
     <span class="c1">#: Subclasses must set this to their AppConfig class.</span>
@@ -384,6 +387,14 @@
 
     <span class="c1">#: Default config file name if the environment variable is not set.</span>
     <span class="n">env_file_default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"config.env"</span>
+
+    <span class="c1">#: Prefix prepended to generated env var names (e.g. ``"KLEA_AGENT_"``).</span>
+    <span class="c1">#: Each model role ``r`` becomes the env var ``&lt;env_prefix&gt;R_MODEL``.</span>
+    <span class="n">env_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+
+    <span class="c1">#: Default JSON config file name, used as the ``app_config_file`` env</span>
+    <span class="c1">#: field default when none is set in the env file or process env.</span>
+    <span class="n">config_file_default</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
 
     <span class="c1">#: Logger name for this orchestrator, also used as the app name</span>
     <span class="c1">#: for ``platformdirs`` data/cache directories.</span>
@@ -453,32 +464,62 @@
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">)</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_env_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build the pydantic-settings class for this graph's environment.</span>
+
+<span class="sd">        The schema is derived from ``self.llm_models``: each model role ``r``</span>
+<span class="sd">        becomes a ``{r}_model`` string field (env var ``&lt;env_prefix&gt;R_MODEL``),</span>
+<span class="sd">        plus ``app_config_file``.  Generating the class from the model</span>
+<span class="sd">        declaration keeps the env schema and the model roles as a single</span>
+<span class="sd">        source of truth, so they cannot drift apart.</span>
+
+<span class="sd">        :returns: A ``BaseSettings`` subclass configured with ``env_prefix``.</span>
+<span class="sd">        """</span>
+        <span class="c1"># Lazy: pydantic-settings is only needed when loading the env.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span><span class="p">,</span> <span class="n">SettingsConfigDict</span>
+
+        <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">_model"</span><span class="p">:</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span>
+        <span class="p">}</span>
+        <span class="n">fields</span><span class="p">[</span><span class="s2">"app_config_file"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_file_default</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">create_model</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="si">}</span><span class="s2">Env"</span><span class="p">,</span>
+            <span class="n">__base__</span><span class="o">=</span><span class="n">BaseSettings</span><span class="p">,</span>
+            <span class="n">__config__</span><span class="o">=</span><span class="n">cast</span><span class="p">(</span><span class="n">ConfigDict</span><span class="p">,</span> <span class="n">SettingsConfigDict</span><span class="p">(</span><span class="n">env_prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">env_prefix</span><span class="p">)),</span>
+            <span class="o">**</span><span class="n">fields</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_env</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Load env file, and configuration</span>
 
-<span class="sd">        Uses ``self.env_class`` and ``self.env_file`` to locate and parse</span>
-<span class="sd">        the env file, then resolves the application config file (from</span>
+<span class="sd">        Builds the env settings class from ``self.llm_models`` (see</span>
+<span class="sd">        :meth:`_build_env_class`) and parses the env file (optional --</span>
+<span class="sd">        when missing, process environment variables and class defaults are</span>
+<span class="sd">        used), then resolves the application config file (from</span>
 <span class="sd">        ``self.app_env.app_config_file``) via</span>
 <span class="sd">        :func:`klea_utils.paths.resolve_app_config_path` -- the working</span>
 <span class="sd">        directory first, then the per-app config directory.  Raises</span>
-<span class="sd">        ``FileNotFoundError`` if either file does not exist.</span>
+<span class="sd">        ``FileNotFoundError`` if the config file does not exist.</span>
 <span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_env_class</span><span class="p">()</span>
+
         <span class="n">env_file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">env_file_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"""Could not find env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">. You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file."""</span>
+            <span class="c1"># Env files are optional.  With no file, pydantic-settings</span>
+            <span class="c1"># falls back to process environment variables and class</span>
+            <span class="c1"># defaults, so a clean machine can run with only a JSON config</span>
+            <span class="c1"># (models are then set via shell env vars or the web UI).</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Env file not found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"Using process environment variables and defaults only. "</span>
+                <span class="sa">f</span><span class="s2">"Set </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> to specify an env file."</span>
             <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="p">(</span><span class="n">_env_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="p">(</span><span class="n">_env_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="p">)</span>
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">app_env</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"env file: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"env: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="s2">"app_config_file"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">env_class</span><span class="o">.</span><span class="n">model_fields</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"No config file provided. Please provide one in the env file (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_file</span><span class="si">}</span><span class="s2">)."</span>
-                <span class="o">+</span> <span class="sa">f</span><span class="s2">"You can use the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_var</span><span class="si">}</span><span class="s2"> environment variable to specify the env file."</span>
-            <span class="p">)</span>
 
         <span class="c1"># An explicit empty value means "not set" -- fall back to the field</span>
         <span class="c1"># default so a line like ``KLEA_AGENT_APP_CONFIG_FILE=`` does not</span>
@@ -635,12 +676,67 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_setup_models</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Set up LLM model instances.</span>
 
-<span class="sd">        Subclasses should populate ``self.llm_models`` with ``LLMModel``</span>
-<span class="sd">        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``).</span>
-<span class="sd">        These are graph-wide defaults; per-request overrides are applied</span>
-<span class="sd">        at runtime via ``model_overrides_ctx``.</span>
+<span class="sd">        Subclasses must populate ``self.llm_models`` with ``LLMModel``</span>
+<span class="sd">        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``),</span>
+<span class="sd">        setting ``required`` on each.  This runs *before* ``_load_env()``,</span>
+<span class="sd">        so the roles declared here define the env schema generated by</span>
+<span class="sd">        :meth:`_build_env_class`.  ``model_name`` is populated from the env</span>
+<span class="sd">        by :meth:`_apply_model_names` after the env is loaded.  These are</span>
+<span class="sd">        graph-wide defaults; per-request overrides are applied at runtime</span>
+<span class="sd">        via ``model_overrides_ctx``.</span>
 <span class="sd">        """</span>
         <span class="o">...</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_model_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Populate ``model_name`` on each LLMModel from the loaded env.</span>
+
+<span class="sd">        Called by :meth:`setup` after ``_load_env()``.  Each role ``r``</span>
+<span class="sd">        reads its default model from the generated ``app_env.&lt;r&gt;_model``</span>
+<span class="sd">        field (env var ``&lt;env_prefix&gt;R_MODEL``).</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># The env field is generated from the role declaration, so the</span>
+            <span class="c1"># attribute is not statically known on the settings instance.</span>
+            <span class="n">entry</span><span class="o">.</span><span class="n">model_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app_env</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">_model"</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_provider_defaults</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Populate per-provider defaults on each LLMModel from the config.</span>
+
+<span class="sd">        Called by :meth:`setup` after ``_load_env()`` (which loads</span>
+<span class="sd">        ``app_config``), since ``_setup_models`` runs before the config is</span>
+<span class="sd">        available.</span>
+<span class="sd">        """</span>
+        <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">entry</span><span class="o">.</span><span class="n">provider_defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_provider_defaults_for_role</span><span class="p">(</span><span class="n">role</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_required_models</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Warn at startup when required model roles have no default model.</span>
+
+<span class="sd">        Missing models are not fatal: the server still starts so the</span>
+<span class="sd">        frontends can be used to set models per chat.  The warning lists</span>
+<span class="sd">        all model env vars (derived as ``&lt;env_prefix&gt;&lt;ROLE&gt;_MODEL``) with</span>
+<span class="sd">        their current state so users can see exactly what to set.</span>
+<span class="sd">        """</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">role</span>
+            <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">required</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">model_name</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The following models have not been set: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="s2">"Please set them before running queries (or from the web UI, "</span>
+                <span class="s2">"Choose models)."</span>
+            <span class="p">),</span>
+            <span class="s2">"Current configured models:"</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">env_var</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">env_prefix</span><span class="si">}{</span><span class="n">role</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_MODEL"</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">env_var</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">model_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'&lt;not set&gt;'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_provider_defaults_for_role</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">role</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""Return per-provider default params for *role* from the config.</span>
@@ -731,20 +827,40 @@
 <span class="w">        </span><span class="sd">"""Set up the orchestrator.</span>
 
 <span class="sd">        Calls hooks and template methods in this order:</span>
-<span class="sd">        1. ``_pre_setup()``</span>
-<span class="sd">        2. ``_setup_checkpointer()``</span>
-<span class="sd">        3. ``_load_env()``</span>
-<span class="sd">        4. ``_setup_models()``</span>
-<span class="sd">        5. ``_create_mcp_client()``</span>
-<span class="sd">        6. ``_pre_graph()``</span>
-<span class="sd">        7. ``_create_graph()``</span>
-<span class="sd">        8. ``_post_setup()``</span>
+
+<span class="sd">        #. ``_pre_setup()``</span>
+<span class="sd">        #. ``_setup_checkpointer()``</span>
+<span class="sd">        #. ``_setup_models()``: build ``self.llm_models`` (roles and required</span>
+<span class="sd">           flags) that the env schema is generated from.</span>
+<span class="sd">        #. ``_load_env()``: parse the env into ``self.app_env`` using the</span>
+<span class="sd">           schema generated from ``llm_models``, then load the JSON config.</span>
+<span class="sd">        #. ``_configure_resources()``</span>
+<span class="sd">        #. ``_check_required_models()``</span>
+<span class="sd">        #. ``_create_mcp_client()``</span>
+<span class="sd">        #. ``_pre_graph()``</span>
+<span class="sd">        #. ``_create_graph()``</span>
+<span class="sd">        #. ``_post_setup()``</span>
 <span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_pre_setup</span><span class="p">()</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_checkpointer</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_load_env</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_configure_resources</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_setup_models</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load_env</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_apply_model_names</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_apply_provider_defaults</span><span class="p">()</span>
+        <span class="c1"># ``llm_models`` is now fully populated (roles, model names, required</span>
+        <span class="c1"># flags, provider defaults) -- log the resolved config once.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">"Resolved model configuration:</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">: "</span>
+                <span class="sa">f</span><span class="s2">"model=</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">model_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'&lt;not set&gt;'</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"required=</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">required</span><span class="si">}</span><span class="s2">, "</span>
+                <span class="sa">f</span><span class="s2">"modifiable=</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">modifiable</span><span class="si">}</span><span class="s2">"</span>
+                <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_models</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_configure_resources</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_required_models</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_create_mcp_client</span><span class="p">()</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_mcp_tools</span><span class="p">()</span>
         <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_vector_stores</span><span class="p">()</span>

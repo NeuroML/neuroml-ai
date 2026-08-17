@@ -163,10 +163,15 @@ Configuration
 
 Both the RAG and Agent packages load configuration from:
 
-1. An env file (``k=v`` format):
+1. Model defaults from the environment (shell env vars or an optional env
+   file in ``k=v`` format):
 
    * ``KLEA_RAG_ENV_FILE`` or ``rag.env`` for the RAG system
    * ``KLEA_AGENT_ENV_FILE`` or ``klea_agent.env`` for the Agent system
+
+   The env file is **optional** -- when it is absent, shell environment
+   variables and class defaults are used, so a clean machine can run with
+   only a JSON config.
 
 2. A JSON configuration file selected by a *profile* name.
 
@@ -185,10 +190,35 @@ Both the RAG and Agent packages load configuration from:
    when set in the shell or a deployment (and, as a fallback, as a key in
    the env file).
 
+Model defaults
+~~~~~~~~~~~~~~
+
+Default models are selected per *role* through environment variables.  The
+exact set of roles is derived from the graph's model declaration, and each
+role ``<ROLE>`` maps to an environment variable ``KLEA_<APP>_<ROLE>_MODEL``
+(``<APP>`` is ``AGENT`` or ``RAG``).  For example:
+
+* Agent: ``KLEA_AGENT_CHAT_MODEL``, ``KLEA_AGENT_PLAN_MODEL``,
+  ``KLEA_AGENT_GUARD_MODEL``
+* RAG: ``KLEA_RAG_CHAT_MODEL``, ``KLEA_RAG_EMBEDDING_MODEL``,
+  ``KLEA_RAG_GUARD_MODEL``
+
 Example env file::
 
    KLEA_RAG_CHAT_MODEL=ollama:qwen3:0.6b
    KLEA_RAG_EMBEDDING_MODEL=ollama:bge-m3
+
+Set these in your shell (``~/.bashrc``, ``~/.zshrc``, or inline on the
+command line) or in the env file.  Setting them inline is the easiest way
+to try a model without editing any files::
+
+   KLEA_AGENT_CHAT_MODEL=ollama:qwen3:0.6b klea cli
+
+If a required model is not set, the server still starts but logs a warning
+listing every model environment variable and its current state.  Queries
+then return a clear "No model configured" error.  From the web UI you can
+set models per chat at runtime with the settings (gear) icon, without
+restarting the server.
 
 Example invocation::
 
@@ -230,9 +260,15 @@ Model names are prefixed according to their provider:
 * Others (e.g. OpenAI, Anthropic) use their standard model names and
   environment variables as supported by LangChain.
 
-Guard models follow the same format.  The guard node is optional --
-set ``KLEA_RAG_GUARD_MODEL`` to an empty value to skip safety
-screening entirely.
+Guard models follow the same format.  The guard role is optional -- set
+``KLEA_AGENT_GUARD_MODEL`` / ``KLEA_RAG_GUARD_MODEL`` to an empty value to
+skip safety screening entirely.
+
+For the RAG app, the embedding model is required only when a domain
+configures vector stores; BM25-only domains need no embedding model.  Note
+that vector stores load at startup from the embedding model, so an
+embedding model chosen per chat in the web UI cannot enable retrieval for
+stores -- set ``KLEA_RAG_EMBEDDING_MODEL`` before starting the server.
 
 Logging
 -------

@@ -531,6 +531,18 @@
         <span class="c1"># Get the merged configurable dict for provider field filtering.</span>
         <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"configurable"</span><span class="p">]</span>
 
+        <span class="c1"># A missing model (no env default and no per-chat override) cannot</span>
+        <span class="c1"># invoke the LLM.  Raise a clear, actionable error instead of the</span>
+        <span class="c1"># confusing provider-level "Missing credentials" error that an empty</span>
+        <span class="c1"># model would otherwise produce.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"No model configured for role '</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="si">}</span><span class="s2">'. "</span>
+                <span class="sa">f</span><span class="s2">"Set the </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_MODEL environment "</span>
+                <span class="s2">"variable (e.g. KLEA_AGENT_CHAT_MODEL) or set a model for "</span>
+                <span class="s2">"this chat from the web UI (Choose models)."</span>
+            <span class="p">)</span>
+
         <span class="c1"># --- Bounded output tokens ---</span>
         <span class="c1"># Guarantee a finite max-output token param for the resolved</span>
         <span class="c1"># provider, clamped to the model's catalog output limit and total</span>

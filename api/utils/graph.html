@@ -303,10 +303,13 @@
 - LangGraph compilation and execution
 - Session checkpointing
 - Dual-stream logging</p>
-<p>Subclasses must implement:
-- <code class="xref py py-meth docutils literal notranslate"><span class="pre">_setup_models()</span></code>: Create LLM model instances
-- <code class="xref py py-meth docutils literal notranslate"><span class="pre">_create_graph()</span></code>: Build and compile the LangGraph
-- Set <code class="docutils literal notranslate"><span class="pre">env_class</span></code> to the appropriate Pydantic settings class</p>
+<p>Subclasses must implement:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_setup_models</span></code>: create <code class="docutils literal notranslate"><span class="pre">self.llm_models</span></code>; the env schema is
+generated from its roles.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_create_graph</span></code>: build and compile the LangGraph.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">config_class</span></code>: the Pydantic class for the JSON configuration.</p></li>
+</ul>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.config_class">
 <span class="sig-name descname"><span class="pre">config_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.config_class" title="Link to this definition">¶</a></dt>
@@ -315,16 +318,32 @@ Subclasses must set this to their AppConfig class.</p>
 </dd></dl>
 
 <dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.config_file_default">
+<span class="sig-name descname"><span class="pre">config_file_default</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.config_file_default" title="Link to this definition">¶</a></dt>
+<dd><p>Default JSON config file name, used as the <code class="docutils literal notranslate"><span class="pre">app_config_file</span></code> env
+field default when none is set in the env file or process env.</p>
+</dd></dl>
+
+<dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.env_class">
-<span class="sig-name descname"><span class="pre">env_class</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><span class="pre">BaseModel</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_class" title="Link to this definition">¶</a></dt>
-<dd><p>Pydantic BaseSettings class for env loading.
-Subclasses must set this to their AppEnv class.</p>
+<span class="sig-name descname"><span class="pre">env_class</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_class" title="Link to this definition">¶</a></dt>
+<dd><p>Pydantic BaseSettings class for env loading.  Subclasses need not
+set this: it is generated at load time from <code class="docutils literal notranslate"><span class="pre">self.llm_models</span></code> (see
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_build_env_class()</span></code>).</p>
+<p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.env_file_default">
 <span class="sig-name descname"><span class="pre">env_file_default</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'config.env'</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_file_default" title="Link to this definition">¶</a></dt>
 <dd><p>Default config file name if the environment variable is not set.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.env_prefix">
+<span class="sig-name descname"><span class="pre">env_prefix</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.env_prefix" title="Link to this definition">¶</a></dt>
+<dd><p>Prefix prepended to generated env var names (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;KLEA_AGENT_&quot;</span></code>).
+Each model role <code class="docutils literal notranslate"><span class="pre">r</span></code> becomes the env var <code class="docutils literal notranslate"><span class="pre">&lt;env_prefix&gt;R_MODEL</span></code>.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -450,15 +469,21 @@ flow through.</p>
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.setup">
 <span class="property"><span class="k"><span class="pre">final</span></span><span class="w"> </span><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.setup" title="Link to this definition">¶</a></dt>
 <dd><p>Set up the orchestrator.</p>
-<p>Calls hooks and template methods in this order:
-1. <code class="docutils literal notranslate"><span class="pre">_pre_setup()</span></code>
-2. <code class="docutils literal notranslate"><span class="pre">_setup_checkpointer()</span></code>
-3. <code class="docutils literal notranslate"><span class="pre">_load_env()</span></code>
-4. <code class="docutils literal notranslate"><span class="pre">_setup_models()</span></code>
-5. <code class="docutils literal notranslate"><span class="pre">_create_mcp_client()</span></code>
-6. <code class="docutils literal notranslate"><span class="pre">_pre_graph()</span></code>
-7. <code class="docutils literal notranslate"><span class="pre">_create_graph()</span></code>
-8. <code class="docutils literal notranslate"><span class="pre">_post_setup()</span></code></p>
+<p>Calls hooks and template methods in this order:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_pre_setup()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_setup_checkpointer()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_setup_models()</span></code>: build <code class="docutils literal notranslate"><span class="pre">self.llm_models</span></code> (roles and required
+flags) that the env schema is generated from.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_load_env()</span></code>: parse the env into <code class="docutils literal notranslate"><span class="pre">self.app_env</span></code> using the
+schema generated from <code class="docutils literal notranslate"><span class="pre">llm_models</span></code>, then load the JSON config.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_configure_resources()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_check_required_models()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_create_mcp_client()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_pre_graph()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_create_graph()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_post_setup()</span></code></p></li>
+</ol>
 </dd></dl>
 
 </dd></dl>
@@ -555,8 +580,10 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <li><a class="reference internal" href="#">Orchestrator framework</a><ul>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.config_class"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.config_class</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.config_file_default"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.config_file_default</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_class"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_class</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_file_default"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_file_default</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_prefix"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_prefix</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_var"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_var</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_name"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_name</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_stream()</span></code></a></li>

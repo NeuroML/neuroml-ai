@@ -1132,19 +1132,29 @@
                     <span class="n">display_parts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">cfg</span> <span class="ow">in</span> <span class="n">model_info</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                         <span class="n">raw</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
-                        <span class="n">short</span> <span class="o">=</span> <span class="p">(</span>
-                            <span class="n">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span><span class="o">.</span><span class="n">model_name</span>
-                            <span class="k">if</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-                            <span class="k">else</span> <span class="n">raw</span>
-                        <span class="p">)</span>
                         <span class="n">provider</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"provider"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">provider</span><span class="p">:</span>
-                            <span class="n">tooltip_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">short</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">provider</span><span class="si">}</span><span class="s2">)"</span>
+                        <span class="n">required</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"required"</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">raw</span><span class="p">:</span>
+                            <span class="c1"># No model set for this role -- show a clear</span>
+                            <span class="c1"># placeholder so the user knows it is missing.</span>
+                            <span class="n">display_short</span> <span class="o">=</span> <span class="s2">"Not set"</span>
+                            <span class="n">required_mark</span> <span class="o">=</span> <span class="s2">" (required)"</span> <span class="k">if</span> <span class="n">required</span> <span class="k">else</span> <span class="s2">""</span>
+                            <span class="n">tooltip_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Not set</span><span class="si">{</span><span class="n">required_mark</span><span class="si">}</span><span class="s2">"</span>
+                            <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"overridden"</span><span class="p">):</span>
+                                <span class="n">tooltip_short</span> <span class="o">+=</span> <span class="s2">" [User]"</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="n">tooltip_short</span> <span class="o">=</span> <span class="n">short</span>
-                        <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"overridden"</span><span class="p">):</span>
-                            <span class="n">tooltip_short</span> <span class="o">+=</span> <span class="s2">" [User]"</span>
-                        <span class="n">display_short</span> <span class="o">=</span> <span class="n">short</span>
+                            <span class="n">short</span> <span class="o">=</span> <span class="p">(</span>
+                                <span class="n">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span><span class="o">.</span><span class="n">model_name</span>
+                                <span class="k">if</span> <span class="n">parse_model_name</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+                                <span class="k">else</span> <span class="n">raw</span>
+                            <span class="p">)</span>
+                            <span class="k">if</span> <span class="n">provider</span><span class="p">:</span>
+                                <span class="n">tooltip_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">short</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">provider</span><span class="si">}</span><span class="s2">)"</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">tooltip_short</span> <span class="o">=</span> <span class="n">short</span>
+                            <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"overridden"</span><span class="p">):</span>
+                                <span class="n">tooltip_short</span> <span class="o">+=</span> <span class="s2">" [User]"</span>
+                            <span class="n">display_short</span> <span class="o">=</span> <span class="n">short</span>
                         <span class="n">tooltip_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">role</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">tooltip_short</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                         <span class="n">display_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">display_short</span><span class="p">)</span>
                     <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">" | "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">display_parts</span><span class="p">))</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
@@ -1336,14 +1346,26 @@
                                     <span class="k">break</span>
                                 <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s2">"error"</span><span class="p">:</span>
                                     <span class="n">pg_row</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+                                    <span class="n">error_msg</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message"</span><span class="p">,</span> <span class="s2">"Unknown error"</span><span class="p">)</span>
                                     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                                         <span class="s2">"chat=</span><span class="si">%s</span><span class="s2"> stream error: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span>
                                         <span class="n">chat_id</span><span class="p">,</span>
-                                        <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"message"</span><span class="p">,</span> <span class="s2">"Unknown error"</span><span class="p">),</span>
+                                        <span class="n">error_msg</span><span class="p">,</span>
                                     <span class="p">)</span>
                                     <span class="k">with</span> <span class="n">_stream_container</span><span class="p">:</span>
+                                        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Error: </span><span class="si">{</span><span class="n">error_msg</span><span class="si">}</span><span class="s2">"</span>
+                                        <span class="c1"># Missing-model errors are actionable:</span>
+                                        <span class="c1"># point the user at the Choose models</span>
+                                        <span class="c1"># dialog so they can set a model and</span>
+                                        <span class="c1"># retry without leaving the page.</span>
+                                        <span class="k">if</span> <span class="s2">"No model configured"</span> <span class="ow">in</span> <span class="n">error_msg</span><span class="p">:</span>
+                                            <span class="n">message</span> <span class="o">+=</span> <span class="p">(</span>
+                                                <span class="s2">" Use the settings (gear) icon "</span>
+                                                <span class="s2">"to choose a model for this "</span>
+                                                <span class="s2">"chat, then retry."</span>
+                                            <span class="p">)</span>
                                         <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
-                                            <span class="sa">f</span><span class="s2">"Error: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'message'</span><span class="p">,</span><span class="w"> </span><span class="s1">'Unknown error'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                                            <span class="n">message</span><span class="p">,</span>
                                             <span class="nb">type</span><span class="o">=</span><span class="s2">"negative"</span><span class="p">,</span>
                                             <span class="n">timeout</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
                                             <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>

@@ -1139,6 +1139,12 @@
 <span class="sd">    (both the API and web UI reject modifications to locked roles).</span>
 <span class="sd">    Set to ``False`` to lock a role (e.g. guard) against user overrides</span>
 <span class="sd">    in managed deployments.</span>
+
+<span class="sd">    ``required`` marks roles that need a default model for the app to</span>
+<span class="sd">    function (e.g. ``chat``).  At startup, required roles with an empty</span>
+<span class="sd">    model trigger a warning (not a failure) listing the environment</span>
+<span class="sd">    variables to set.  Optional roles (e.g. ``guard``) are skipped when</span>
+<span class="sd">    their model is empty.</span>
 <span class="sd">    """</span>
 
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
@@ -1146,6 +1152,7 @@
     <span class="n">role_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">provider_defaults</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">modifiable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 
 <div class="viewcode-block" id="LLMModel.build_config">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.LLMModel.build_config">[docs]</a>
