@@ -203,7 +203,7 @@ def _catalog() -> dict:
     return data
 
 
-def get_model_limits(provider: str, model_name: str) -> ModelLimits | None:
+def get_catalog_model_limits(provider: str, model_name: str) -> ModelLimits | None:
     """Return the token limits for a provider + model, or ``None``.
 
     Returns ``None`` when the provider has no catalog entry (local
@@ -243,32 +243,6 @@ def get_model_limits(provider: str, model_name: str) -> ModelLimits | None:
     )
 
 
-def get_model_output_limit(provider: str, model_name: str) -> int | None:
-    """Return the max output token limit for a provider + model.
-
-    Convenience wrapper around :func:`get_model_limits`.
-
-    :param provider: Klea provider id.
-    :param model_name: Model identifier.
-    :returns: The model's ``limit.output``, or ``None`` if unknown.
-    """
-    limits = get_model_limits(provider, model_name)
-    return limits.output if limits else None
-
-
-def get_model_context_limit(provider: str, model_name: str) -> int | None:
-    """Return the context window size for a provider + model.
-
-    Convenience wrapper around :func:`get_model_limits`.
-
-    :param provider: Klea provider id.
-    :param model_name: Model identifier.
-    :returns: The model's ``limit.context``, or ``None`` if unknown.
-    """
-    limits = get_model_limits(provider, model_name)
-    return limits.context if limits else None
-
-
 #: Time-to-live for the in-memory live-endpoint model-limits cache, in
 #: seconds.  A model's ``max_model_len`` is a stable property of its
 #: deployment and rarely changes, so we cache it for the process lifetime;
@@ -283,8 +257,30 @@ ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS = 5.0
 #: with an insertion timestamp so entries can expire after the TTL.
 _ENDPOINT_LIMITS_CACHE: dict[tuple[str, str], tuple[float, ModelLimits]] = {}
 
+#: LangChain provider id -> API key env var name, for providers whose id
+#: does not map to ``{PROVIDER}_API_KEY``.  ``mistralai`` reads
+#: ``MISTRAL_API_KEY`` in the langchain-mistralai SDK (not
+#: ``MISTRALAI_API_KEY``).  The alias exists so the probe authenticates
+#: with the same credential the model invoke would use.
+_LANGCHAIN_PROVIDER_API_KEY_ENV: dict[str, str] = {"mistralai": "MISTRAL_API_KEY"}
 
-def get_endpoint_model_limits(
+
+def _langchain_provider_api_key_env(provider: str) -> str:
+    """Return the API key env var name a LangChain SDK reads for *provider*.
+
+    The provider id here is a LangChain ``_BUILTIN_PROVIDERS`` key, and
+    the whole point is to mirror how the LangChain SDKs resolve
+    credentials so the endpoint probe authenticates with the same key the
+    model invoke would use.  Follows the ``{PROVIDER}_API_KEY`` convention
+    unless an explicit alias is registered in
+    :data:`_LANGCHAIN_PROVIDER_API_KEY_ENV`.
+    """
+    return (
+        _LANGCHAIN_PROVIDER_API_KEY_ENV.get(provider) or f"{provider.upper()}_API_KEY"
+    )
+
+
+def probe_endpoint_model_limits(
     provider: str,
     model_name: str,
     base_url: str | None,
@@ -299,11 +295,19 @@ def get_endpoint_model_limits(
     ``max_model_len`` (the total context window, e.g. 262144 for a large
     vLLM deployment), which is the authoritative per-deployment value.
 
-    Only OpenAI-compatible custom endpoints (``provider == "openai"`` with
-    a ``base_url``) are probed.  Results are cached in memory keyed by
-    ``(base_url, model_name)`` for :data:`ENDPOINT_LIMITS_CACHE_TTL_SECONDS`;
-    a user switching to a different model simply misses and triggers a
-    fresh probe for the new key.
+    Any provider with a known ``base_url`` is probed -- not just
+    ``openai`` custom endpoints.  Native providers (``mistral:``,
+    ``anthropic:``, ``deepseek:``, ...) normally carry no ``base_url`` in
+    the configurable dict (their SDK resolves a default endpoint
+    internally); callers resolve it via
+    ``klea_utils.llm.resolve_langchain_endpoint`` and pass it here.  The
+    probe is best-effort: providers whose ``/models`` response does not
+    advertise ``max_model_len`` (e.g. Anthropic's non-OpenAI-shaped
+    payload) simply return ``None`` and the catalog fallback is used.
+    Results are cached in memory keyed by ``(base_url, model_name)`` for
+    :data:`ENDPOINT_LIMITS_CACHE_TTL_SECONDS`; a user switching to a
+    different model simply misses and triggers a fresh probe for the new
+    key.
 
     Never raises and never blocks a query: any error, missing model, or
     inapplicable input returns ``None``.
@@ -315,7 +319,7 @@ def get_endpoint_model_limits(
     :returns: ``ModelLimits`` with ``context`` set from ``max_model_len``,
         or ``None`` when the endpoint does not expose it or is not usable.
     """
-    if provider != "openai" or not base_url:
+    if not base_url:
         return None
 
     key = (base_url, model_name)
@@ -334,18 +338,21 @@ def get_endpoint_model_limits(
 def _fetch_endpoint_max_model_len(
     base_url: str, model_name: str, provider: str, api_key: str | None
 ) -> int | None:
-    """Fetch ``max_model_len`` for *model_name* from an OpenAI endpoint.
+    """Fetch ``max_model_len`` for *model_name* from an OpenAI-compatible endpoint.
 
     Best-effort: returns ``None`` on any network, parse, or auth error so
     callers can fall back to the models.dev catalog or the built-in
-    default without failing the query.
+    default without failing the query.  Also returns ``None`` when the
+    endpoint's ``/models`` payload does not advertise ``max_model_len``
+    (not all providers expose it in this OpenAI-shaped schema).
 
     When no explicit *api_key* is given, falls back to the standard
     ``{PROVIDER}_API_KEY`` environment variable derived from *provider*
-    (e.g. ``OPENAI_API_KEY``, ``MISTRAL_API_KEY``), matching how the
-    LangChain/OpenAI SDKs resolve credentials for each provider.
+    via :func:`_langchain_provider_api_key_env` (e.g. ``OPENAI_API_KEY``,
+    ``MISTRAL_API_KEY``), matching how the LangChain/OpenAI SDKs resolve
+    credentials for each provider.
     """
-    resolved_key = api_key or os.environ.get(f"{provider.upper()}_API_KEY")
+    resolved_key = api_key or os.environ.get(_langchain_provider_api_key_env(provider))
     headers = {"Authorization": f"Bearer {resolved_key}"} if resolved_key else {}
     url = base_url.rstrip("/") + "/models"
     try:

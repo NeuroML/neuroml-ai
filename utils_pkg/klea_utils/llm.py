@@ -25,7 +25,7 @@ from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
 from .errors import LLMInvocationErrorCategory
-from .models_catalog import get_endpoint_model_limits, get_model_limits
+from .models_catalog import get_catalog_model_limits, probe_endpoint_model_limits
 from .plogging import mask_sensitive
 
 logger = logging.getLogger(__name__)
@@ -407,16 +407,18 @@ def resolve_output_token_limit(
     given, to the remaining budget (``context - estimated input tokens``)
     so HuggingFace's total-budget check is never exceeded.
 
-    The *context* source depends on *use_endpoint*: for OpenAI-compatible
-    custom endpoints, ``max_model_len`` from the live ``/models`` probe is
-    authoritative (models.dev's values are per-deployment and may
-    under-report).  The normal (non-retry) path passes ``use_endpoint=False``
-    so it stays on the fast, offline models.dev value -- its purpose is only
-    to produce a finite budget (mainly for the HuggingFace whole-window
-    reservation), not an exact cap.  The retry path passes
-    ``use_endpoint=True`` to clamp against the real server context, falling
-    back to models.dev when the endpoint probe fails.  The ``output`` clamp
-    always uses models.dev (the endpoint exposes no separate output cap).
+    The *context* source depends on *use_endpoint*: for endpoints with a
+    known ``base_url`` (custom OpenAI-compatible endpoints, or a native
+    provider endpoint resolved via :func:`resolve_langchain_endpoint`),
+    ``max_model_len`` from the live ``/models`` probe is authoritative
+    (models.dev's values are per-deployment and may under-report).  The
+    normal (non-retry) path passes ``use_endpoint=False`` so it stays on
+    the fast, offline models.dev value -- its purpose is only to produce a
+    finite budget (mainly for the HuggingFace whole-window reservation),
+    not an exact cap.  The retry path passes ``use_endpoint=True`` to
+    clamp against the real server context, falling back to models.dev when
+    the endpoint probe fails.  The ``output`` clamp always uses models.dev
+    (the endpoint exposes no separate output cap).
 
     :param overrides: The merged ``configurable`` dict to update in place.
     :param provider: Klea provider id (``huggingface``, ``ollama``, ...).
@@ -453,15 +455,15 @@ def resolve_output_token_limit(
     # produce a finite budget (mainly the HuggingFace whole-window
     # reservation), not an exact cap.
     limits = None
-    if use_endpoint and overrides.get("model_provider") == "openai":
-        limits = get_endpoint_model_limits(
+    if use_endpoint and overrides.get("base_url"):
+        limits = probe_endpoint_model_limits(
             provider,
             overrides.get("model", ""),
             overrides.get("base_url"),
             overrides.get("api_key"),
         )
     if limits is None:
-        limits = get_model_limits(provider, overrides.get("model", ""))
+        limits = get_catalog_model_limits(provider, overrides.get("model", ""))
     if limits and limits.output:
         value = min(value, limits.output)
     if limits and limits.context and input_chars is not None:
@@ -815,6 +817,61 @@ def create_configurable_model(logger: logging.Logger):
     logger.info("Configurable chat model created (provider/model set per invoke)")
 
     return model_var
+
+
+#: Base URL attribute names on the concrete chat model classes returned by
+#: ``_ConfigurableModel._model()``.  Each provider exposes its resolved
+#: endpoint under a different attribute (e.g. ``ChatOpenAI.openai_api_base``,
+#: ``ChatMistralAI.endpoint``, ``ChatAnthropic.anthropic_api_url``), so we
+#: cycle through the list and take the first one set rather than keeping a
+#: per-provider map.  ``ChatDeepSeek`` redefines the inherited field as
+#: ``api_base``, so its ``openai_api_base`` stays ``None`` and the cycle
+#: picks up ``api_base``.
+_LANGCHAIN_BASE_URL_ATTRS = (
+    "openai_api_base",
+    "api_base",
+    "endpoint",
+    "anthropic_api_url",
+)
+
+
+def resolve_langchain_endpoint(instance: Any, config: RunnableConfig) -> str | None:
+    """Resolve the base URL/endpoint of a configurable chat model.
+
+    ``create_configurable_model`` returns a generic ``_ConfigurableModel``
+    whose concrete provider instance is only built at invoke time (via its
+    private ``_model(config)`` method, which is already called on every
+    ``ainvoke``).  Native providers (``mistral:``, ``anthropic:``,
+    ``deepseek:``, ...) do not carry a ``base_url`` in the configurable
+    dict -- the provider resolves its own default endpoint internally --
+    so to probe such an endpoint we materialise the concrete instance and
+    read its resolved endpoint attribute.
+
+    Cheap by construction: ``_model(config)`` only parses the model string
+    and constructs the provider object (module import is cached per
+    provider); no network or API calls happen at construction.
+
+    :param instance: The configurable model (``_ConfigurableModel``) whose
+        concrete instance to materialise.
+    :param config: Per-invoke RunnableConfig carrying the merged
+        ``configurable`` dict.
+    :returns: The resolved base URL, or ``None`` when the concrete model
+        exposes no known endpoint attribute (e.g. plain ``openai:`` models,
+        whose default URL lives inside the OpenAI SDK client, not on the
+        model object).
+    """
+    try:
+        model = instance._model(config)
+    except Exception as e:
+        logger.debug(f"Failed to materialise concrete model for endpoint: {e}")
+        return None
+    for attr in _LANGCHAIN_BASE_URL_ATTRS:
+        value = getattr(model, attr, None)
+        if isinstance(value, str) and value:
+            logger.debug(f"Resolved endpoint for model via {attr}: {value}")
+            return value
+    logger.debug("No base URL attribute found on concrete model instance")
+    return None
 
 
 class LLMModel(BaseModel):

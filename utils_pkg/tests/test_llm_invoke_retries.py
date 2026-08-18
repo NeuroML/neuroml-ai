@@ -108,7 +108,7 @@ class TestInvokeWithRetries:
     def setup_method(self):
         # No catalog data by default so tests are hermetic and offline.
         self._catalog_patcher = mock.patch(
-            "klea_utils.llm.get_model_limits", return_value=None
+            "klea_utils.llm.get_catalog_model_limits", return_value=None
         )
         self._catalog_patcher.start()
 
@@ -267,7 +267,7 @@ class TestInvokeWithRetries:
     async def test_truncation_jump_uses_endpoint_context(self):
         """A large endpoint max_model_len lets the jump exceed the fixed ceiling."""
         with mock.patch(
-            "klea_utils.nodes.base.get_endpoint_model_limits",
+            "klea_utils.nodes.base.probe_endpoint_model_limits",
             return_value=ModelLimits(context=262144, output=None, input=None),
         ):
             inst = mock.Mock()
@@ -312,7 +312,7 @@ class TestInvokeWithRetries:
         under-cut the raise.
         """
         with mock.patch(
-            "klea_utils.nodes.base.get_endpoint_model_limits",
+            "klea_utils.nodes.base.probe_endpoint_model_limits",
             return_value=ModelLimits(context=262144, output=None, input=None),
         ) as endpoint_lookup:
             inst = mock.Mock()
@@ -347,7 +347,7 @@ class TestInvokeWithRetries:
     async def test_truncation_exception_at_catalog_cap_no_retry(self):
         """Raised truncation at the catalog output cap surfaces immediately."""
         with mock.patch(
-            "klea_utils.llm.get_model_limits",
+            "klea_utils.llm.get_catalog_model_limits",
             return_value=ModelLimits(context=128000, output=4096),
         ):
             inst = mock.Mock()
@@ -370,7 +370,7 @@ class TestInvokeWithRetries:
     async def test_truncation_at_catalog_cap_no_retry(self):
         """Truncation at the catalog output cap does not waste a retry."""
         with mock.patch(
-            "klea_utils.llm.get_model_limits",
+            "klea_utils.llm.get_catalog_model_limits",
             return_value=ModelLimits(context=128000, output=4096),
         ):
             inst = mock.Mock()
@@ -385,6 +385,99 @@ class TestInvokeWithRetries:
         assert inst.ainvoke.await_count == 1
         assert out.content == "cut"
         assert config["configurable"]["max_tokens"] == 4096
+
+    async def test_truncation_resolves_native_provider_endpoint(self):
+        """A native provider without base_url resolves its endpoint for the probe."""
+        captured = {}
+
+        def fake_endpoint_lookup(provider, model, base_url, api_key=None):
+            captured["provider"] = provider
+            captured["base_url"] = base_url
+            return ModelLimits(context=262144, output=None, input=None)
+
+        with mock.patch(
+            "klea_utils.llm.probe_endpoint_model_limits",
+            side_effect=fake_endpoint_lookup,
+        ):
+            inst = mock.Mock()
+            inst.ainvoke = mock.AsyncMock(
+                side_effect=[
+                    RuntimeError(
+                        "Could not parse response content as the length limit was reached"
+                    ),
+                    AIMessage(
+                        content="full", response_metadata={"finish_reason": "stop"}
+                    ),
+                ]
+            )
+            # instance._model(config) -> concrete Mistral model exposing .endpoint.
+            inst._model = mock.Mock(
+                return_value=mock.Mock(endpoint="https://api.mistral.ai/v1")
+            )
+
+            config = make_config(
+                max_tokens=1024, model="mistral-small-latest", provider="mistralai"
+            )
+            node = make_node(inst)
+            node._last_prompt = StringPromptValue(text="hi")
+            out = await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+
+        assert out.content == "full"
+        assert config["configurable"]["base_url"] == "https://api.mistral.ai/v1"
+        assert captured["base_url"] == "https://api.mistral.ai/v1"
+        assert captured["provider"] == "mistralai"
+
+    async def test_truncation_jump_uses_resolved_native_endpoint(self):
+        """The jump targets a native provider's resolved endpoint context."""
+        captured = {}
+
+        def fake_endpoint_lookup(provider, model, base_url, api_key=None):
+            captured["provider"] = provider
+            captured["base_url"] = base_url
+            return ModelLimits(context=262144, output=None, input=None)
+
+        with (
+            mock.patch(
+                "klea_utils.llm.probe_endpoint_model_limits",
+                side_effect=fake_endpoint_lookup,
+            ),
+            mock.patch(
+                "klea_utils.nodes.base.probe_endpoint_model_limits",
+                side_effect=fake_endpoint_lookup,
+            ),
+        ):
+            inst = mock.Mock()
+            inst.ainvoke = mock.AsyncMock(
+                side_effect=[
+                    RuntimeError(
+                        "Could not parse response content as the length limit was reached"
+                    ),
+                    RuntimeError(
+                        "Could not parse response content as the length limit was reached"
+                    ),
+                    RuntimeError(
+                        "Could not parse response content as the length limit was reached"
+                    ),
+                    AIMessage(
+                        content="full", response_metadata={"finish_reason": "stop"}
+                    ),
+                ]
+            )
+            inst._model = mock.Mock(
+                return_value=mock.Mock(endpoint="https://api.mistral.ai/v1")
+            )
+
+            config = make_config(
+                max_tokens=1024, model="mistral-small-latest", provider="mistralai"
+            )
+            node = make_node(inst)
+            node._last_prompt = StringPromptValue(text="hi")
+            out = await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+
+        assert out.content == "full"
+        assert captured["base_url"] == "https://api.mistral.ai/v1"
+        assert captured["provider"] == "mistralai"
+        assert config["configurable"]["max_tokens"] > MAX_OUTPUT_TOKENS_CEILING
 
     async def test_truncation_list_finish_reason(self):
         """List-form finish_reason (some providers) is handled."""

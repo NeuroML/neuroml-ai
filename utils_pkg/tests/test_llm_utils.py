@@ -17,6 +17,7 @@ from klea_utils.llm import (
     get_last_n_conversations,
     get_recent_messages,
     parse_model_name,
+    resolve_langchain_endpoint,
     split_output_by_section,
 )
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -251,6 +252,71 @@ def test_add_memory_to_prompt_is_summary_only():
 def test_add_memory_to_prompt_empty_summary():
     """No summary produces an empty block."""
     assert add_memory_to_prompt("") == ""
+
+
+class _FakeConfigurableModel:
+    """Fake ``_ConfigurableModel`` returning a fixed concrete instance."""
+
+    def __init__(self, concrete):
+        self._concrete = concrete
+
+    def _model(self, config):
+        return self._concrete
+
+
+def _concrete(**attrs):
+    """Build a concrete model instance exposing the given attributes."""
+    return type("ConcreteModel", (), attrs)()
+
+
+def test_resolve_langchain_endpoint_openai_api_base():
+    """ChatOpenAI-style custom endpoints resolve via openai_api_base."""
+    inst = _FakeConfigurableModel(_concrete(openai_api_base="https://custom/v1"))
+    assert resolve_langchain_endpoint(inst, {}) == "https://custom/v1"
+
+
+def test_resolve_langchain_endpoint_mistral_endpoint():
+    """ChatMistralAI-style endpoints resolve via endpoint."""
+    inst = _FakeConfigurableModel(_concrete(endpoint="https://api.mistral.ai/v1"))
+    assert resolve_langchain_endpoint(inst, {}) == "https://api.mistral.ai/v1"
+
+
+def test_resolve_langchain_endpoint_anthropic_api_url():
+    """ChatAnthropic-style endpoints resolve via anthropic_api_url."""
+    inst = _FakeConfigurableModel(
+        _concrete(anthropic_api_url="https://api.anthropic.com")
+    )
+    assert resolve_langchain_endpoint(inst, {}) == "https://api.anthropic.com"
+
+
+def test_resolve_langchain_endpoint_skips_none_then_finds_api_base():
+    """The cycle skips None attrs; ChatDeepSeek picks up api_base."""
+    inst = _FakeConfigurableModel(
+        _concrete(openai_api_base=None, api_base="https://api.deepseek.com")
+    )
+    assert resolve_langchain_endpoint(inst, {}) == "https://api.deepseek.com"
+
+
+def test_resolve_langchain_endpoint_ignores_non_string():
+    """Non-string attrs (e.g. mocks) are skipped, not treated as an endpoint."""
+    inst = _FakeConfigurableModel(_concrete(openai_api_base=object()))
+    assert resolve_langchain_endpoint(inst, {}) is None
+
+
+def test_resolve_langchain_endpoint_none_without_known_attr():
+    """A concrete model exposing none of the endpoint attrs returns None."""
+    inst = _FakeConfigurableModel(_concrete())
+    assert resolve_langchain_endpoint(inst, {}) is None
+
+
+def test_resolve_langchain_endpoint_model_error_returns_none():
+    """A failing _model() materialisation returns None, not an exception."""
+
+    class _Boom:
+        def _model(self, config):
+            raise RuntimeError("bad params")
+
+    assert resolve_langchain_endpoint(_Boom(), {}) is None
 
 
 if __name__ == "__main__":

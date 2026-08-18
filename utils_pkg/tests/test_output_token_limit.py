@@ -19,8 +19,8 @@ from klea_utils.models_catalog import ModelLimits
 
 
 def _no_catalog(limits=None):
-    """Patch get_model_limits to return a fixed value (default: no info)."""
-    return mock.patch("klea_utils.llm.get_model_limits", return_value=limits)
+    """Patch get_catalog_model_limits to return a fixed value (default: no info)."""
+    return mock.patch("klea_utils.llm.get_catalog_model_limits", return_value=limits)
 
 
 class TestResolveOutputTokenLimit(unittest.TestCase):
@@ -166,7 +166,7 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
         with (
             _no_catalog(),
             mock.patch(
-                "klea_utils.llm.get_endpoint_model_limits",
+                "klea_utils.llm.probe_endpoint_model_limits",
                 return_value=endpoint_limits,
             ),
         ):
@@ -222,11 +222,27 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
         )
         self.assertEqual(ov["max_tokens"], 692)
 
+    def test_native_provider_with_resolved_endpoint_is_probed(self):
+        """A native provider's resolved base_url drives the retry-path clamp."""
+        ov = self._resolve_with_endpoint(
+            {
+                "model": "mistral-small-latest",
+                "model_provider": "mistralai",
+                "base_url": "https://api.mistral.ai/v1",
+                "max_output_tokens": 4096,
+            },
+            "mistralai",
+            ModelLimits(context=8192, output=None, input=None),
+            role="chat",
+            input_chars=30000,  # ~7500 tokens -> headroom ~692
+        )
+        self.assertEqual(ov["max_tokens"], 692)
+
     def test_normal_path_does_not_query_endpoint(self):
         """use_endpoint=False (normal path) never calls the endpoint lookup."""
         with (
             _no_catalog(),
-            mock.patch("klea_utils.llm.get_endpoint_model_limits") as endpoint_lookup,
+            mock.patch("klea_utils.llm.probe_endpoint_model_limits") as endpoint_lookup,
         ):
             ov = {
                 "model": "Qwen",
@@ -242,7 +258,7 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
         """Endpoint returning None falls back to models.dev for context."""
         with (
             _no_catalog(ModelLimits(context=128000, output=16384)),
-            mock.patch("klea_utils.llm.get_endpoint_model_limits", return_value=None),
+            mock.patch("klea_utils.llm.probe_endpoint_model_limits", return_value=None),
         ):
             ov = {
                 "model": "gpt-4o",

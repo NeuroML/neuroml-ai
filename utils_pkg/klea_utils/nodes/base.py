@@ -43,9 +43,10 @@ from ..llm import (
     is_output_truncated,
     load_prompt,
     parse_output_with_thought,
+    resolve_langchain_endpoint,
     resolve_output_token_limit,
 )
-from ..models_catalog import get_endpoint_model_limits
+from ..models_catalog import probe_endpoint_model_limits
 from .abstract import AbstractLLMNode
 
 #: Max times to retry an invoke that overflowed the context window, each
@@ -366,6 +367,21 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             already at a bound (no point retrying).
         """
         overrides = config["configurable"]
+        # Native providers (``mistral:``, ``anthropic:``, ``deepseek:``,
+        # ...) carry no ``base_url`` in the configurable dict -- the
+        # provider resolves its own default endpoint internally.  Resolve
+        # it by materialising the concrete model (already built on every
+        # invoke, no network) and reading its resolved endpoint attribute,
+        # so the endpoint-aware retry probes target the right server.
+        # Storing it back in *overrides* is safe: every provider that
+        # exposes one of the endpoint attributes aliases ``base_url``, so
+        # the retried invoke accepts it.
+        if not overrides.get("base_url"):
+            resolved_base_url = resolve_langchain_endpoint(
+                self._llm_entry.instance, config
+            )
+            if resolved_base_url:
+                overrides["base_url"] = resolved_base_url
         provider = overrides.get("model_provider") or "openai"
         token_param = get_token_limit_param(provider)
         current = int(overrides.get(token_param, DEFAULT_MAX_OUTPUT_TOKENS))
@@ -435,7 +451,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """
         target = MAX_OUTPUT_TOKENS_CEILING
         provider = overrides.get("model_provider") or "openai"
-        limits = get_endpoint_model_limits(
+        limits = probe_endpoint_model_limits(
             provider,
             overrides.get("model", ""),
             overrides.get("base_url"),

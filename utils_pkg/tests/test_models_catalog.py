@@ -78,8 +78,10 @@ class TestModelsCatalog(unittest.TestCase):
         with mock.patch.object(
             models_catalog, "_fetch_catalog", return_value=_SAMPLE_CATALOG
         ) as fetch:
-            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
-        self.assertEqual(limit, 16384)
+            limits = models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
         fetch.assert_called_once()
         self.assertTrue(self._cache_path.exists())
 
@@ -87,8 +89,10 @@ class TestModelsCatalog(unittest.TestCase):
         """A fresh on-disk cache is used without a network fetch."""
         self._write_disk_cache()
         with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
-            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
-        self.assertEqual(limit, 16384)
+            limits = models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
         fetch.assert_not_called()
 
     def test_expired_disk_cache_refetches(self):
@@ -97,8 +101,10 @@ class TestModelsCatalog(unittest.TestCase):
         with mock.patch.object(
             models_catalog, "_fetch_catalog", return_value=_SAMPLE_CATALOG
         ) as fetch:
-            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
-        self.assertEqual(limit, 16384)
+            limits = models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
         fetch.assert_called_once()
 
     def test_offline_no_cache_returns_none(self):
@@ -106,8 +112,9 @@ class TestModelsCatalog(unittest.TestCase):
         with mock.patch.object(
             models_catalog, "_fetch_catalog", side_effect=RuntimeError("offline")
         ):
-            self.assertIsNone(models_catalog.get_model_output_limit("openai", "gpt-4o"))
-            self.assertIsNone(models_catalog.get_model_limits("openai", "gpt-4o"))
+            self.assertIsNone(
+                models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+            )
 
     def test_offline_falls_back_to_stale_disk(self):
         """A fetch failure falls back to a stale on-disk copy."""
@@ -115,15 +122,17 @@ class TestModelsCatalog(unittest.TestCase):
         with mock.patch.object(
             models_catalog, "_fetch_catalog", side_effect=RuntimeError("offline")
         ):
-            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
-        self.assertEqual(limit, 16384)
+            limits = models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
 
     def test_missing_model_returns_none(self):
         """A model absent from the catalog resolves to None."""
         self._write_disk_cache()
         with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
             self.assertIsNone(
-                models_catalog.get_model_output_limit("openai", "no-such-model")
+                models_catalog.get_catalog_model_limits("openai", "no-such-model")
             )
         fetch.assert_not_called()
 
@@ -132,7 +141,7 @@ class TestModelsCatalog(unittest.TestCase):
         self._write_disk_cache()
         with mock.patch.object(models_catalog, "_fetch_catalog") as fetch:
             self.assertIsNone(
-                models_catalog.get_model_output_limit("ollama", "qwen3:0.6b")
+                models_catalog.get_catalog_model_limits("ollama", "qwen3:0.6b")
             )
         fetch.assert_not_called()
 
@@ -140,20 +149,21 @@ class TestModelsCatalog(unittest.TestCase):
         """An unknown provider is passed through and simply misses."""
         self._write_disk_cache()
         self.assertIsNone(
-            models_catalog.get_model_output_limit("not-a-provider", "gpt-4o")
+            models_catalog.get_catalog_model_limits("not-a-provider", "gpt-4o")
         )
 
     def test_custom_provider_maps_to_openai(self):
         """custom: maps to the openai catalog entry, mirroring build_config."""
         self._write_disk_cache()
-        self.assertEqual(
-            models_catalog.get_model_output_limit("custom", "gpt-4o"), 16384
-        )
+        limits = models_catalog.get_catalog_model_limits("custom", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
 
     def test_context_input_output_limits(self):
         """All defined limit fields are returned in ModelLimits."""
         self._write_disk_cache()
-        limits = models_catalog.get_model_limits(
+        limits = models_catalog.get_catalog_model_limits(
             "huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct"
         )
         self.assertIsNotNone(limits)
@@ -161,25 +171,16 @@ class TestModelsCatalog(unittest.TestCase):
         self.assertEqual(limits.context, 262144)
         self.assertEqual(limits.input, 200000)
         self.assertEqual(limits.output, 65536)
-        self.assertEqual(
-            models_catalog.get_model_context_limit(
-                "huggingface", "Qwen/Qwen3-Coder-30B-A3B-Instruct"
-            ),
-            262144,
-        )
 
     def test_missing_output_field(self):
         """Models without an output limit expose it as None."""
         self._write_disk_cache()
-        limits = models_catalog.get_model_limits("openai", "no-output-limit")
+        limits = models_catalog.get_catalog_model_limits("openai", "no-output-limit")
         self.assertIsNotNone(limits)
         assert limits is not None
         self.assertEqual(limits.context, 1000)
         self.assertIsNone(limits.input)
         self.assertIsNone(limits.output)
-        self.assertIsNone(
-            models_catalog.get_model_output_limit("openai", "no-output-limit")
-        )
 
     def test_fetch_uses_configured_url(self):
         """The catalog URL honours the KLEA_MODELS_DEV_URL override."""
@@ -195,8 +196,10 @@ class TestModelsCatalog(unittest.TestCase):
             ),
         ):
             models_catalog._catalog.cache_clear()
-            limit = models_catalog.get_model_output_limit("openai", "gpt-4o")
-        self.assertEqual(limit, 16384)
+            limits = models_catalog.get_catalog_model_limits("openai", "gpt-4o")
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.output, 16384)
         get.assert_called_once()
         args, kwargs = get.call_args
         self.assertEqual(args[0], "https://mirror.example/api.json")
@@ -204,7 +207,7 @@ class TestModelsCatalog(unittest.TestCase):
 
 
 class TestEndpointModelLimits(unittest.TestCase):
-    """Tests for get_endpoint_model_limits (live OpenAI-compatible probe)."""
+    """Tests for probe_endpoint_model_limits (live OpenAI-compatible probe)."""
 
     def setUp(self):
         self.addCleanup(models_catalog._ENDPOINT_LIMITS_CACHE.clear)
@@ -220,7 +223,7 @@ class TestEndpointModelLimits(unittest.TestCase):
     def test_returns_context_from_max_model_len(self):
         payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
         with mock.patch("httpx.get", return_value=self._resp(payload)) as get:
-            limits = models_catalog.get_endpoint_model_limits(
+            limits = models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1", "secret"
             )
         self.assertIsNotNone(limits)
@@ -236,27 +239,32 @@ class TestEndpointModelLimits(unittest.TestCase):
     def test_caches_after_first_fetch(self):
         payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
         with mock.patch("httpx.get", return_value=self._resp(payload)) as get:
-            models_catalog.get_endpoint_model_limits(
+            models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1"
             )
-            models_catalog.get_endpoint_model_limits(
+            models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1"
             )
         get.assert_called_once()
 
-    def test_non_openai_provider_returns_none(self):
-        with mock.patch("httpx.get") as get:
-            self.assertIsNone(
-                models_catalog.get_endpoint_model_limits(
-                    "huggingface", "Qwen", "https://example.com/v1"
-                )
+    def test_native_provider_with_base_url_is_probed(self):
+        """A non-openai provider with a base_url is probed (relaxed gate)."""
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with mock.patch("httpx.get", return_value=self._resp(payload)) as get:
+            limits = models_catalog.probe_endpoint_model_limits(
+                "mistral", "Qwen", "https://api.mistral.ai/v1"
             )
-        get.assert_not_called()
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.context, 262144)
+        get.assert_called_once()
+        args, kwargs = get.call_args
+        self.assertEqual(args[0], "https://api.mistral.ai/v1/models")
 
     def test_no_base_url_returns_none(self):
         with mock.patch("httpx.get") as get:
             self.assertIsNone(
-                models_catalog.get_endpoint_model_limits("openai", "Qwen", None)
+                models_catalog.probe_endpoint_model_limits("openai", "Qwen", None)
             )
         get.assert_not_called()
 
@@ -264,7 +272,7 @@ class TestEndpointModelLimits(unittest.TestCase):
         payload = {"data": [{"id": "Other", "max_model_len": 1000}]}
         with mock.patch("httpx.get", return_value=self._resp(payload)):
             self.assertIsNone(
-                models_catalog.get_endpoint_model_limits(
+                models_catalog.probe_endpoint_model_limits(
                     "openai", "Qwen", "https://example.com/v1"
                 )
             )
@@ -274,7 +282,7 @@ class TestEndpointModelLimits(unittest.TestCase):
         mock_resp.raise_for_status.side_effect = RuntimeError("boom")
         with mock.patch("httpx.get", return_value=mock_resp):
             self.assertIsNone(
-                models_catalog.get_endpoint_model_limits(
+                models_catalog.probe_endpoint_model_limits(
                     "openai", "Qwen", "https://example.com/v1"
                 )
             )
@@ -282,7 +290,7 @@ class TestEndpointModelLimits(unittest.TestCase):
     def test_network_error_returns_none(self):
         with mock.patch("httpx.get", side_effect=RuntimeError("offline")):
             self.assertIsNone(
-                models_catalog.get_endpoint_model_limits(
+                models_catalog.probe_endpoint_model_limits(
                     "openai", "Qwen", "https://example.com/v1"
                 )
             )
@@ -291,7 +299,7 @@ class TestEndpointModelLimits(unittest.TestCase):
         payload = {"data": [{"id": "Qwen", "max_model_len": "large"}]}
         with mock.patch("httpx.get", return_value=self._resp(payload)):
             self.assertIsNone(
-                models_catalog.get_endpoint_model_limits(
+                models_catalog.probe_endpoint_model_limits(
                     "openai", "Qwen", "https://example.com/v1"
                 )
             )
@@ -305,7 +313,7 @@ class TestEndpointModelLimits(unittest.TestCase):
                 "os.environ", {"OPENAI_API_KEY": "env-secret"}, clear=False
             ),
         ):
-            limits = models_catalog.get_endpoint_model_limits(
+            limits = models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1"
             )
         self.assertIsNotNone(limits)
@@ -323,7 +331,7 @@ class TestEndpointModelLimits(unittest.TestCase):
                 "os.environ", {"OPENAI_API_KEY": "env-secret"}, clear=False
             ),
         ):
-            models_catalog.get_endpoint_model_limits(
+            models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1", "explicit-secret"
             )
         args, kwargs = get.call_args
@@ -338,7 +346,7 @@ class TestEndpointModelLimits(unittest.TestCase):
                 "os.environ", {"MISTRAL_API_KEY": "mistral-secret"}, clear=False
             ),
         ):
-            models_catalog.get_endpoint_model_limits(
+            models_catalog.probe_endpoint_model_limits(
                 "mistralai", "Qwen", "https://api.mistral.ai/v1"
             )
         args, kwargs = get.call_args
