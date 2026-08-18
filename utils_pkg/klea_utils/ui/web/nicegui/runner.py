@@ -13,7 +13,6 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import json
 import logging
-import re
 import uuid
 from datetime import datetime
 
@@ -28,6 +27,7 @@ from klea_utils.api.sse import (
 )
 from klea_utils.api.utils import check_api_is_ready
 from klea_utils.llm import parse_model_name
+from klea_utils.ui.linkify import linkify_md
 
 from .client import (
     clear_model_override,
@@ -196,22 +196,6 @@ def setup_layout(
     # switch the whole page session to a fresh identity after a delete.
     _expanded: set[int] = set()
 
-    # ------------------------------------------------------------------
-    # Linkify helper  ---  convert bare URLs in markdown source to
-    # clickable [url](url) so markdown2 renders them as <a> tags.
-    # The negative lookbehind avoids re-wrapping URLs already inside
-    # markdown link syntax, e.g. [text](url).
-    # ------------------------------------------------------------------
-    _BARE_URL_RE = re.compile(r"(\[[^\]]*\]\([^)]*\))|(?<!\()(https?://[^\s<)]+)")
-
-    def _linkify_md(text: str) -> str:
-        def _replacer(m: re.Match) -> str:
-            if m.group(1):
-                return m.group(1)
-            return f"[{m.group(2)}]({m.group(2)})"
-
-        return _BARE_URL_RE.sub(_replacer, text)
-
     def _render_chat_area() -> None:
         """Rebuild the scroll-area content (welcome or messages).
 
@@ -244,7 +228,7 @@ def setup_layout(
                 for idx, (text, stamp, is_user) in enumerate(msgs):
                     collapsed = idx not in _expanded
                     ChatBubble(
-                        text=_linkify_md(text),
+                        text=linkify_md(text),
                         stamp=stamp,
                         is_user=is_user,
                         collapsed=collapsed,
@@ -909,7 +893,7 @@ def setup_layout(
                         ui.label(section.get("heading", node_label))
                     display = section.get("display", "")
                     if display:
-                        ui.markdown(_linkify_md(display)).classes("text-xs w-full")
+                        ui.markdown(linkify_md(display)).classes("text-xs w-full")
                     summary = section.get("summary", "")
                     if summary and not display:
                         ui.label(summary).classes("text-xs text-grey-6 mb-1 w-full")
