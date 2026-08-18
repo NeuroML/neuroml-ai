@@ -13,6 +13,7 @@ import unittest
 import pytest
 from klea_utils.llm import (
     add_memory_to_prompt,
+    estimate_input_tokens,
     format_alert,
     get_last_n_conversations,
     get_recent_messages,
@@ -252,6 +253,22 @@ def test_add_memory_to_prompt_is_summary_only():
 def test_add_memory_to_prompt_empty_summary():
     """No summary produces an empty block."""
     assert add_memory_to_prompt("") == ""
+
+
+def test_estimate_input_tokens_is_conservative():
+    """The estimate is inflated by the safety factor and rounded up."""
+    # 9736 chars -> 2434 at 4 chars/token; with the 5% factor it must be
+    # strictly higher than the raw estimate (real tokenizers can count one
+    # more token, which previously pushed input+output over the context).
+    assert estimate_input_tokens(9736) == 2556
+    assert estimate_input_tokens(9736) > 9736 // 4
+
+
+def test_estimate_input_tokens_rounds_up():
+    """Rounding goes up so the margin is never undercut."""
+    # ceil(1 * 1.05) = 2, not 1.
+    assert estimate_input_tokens(4) == 2
+    assert estimate_input_tokens(0) == 0
 
 
 class _FakeConfigurableModel:

@@ -54,19 +54,39 @@ from .abstract import AbstractLLMNode
 MAX_CONTEXT_OVERFLOW_RETRIES = 3
 
 #: Max times to retry an invoke whose output was truncated (``finish_reason
-#: == "length"``), each time growing the reserved output window.
-MAX_TRUNCATION_RETRIES = 2
+#: == "length"``), each time growing the reserved output window.  The
+#: budget covers the full climb from the smallest node window to the
+#: largest advertised context (262144) so heavy-thinking models are not
+#: cut short, while still bounding pathological repeated truncations.
+MAX_TRUNCATION_RETRIES = 15
 
-#: Large reserve output window used as a last-ditch truncation retry.
-#: Reasoning-capable models can spend a large, unpredictable number of
-#: tokens thinking before producing a small final answer, so after the
-#: cheap doubling rungs are exhausted we jump to a generous ceiling
-#: (mirrors opencode's ``OUTPUT_TOKEN_MAX``).  This is the fallback when
-#: the model's context is unknown; for a custom endpoint that advertises a
-#: larger ``max_model_len``, :meth:`BaseLLMNode._jump_output_target` raises
-#: the ceiling to the endpoint's remaining context.  It is still clamped
-#: to the model's catalog output limit / total budget by
-#: ``resolve_output_token_limit``.
+#: Linear-phase step for truncation retries: the window grows by
+#: ``TRUNCATION_LINEAR_STEP`` while below ``TRUNCATION_LINEAR_CAP``.
+#: Covers the common case -- a model cut off a few hundred to a couple of
+#: thousand tokens short of finishing -- with small, predictable
+#: reservations.
+TRUNCATION_LINEAR_STEP = 2048
+
+#: Ceiling for the linear phase; above it the window grows by
+#: :data:`TRUNCATION_PHASE2_STEP`.
+TRUNCATION_LINEAR_CAP = 16384
+
+#: Large-step phase for truncation retries: once the linear phase is
+#: exhausted the window grows by this fixed step up to the output ceiling.
+#: Fixed-size steps (not exponential) keep reservations predictable for
+#: inference engines that allocate resources against ``max_tokens`` (e.g.
+#: vLLM KV-cache), avoiding the spikes of a doubling ladder.
+TRUNCATION_PHASE2_STEP = 32768
+
+#: Output-window ceiling for truncation retries.  Reasoning-capable models
+#: can spend a large, unpredictable number of tokens thinking before
+#: producing a small final answer, so the grow ladder clamps at a generous
+#: ceiling (mirrors opencode's ``OUTPUT_TOKEN_MAX``).  This is the
+#: fallback when the model's context is unknown; for a custom endpoint
+#: that advertises a larger ``max_model_len``,
+#: :meth:`BaseLLMNode._jump_output_target` raises the ceiling to the
+#: endpoint's remaining context.  It is still clamped to the model's
+#: catalog output limit / total budget by ``resolve_output_token_limit``.
 MAX_OUTPUT_TOKENS_CEILING = 32768
 
 #: Floor for the reserved output window when shrinking it on overflow.
@@ -345,24 +365,25 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         self,
         config: RunnableConfig,
         direction: Literal["shrink", "grow"],
-        jump: bool = False,
     ) -> bool:
         """Resize the reserved output window.
 
         Updates ``config["configurable"]`` in place.  ``"shrink"`` halves
-        the window (context-overflow retry); ``"grow"`` doubles it
-        (truncation retry) unless *jump* is set, in which case it jumps to
-        :meth:`_jump_output_target` (the last-ditch attempt for
-        reasoning-heavy truncations).  Shrink and grow re-clamp to the
-        model's catalog output limit and total budget via
-        ``resolve_output_token_limit`` (endpoint-first context on these
-        retries); jump sets the endpoint-authoritative target directly.
+        the window (context-overflow retry); ``"grow"`` extends it
+        (truncation retry) in two bounded phases: a linear step-up
+        (:data:`TRUNCATION_LINEAR_STEP` while below
+        :data:`TRUNCATION_LINEAR_CAP`) for models cut off just short of
+        finishing, then fixed large steps (:data:`TRUNCATION_PHASE2_STEP`)
+        climbing toward the output ceiling (:meth:`_jump_output_target`).
+        No exponential doubling: inference engines allocate resources
+        against ``max_tokens``, so doubling spikes KV-cache usage,
+        overshoots the real need, and overpays hallucination loops.  Both
+        grow paths re-clamp to the model's catalog output limit and total
+        budget via ``resolve_output_token_limit`` (endpoint-first context
+        on these retries).
 
         :param config: The per-invoke RunnableConfig to update in place.
         :param direction: ``"shrink"`` or ``"grow"``.
-        :param jump: When ``"grow"``, set the window directly to the
-            jump target (falling back to :data:`MAX_OUTPUT_TOKENS_CEILING`)
-            instead of doubling.
         :returns: True if the window actually changed, False if it was
             already at a bound (no point retrying).
         """
@@ -388,30 +409,25 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
         if direction == "shrink":
             target = max(MIN_OUTPUT_TOKENS, current // 2)
-        elif jump:
-            # Jump target is endpoint-authoritative: _jump_output_target
-            # already bounds it to the endpoint's remaining context (with a
-            # MAX_OUTPUT_TOKENS_CEILING fallback), so we set it directly and
-            # skip the resolver -- a single endpoint lookup, and no
-            # models.dev output clamp that could under-cut the raise.
-            overrides[token_param] = self._jump_output_target(overrides)
-            new_value = int(overrides[token_param])
-            self.logger.warning(
-                "Output window %s (jump): %d -> %d (%s)",
-                direction,
-                current,
-                new_value,
-                provider,
-            )
-            return new_value != current
+            phase = "-"
         else:
-            target = current * 2
+            # Two-phase grow (see docstring).  Clamp to the output ceiling
+            # so the ladder never exceeds what the endpoint (or the fixed
+            # fallback) allows; the resolver below re-applies the catalog
+            # output / total-budget clamps.
+            if current < TRUNCATION_LINEAR_CAP:
+                step = TRUNCATION_LINEAR_STEP
+                phase = "linear"
+            else:
+                step = TRUNCATION_PHASE2_STEP
+                phase = "large-step"
+            target = min(current + step, self._jump_output_target(overrides))
 
         # Set the provider token param directly (rather than the generic
         # key) so the resolver's "explicit value wins" precedence does not
         # pick up a stale explicit value; resolve then re-applies the
         # catalog output / total-budget clamps to *target*.  Shrink and
-        # double are retries, so use the live endpoint for an accurate
+        # grow are retries, so use the live endpoint for an accurate
         # context cap (falling back to models.dev), unlike the normal path.
         overrides[token_param] = target
         last_prompt = getattr(self, "_last_prompt", None)
@@ -425,8 +441,9 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         )
         new_value = int(overrides[token_param])
         self.logger.warning(
-            "Output window %s: %d -> %d (%s)",
+            "Output window %s (%s): %d -> %d (%s)",
             direction,
+            phase,
             current,
             new_value,
             provider,
@@ -434,20 +451,20 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         return new_value != current
 
     def _jump_output_target(self, overrides: dict[str, Any]) -> int:
-        """Return the last-ditch truncation-retry output window.
+        """Return the output-window ceiling for truncation retries.
 
         The ceiling is :data:`MAX_OUTPUT_TOKENS_CEILING` by default, but
         for an OpenAI-compatible custom endpoint that advertises a larger
         ``max_model_len`` we raise it to the endpoint's remaining context
         (``max_model_len - estimated input``) so a long reasoning trace is
-        not capped by the fixed fallback.  This value is authoritative on
-        the jump path (``_update_output_window`` sets it directly and skips
-        the resolver), so no models.dev ``output`` clamp is applied -- the
-        live endpoint is trusted as the source of truth for the retry
-        ceiling.
+        not capped by the fixed fallback.  The grow ladder in
+        :meth:`_update_output_window` clamps to this ceiling; the live
+        endpoint is trusted as the source of truth for the retry ceiling,
+        so no models.dev ``output`` clamp is applied below it -- the
+        resolver re-applies that clamp to the *target*, not the ceiling.
 
         :param overrides: The merged ``configurable`` dict.
-        :returns: The target output window for a jump retry.
+        :returns: The ceiling for the grow ladder.
         """
         target = MAX_OUTPUT_TOKENS_CEILING
         provider = overrides.get("model_provider") or "openai"
@@ -464,7 +481,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
                 headroom = limits.context - estimate_input_tokens(input_chars)
                 target = max(target, headroom)
         self.logger.debug(
-            f"Jump output target {target = } "
+            f"Output ceiling {target = } "
             f"(endpoint_context = {limits.context if limits else None}, "
             f"{provider = })"
         )
@@ -484,15 +501,14 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
           the reserved output exceeds the window) retry up to
           :data:`MAX_CONTEXT_OVERFLOW_RETRIES` times, shrinking the
           output window each time.
-        * Truncation retries by growing the output window: first doubling
-          up to :data:`MAX_TRUNCATION_RETRIES` times, then a single jump
-          to :meth:`_jump_output_target` for a last-ditch attempt
-          (reasoning models can spend many tokens thinking before a small
-          answer).  Truncation is detected two ways: a successful call
-          that was cut off (``finish_reason == "length"``), or a raised
-          ``length_truncation`` exception (some SDKs, e.g. the OpenAI
-          streaming / structured-output path, raise instead of returning
-          a truncated message).
+        * Truncation retries by growing the output window in two bounded
+          phases -- a linear step-up, then fixed large steps up to the
+          output ceiling (see :meth:`_update_output_window`) -- capped at
+          :data:`MAX_TRUNCATION_RETRIES` attempts.  Truncation is detected
+          two ways: a successful call that was cut off (``finish_reason ==
+          "length"``), or a raised ``length_truncation`` exception (some
+          SDKs, e.g. the OpenAI streaming / structured-output path, raise
+          instead of returning a truncated message).
 
         All other failures (rate limits, auth, model-not-found, ...) are
         re-raised immediately.  Retrying stops early if resizing the
@@ -505,7 +521,6 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """
         overflow_retries = 0
         truncation_retries = 0
-        jumped = False
 
         while True:
             try:
@@ -531,24 +546,20 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
                     continue
 
                 if category is LLMInvocationErrorCategory.LENGTH_TRUNCATION:
-                    grow, jumped_now, message = self._next_truncation_retry(
-                        config, truncation_retries, jumped
+                    grow, message = self._next_truncation_retry(
+                        config, truncation_retries
                     )
                     if grow:
                         truncation_retries += 1
-                        jumped = jumped or jumped_now
                         self.logger.warning(message)
                         continue
                     raise
                 raise
 
             if is_output_truncated(output):
-                grow, jumped_now, message = self._next_truncation_retry(
-                    config, truncation_retries, jumped
-                )
+                grow, message = self._next_truncation_retry(config, truncation_retries)
                 if grow:
                     truncation_retries += 1
-                    jumped = jumped or jumped_now
                     self.logger.warning(message)
                     continue
                 return output
@@ -556,49 +567,38 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             return output
 
     def _next_truncation_retry(
-        self, config: RunnableConfig, truncation_retries: int, jumped: bool
-    ) -> tuple[bool, bool, str]:
+        self, config: RunnableConfig, truncation_retries: int
+    ) -> tuple[bool, str]:
         """Return whether to retry a truncated invoke, and the log message.
 
-        Grows the window by doubling for the first
-        :data:`MAX_TRUNCATION_RETRIES` truncations, then jumps to
-        :meth:`_jump_output_target` (falling back to
-        :data:`MAX_OUTPUT_TOKENS_CEILING`) for the last-ditch attempt
-        (reasoning models can spend many tokens thinking).  Stops retrying
-        once the ceiling attempt has been made and still failed.
+        Grows the reserved output window on each truncation -- linear
+        steps while below :data:`TRUNCATION_LINEAR_CAP`, then
+        :data:`TRUNCATION_PHASE2_STEP` steps up to the output ceiling
+        (:meth:`_jump_output_target`) -- capped at
+        :data:`MAX_TRUNCATION_RETRIES` attempts.  Stops retrying once the
+        window cannot grow further (already at the ceiling) or the retry
+        budget is spent.
 
         :param config: The per-invoke RunnableConfig to update in place.
         :param truncation_retries: Number of truncation retries so far.
-        :param jumped: Whether the ceiling jump has already been made.
-        :returns: ``(grow, jumped_now, message)``; ``grow`` is False when
-            the window cannot grow further (no point retrying), and
-            ``jumped_now`` is True when this grow was the ceiling jump.
+        :returns: ``(grow, message)``; ``grow`` is False when the window
+            cannot grow further or the budget is exhausted.
         """
-        if truncation_retries < MAX_TRUNCATION_RETRIES:
-            if self._update_output_window(config, "grow"):
-                return (
-                    True,
-                    False,
-                    (
-                        "Output truncated, retrying with larger output window "
-                        f"({truncation_retries + 1}/{MAX_TRUNCATION_RETRIES})"
-                    ),
-                )
+        if truncation_retries >= MAX_TRUNCATION_RETRIES:
             self.logger.warning(
-                "Output truncated but output window cannot grow further"
+                "Output truncated but truncation retry budget exhausted"
             )
-            return False, False, ""
-        if not jumped and self._update_output_window(config, "grow", jump=True):
+            return False, ""
+        if self._update_output_window(config, "grow"):
             return (
                 True,
-                True,
                 (
-                    "Output truncated, jumping to large output window "
-                    f"({MAX_OUTPUT_TOKENS_CEILING} tokens)"
+                    "Output truncated, retrying with larger output window "
+                    f"({truncation_retries + 1}/{MAX_TRUNCATION_RETRIES})"
                 ),
             )
         self.logger.warning("Output truncated but output window cannot grow further")
-        return False, False, ""
+        return False, ""
 
     def _process_output(self, output: AIMessage | dict[str, Any]) -> Any:
         """Common output processing with error handling.

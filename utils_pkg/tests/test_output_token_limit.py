@@ -117,7 +117,8 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
 
     def test_total_budget_clamp(self):
         """Output is bounded by context - estimated input tokens."""
-        # 40_000 chars ~= 10_000 tokens; context 32k -> headroom 22k.
+        # 40_000 chars ~= 10_000 tokens; with the 5% safety factor the
+        # estimate is 10_500; context 32k -> headroom 22_268.
         # An explicit 30k budget is reduced to the available headroom.
         with _no_catalog(ModelLimits(context=32768, output=65536)):
             ov = {
@@ -128,7 +129,7 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             resolve_output_token_limit(
                 ov, "huggingface", role="chat", input_chars=40000
             )
-        self.assertEqual(ov["max_tokens"], 22768)
+        self.assertEqual(ov["max_tokens"], 22268)
 
     def test_total_budget_clamp_below_role_default(self):
         """A tight context + large input shrinks even the role default."""
@@ -137,8 +138,9 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             resolve_output_token_limit(
                 ov, "huggingface", role="chat", input_chars=30000
             )
-        # 30k chars ~= 7500 tokens; headroom = 8192 - 7500 = 692.
-        self.assertEqual(ov["max_tokens"], 692)
+        # 30k chars ~= 7500 tokens; with the 5% safety factor that is 7875;
+        # headroom = 8192 - 7875 = 317.
+        self.assertEqual(ov["max_tokens"], 317)
 
     def test_no_total_budget_clamp_without_input_chars(self):
         """Without input_chars only the output-limit clamp applies."""
@@ -185,9 +187,9 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             "openai",
             ModelLimits(context=262144, output=None, input=None),
             role="chat",
-            input_chars=100000,  # ~25000 tokens -> headroom ~237k
+            input_chars=100000,  # ~26250 tokens with 5% factor -> headroom ~236k
         )
-        # 30000 < 237k headroom, so it stays at the configured value.
+        # 30000 < 236k headroom, so it stays at the configured value.
         self.assertEqual(ov["max_tokens"], 30000)
 
     def test_custom_endpoint_headroom_shrinks_large_budget(self):
@@ -202,7 +204,7 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             "openai",
             ModelLimits(context=262144, output=None, input=None),
             role="chat",
-            input_chars=40000,  # ~10000 tokens -> headroom ~252k
+            input_chars=40000,  # ~10500 tokens with 5% factor -> headroom ~251k
         )
         self.assertEqual(ov["max_tokens"], 200000)
 
@@ -218,9 +220,9 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             "openai",
             ModelLimits(context=8192, output=None, input=None),
             role="chat",
-            input_chars=30000,  # ~7500 tokens -> headroom ~692
+            input_chars=30000,  # ~7875 tokens with 5% factor -> headroom ~317
         )
-        self.assertEqual(ov["max_tokens"], 692)
+        self.assertEqual(ov["max_tokens"], 317)
 
     def test_native_provider_with_resolved_endpoint_is_probed(self):
         """A native provider's resolved base_url drives the retry-path clamp."""
@@ -234,9 +236,9 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
             "mistralai",
             ModelLimits(context=8192, output=None, input=None),
             role="chat",
-            input_chars=30000,  # ~7500 tokens -> headroom ~692
+            input_chars=30000,  # ~7875 tokens with 5% factor -> headroom ~317
         )
-        self.assertEqual(ov["max_tokens"], 692)
+        self.assertEqual(ov["max_tokens"], 317)
 
     def test_normal_path_does_not_query_endpoint(self):
         """use_endpoint=False (normal path) never calls the endpoint lookup."""

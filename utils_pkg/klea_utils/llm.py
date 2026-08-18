@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 from __future__ import annotations
 
 import logging
+import math
 import re
 import sys
 import time
@@ -364,18 +365,30 @@ _ROLE_MAX_OUTPUT_TOKENS: dict[str, int] = {
 _TOKEN_PARAMS = ("max_tokens", "max_new_tokens", "num_predict")
 
 
-def estimate_input_tokens(input_chars: int) -> int:
-    """Rough token estimate for a prompt's character count.
+#: Safety factor applied on top of the char-based token estimate so the
+#: reserved output window keeps headroom for tokenizer variance: the
+#: ``~4 chars/token`` rule can undercount the real token count (e.g. 9736
+#: chars estimate 2434 tokens while the server tokenizes 2435), which
+#: pushes input + output one token over the model's context window and
+#: fails the request.
+INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR = 1.05
 
-    Used only to keep the reserved output window within a model's total
-    budget (input + output <= context).  ~4 characters per token is a
-    reasonable average for mixed English/code text; an exact count would
-    require provider-specific tokenizers.
+
+def estimate_input_tokens(input_chars: int) -> int:
+    """Conservative token estimate for a prompt's character count.
+
+    Used to keep the reserved output window within a model's total budget
+    (input + output <= context).  ~4 characters per token is a reasonable
+    average for mixed English/code text; an exact count would require
+    provider-specific tokenizers.  The estimate is deliberately inflated
+    by :data:`INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR` (rounded up) so a
+    tokenizer that counts more tokens than the average never pushes the
+    request over the context window.
 
     :param input_chars: Number of characters in the prompt.
-    :returns: Estimated token count.
+    :returns: Conservative estimated token count.
     """
-    return input_chars // 4
+    return math.ceil(input_chars / 4 * INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR)
 
 
 def resolve_output_token_limit(

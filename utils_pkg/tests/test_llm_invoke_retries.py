@@ -18,6 +18,7 @@ from klea_utils.nodes.base import (
     MAX_CONTEXT_OVERFLOW_RETRIES,
     MAX_OUTPUT_TOKENS_CEILING,
     MAX_TRUNCATION_RETRIES,
+    TRUNCATION_LINEAR_STEP,
     BaseLLMNode,
 )
 from langchain_core.messages import AIMessage
@@ -168,7 +169,7 @@ class TestInvokeWithRetries:
         assert inst.ainvoke.await_count == 1
 
     async def test_truncation_retry_grows_window(self):
-        """A truncated output retries once with a doubled output window."""
+        """A truncated output retries once with a linearly grown output window."""
         inst = mock.Mock()
         inst.ainvoke = mock.AsyncMock(
             side_effect=[
@@ -183,10 +184,10 @@ class TestInvokeWithRetries:
 
         assert inst.ainvoke.await_count == 2
         assert out.content == "full"
-        assert config["configurable"]["max_tokens"] == 8192
+        assert config["configurable"]["max_tokens"] == 4096 + TRUNCATION_LINEAR_STEP
 
     async def test_truncation_exception_retry_grows_window(self):
-        """A raised truncation error (OpenAI streaming path) retries with a doubled window."""
+        """A raised truncation error (OpenAI streaming path) retries with a grown window."""
         inst = mock.Mock()
         inst.ainvoke = mock.AsyncMock(
             side_effect=[
@@ -201,10 +202,15 @@ class TestInvokeWithRetries:
 
         assert inst.ainvoke.await_count == 2
         assert out.content == "full"
-        assert config["configurable"]["max_tokens"] == 8192
+        assert config["configurable"]["max_tokens"] == 4096 + TRUNCATION_LINEAR_STEP
 
     async def test_truncation_exception_exhausts_retries(self):
-        """Persistent raised truncation doubles, then jumps to the ceiling, then re-raises."""
+        """Persistent raised truncation climbs to the ceiling, then re-raises.
+
+        From 1024 the ladder steps +2048 through the linear phase up to
+        16384, then +32768 to the fixed 32768 ceiling (9 rungs); at the
+        ceiling the window cannot grow further, so the error surfaces.
+        """
         inst = mock.Mock()
         inst.ainvoke = mock.AsyncMock(
             side_effect=RuntimeError(
@@ -219,12 +225,12 @@ class TestInvokeWithRetries:
         else:
             raise AssertionError("expected RuntimeError")
 
-        # 1 original + 2 doubling rungs + 1 ceiling jump.
-        assert inst.ainvoke.await_count == 1 + MAX_TRUNCATION_RETRIES + 1
+        # 1 original + 9 grow rungs (3072..32768); the ceiling cannot grow further.
+        assert inst.ainvoke.await_count == 10
         assert config["configurable"]["max_tokens"] == MAX_OUTPUT_TOKENS_CEILING
 
-    async def test_truncation_exception_jumps_to_ceiling_after_doubling(self):
-        """After the doubling rungs, truncation jumps to the large ceiling."""
+    async def test_truncation_exception_linear_rungs_before_success(self):
+        """Linear grow rungs, not a jump, precede a successful retry."""
         inst = mock.Mock()
         inst.ainvoke = mock.AsyncMock(
             side_effect=[
@@ -243,13 +249,13 @@ class TestInvokeWithRetries:
         config = make_config(max_tokens=1024)
         out = await self._invoke(inst, config)
 
-        # 1024 -> 2048 (doubling 1) -> 4096 (doubling 2) -> 32768 (jump) -> success.
+        # 1024 -> 3072 -> 5120 -> 7168 (linear) -> success.
         assert inst.ainvoke.await_count == 4
         assert out.content == "full"
-        assert config["configurable"]["max_tokens"] == MAX_OUTPUT_TOKENS_CEILING
+        assert config["configurable"]["max_tokens"] == 1024 + 3 * TRUNCATION_LINEAR_STEP
 
     async def test_truncation_at_ceiling_no_more_retries(self):
-        """Once the ceiling retry also truncates, no further retries occur."""
+        """Once the ceiling is reached, further truncation stops retrying."""
         inst = mock.Mock()
         inst.ainvoke = mock.AsyncMock(
             return_value=AIMessage(
@@ -259,89 +265,93 @@ class TestInvokeWithRetries:
         config = make_config(max_tokens=1024)
         out = await self._invoke(inst, config)
 
-        # 1 original + 2 doublings + 1 ceiling jump = 4 attempts.
-        assert inst.ainvoke.await_count == 1 + MAX_TRUNCATION_RETRIES + 1
+        # 1 original + 9 grow rungs to the 32768 ceiling; then no progress.
+        assert inst.ainvoke.await_count == 10
         assert out.content == "cut"
         assert config["configurable"]["max_tokens"] == MAX_OUTPUT_TOKENS_CEILING
 
-    async def test_truncation_jump_uses_endpoint_context(self):
-        """A large endpoint max_model_len lets the jump exceed the fixed ceiling."""
-        with mock.patch(
-            "klea_utils.nodes.base.probe_endpoint_model_limits",
-            return_value=ModelLimits(context=262144, output=None, input=None),
+    async def test_truncation_grows_to_endpoint_ceiling(self):
+        """The ladder climbs to the endpoint headroom, not the fixed ceiling."""
+        with (
+            mock.patch(
+                "klea_utils.llm.probe_endpoint_model_limits",
+                return_value=ModelLimits(context=262144, output=None, input=None),
+            ),
+            mock.patch(
+                "klea_utils.nodes.base.probe_endpoint_model_limits",
+                return_value=ModelLimits(context=262144, output=None, input=None),
+            ),
         ):
             inst = mock.Mock()
             inst.ainvoke = mock.AsyncMock(
-                side_effect=[
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    AIMessage(
-                        content="full", response_metadata={"finish_reason": "stop"}
-                    ),
-                ]
+                side_effect=RuntimeError(
+                    "Could not parse response content as the length limit was reached"
+                )
             )
             # base_url present so the endpoint lookup applies; small prompt so
             # the endpoint headroom (~262k) is far above the 32768 fallback.
-            config = make_config(max_tokens=1024)
+            config = make_config(max_tokens=2048)
             config["configurable"]["base_url"] = (
                 "https://inf01.arc-llm.condenser.arc.ucl.ac.uk/v1/"
             )
             config["configurable"]["model_provider"] = "openai"
             node = make_node(inst)
             node._last_prompt = StringPromptValue(text="hi")
-            out = await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            try:
+                await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("expected RuntimeError")
 
-        # 1024 -> 2048 -> 4096 (doublings) -> jump to endpoint headroom, not 32768.
-        assert inst.ainvoke.await_count == 4
-        assert out.content == "full"
-        assert config["configurable"]["max_tokens"] > MAX_OUTPUT_TOKENS_CEILING
+        # Linear rungs to 16384, then +32768 rungs to the endpoint headroom
+        # (262144 - 1 input token = 262143) at the 15th rung.
+        assert inst.ainvoke.await_count == 1 + MAX_TRUNCATION_RETRIES
+        assert config["configurable"]["max_tokens"] == 262143
 
-    async def test_truncation_jump_ignores_models_dev_output_cap(self):
-        """The jump trusts the endpoint and is not shrunk by a lower models.dev cap.
+    async def test_truncation_growth_not_capped_by_models_dev_output(self):
+        """The endpoint context, not a lower models.dev output cap, bounds growth.
 
-        The retry path passes use_endpoint=True for shrink/double, but the
-        jump bypasses the resolver entirely (single endpoint lookup), so a
-        models.dev output cap lower than the endpoint context must not
-        under-cut the raise.
+        The retry path uses the live endpoint for the context cap, so a
+        models.dev output cap below the endpoint context must not under-cut
+        the grow ladder.
         """
-        with mock.patch(
-            "klea_utils.nodes.base.probe_endpoint_model_limits",
-            return_value=ModelLimits(context=262144, output=None, input=None),
-        ) as endpoint_lookup:
+        with (
+            mock.patch(
+                "klea_utils.llm.probe_endpoint_model_limits",
+                return_value=ModelLimits(context=262144, output=None, input=None),
+            ),
+            mock.patch(
+                "klea_utils.nodes.base.probe_endpoint_model_limits",
+                return_value=ModelLimits(context=262144, output=None, input=None),
+            ),
+            mock.patch(
+                "klea_utils.llm.get_catalog_model_limits",
+                return_value=ModelLimits(context=128000, output=4096),
+            ),
+        ):
             inst = mock.Mock()
             inst.ainvoke = mock.AsyncMock(
-                side_effect=[
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    AIMessage(
-                        content="full", response_metadata={"finish_reason": "stop"}
-                    ),
-                ]
+                side_effect=RuntimeError(
+                    "Could not parse response content as the length limit was reached"
+                )
             )
-            config = make_config(max_tokens=1024)
+            config = make_config(max_tokens=2048)
             config["configurable"]["base_url"] = "https://example.com/v1/"
             config["configurable"]["model_provider"] = "openai"
             node = make_node(inst)
             node._last_prompt = StringPromptValue(text="hi")
-            out = await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            try:
+                await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("expected RuntimeError")
 
-        # 1024 -> 2048 -> 4096 (doublings) -> jump (not capped by models.dev).
-        assert inst.ainvoke.await_count == 4
-        assert out.content == "full"
+        # Grows well past the models.dev output cap of 4096, up to the
+        # endpoint headroom.
+        assert inst.ainvoke.await_count == 1 + MAX_TRUNCATION_RETRIES
+        assert config["configurable"]["max_tokens"] == 262143
         assert config["configurable"]["max_tokens"] > MAX_OUTPUT_TOKENS_CEILING
 
     async def test_truncation_exception_at_catalog_cap_no_retry(self):
@@ -395,9 +405,15 @@ class TestInvokeWithRetries:
             captured["base_url"] = base_url
             return ModelLimits(context=262144, output=None, input=None)
 
-        with mock.patch(
-            "klea_utils.llm.probe_endpoint_model_limits",
-            side_effect=fake_endpoint_lookup,
+        with (
+            mock.patch(
+                "klea_utils.llm.probe_endpoint_model_limits",
+                side_effect=fake_endpoint_lookup,
+            ),
+            mock.patch(
+                "klea_utils.nodes.base.probe_endpoint_model_limits",
+                side_effect=fake_endpoint_lookup,
+            ),
         ):
             inst = mock.Mock()
             inst.ainvoke = mock.AsyncMock(
@@ -427,8 +443,8 @@ class TestInvokeWithRetries:
         assert captured["base_url"] == "https://api.mistral.ai/v1"
         assert captured["provider"] == "mistralai"
 
-    async def test_truncation_jump_uses_resolved_native_endpoint(self):
-        """The jump targets a native provider's resolved endpoint context."""
+    async def test_truncation_growth_uses_resolved_native_endpoint(self):
+        """The ladder climbs to a native provider's resolved endpoint context."""
         captured = {}
 
         def fake_endpoint_lookup(provider, model, base_url, api_key=None):
@@ -448,36 +464,29 @@ class TestInvokeWithRetries:
         ):
             inst = mock.Mock()
             inst.ainvoke = mock.AsyncMock(
-                side_effect=[
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    RuntimeError(
-                        "Could not parse response content as the length limit was reached"
-                    ),
-                    AIMessage(
-                        content="full", response_metadata={"finish_reason": "stop"}
-                    ),
-                ]
+                side_effect=RuntimeError(
+                    "Could not parse response content as the length limit was reached"
+                )
             )
             inst._model = mock.Mock(
                 return_value=mock.Mock(endpoint="https://api.mistral.ai/v1")
             )
 
             config = make_config(
-                max_tokens=1024, model="mistral-small-latest", provider="mistralai"
+                max_tokens=2048, model="mistral-small-latest", provider="mistralai"
             )
             node = make_node(inst)
             node._last_prompt = StringPromptValue(text="hi")
-            out = await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            try:
+                await node._invoke_llm(inst, StringPromptValue(text="hi"), config)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("expected RuntimeError")
 
-        assert out.content == "full"
         assert captured["base_url"] == "https://api.mistral.ai/v1"
         assert captured["provider"] == "mistralai"
-        assert config["configurable"]["max_tokens"] > MAX_OUTPUT_TOKENS_CEILING
+        assert config["configurable"]["max_tokens"] == 262143
 
     async def test_truncation_list_finish_reason(self):
         """List-form finish_reason (some providers) is handled."""
