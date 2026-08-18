@@ -47,6 +47,11 @@ package-specific commands, node layout, and conventions.
 
 ## Commands
 
+Use `uv` for all package operations; do not use `pip` when `uv` is
+available. To detect whether an existing venv is uv-managed, look for a
+`uv = <version>` key in `<venv>/pyvenv.cfg` (uv writes it on `uv venv`;
+`python -m venv` does not).
+
 ```bash
 # Dev install (editable, all packages)
 uv pip install -r requirements-dev.txt

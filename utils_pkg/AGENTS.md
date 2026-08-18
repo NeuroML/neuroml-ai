@@ -11,10 +11,10 @@ Package: `klea_utils`
 ### Building and Installation
 ```bash
 # Install in development mode
-pip install -e .
+uv pip install -e .
 
 # Install development dependencies
-pip install -e .[dev]
+uv pip install -e .[dev]
 ```
 
 ### Linting and Formatting
