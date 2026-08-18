@@ -1,5 +1,5 @@
 # Docs build: install all packages + Sphinx + Furo
--r requirements.txt
+-r requirements-dev.txt
 sphinx
 furo
 sphinxcontrib-typer
