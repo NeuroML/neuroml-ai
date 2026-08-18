@@ -495,6 +495,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
             try:
                 output = await invoke(prompt, config=config)
             except Exception as exc:
+                self.logger.error(f"{exc = }")
                 category = classify_llm_invocation_error(exc)
                 if (
                     category is LLMInvocationErrorCategory.CONTEXT_OVERFLOW

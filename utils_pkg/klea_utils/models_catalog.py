@@ -324,7 +324,7 @@ def get_endpoint_model_limits(
     if cached is not None and now - cached[0] < ENDPOINT_LIMITS_CACHE_TTL_SECONDS:
         return cached[1]
 
-    context = _fetch_endpoint_max_model_len(base_url, model_name, api_key)
+    context = _fetch_endpoint_max_model_len(base_url, model_name, provider, api_key)
     limits = ModelLimits(context=context) if context else None
     if limits is not None:
         _ENDPOINT_LIMITS_CACHE[key] = (now, limits)
@@ -332,15 +332,21 @@ def get_endpoint_model_limits(
 
 
 def _fetch_endpoint_max_model_len(
-    base_url: str, model_name: str, api_key: str | None
+    base_url: str, model_name: str, provider: str, api_key: str | None
 ) -> int | None:
     """Fetch ``max_model_len`` for *model_name* from an OpenAI endpoint.
 
     Best-effort: returns ``None`` on any network, parse, or auth error so
     callers can fall back to the models.dev catalog or the built-in
     default without failing the query.
+
+    When no explicit *api_key* is given, falls back to the standard
+    ``{PROVIDER}_API_KEY`` environment variable derived from *provider*
+    (e.g. ``OPENAI_API_KEY``, ``MISTRAL_API_KEY``), matching how the
+    LangChain/OpenAI SDKs resolve credentials for each provider.
     """
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    resolved_key = api_key or os.environ.get(f"{provider.upper()}_API_KEY")
+    headers = {"Authorization": f"Bearer {resolved_key}"} if resolved_key else {}
     url = base_url.rstrip("/") + "/models"
     try:
         resp = httpx.get(

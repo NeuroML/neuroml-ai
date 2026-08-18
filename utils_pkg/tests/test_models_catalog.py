@@ -296,6 +296,54 @@ class TestEndpointModelLimits(unittest.TestCase):
                 )
             )
 
+    def test_env_api_key_fallback_when_no_explicit_key(self):
+        """A missing explicit key falls back to the {PROVIDER}_API_KEY env var."""
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with (
+            mock.patch("httpx.get", return_value=self._resp(payload)) as get,
+            mock.patch.dict(
+                "os.environ", {"OPENAI_API_KEY": "env-secret"}, clear=False
+            ),
+        ):
+            limits = models_catalog.get_endpoint_model_limits(
+                "openai", "Qwen", "https://example.com/v1"
+            )
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.context, 262144)
+        args, kwargs = get.call_args
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer env-secret")
+
+    def test_explicit_key_wins_over_env(self):
+        """An explicit api_key overrides the env var."""
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with (
+            mock.patch("httpx.get", return_value=self._resp(payload)) as get,
+            mock.patch.dict(
+                "os.environ", {"OPENAI_API_KEY": "env-secret"}, clear=False
+            ),
+        ):
+            models_catalog.get_endpoint_model_limits(
+                "openai", "Qwen", "https://example.com/v1", "explicit-secret"
+            )
+        args, kwargs = get.call_args
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer explicit-secret")
+
+    def test_env_key_derived_from_provider(self):
+        """The env var name is derived from the provider (e.g. MISTRAL_API_KEY)."""
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with (
+            mock.patch("httpx.get", return_value=self._resp(payload)) as get,
+            mock.patch.dict(
+                "os.environ", {"MISTRAL_API_KEY": "mistral-secret"}, clear=False
+            ),
+        ):
+            models_catalog.get_endpoint_model_limits(
+                "mistralai", "Qwen", "https://api.mistral.ai/v1"
+            )
+        args, kwargs = get.call_args
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer mistral-secret")
+
 
 if __name__ == "__main__":
     unittest.main()
