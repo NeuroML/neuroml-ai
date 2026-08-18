@@ -203,5 +203,99 @@ class TestModelsCatalog(unittest.TestCase):
         self.assertEqual(kwargs["timeout"], models_catalog.FETCH_TIMEOUT_SECONDS)
 
 
+class TestEndpointModelLimits(unittest.TestCase):
+    """Tests for get_endpoint_model_limits (live OpenAI-compatible probe)."""
+
+    def setUp(self):
+        self.addCleanup(models_catalog._ENDPOINT_LIMITS_CACHE.clear)
+        models_catalog._ENDPOINT_LIMITS_CACHE.clear()
+
+    def _resp(self, payload):
+        mock_resp = mock.Mock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = payload
+        return mock_resp
+
+    def test_returns_context_from_max_model_len(self):
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with mock.patch("httpx.get", return_value=self._resp(payload)) as get:
+            limits = models_catalog.get_endpoint_model_limits(
+                "openai", "Qwen", "https://example.com/v1", "secret"
+            )
+        self.assertIsNotNone(limits)
+        assert limits is not None
+        self.assertEqual(limits.context, 262144)
+        self.assertIsNone(limits.output)
+        self.assertIsNone(limits.input)
+        get.assert_called_once()
+        args, kwargs = get.call_args
+        self.assertEqual(args[0], "https://example.com/v1/models")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer secret")
+
+    def test_caches_after_first_fetch(self):
+        payload = {"data": [{"id": "Qwen", "max_model_len": 262144}]}
+        with mock.patch("httpx.get", return_value=self._resp(payload)) as get:
+            models_catalog.get_endpoint_model_limits(
+                "openai", "Qwen", "https://example.com/v1"
+            )
+            models_catalog.get_endpoint_model_limits(
+                "openai", "Qwen", "https://example.com/v1"
+            )
+        get.assert_called_once()
+
+    def test_non_openai_provider_returns_none(self):
+        with mock.patch("httpx.get") as get:
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits(
+                    "huggingface", "Qwen", "https://example.com/v1"
+                )
+            )
+        get.assert_not_called()
+
+    def test_no_base_url_returns_none(self):
+        with mock.patch("httpx.get") as get:
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits("openai", "Qwen", None)
+            )
+        get.assert_not_called()
+
+    def test_missing_model_returns_none(self):
+        payload = {"data": [{"id": "Other", "max_model_len": 1000}]}
+        with mock.patch("httpx.get", return_value=self._resp(payload)):
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits(
+                    "openai", "Qwen", "https://example.com/v1"
+                )
+            )
+
+    def test_http_error_returns_none(self):
+        mock_resp = mock.Mock()
+        mock_resp.raise_for_status.side_effect = RuntimeError("boom")
+        with mock.patch("httpx.get", return_value=mock_resp):
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits(
+                    "openai", "Qwen", "https://example.com/v1"
+                )
+            )
+
+    def test_network_error_returns_none(self):
+        with mock.patch("httpx.get", side_effect=RuntimeError("offline")):
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits(
+                    "openai", "Qwen", "https://example.com/v1"
+                )
+            )
+
+    def test_non_int_max_model_len_returns_none(self):
+        payload = {"data": [{"id": "Qwen", "max_model_len": "large"}]}
+        with mock.patch("httpx.get", return_value=self._resp(payload)):
+            self.assertIsNone(
+                models_catalog.get_endpoint_model_limits(
+                    "openai", "Qwen", "https://example.com/v1"
+                )
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

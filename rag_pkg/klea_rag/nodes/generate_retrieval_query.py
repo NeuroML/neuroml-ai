@@ -32,7 +32,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
     """
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
 
     def __init__(
         self,

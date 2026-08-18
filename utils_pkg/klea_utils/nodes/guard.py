@@ -20,7 +20,7 @@ from .base import BaseLLMNode
 
 class GuardNode(BaseLLMNode):
     model_type = "guard"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 1024}
+    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
     """Safety guard node that checks if user queries are safe to process.
 
     Evaluates whether a query contains potentially harmful content

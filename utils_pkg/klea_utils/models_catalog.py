@@ -267,3 +267,106 @@ def get_model_context_limit(provider: str, model_name: str) -> int | None:
     """
     limits = get_model_limits(provider, model_name)
     return limits.context if limits else None
+
+
+#: Time-to-live for the in-memory live-endpoint model-limits cache, in
+#: seconds.  A model's ``max_model_len`` is a stable property of its
+#: deployment and rarely changes, so we cache it for the process lifetime;
+#: this TTL is just a safety valve against very long-running servers.
+ENDPOINT_LIMITS_CACHE_TTL_SECONDS = 12 * 60 * 60
+
+#: HTTP timeout for the live-endpoint ``/models`` probe.  Short: it is
+#: best-effort and must never stall a query.
+ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS = 5.0
+
+#: Cache of live-endpoint model limits, keyed by ``(base_url, model_name)``
+#: with an insertion timestamp so entries can expire after the TTL.
+_ENDPOINT_LIMITS_CACHE: dict[tuple[str, str], tuple[float, ModelLimits]] = {}
+
+
+def get_endpoint_model_limits(
+    provider: str,
+    model_name: str,
+    base_url: str | None,
+    api_key: str | None = None,
+) -> ModelLimits | None:
+    """Return token limits for a model served by a live OpenAI-compatible endpoint.
+
+    models.dev's ``limit`` values are per-deployment configuration, not a
+    property of the model, and private/custom endpoints (e.g. an internal
+    vLLM server) are not in the catalog at all.  For those we ask the
+    endpoint directly: ``GET {base_url}/models`` returns each model's
+    ``max_model_len`` (the total context window, e.g. 262144 for a large
+    vLLM deployment), which is the authoritative per-deployment value.
+
+    Only OpenAI-compatible custom endpoints (``provider == "openai"`` with
+    a ``base_url``) are probed.  Results are cached in memory keyed by
+    ``(base_url, model_name)`` for :data:`ENDPOINT_LIMITS_CACHE_TTL_SECONDS`;
+    a user switching to a different model simply misses and triggers a
+    fresh probe for the new key.
+
+    Never raises and never blocks a query: any error, missing model, or
+    inapplicable input returns ``None``.
+
+    :param provider: Klea provider id (``openai`` for custom endpoints).
+    :param model_name: Model identifier as served by the endpoint.
+    :param base_url: Base URL of the OpenAI-compatible endpoint, or ``None``.
+    :param api_key: Optional bearer token for the endpoint.
+    :returns: ``ModelLimits`` with ``context`` set from ``max_model_len``,
+        or ``None`` when the endpoint does not expose it or is not usable.
+    """
+    if provider != "openai" or not base_url:
+        return None
+
+    key = (base_url, model_name)
+    now = time.monotonic()
+    cached = _ENDPOINT_LIMITS_CACHE.get(key)
+    if cached is not None and now - cached[0] < ENDPOINT_LIMITS_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    context = _fetch_endpoint_max_model_len(base_url, model_name, api_key)
+    limits = ModelLimits(context=context) if context else None
+    if limits is not None:
+        _ENDPOINT_LIMITS_CACHE[key] = (now, limits)
+    return limits
+
+
+def _fetch_endpoint_max_model_len(
+    base_url: str, model_name: str, api_key: str | None
+) -> int | None:
+    """Fetch ``max_model_len`` for *model_name* from an OpenAI endpoint.
+
+    Best-effort: returns ``None`` on any network, parse, or auth error so
+    callers can fall back to the models.dev catalog or the built-in
+    default without failing the query.
+    """
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    url = base_url.rstrip("/") + "/models"
+    try:
+        resp = httpx.get(
+            url,
+            headers=headers,
+            timeout=ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.warning(
+            f"Failed to fetch model limits from {url}: {e.__class__.__name__}"
+        )
+        return None
+
+    entries = data.get("data") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        logger.warning(f"Unexpected /models response shape from {url}")
+        return None
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("id") == model_name and isinstance(
+            entry.get("max_model_len"), int
+        ):
+            return entry["max_model_len"]
+    logger.debug(f"No max_model_len for {model_name!r} in {url}")
+    return None

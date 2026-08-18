@@ -25,7 +25,7 @@ from langgraph.types import RunnableConfig
 from pydantic import BaseModel
 
 from .errors import LLMInvocationErrorCategory
-from .models_catalog import get_model_limits
+from .models_catalog import get_endpoint_model_limits, get_model_limits
 from .plogging import mask_sensitive
 
 logger = logging.getLogger(__name__)
@@ -383,6 +383,8 @@ def resolve_output_token_limit(
     provider: str,
     role: str | None = None,
     input_chars: int | None = None,
+    *,
+    use_endpoint: bool = False,
 ) -> None:
     """Ensure a bounded max-output token param is set in *overrides*.
 
@@ -405,12 +407,27 @@ def resolve_output_token_limit(
     given, to the remaining budget (``context - estimated input tokens``)
     so HuggingFace's total-budget check is never exceeded.
 
+    The *context* source depends on *use_endpoint*: for OpenAI-compatible
+    custom endpoints, ``max_model_len`` from the live ``/models`` probe is
+    authoritative (models.dev's values are per-deployment and may
+    under-report).  The normal (non-retry) path passes ``use_endpoint=False``
+    so it stays on the fast, offline models.dev value -- its purpose is only
+    to produce a finite budget (mainly for the HuggingFace whole-window
+    reservation), not an exact cap.  The retry path passes
+    ``use_endpoint=True`` to clamp against the real server context, falling
+    back to models.dev when the endpoint probe fails.  The ``output`` clamp
+    always uses models.dev (the endpoint exposes no separate output cap).
+
     :param overrides: The merged ``configurable`` dict to update in place.
     :param provider: Klea provider id (``huggingface``, ``ollama``, ...).
     :param role: Model role (e.g. ``"chat"``), used for the built-in
         per-role fallback.
     :param input_chars: Character count of the prompt, to bound the output
         within the total budget.
+    :param use_endpoint: When True, prefer the live endpoint's
+        ``max_model_len`` as the context source, falling back to models.dev.
+        When False (default), use models.dev only and never query the
+        endpoint.
     """
     token_param = get_token_limit_param(provider)
 
@@ -427,8 +444,24 @@ def resolve_output_token_limit(
         value = _ROLE_MAX_OUTPUT_TOKENS.get(role or "", DEFAULT_MAX_OUTPUT_TOKENS)
     value = int(value)
 
-    # Clamp to the model's catalog output limit and total budget, if known.
-    limits = get_model_limits(provider, overrides.get("model", ""))
+    # Clamp to the model's output limit and total budget, if known.
+    # models.dev's limits are per-deployment config and may under-report a
+    # specific server's real context window, so on the retry path
+    # (use_endpoint=True) we prefer the live endpoint's max_model_len and
+    # fall back to models.dev.  The normal path (use_endpoint=False) uses
+    # models.dev only -- no endpoint query -- since its purpose is just to
+    # produce a finite budget (mainly the HuggingFace whole-window
+    # reservation), not an exact cap.
+    limits = None
+    if use_endpoint and overrides.get("model_provider") == "openai":
+        limits = get_endpoint_model_limits(
+            provider,
+            overrides.get("model", ""),
+            overrides.get("base_url"),
+            overrides.get("api_key"),
+        )
+    if limits is None:
+        limits = get_model_limits(provider, overrides.get("model", ""))
     if limits and limits.output:
         value = min(value, limits.output)
     if limits and limits.context and input_chars is not None:
@@ -592,6 +625,18 @@ _CONTEXT_OVERFLOW_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"requested token count", re.IGNORECASE),
 ]
 
+#: Tolerant patterns for "the model stopped because it hit the output
+#: token cap" errors.  Providers report this either as a returned message
+#: with ``finish_reason == "length"`` (handled by :func:`is_output_truncated`)
+#: or as a raised exception (e.g. the OpenAI SDK's
+#: ``LengthFinishReasonError`` on the streaming/structured-output path).
+_LENGTH_TRUNCATION_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"length limit was reached", re.IGNORECASE),
+    re.compile(r"finish[_ -]?reason[^\n]*length", re.IGNORECASE),
+    re.compile(r"length[^\n]*finish[_ -]?reason", re.IGNORECASE),
+    re.compile(r"output truncated", re.IGNORECASE),
+]
+
 #: Tolerant patterns for rate-limit / quota errors.
 _RATE_LIMIT_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\b429\b", re.IGNORECASE),
@@ -683,6 +728,8 @@ def classify_llm_invocation_error(exc: BaseException) -> LLMInvocationErrorCateg
 
     if _matches_any(_CONTEXT_OVERFLOW_PATTERNS, text):
         return LLMInvocationErrorCategory.CONTEXT_OVERFLOW
+    if _matches_any(_LENGTH_TRUNCATION_PATTERNS, text):
+        return LLMInvocationErrorCategory.LENGTH_TRUNCATION
     if _matches_any(_RATE_LIMIT_PATTERNS, text):
         return LLMInvocationErrorCategory.RATE_LIMITED
     if _matches_any(_AUTH_PATTERNS, text):

@@ -81,6 +81,29 @@ class TestClassifyInvocationError(unittest.TestCase):
             LLMInvocationErrorCategory.CONTEXT_OVERFLOW,
         )
 
+    # --- length truncation (raised, e.g. OpenAI streaming path) ---
+
+    def test_length_truncation_messages(self):
+        messages = [
+            "Could not parse response content as the length limit was reached",
+            (
+                "Could not parse response content as the length limit was "
+                "reached - 4096 tokens used"
+            ),
+            "LengthFinishReasonError: finish_reason is 'length'",
+            "APIError: response was truncated at finish_reason: length",
+        ]
+        for msg in messages:
+            self._assert_category(LLMInvocationErrorCategory.LENGTH_TRUNCATION, msg)
+
+    def test_context_overflow_still_outranks_truncation(self):
+        """Context-overflow messages must not be stolen by the truncation heuristics."""
+        msg = (
+            "This model's maximum context length is 8192 tokens. "
+            "However, you requested 9000 tokens."
+        )
+        self._assert_category(LLMInvocationErrorCategory.CONTEXT_OVERFLOW, msg)
+
     # --- rate limited ---
 
     def test_rate_limited_messages(self):

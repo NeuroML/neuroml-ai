@@ -154,6 +154,108 @@ class TestResolveOutputTokenLimit(unittest.TestCase):
         )
         self.assertEqual(ov["max_tokens"], 4096)
 
+    # --- live-endpoint limits (custom OpenAI-compatible endpoints) ---
+
+    def _resolve_with_endpoint(self, overrides, provider, endpoint_limits, **kwargs):
+        """Resolve with models.dev returning None and a mocked endpoint lookup.
+
+        Uses ``use_endpoint=True`` so the endpoint context is consulted
+        (the retry-path behaviour).
+        """
+        kwargs.setdefault("use_endpoint", True)
+        with (
+            _no_catalog(),
+            mock.patch(
+                "klea_utils.llm.get_endpoint_model_limits",
+                return_value=endpoint_limits,
+            ),
+        ):
+            resolve_output_token_limit(overrides, provider, **kwargs)
+        return overrides
+
+    def test_custom_endpoint_total_budget_clamp(self):
+        """A custom endpoint's max_model_len drives the total-budget clamp."""
+        ov = self._resolve_with_endpoint(
+            {
+                "model": "Qwen",
+                "model_provider": "openai",
+                "base_url": "https://inf01.arc-llm.condenser.arc.ucl.ac.uk/v1/",
+                "max_output_tokens": 30000,
+            },
+            "openai",
+            ModelLimits(context=262144, output=None, input=None),
+            role="chat",
+            input_chars=100000,  # ~25000 tokens -> headroom ~237k
+        )
+        # 30000 < 237k headroom, so it stays at the configured value.
+        self.assertEqual(ov["max_tokens"], 30000)
+
+    def test_custom_endpoint_headroom_shrinks_large_budget(self):
+        """A huge budget is clamped by the endpoint's remaining context."""
+        ov = self._resolve_with_endpoint(
+            {
+                "model": "Qwen",
+                "model_provider": "openai",
+                "base_url": "https://example.com/v1/",
+                "max_output_tokens": 200000,
+            },
+            "openai",
+            ModelLimits(context=262144, output=None, input=None),
+            role="chat",
+            input_chars=40000,  # ~10000 tokens -> headroom ~252k
+        )
+        self.assertEqual(ov["max_tokens"], 200000)
+
+    def test_custom_endpoint_small_context_clamps(self):
+        """A tight endpoint context shrinks even a modest budget."""
+        ov = self._resolve_with_endpoint(
+            {
+                "model": "Qwen",
+                "model_provider": "openai",
+                "base_url": "https://example.com/v1/",
+                "max_output_tokens": 4096,
+            },
+            "openai",
+            ModelLimits(context=8192, output=None, input=None),
+            role="chat",
+            input_chars=30000,  # ~7500 tokens -> headroom ~692
+        )
+        self.assertEqual(ov["max_tokens"], 692)
+
+    def test_normal_path_does_not_query_endpoint(self):
+        """use_endpoint=False (normal path) never calls the endpoint lookup."""
+        with (
+            _no_catalog(),
+            mock.patch("klea_utils.llm.get_endpoint_model_limits") as endpoint_lookup,
+        ):
+            ov = {
+                "model": "Qwen",
+                "model_provider": "openai",
+                "base_url": "https://example.com/v1/",
+            }
+            resolve_output_token_limit(ov, "openai", role="chat", input_chars=30000)
+        endpoint_lookup.assert_not_called()
+        # No models.dev entry -> falls back to the chat role default.
+        self.assertEqual(ov["max_tokens"], 4096)
+
+    def test_use_endpoint_falls_back_to_models_dev_when_none(self):
+        """Endpoint returning None falls back to models.dev for context."""
+        with (
+            _no_catalog(ModelLimits(context=128000, output=16384)),
+            mock.patch("klea_utils.llm.get_endpoint_model_limits", return_value=None),
+        ):
+            ov = {
+                "model": "gpt-4o",
+                "model_provider": "openai",
+                "base_url": "https://example.com/v1/",
+                "max_output_tokens": 30000,
+            }
+            resolve_output_token_limit(
+                ov, "openai", role="chat", input_chars=10000, use_endpoint=True
+            )
+        # Clamped to models.dev output cap.
+        self.assertEqual(ov["max_tokens"], 16384)
+
 
 if __name__ == "__main__":
     unittest.main()
