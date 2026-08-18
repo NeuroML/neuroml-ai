@@ -491,9 +491,9 @@
     <span class="k">return</span> <span class="n">data</span>
 
 
-<div class="viewcode-block" id="get_model_limits">
-<a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_limits">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelLimits</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="get_catalog_model_limits">
+<a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_catalog_model_limits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_catalog_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelLimits</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the token limits for a provider + model, or ``None``.</span>
 
 <span class="sd">    Returns ``None`` when the provider has no catalog entry (local</span>
@@ -534,36 +534,149 @@
 
 
 
-<div class="viewcode-block" id="get_model_output_limit">
-<a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_output_limit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_model_output_limit</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the max output token limit for a provider + model.</span>
+<span class="c1">#: Time-to-live for the in-memory live-endpoint model-limits cache, in</span>
+<span class="c1">#: seconds.  A model's ``max_model_len`` is a stable property of its</span>
+<span class="c1">#: deployment and rarely changes, so we cache it for the process lifetime;</span>
+<span class="c1">#: this TTL is just a safety valve against very long-running servers.</span>
+<span class="n">ENDPOINT_LIMITS_CACHE_TTL_SECONDS</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">60</span>
 
-<span class="sd">    Convenience wrapper around :func:`get_model_limits`.</span>
+<span class="c1">#: HTTP timeout for the live-endpoint ``/models`` probe.  Short: it is</span>
+<span class="c1">#: best-effort and must never stall a query.</span>
+<span class="n">ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS</span> <span class="o">=</span> <span class="mf">5.0</span>
 
-<span class="sd">    :param provider: Klea provider id.</span>
-<span class="sd">    :param model_name: Model identifier.</span>
-<span class="sd">    :returns: The model's ``limit.output``, or ``None`` if unknown.</span>
+<span class="c1">#: Cache of live-endpoint model limits, keyed by ``(base_url, model_name)``</span>
+<span class="c1">#: with an insertion timestamp so entries can expire after the TTL.</span>
+<span class="n">_ENDPOINT_LIMITS_CACHE</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">ModelLimits</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1">#: LangChain provider id -&gt; API key env var name, for providers whose id</span>
+<span class="c1">#: does not map to ``{PROVIDER}_API_KEY``.  ``mistralai`` reads</span>
+<span class="c1">#: ``MISTRAL_API_KEY`` in the langchain-mistralai SDK (not</span>
+<span class="c1">#: ``MISTRALAI_API_KEY``).  The alias exists so the probe authenticates</span>
+<span class="c1">#: with the same credential the model invoke would use.</span>
+<span class="n">_LANGCHAIN_PROVIDER_API_KEY_ENV</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"mistralai"</span><span class="p">:</span> <span class="s2">"MISTRAL_API_KEY"</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_langchain_provider_api_key_env</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the API key env var name a LangChain SDK reads for *provider*.</span>
+
+<span class="sd">    The provider id here is a LangChain ``_BUILTIN_PROVIDERS`` key, and</span>
+<span class="sd">    the whole point is to mirror how the LangChain SDKs resolve</span>
+<span class="sd">    credentials so the endpoint probe authenticates with the same key the</span>
+<span class="sd">    model invoke would use.  Follows the ``{PROVIDER}_API_KEY`` convention</span>
+<span class="sd">    unless an explicit alias is registered in</span>
+<span class="sd">    :data:`_LANGCHAIN_PROVIDER_API_KEY_ENV`.</span>
 <span class="sd">    """</span>
-    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span> <span class="k">if</span> <span class="n">limits</span> <span class="k">else</span> <span class="kc">None</span></div>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">_LANGCHAIN_PROVIDER_API_KEY_ENV</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">provider</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_API_KEY"</span>
+    <span class="p">)</span>
 
 
+<div class="viewcode-block" id="probe_endpoint_model_limits">
+<a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.probe_endpoint_model_limits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">probe_endpoint_model_limits</span><span class="p">(</span>
+    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelLimits</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return token limits for a model served by a live OpenAI-compatible endpoint.</span>
 
-<div class="viewcode-block" id="get_model_context_limit">
-<a class="viewcode-back" href="../../api/utils/models_catalog.html#klea_utils.models_catalog.get_model_context_limit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_model_context_limit</span><span class="p">(</span><span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Return the context window size for a provider + model.</span>
+<span class="sd">    models.dev's ``limit`` values are per-deployment configuration, not a</span>
+<span class="sd">    property of the model, and private/custom endpoints (e.g. an internal</span>
+<span class="sd">    vLLM server) are not in the catalog at all.  For those we ask the</span>
+<span class="sd">    endpoint directly: ``GET {base_url}/models`` returns each model's</span>
+<span class="sd">    ``max_model_len`` (the total context window, e.g. 262144 for a large</span>
+<span class="sd">    vLLM deployment), which is the authoritative per-deployment value.</span>
 
-<span class="sd">    Convenience wrapper around :func:`get_model_limits`.</span>
+<span class="sd">    Any provider with a known ``base_url`` is probed -- not just</span>
+<span class="sd">    ``openai`` custom endpoints.  Native providers (``mistral:``,</span>
+<span class="sd">    ``anthropic:``, ``deepseek:``, ...) normally carry no ``base_url`` in</span>
+<span class="sd">    the configurable dict (their SDK resolves a default endpoint</span>
+<span class="sd">    internally); callers resolve it via</span>
+<span class="sd">    ``klea_utils.llm.resolve_langchain_endpoint`` and pass it here.  The</span>
+<span class="sd">    probe is best-effort: providers whose ``/models`` response does not</span>
+<span class="sd">    advertise ``max_model_len`` (e.g. Anthropic's non-OpenAI-shaped</span>
+<span class="sd">    payload) simply return ``None`` and the catalog fallback is used.</span>
+<span class="sd">    Results are cached in memory keyed by ``(base_url, model_name)`` for</span>
+<span class="sd">    :data:`ENDPOINT_LIMITS_CACHE_TTL_SECONDS`; a user switching to a</span>
+<span class="sd">    different model simply misses and triggers a fresh probe for the new</span>
+<span class="sd">    key.</span>
 
-<span class="sd">    :param provider: Klea provider id.</span>
-<span class="sd">    :param model_name: Model identifier.</span>
-<span class="sd">    :returns: The model's ``limit.context``, or ``None`` if unknown.</span>
+<span class="sd">    Never raises and never blocks a query: any error, missing model, or</span>
+<span class="sd">    inapplicable input returns ``None``.</span>
+
+<span class="sd">    :param provider: Klea provider id (``openai`` for custom endpoints).</span>
+<span class="sd">    :param model_name: Model identifier as served by the endpoint.</span>
+<span class="sd">    :param base_url: Base URL of the OpenAI-compatible endpoint, or ``None``.</span>
+<span class="sd">    :param api_key: Optional bearer token for the endpoint.</span>
+<span class="sd">    :returns: ``ModelLimits`` with ``context`` set from ``max_model_len``,</span>
+<span class="sd">        or ``None`` when the endpoint does not expose it or is not usable.</span>
 <span class="sd">    """</span>
-    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="k">if</span> <span class="n">limits</span> <span class="k">else</span> <span class="kc">None</span></div>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">base_url</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
+    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">model_name</span><span class="p">)</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+    <span class="n">cached</span> <span class="o">=</span> <span class="n">_ENDPOINT_LIMITS_CACHE</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">now</span> <span class="o">-</span> <span class="n">cached</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">ENDPOINT_LIMITS_CACHE_TTL_SECONDS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cached</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">context</span> <span class="o">=</span> <span class="n">_fetch_endpoint_max_model_len</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">model_name</span><span class="p">,</span> <span class="n">provider</span><span class="p">,</span> <span class="n">api_key</span><span class="p">)</span>
+    <span class="n">limits</span> <span class="o">=</span> <span class="n">ModelLimits</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">)</span> <span class="k">if</span> <span class="n">context</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_ENDPOINT_LIMITS_CACHE</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">limits</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">limits</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fetch_endpoint_max_model_len</span><span class="p">(</span>
+    <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Fetch ``max_model_len`` for *model_name* from an OpenAI-compatible endpoint.</span>
+
+<span class="sd">    Best-effort: returns ``None`` on any network, parse, or auth error so</span>
+<span class="sd">    callers can fall back to the models.dev catalog or the built-in</span>
+<span class="sd">    default without failing the query.  Also returns ``None`` when the</span>
+<span class="sd">    endpoint's ``/models`` payload does not advertise ``max_model_len``</span>
+<span class="sd">    (not all providers expose it in this OpenAI-shaped schema).</span>
+
+<span class="sd">    When no explicit *api_key* is given, falls back to the standard</span>
+<span class="sd">    ``{PROVIDER}_API_KEY`` environment variable derived from *provider*</span>
+<span class="sd">    via :func:`_langchain_provider_api_key_env` (e.g. ``OPENAI_API_KEY``,</span>
+<span class="sd">    ``MISTRAL_API_KEY``), matching how the LangChain/OpenAI SDKs resolve</span>
+<span class="sd">    credentials for each provider.</span>
+<span class="sd">    """</span>
+    <span class="n">resolved_key</span> <span class="o">=</span> <span class="n">api_key</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">_langchain_provider_api_key_env</span><span class="p">(</span><span class="n">provider</span><span class="p">))</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Authorization"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Bearer </span><span class="si">{</span><span class="n">resolved_key</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span> <span class="k">if</span> <span class="n">resolved_key</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">base_url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"/models"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">url</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS</span><span class="p">,</span>
+            <span class="n">follow_redirects</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Failed to fetch model limits from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">entries</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entries</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected /models response shape from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">model_name</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
+            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"max_model_len"</span><span class="p">),</span> <span class="nb">int</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"max_model_len"</span><span class="p">]</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No max_model_len for </span><span class="si">{</span><span class="n">model_name</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>
 </pre></div>
         </article>
       </div>

@@ -331,6 +331,27 @@ environment variable (e.g. for offline mirrors or enterprise proxies).</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">ENDPOINT_LIMITS_CACHE_TTL_SECONDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">43200</span></span><a class="headerlink" href="#klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS" title="Link to this definition">¶</a></dt>
+<dd><p>Time-to-live for the in-memory live-endpoint model-limits cache, in
+seconds.  A model’s <code class="docutils literal notranslate"><span class="pre">max_model_len</span></code> is a stable property of its
+deployment and rarely changes, so we cache it for the process lifetime;
+this TTL is just a safety valve against very long-running servers.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.models_catalog.ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5.0</span></span><a class="headerlink" href="#klea_utils.models_catalog.ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS" title="Link to this definition">¶</a></dt>
+<dd><p>it is
+best-effort and must never stall a query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>HTTP timeout for the live-endpoint <code class="docutils literal notranslate"><span class="pre">/models</span></code> probe.  Short</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.models_catalog.FETCH_TIMEOUT_SECONDS">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">FETCH_TIMEOUT_SECONDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">15.0</span></span><a class="headerlink" href="#klea_utils.models_catalog.FETCH_TIMEOUT_SECONDS" title="Link to this definition">¶</a></dt>
 <dd><p>this is only hit on the
@@ -370,26 +391,8 @@ first use after the disk cache expires.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.models_catalog.get_model_context_limit">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">get_model_context_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/models_catalog.html#get_model_context_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.models_catalog.get_model_context_limit" title="Link to this definition">¶</a></dt>
-<dd><p>Return the context window size for a provider + model.</p>
-<p>Convenience wrapper around <a class="reference internal" href="#klea_utils.models_catalog.get_model_limits" title="klea_utils.models_catalog.get_model_limits"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_model_limits()</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>provider</strong> – Klea provider id.</p></li>
-<li><p><strong>model_name</strong> – Model identifier.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The model’s <code class="docutils literal notranslate"><span class="pre">limit.context</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if unknown.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.models_catalog.get_model_limits">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">get_model_limits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits" title="klea_utils.models_catalog.ModelLimits"><span class="pre">ModelLimits</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/models_catalog.html#get_model_limits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.models_catalog.get_model_limits" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="klea_utils.models_catalog.get_catalog_model_limits">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">get_catalog_model_limits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits" title="klea_utils.models_catalog.ModelLimits"><span class="pre">ModelLimits</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/models_catalog.html#get_catalog_model_limits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.models_catalog.get_catalog_model_limits" title="Link to this definition">¶</a></dt>
 <dd><p>Return the token limits for a provider + model, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 <p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when the provider has no catalog entry (local
 ollama, custom endpoints), the model is missing from the catalog, or
@@ -410,19 +413,42 @@ the catalog could not be fetched.  Callers should treat <code class="docutils li
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.models_catalog.get_model_output_limit">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">get_model_output_limit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/models_catalog.html#get_model_output_limit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.models_catalog.get_model_output_limit" title="Link to this definition">¶</a></dt>
-<dd><p>Return the max output token limit for a provider + model.</p>
-<p>Convenience wrapper around <a class="reference internal" href="#klea_utils.models_catalog.get_model_limits" title="klea_utils.models_catalog.get_model_limits"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_model_limits()</span></code></a>.</p>
+<dt class="sig sig-object py" id="klea_utils.models_catalog.probe_endpoint_model_limits">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.models_catalog.</span></span><span class="sig-name descname"><span class="pre">probe_endpoint_model_limits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">provider</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits" title="klea_utils.models_catalog.ModelLimits"><span class="pre">ModelLimits</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/models_catalog.html#probe_endpoint_model_limits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.models_catalog.probe_endpoint_model_limits" title="Link to this definition">¶</a></dt>
+<dd><p>Return token limits for a model served by a live OpenAI-compatible endpoint.</p>
+<p>models.dev’s <code class="docutils literal notranslate"><span class="pre">limit</span></code> values are per-deployment configuration, not a
+property of the model, and private/custom endpoints (e.g. an internal
+vLLM server) are not in the catalog at all.  For those we ask the
+endpoint directly: <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">{base_url}/models</span></code> returns each model’s
+<code class="docutils literal notranslate"><span class="pre">max_model_len</span></code> (the total context window, e.g. 262144 for a large
+vLLM deployment), which is the authoritative per-deployment value.</p>
+<p>Any provider with a known <code class="docutils literal notranslate"><span class="pre">base_url</span></code> is probed – not just
+<code class="docutils literal notranslate"><span class="pre">openai</span></code> custom endpoints.  Native providers (<code class="docutils literal notranslate"><span class="pre">mistral:</span></code>,
+<code class="docutils literal notranslate"><span class="pre">anthropic:</span></code>, <code class="docutils literal notranslate"><span class="pre">deepseek:</span></code>, …) normally carry no <code class="docutils literal notranslate"><span class="pre">base_url</span></code> in
+the configurable dict (their SDK resolves a default endpoint
+internally); callers resolve it via
+<code class="docutils literal notranslate"><span class="pre">klea_utils.llm.resolve_langchain_endpoint</span></code> and pass it here.  The
+probe is best-effort: providers whose <code class="docutils literal notranslate"><span class="pre">/models</span></code> response does not
+advertise <code class="docutils literal notranslate"><span class="pre">max_model_len</span></code> (e.g. Anthropic’s non-OpenAI-shaped
+payload) simply return <code class="docutils literal notranslate"><span class="pre">None</span></code> and the catalog fallback is used.
+Results are cached in memory keyed by <code class="docutils literal notranslate"><span class="pre">(base_url,</span> <span class="pre">model_name)</span></code> for
+<a class="reference internal" href="#klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS" title="klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS"><code class="xref py py-data docutils literal notranslate"><span class="pre">ENDPOINT_LIMITS_CACHE_TTL_SECONDS</span></code></a>; a user switching to a
+different model simply misses and triggers a fresh probe for the new
+key.</p>
+<p>Never raises and never blocks a query: any error, missing model, or
+inapplicable input returns <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>provider</strong> – Klea provider id.</p></li>
-<li><p><strong>model_name</strong> – Model identifier.</p></li>
+<li><p><strong>provider</strong> – Klea provider id (<code class="docutils literal notranslate"><span class="pre">openai</span></code> for custom endpoints).</p></li>
+<li><p><strong>model_name</strong> – Model identifier as served by the endpoint.</p></li>
+<li><p><strong>base_url</strong> – Base URL of the OpenAI-compatible endpoint, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>api_key</strong> – Optional bearer token for the endpoint.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The model’s <code class="docutils literal notranslate"><span class="pre">limit.output</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if unknown.</p>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">ModelLimits</span></code> with <code class="docutils literal notranslate"><span class="pre">context</span></code> set from <code class="docutils literal notranslate"><span class="pre">max_model_len</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> when the endpoint does not expose it or is not usable.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -487,6 +513,8 @@ the catalog could not be fetched.  Callers should treat <code class="docutils li
 <li><a class="reference internal" href="#klea_utils.models_catalog.DEFAULT_MODELS_DEV_URL"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MODELS_DEV_URL</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.models_catalog.DISK_CACHE_FILE"><code class="docutils literal notranslate"><span class="pre">DISK_CACHE_FILE</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.models_catalog.DISK_CACHE_TTL_SECONDS"><code class="docutils literal notranslate"><span class="pre">DISK_CACHE_TTL_SECONDS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS"><code class="docutils literal notranslate"><span class="pre">ENDPOINT_LIMITS_CACHE_TTL_SECONDS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.models_catalog.ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS"><code class="docutils literal notranslate"><span class="pre">ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.models_catalog.FETCH_TIMEOUT_SECONDS"><code class="docutils literal notranslate"><span class="pre">FETCH_TIMEOUT_SECONDS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits"><code class="docutils literal notranslate"><span class="pre">ModelLimits</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits.context"><code class="docutils literal notranslate"><span class="pre">ModelLimits.context</span></code></a></li>
@@ -494,9 +522,8 @@ the catalog could not be fetched.  Callers should treat <code class="docutils li
 <li><a class="reference internal" href="#klea_utils.models_catalog.ModelLimits.output"><code class="docutils literal notranslate"><span class="pre">ModelLimits.output</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#klea_utils.models_catalog.get_model_context_limit"><code class="docutils literal notranslate"><span class="pre">get_model_context_limit()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.models_catalog.get_model_limits"><code class="docutils literal notranslate"><span class="pre">get_model_limits()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.models_catalog.get_model_output_limit"><code class="docutils literal notranslate"><span class="pre">get_model_output_limit()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.models_catalog.get_catalog_model_limits"><code class="docutils literal notranslate"><span class="pre">get_catalog_model_limits()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.models_catalog.probe_endpoint_model_limits"><code class="docutils literal notranslate"><span class="pre">probe_endpoint_model_limits()</span></code></a></li>
 </ul>
 </li>
 </ul>

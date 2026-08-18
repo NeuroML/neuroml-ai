@@ -321,14 +321,17 @@
     <span class="n">add_memory_to_prompt</span><span class="p">,</span>
     <span class="n">classify_llm_invocation_error</span><span class="p">,</span>
     <span class="n">content_to_str</span><span class="p">,</span>
+    <span class="n">estimate_input_tokens</span><span class="p">,</span>
     <span class="n">get_provider_allowed_fields</span><span class="p">,</span>
     <span class="n">get_recent_messages</span><span class="p">,</span>
     <span class="n">get_token_limit_param</span><span class="p">,</span>
     <span class="n">is_output_truncated</span><span class="p">,</span>
     <span class="n">load_prompt</span><span class="p">,</span>
     <span class="n">parse_output_with_thought</span><span class="p">,</span>
+    <span class="n">resolve_langchain_endpoint</span><span class="p">,</span>
     <span class="n">resolve_output_token_limit</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..models_catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">probe_endpoint_model_limits</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.abstract</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractLLMNode</span>
 
 <span class="c1">#: Max times to retry an invoke that overflowed the context window, each</span>
@@ -336,8 +339,40 @@
 <span class="n">MAX_CONTEXT_OVERFLOW_RETRIES</span> <span class="o">=</span> <span class="mi">3</span>
 
 <span class="c1">#: Max times to retry an invoke whose output was truncated (``finish_reason</span>
-<span class="c1">#: == "length"``), each time growing the reserved output window.</span>
-<span class="n">MAX_TRUNCATION_RETRIES</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="c1">#: == "length"``), each time growing the reserved output window.  The</span>
+<span class="c1">#: budget covers the full climb from the smallest node window to the</span>
+<span class="c1">#: largest advertised context (262144) so heavy-thinking models are not</span>
+<span class="c1">#: cut short, while still bounding pathological repeated truncations.</span>
+<span class="n">MAX_TRUNCATION_RETRIES</span> <span class="o">=</span> <span class="mi">15</span>
+
+<span class="c1">#: Linear-phase step for truncation retries: the window grows by</span>
+<span class="c1">#: ``TRUNCATION_LINEAR_STEP`` while below ``TRUNCATION_LINEAR_CAP``.</span>
+<span class="c1">#: Covers the common case -- a model cut off a few hundred to a couple of</span>
+<span class="c1">#: thousand tokens short of finishing -- with small, predictable</span>
+<span class="c1">#: reservations.</span>
+<span class="n">TRUNCATION_LINEAR_STEP</span> <span class="o">=</span> <span class="mi">2048</span>
+
+<span class="c1">#: Ceiling for the linear phase; above it the window grows by</span>
+<span class="c1">#: :data:`TRUNCATION_PHASE2_STEP`.</span>
+<span class="n">TRUNCATION_LINEAR_CAP</span> <span class="o">=</span> <span class="mi">16384</span>
+
+<span class="c1">#: Large-step phase for truncation retries: once the linear phase is</span>
+<span class="c1">#: exhausted the window grows by this fixed step up to the output ceiling.</span>
+<span class="c1">#: Fixed-size steps (not exponential) keep reservations predictable for</span>
+<span class="c1">#: inference engines that allocate resources against ``max_tokens`` (e.g.</span>
+<span class="c1">#: vLLM KV-cache), avoiding the spikes of a doubling ladder.</span>
+<span class="n">TRUNCATION_PHASE2_STEP</span> <span class="o">=</span> <span class="mi">32768</span>
+
+<span class="c1">#: Output-window ceiling for truncation retries.  Reasoning-capable models</span>
+<span class="c1">#: can spend a large, unpredictable number of tokens thinking before</span>
+<span class="c1">#: producing a small final answer, so the grow ladder clamps at a generous</span>
+<span class="c1">#: ceiling (mirrors opencode's ``OUTPUT_TOKEN_MAX``).  This is the</span>
+<span class="c1">#: fallback when the model's context is unknown; for a custom endpoint</span>
+<span class="c1">#: that advertises a larger ``max_model_len``,</span>
+<span class="c1">#: :meth:`BaseLLMNode._jump_output_target` raises the ceiling to the</span>
+<span class="c1">#: endpoint's remaining context.  It is still clamped to the model's</span>
+<span class="c1">#: catalog output limit / total budget by ``resolve_output_token_limit``.</span>
+<span class="n">MAX_OUTPUT_TOKENS_CEILING</span> <span class="o">=</span> <span class="mi">32768</span>
 
 <span class="c1">#: Floor for the reserved output window when shrinking it on overflow.</span>
 <span class="n">MIN_OUTPUT_TOKENS</span> <span class="o">=</span> <span class="mi">64</span>
@@ -548,6 +583,11 @@
         <span class="c1"># provider, clamped to the model's catalog output limit and total</span>
         <span class="c1"># budget (input + output &lt;= context).  Must run before provider</span>
         <span class="c1"># field filtering so the translated provider token param survives.</span>
+        <span class="c1"># This is the normal (non-retry) path: use_endpoint stays False so</span>
+        <span class="c1"># we use the fast, offline models.dev value (the purpose here is a</span>
+        <span class="c1"># finite budget, mainly for the HuggingFace whole-window</span>
+        <span class="c1"># reservation).  The retry path in _update_output_window opts into</span>
+        <span class="c1"># the live endpoint for an accurate cap.</span>
         <span class="n">input_chars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_prompt</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">resolve_output_token_limit</span><span class="p">(</span>
             <span class="n">overrides</span><span class="p">,</span>
@@ -609,14 +649,25 @@
         <span class="k">return</span> <span class="n">output</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_output_window</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span><span class="p">,</span> <span class="n">direction</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"shrink"</span><span class="p">,</span> <span class="s2">"grow"</span><span class="p">]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span><span class="p">,</span>
+        <span class="n">direction</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"shrink"</span><span class="p">,</span> <span class="s2">"grow"</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Resize the reserved output window and re-apply catalog clamps.</span>
+<span class="w">        </span><span class="sd">"""Resize the reserved output window.</span>
 
 <span class="sd">        Updates ``config["configurable"]`` in place.  ``"shrink"`` halves</span>
-<span class="sd">        the window (context-overflow retry), ``"grow"`` doubles it</span>
-<span class="sd">        (truncation retry); both are re-clamped to the model's catalog</span>
-<span class="sd">        output limit and total budget via ``resolve_output_token_limit``.</span>
+<span class="sd">        the window (context-overflow retry); ``"grow"`` extends it</span>
+<span class="sd">        (truncation retry) in two bounded phases: a linear step-up</span>
+<span class="sd">        (:data:`TRUNCATION_LINEAR_STEP` while below</span>
+<span class="sd">        :data:`TRUNCATION_LINEAR_CAP`) for models cut off just short of</span>
+<span class="sd">        finishing, then fixed large steps (:data:`TRUNCATION_PHASE2_STEP`)</span>
+<span class="sd">        climbing toward the output ceiling (:meth:`_jump_output_target`).</span>
+<span class="sd">        No exponential doubling: inference engines allocate resources</span>
+<span class="sd">        against ``max_tokens``, so doubling spikes KV-cache usage,</span>
+<span class="sd">        overshoots the real need, and overpays hallucination loops.  Both</span>
+<span class="sd">        grow paths re-clamp to the model's catalog output limit and total</span>
+<span class="sd">        budget via ``resolve_output_token_limit`` (endpoint-first context</span>
+<span class="sd">        on these retries).</span>
 
 <span class="sd">        :param config: The per-invoke RunnableConfig to update in place.</span>
 <span class="sd">        :param direction: ``"shrink"`` or ``"grow"``.</span>
@@ -624,19 +675,47 @@
 <span class="sd">            already at a bound (no point retrying).</span>
 <span class="sd">        """</span>
         <span class="n">overrides</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"configurable"</span><span class="p">]</span>
+        <span class="c1"># Native providers (``mistral:``, ``anthropic:``, ``deepseek:``,</span>
+        <span class="c1"># ...) carry no ``base_url`` in the configurable dict -- the</span>
+        <span class="c1"># provider resolves its own default endpoint internally.  Resolve</span>
+        <span class="c1"># it by materialising the concrete model (already built on every</span>
+        <span class="c1"># invoke, no network) and reading its resolved endpoint attribute,</span>
+        <span class="c1"># so the endpoint-aware retry probes target the right server.</span>
+        <span class="c1"># Storing it back in *overrides* is safe: every provider that</span>
+        <span class="c1"># exposes one of the endpoint attributes aliases ``base_url``, so</span>
+        <span class="c1"># the retried invoke accepts it.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"base_url"</span><span class="p">):</span>
+            <span class="n">resolved_base_url</span> <span class="o">=</span> <span class="n">resolve_langchain_endpoint</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_llm_entry</span><span class="o">.</span><span class="n">instance</span><span class="p">,</span> <span class="n">config</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">resolved_base_url</span><span class="p">:</span>
+                <span class="n">overrides</span><span class="p">[</span><span class="s2">"base_url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">resolved_base_url</span>
         <span class="n">provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_provider"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"openai"</span>
         <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
         <span class="n">current</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token_param</span><span class="p">,</span> <span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s2">"shrink"</span><span class="p">:</span>
             <span class="n">target</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">MIN_OUTPUT_TOKENS</span><span class="p">,</span> <span class="n">current</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">phase</span> <span class="o">=</span> <span class="s2">"-"</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">target</span> <span class="o">=</span> <span class="n">current</span> <span class="o">*</span> <span class="mi">2</span>
+            <span class="c1"># Two-phase grow (see docstring).  Clamp to the output ceiling</span>
+            <span class="c1"># so the ladder never exceeds what the endpoint (or the fixed</span>
+            <span class="c1"># fallback) allows; the resolver below re-applies the catalog</span>
+            <span class="c1"># output / total-budget clamps.</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="o">&lt;</span> <span class="n">TRUNCATION_LINEAR_CAP</span><span class="p">:</span>
+                <span class="n">step</span> <span class="o">=</span> <span class="n">TRUNCATION_LINEAR_STEP</span>
+                <span class="n">phase</span> <span class="o">=</span> <span class="s2">"linear"</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">step</span> <span class="o">=</span> <span class="n">TRUNCATION_PHASE2_STEP</span>
+                <span class="n">phase</span> <span class="o">=</span> <span class="s2">"large-step"</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">current</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jump_output_target</span><span class="p">(</span><span class="n">overrides</span><span class="p">))</span>
 
         <span class="c1"># Set the provider token param directly (rather than the generic</span>
         <span class="c1"># key) so the resolver's "explicit value wins" precedence does not</span>
         <span class="c1"># pick up a stale explicit value; resolve then re-applies the</span>
-        <span class="c1"># catalog output / total-budget clamps to *target*.</span>
+        <span class="c1"># catalog output / total-budget clamps to *target*.  Shrink and</span>
+        <span class="c1"># grow are retries, so use the live endpoint for an accurate</span>
+        <span class="c1"># context cap (falling back to models.dev), unlike the normal path.</span>
         <span class="n">overrides</span><span class="p">[</span><span class="n">token_param</span><span class="p">]</span> <span class="o">=</span> <span class="n">target</span>
         <span class="n">last_prompt</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_last_prompt"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">input_chars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_prompt</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span> <span class="k">if</span> <span class="n">last_prompt</span> <span class="k">else</span> <span class="kc">None</span>
@@ -645,12 +724,55 @@
             <span class="n">provider</span><span class="o">=</span><span class="n">provider</span><span class="p">,</span>
             <span class="n">role</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_type</span><span class="p">,</span>
             <span class="n">input_chars</span><span class="o">=</span><span class="n">input_chars</span><span class="p">,</span>
+            <span class="n">use_endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">new_value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">overrides</span><span class="p">[</span><span class="n">token_param</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Output window </span><span class="si">{</span><span class="n">direction</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">current</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">new_value</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">provider</span><span class="w"> </span><span class="si">= }</span><span class="s2">)"</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"Output window </span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">): </span><span class="si">%d</span><span class="s2"> -&gt; </span><span class="si">%d</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span>
+            <span class="n">direction</span><span class="p">,</span>
+            <span class="n">phase</span><span class="p">,</span>
+            <span class="n">current</span><span class="p">,</span>
+            <span class="n">new_value</span><span class="p">,</span>
+            <span class="n">provider</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">new_value</span> <span class="o">!=</span> <span class="n">current</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_jump_output_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">overrides</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the output-window ceiling for truncation retries.</span>
+
+<span class="sd">        The ceiling is :data:`MAX_OUTPUT_TOKENS_CEILING` by default, but</span>
+<span class="sd">        for an OpenAI-compatible custom endpoint that advertises a larger</span>
+<span class="sd">        ``max_model_len`` we raise it to the endpoint's remaining context</span>
+<span class="sd">        (``max_model_len - estimated input``) so a long reasoning trace is</span>
+<span class="sd">        not capped by the fixed fallback.  The grow ladder in</span>
+<span class="sd">        :meth:`_update_output_window` clamps to this ceiling; the live</span>
+<span class="sd">        endpoint is trusted as the source of truth for the retry ceiling,</span>
+<span class="sd">        so no models.dev ``output`` clamp is applied below it -- the</span>
+<span class="sd">        resolver re-applies that clamp to the *target*, not the ceiling.</span>
+
+<span class="sd">        :param overrides: The merged ``configurable`` dict.</span>
+<span class="sd">        :returns: The ceiling for the grow ladder.</span>
+<span class="sd">        """</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">MAX_OUTPUT_TOKENS_CEILING</span>
+        <span class="n">provider</span> <span class="o">=</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model_provider"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"openai"</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">probe_endpoint_model_limits</span><span class="p">(</span>
+            <span class="n">provider</span><span class="p">,</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"base_url"</span><span class="p">),</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"api_key"</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span><span class="p">:</span>
+            <span class="n">last_prompt</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_last_prompt"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">input_chars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">last_prompt</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span> <span class="k">if</span> <span class="n">last_prompt</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">input_chars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">headroom</span> <span class="o">=</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="o">-</span> <span class="n">estimate_input_tokens</span><span class="p">(</span><span class="n">input_chars</span><span class="p">)</span>
+                <span class="n">target</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">headroom</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Output ceiling </span><span class="si">{</span><span class="n">target</span><span class="w"> </span><span class="si">= }</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"(endpoint_context = </span><span class="si">{</span><span class="n">limits</span><span class="o">.</span><span class="n">context</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">limits</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">provider</span><span class="w"> </span><span class="si">= }</span><span class="s2">)"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">target</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_invoke_with_retries</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -666,9 +788,14 @@
 <span class="sd">          the reserved output exceeds the window) retry up to</span>
 <span class="sd">          :data:`MAX_CONTEXT_OVERFLOW_RETRIES` times, shrinking the</span>
 <span class="sd">          output window each time.</span>
-<span class="sd">        * Successful calls that were truncated (``finish_reason ==</span>
-<span class="sd">          "length"``) retry up to :data:`MAX_TRUNCATION_RETRIES` times,</span>
-<span class="sd">          growing the output window each time.</span>
+<span class="sd">        * Truncation retries by growing the output window in two bounded</span>
+<span class="sd">          phases -- a linear step-up, then fixed large steps up to the</span>
+<span class="sd">          output ceiling (see :meth:`_update_output_window`) -- capped at</span>
+<span class="sd">          :data:`MAX_TRUNCATION_RETRIES` attempts.  Truncation is detected</span>
+<span class="sd">          two ways: a successful call that was cut off (``finish_reason ==</span>
+<span class="sd">          "length"``), or a raised ``length_truncation`` exception (some</span>
+<span class="sd">          SDKs, e.g. the OpenAI streaming / structured-output path, raise</span>
+<span class="sd">          instead of returning a truncated message).</span>
 
 <span class="sd">        All other failures (rate limits, auth, model-not-found, ...) are</span>
 <span class="sd">        re-raised immediately.  Retrying stops early if resizing the</span>
@@ -686,6 +813,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">output</span> <span class="o">=</span> <span class="k">await</span> <span class="n">invoke</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">exc</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">category</span> <span class="o">=</span> <span class="n">classify_llm_invocation_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
                 <span class="k">if</span> <span class="p">(</span>
                     <span class="n">category</span> <span class="ow">is</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">CONTEXT_OVERFLOW</span>
@@ -703,26 +831,61 @@
                         <span class="n">MAX_CONTEXT_OVERFLOW_RETRIES</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">category</span> <span class="ow">is</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">LENGTH_TRUNCATION</span><span class="p">:</span>
+                    <span class="n">grow</span><span class="p">,</span> <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_next_truncation_retry</span><span class="p">(</span>
+                        <span class="n">config</span><span class="p">,</span> <span class="n">truncation_retries</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">grow</span><span class="p">:</span>
+                        <span class="n">truncation_retries</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="k">raise</span>
                 <span class="k">raise</span>
 
-            <span class="k">if</span> <span class="p">(</span>
-                <span class="n">is_output_truncated</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-                <span class="ow">and</span> <span class="n">truncation_retries</span> <span class="o">&lt;</span> <span class="n">MAX_TRUNCATION_RETRIES</span>
-            <span class="p">):</span>
-                <span class="n">truncation_retries</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_output_window</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"grow"</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="s2">"Output truncated but output window cannot grow further"</span>
-                    <span class="p">)</span>
-                    <span class="k">return</span> <span class="n">output</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">"Output truncated, retrying with larger output window (</span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">)"</span><span class="p">,</span>
-                    <span class="n">truncation_retries</span><span class="p">,</span>
-                    <span class="n">MAX_TRUNCATION_RETRIES</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">is_output_truncated</span><span class="p">(</span><span class="n">output</span><span class="p">):</span>
+                <span class="n">grow</span><span class="p">,</span> <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_next_truncation_retry</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">truncation_retries</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">grow</span><span class="p">:</span>
+                    <span class="n">truncation_retries</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">return</span> <span class="n">output</span>
 
             <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_next_truncation_retry</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span><span class="p">,</span> <span class="n">truncation_retries</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return whether to retry a truncated invoke, and the log message.</span>
+
+<span class="sd">        Grows the reserved output window on each truncation -- linear</span>
+<span class="sd">        steps while below :data:`TRUNCATION_LINEAR_CAP`, then</span>
+<span class="sd">        :data:`TRUNCATION_PHASE2_STEP` steps up to the output ceiling</span>
+<span class="sd">        (:meth:`_jump_output_target`) -- capped at</span>
+<span class="sd">        :data:`MAX_TRUNCATION_RETRIES` attempts.  Stops retrying once the</span>
+<span class="sd">        window cannot grow further (already at the ceiling) or the retry</span>
+<span class="sd">        budget is spent.</span>
+
+<span class="sd">        :param config: The per-invoke RunnableConfig to update in place.</span>
+<span class="sd">        :param truncation_retries: Number of truncation retries so far.</span>
+<span class="sd">        :returns: ``(grow, message)``; ``grow`` is False when the window</span>
+<span class="sd">            cannot grow further or the budget is exhausted.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">truncation_retries</span> <span class="o">&gt;=</span> <span class="n">MAX_TRUNCATION_RETRIES</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Output truncated but truncation retry budget exhausted"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_output_window</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"grow"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="kc">True</span><span class="p">,</span>
+                <span class="p">(</span>
+                    <span class="s2">"Output truncated, retrying with larger output window "</span>
+                    <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">truncation_retries</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">MAX_TRUNCATION_RETRIES</span><span class="si">}</span><span class="s2">)"</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Output truncated but output window cannot grow further"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">""</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_process_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="n">AIMessage</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Common output processing with error handling.</span>

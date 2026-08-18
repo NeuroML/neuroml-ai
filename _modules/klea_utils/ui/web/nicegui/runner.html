@@ -298,7 +298,6 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 
@@ -313,6 +312,7 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_api_is_ready</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_model_name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.ui.linkify</span><span class="w"> </span><span class="kn">import</span> <span class="n">linkify_md</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.client</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">clear_model_override</span><span class="p">,</span>
@@ -483,22 +483,6 @@
     <span class="c1"># switch the whole page session to a fresh identity after a delete.</span>
     <span class="n">_expanded</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
-    <span class="c1"># ------------------------------------------------------------------</span>
-    <span class="c1"># Linkify helper  ---  convert bare URLs in markdown source to</span>
-    <span class="c1"># clickable [url](url) so markdown2 renders them as &lt;a&gt; tags.</span>
-    <span class="c1"># The negative lookbehind avoids re-wrapping URLs already inside</span>
-    <span class="c1"># markdown link syntax, e.g. [text](url).</span>
-    <span class="c1"># ------------------------------------------------------------------</span>
-    <span class="n">_BARE_URL_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(\[[^\]]*\]\([^)]*\))|(?&lt;!\()(https?://[^\s&lt;)]+)"</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_linkify_md</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">def</span><span class="w"> </span><span class="nf">_replacer</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">Match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
-                <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">](</span><span class="si">{</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
-
-        <span class="k">return</span> <span class="n">_BARE_URL_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">_replacer</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">_render_chat_area</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Rebuild the scroll-area content (welcome or messages).</span>
 
@@ -531,7 +515,7 @@
                 <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">stamp</span><span class="p">,</span> <span class="n">is_user</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">msgs</span><span class="p">):</span>
                     <span class="n">collapsed</span> <span class="o">=</span> <span class="n">idx</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_expanded</span>
                     <span class="n">ChatBubble</span><span class="p">(</span>
-                        <span class="n">text</span><span class="o">=</span><span class="n">_linkify_md</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+                        <span class="n">text</span><span class="o">=</span><span class="n">linkify_md</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
                         <span class="n">stamp</span><span class="o">=</span><span class="n">stamp</span><span class="p">,</span>
                         <span class="n">is_user</span><span class="o">=</span><span class="n">is_user</span><span class="p">,</span>
                         <span class="n">collapsed</span><span class="o">=</span><span class="n">collapsed</span><span class="p">,</span>
@@ -1196,7 +1180,7 @@
                         <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"heading"</span><span class="p">,</span> <span class="n">node_label</span><span class="p">))</span>
                     <span class="n">display</span> <span class="o">=</span> <span class="n">section</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"display"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">display</span><span class="p">:</span>
-                        <span class="n">ui</span><span class="o">.</span><span class="n">markdown</span><span class="p">(</span><span class="n">_linkify_md</span><span class="p">(</span><span class="n">display</span><span class="p">))</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-xs w-full"</span><span class="p">)</span>
+                        <span class="n">ui</span><span class="o">.</span><span class="n">markdown</span><span class="p">(</span><span class="n">linkify_md</span><span class="p">(</span><span class="n">display</span><span class="p">))</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-xs w-full"</span><span class="p">)</span>
                     <span class="n">summary</span> <span class="o">=</span> <span class="n">section</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"summary"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">summary</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">display</span><span class="p">:</span>
                         <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-xs text-grey-6 mb-1 w-full"</span><span class="p">)</span>

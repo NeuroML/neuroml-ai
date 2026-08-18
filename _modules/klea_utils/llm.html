@@ -296,6 +296,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
@@ -310,7 +311,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMInvocationErrorCategory</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.models_catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model_limits</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models_catalog</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_catalog_model_limits</span><span class="p">,</span> <span class="n">probe_endpoint_model_limits</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask_sensitive</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -682,20 +683,32 @@
 <span class="n">_TOKEN_PARAMS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"max_tokens"</span><span class="p">,</span> <span class="s2">"max_new_tokens"</span><span class="p">,</span> <span class="s2">"num_predict"</span><span class="p">)</span>
 
 
+<span class="c1">#: Safety factor applied on top of the char-based token estimate so the</span>
+<span class="c1">#: reserved output window keeps headroom for tokenizer variance: the</span>
+<span class="c1">#: ``~4 chars/token`` rule can undercount the real token count (e.g. 9736</span>
+<span class="c1">#: chars estimate 2434 tokens while the server tokenizes 2435), which</span>
+<span class="c1">#: pushes input + output one token over the model's context window and</span>
+<span class="c1">#: fails the request.</span>
+<span class="n">INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR</span> <span class="o">=</span> <span class="mf">1.05</span>
+
+
 <div class="viewcode-block" id="estimate_input_tokens">
 <a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.estimate_input_tokens">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">estimate_input_tokens</span><span class="p">(</span><span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Rough token estimate for a prompt's character count.</span>
+<span class="w">    </span><span class="sd">"""Conservative token estimate for a prompt's character count.</span>
 
-<span class="sd">    Used only to keep the reserved output window within a model's total</span>
-<span class="sd">    budget (input + output &lt;= context).  ~4 characters per token is a</span>
-<span class="sd">    reasonable average for mixed English/code text; an exact count would</span>
-<span class="sd">    require provider-specific tokenizers.</span>
+<span class="sd">    Used to keep the reserved output window within a model's total budget</span>
+<span class="sd">    (input + output &lt;= context).  ~4 characters per token is a reasonable</span>
+<span class="sd">    average for mixed English/code text; an exact count would require</span>
+<span class="sd">    provider-specific tokenizers.  The estimate is deliberately inflated</span>
+<span class="sd">    by :data:`INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR` (rounded up) so a</span>
+<span class="sd">    tokenizer that counts more tokens than the average never pushes the</span>
+<span class="sd">    request over the context window.</span>
 
 <span class="sd">    :param input_chars: Number of characters in the prompt.</span>
-<span class="sd">    :returns: Estimated token count.</span>
+<span class="sd">    :returns: Conservative estimated token count.</span>
 <span class="sd">    """</span>
-    <span class="k">return</span> <span class="n">input_chars</span> <span class="o">//</span> <span class="mi">4</span></div>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">input_chars</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR</span><span class="p">)</span></div>
 
 
 
@@ -706,6 +719,8 @@
     <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">role</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">input_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">use_endpoint</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Ensure a bounded max-output token param is set in *overrides*.</span>
 
@@ -728,12 +743,29 @@
 <span class="sd">    given, to the remaining budget (``context - estimated input tokens``)</span>
 <span class="sd">    so HuggingFace's total-budget check is never exceeded.</span>
 
+<span class="sd">    The *context* source depends on *use_endpoint*: for endpoints with a</span>
+<span class="sd">    known ``base_url`` (custom OpenAI-compatible endpoints, or a native</span>
+<span class="sd">    provider endpoint resolved via :func:`resolve_langchain_endpoint`),</span>
+<span class="sd">    ``max_model_len`` from the live ``/models`` probe is authoritative</span>
+<span class="sd">    (models.dev's values are per-deployment and may under-report).  The</span>
+<span class="sd">    normal (non-retry) path passes ``use_endpoint=False`` so it stays on</span>
+<span class="sd">    the fast, offline models.dev value -- its purpose is only to produce a</span>
+<span class="sd">    finite budget (mainly for the HuggingFace whole-window reservation),</span>
+<span class="sd">    not an exact cap.  The retry path passes ``use_endpoint=True`` to</span>
+<span class="sd">    clamp against the real server context, falling back to models.dev when</span>
+<span class="sd">    the endpoint probe fails.  The ``output`` clamp always uses models.dev</span>
+<span class="sd">    (the endpoint exposes no separate output cap).</span>
+
 <span class="sd">    :param overrides: The merged ``configurable`` dict to update in place.</span>
 <span class="sd">    :param provider: Klea provider id (``huggingface``, ``ollama``, ...).</span>
 <span class="sd">    :param role: Model role (e.g. ``"chat"``), used for the built-in</span>
 <span class="sd">        per-role fallback.</span>
 <span class="sd">    :param input_chars: Character count of the prompt, to bound the output</span>
 <span class="sd">        within the total budget.</span>
+<span class="sd">    :param use_endpoint: When True, prefer the live endpoint's</span>
+<span class="sd">        ``max_model_len`` as the context source, falling back to models.dev.</span>
+<span class="sd">        When False (default), use models.dev only and never query the</span>
+<span class="sd">        endpoint.</span>
 <span class="sd">    """</span>
     <span class="n">token_param</span> <span class="o">=</span> <span class="n">get_token_limit_param</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
 
@@ -750,8 +782,24 @@
         <span class="n">value</span> <span class="o">=</span> <span class="n">_ROLE_MAX_OUTPUT_TOKENS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">role</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="n">DEFAULT_MAX_OUTPUT_TOKENS</span><span class="p">)</span>
     <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
-    <span class="c1"># Clamp to the model's catalog output limit and total budget, if known.</span>
-    <span class="n">limits</span> <span class="o">=</span> <span class="n">get_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="c1"># Clamp to the model's output limit and total budget, if known.</span>
+    <span class="c1"># models.dev's limits are per-deployment config and may under-report a</span>
+    <span class="c1"># specific server's real context window, so on the retry path</span>
+    <span class="c1"># (use_endpoint=True) we prefer the live endpoint's max_model_len and</span>
+    <span class="c1"># fall back to models.dev.  The normal path (use_endpoint=False) uses</span>
+    <span class="c1"># models.dev only -- no endpoint query -- since its purpose is just to</span>
+    <span class="c1"># produce a finite budget (mainly the HuggingFace whole-window</span>
+    <span class="c1"># reservation), not an exact cap.</span>
+    <span class="n">limits</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">use_endpoint</span> <span class="ow">and</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"base_url"</span><span class="p">):</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">probe_endpoint_model_limits</span><span class="p">(</span>
+            <span class="n">provider</span><span class="p">,</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"base_url"</span><span class="p">),</span>
+            <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"api_key"</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">limits</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">limits</span> <span class="o">=</span> <span class="n">get_catalog_model_limits</span><span class="p">(</span><span class="n">provider</span><span class="p">,</span> <span class="n">overrides</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"model"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">limits</span> <span class="ow">and</span> <span class="n">limits</span><span class="o">.</span><span class="n">context</span> <span class="ow">and</span> <span class="n">input_chars</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -919,6 +967,18 @@
     <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"requested token count"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
 <span class="p">]</span>
 
+<span class="c1">#: Tolerant patterns for "the model stopped because it hit the output</span>
+<span class="c1">#: token cap" errors.  Providers report this either as a returned message</span>
+<span class="c1">#: with ``finish_reason == "length"`` (handled by :func:`is_output_truncated`)</span>
+<span class="c1">#: or as a raised exception (e.g. the OpenAI SDK's</span>
+<span class="c1">#: ``LengthFinishReasonError`` on the streaming/structured-output path).</span>
+<span class="n">_LENGTH_TRUNCATION_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"length limit was reached"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"finish[_ -]?reason[^\n]*length"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"length[^\n]*finish[_ -]?reason"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"output truncated"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
+<span class="p">]</span>
+
 <span class="c1">#: Tolerant patterns for rate-limit / quota errors.</span>
 <span class="n">_RATE_LIMIT_PATTERNS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">Pattern</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
     <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\b429\b"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">),</span>
@@ -1012,6 +1072,8 @@
 
     <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_CONTEXT_OVERFLOW_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">CONTEXT_OVERFLOW</span>
+    <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_LENGTH_TRUNCATION_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">LENGTH_TRUNCATION</span>
     <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_RATE_LIMIT_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">LLMInvocationErrorCategory</span><span class="o">.</span><span class="n">RATE_LIMITED</span>
     <span class="k">if</span> <span class="n">_matches_any</span><span class="p">(</span><span class="n">_AUTH_PATTERNS</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
@@ -1103,6 +1165,64 @@
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Configurable chat model created (provider/model set per invoke)"</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">model_var</span></div>
+
+
+
+<span class="c1">#: Base URL attribute names on the concrete chat model classes returned by</span>
+<span class="c1">#: ``_ConfigurableModel._model()``.  Each provider exposes its resolved</span>
+<span class="c1">#: endpoint under a different attribute (e.g. ``ChatOpenAI.openai_api_base``,</span>
+<span class="c1">#: ``ChatMistralAI.endpoint``, ``ChatAnthropic.anthropic_api_url``), so we</span>
+<span class="c1">#: cycle through the list and take the first one set rather than keeping a</span>
+<span class="c1">#: per-provider map.  ``ChatDeepSeek`` redefines the inherited field as</span>
+<span class="c1">#: ``api_base``, so its ``openai_api_base`` stays ``None`` and the cycle</span>
+<span class="c1">#: picks up ``api_base``.</span>
+<span class="n">_LANGCHAIN_BASE_URL_ATTRS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"openai_api_base"</span><span class="p">,</span>
+    <span class="s2">"api_base"</span><span class="p">,</span>
+    <span class="s2">"endpoint"</span><span class="p">,</span>
+    <span class="s2">"anthropic_api_url"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="resolve_langchain_endpoint">
+<a class="viewcode-back" href="../../api/utils/llm.html#klea_utils.llm.resolve_langchain_endpoint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_langchain_endpoint</span><span class="p">(</span><span class="n">instance</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Resolve the base URL/endpoint of a configurable chat model.</span>
+
+<span class="sd">    ``create_configurable_model`` returns a generic ``_ConfigurableModel``</span>
+<span class="sd">    whose concrete provider instance is only built at invoke time (via its</span>
+<span class="sd">    private ``_model(config)`` method, which is already called on every</span>
+<span class="sd">    ``ainvoke``).  Native providers (``mistral:``, ``anthropic:``,</span>
+<span class="sd">    ``deepseek:``, ...) do not carry a ``base_url`` in the configurable</span>
+<span class="sd">    dict -- the provider resolves its own default endpoint internally --</span>
+<span class="sd">    so to probe such an endpoint we materialise the concrete instance and</span>
+<span class="sd">    read its resolved endpoint attribute.</span>
+
+<span class="sd">    Cheap by construction: ``_model(config)`` only parses the model string</span>
+<span class="sd">    and constructs the provider object (module import is cached per</span>
+<span class="sd">    provider); no network or API calls happen at construction.</span>
+
+<span class="sd">    :param instance: The configurable model (``_ConfigurableModel``) whose</span>
+<span class="sd">        concrete instance to materialise.</span>
+<span class="sd">    :param config: Per-invoke RunnableConfig carrying the merged</span>
+<span class="sd">        ``configurable`` dict.</span>
+<span class="sd">    :returns: The resolved base URL, or ``None`` when the concrete model</span>
+<span class="sd">        exposes no known endpoint attribute (e.g. plain ``openai:`` models,</span>
+<span class="sd">        whose default URL lives inside the OpenAI SDK client, not on the</span>
+<span class="sd">        model object).</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed to materialise concrete model for endpoint: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">_LANGCHAIN_BASE_URL_ATTRS</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Resolved endpoint for model via </span><span class="si">{</span><span class="n">attr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">value</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"No base URL attribute found on concrete model instance"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
 
 
 

@@ -482,16 +482,70 @@ time shrinking the reserved output window to free headroom.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.nodes.base.MAX_OUTPUT_TOKENS_CEILING">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">MAX_OUTPUT_TOKENS_CEILING</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">32768</span></span><a class="headerlink" href="#klea_utils.nodes.base.MAX_OUTPUT_TOKENS_CEILING" title="Link to this definition">¶</a></dt>
+<dd><p>Output-window ceiling for truncation retries.  Reasoning-capable models
+can spend a large, unpredictable number of tokens thinking before
+producing a small final answer, so the grow ladder clamps at a generous
+ceiling (mirrors opencode’s <code class="docutils literal notranslate"><span class="pre">OUTPUT_TOKEN_MAX</span></code>).  This is the
+fallback when the model’s context is unknown; for a custom endpoint
+that advertises a larger <code class="docutils literal notranslate"><span class="pre">max_model_len</span></code>,
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">BaseLLMNode._jump_output_target()</span></code> raises the ceiling to the
+endpoint’s remaining context.  It is still clamped to the model’s
+catalog output limit / total budget by <code class="docutils literal notranslate"><span class="pre">resolve_output_token_limit</span></code>.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.nodes.base.MAX_TRUNCATION_RETRIES">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">MAX_TRUNCATION_RETRIES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#klea_utils.nodes.base.MAX_TRUNCATION_RETRIES" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">MAX_TRUNCATION_RETRIES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">15</span></span><a class="headerlink" href="#klea_utils.nodes.base.MAX_TRUNCATION_RETRIES" title="Link to this definition">¶</a></dt>
 <dd><p>Max times to retry an invoke whose output was truncated (<code class="docutils literal notranslate"><span class="pre">finish_reason</span>
-<span class="pre">==</span> <span class="pre">&quot;length&quot;</span></code>), each time growing the reserved output window.</p>
+<span class="pre">==</span> <span class="pre">&quot;length&quot;</span></code>), each time growing the reserved output window.  The
+budget covers the full climb from the smallest node window to the
+largest advertised context (262144) so heavy-thinking models are not
+cut short, while still bounding pathological repeated truncations.</p>
 </dd></dl>
 
 <dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.nodes.base.MIN_OUTPUT_TOKENS">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">MIN_OUTPUT_TOKENS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">64</span></span><a class="headerlink" href="#klea_utils.nodes.base.MIN_OUTPUT_TOKENS" title="Link to this definition">¶</a></dt>
 <dd><p>Floor for the reserved output window when shrinking it on overflow.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.nodes.base.TRUNCATION_LINEAR_CAP">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">TRUNCATION_LINEAR_CAP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">16384</span></span><a class="headerlink" href="#klea_utils.nodes.base.TRUNCATION_LINEAR_CAP" title="Link to this definition">¶</a></dt>
+<dd><p>Ceiling for the linear phase; above it the window grows by
+<a class="reference internal" href="#klea_utils.nodes.base.TRUNCATION_PHASE2_STEP" title="klea_utils.nodes.base.TRUNCATION_PHASE2_STEP"><code class="xref py py-data docutils literal notranslate"><span class="pre">TRUNCATION_PHASE2_STEP</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.nodes.base.TRUNCATION_LINEAR_STEP">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">TRUNCATION_LINEAR_STEP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2048</span></span><a class="headerlink" href="#klea_utils.nodes.base.TRUNCATION_LINEAR_STEP" title="Link to this definition">¶</a></dt>
+<dd><p>the window grows by
+<code class="docutils literal notranslate"><span class="pre">TRUNCATION_LINEAR_STEP</span></code> while below <code class="docutils literal notranslate"><span class="pre">TRUNCATION_LINEAR_CAP</span></code>.
+Covers the common case – a model cut off a few hundred to a couple of
+thousand tokens short of finishing – with small, predictable
+reservations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Linear-phase step for truncation retries</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.nodes.base.TRUNCATION_PHASE2_STEP">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.nodes.base.</span></span><span class="sig-name descname"><span class="pre">TRUNCATION_PHASE2_STEP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">32768</span></span><a class="headerlink" href="#klea_utils.nodes.base.TRUNCATION_PHASE2_STEP" title="Link to this definition">¶</a></dt>
+<dd><p>once the linear phase is
+exhausted the window grows by this fixed step up to the output ceiling.
+Fixed-size steps (not exponential) keep reservations predictable for
+inference engines that allocate resources against <code class="docutils literal notranslate"><span class="pre">max_tokens</span></code> (e.g.
+vLLM KV-cache), avoiding the spikes of a doubling ladder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Large-step phase for truncation retries</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -507,7 +561,7 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <dd><p>Bases: <a class="reference internal" href="#klea_utils.nodes.base.BaseLLMNode" title="klea_utils.nodes.base.BaseLLMNode"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseLLMNode</span></code></a></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.nodes.guard.GuardNode.model_defaults">
-<span class="sig-name descname"><span class="pre">model_defaults</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'max_output_tokens':</span> <span class="pre">1024,</span> <span class="pre">'temperature':</span> <span class="pre">0.3}</span></span><a class="headerlink" href="#klea_utils.nodes.guard.GuardNode.model_defaults" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">model_defaults</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'max_output_tokens':</span> <span class="pre">2048,</span> <span class="pre">'temperature':</span> <span class="pre">0.3}</span></span><a class="headerlink" href="#klea_utils.nodes.guard.GuardNode.model_defaults" title="Link to this definition">¶</a></dt>
 <dd><p>Safety guard node that checks if user queries are safe to process.</p>
 <p>Evaluates whether a query contains potentially harmful content
 and returns a routing decision (“safe” or “unsafe”).</p>
@@ -746,8 +800,12 @@ this node uses.  Must match a key set up by the orchestrator in
 </ul>
 </li>
 <li><a class="reference internal" href="#klea_utils.nodes.base.MAX_CONTEXT_OVERFLOW_RETRIES"><code class="docutils literal notranslate"><span class="pre">MAX_CONTEXT_OVERFLOW_RETRIES</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.nodes.base.MAX_OUTPUT_TOKENS_CEILING"><code class="docutils literal notranslate"><span class="pre">MAX_OUTPUT_TOKENS_CEILING</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.nodes.base.MAX_TRUNCATION_RETRIES"><code class="docutils literal notranslate"><span class="pre">MAX_TRUNCATION_RETRIES</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.nodes.base.MIN_OUTPUT_TOKENS"><code class="docutils literal notranslate"><span class="pre">MIN_OUTPUT_TOKENS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.nodes.base.TRUNCATION_LINEAR_CAP"><code class="docutils literal notranslate"><span class="pre">TRUNCATION_LINEAR_CAP</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.nodes.base.TRUNCATION_LINEAR_STEP"><code class="docutils literal notranslate"><span class="pre">TRUNCATION_LINEAR_STEP</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.nodes.base.TRUNCATION_PHASE2_STEP"><code class="docutils literal notranslate"><span class="pre">TRUNCATION_PHASE2_STEP</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-klea_utils.nodes.guard">Guard / safety nodes</a><ul>

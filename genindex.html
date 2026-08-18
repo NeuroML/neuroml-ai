@@ -470,6 +470,10 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="glossary.html#term-Embedding"><strong>Embedding</strong></a>
 </li>
+        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.ENDPOINT_LIMITS_CACHE_TTL_SECONDS">ENDPOINT_LIMITS_CACHE_TTL_SECONDS (in module klea_utils.models_catalog)</a>
+</li>
+        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS">ENDPOINT_LIMITS_FETCH_TIMEOUT_SECONDS (in module klea_utils.models_catalog)</a>
+</li>
         <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.state.ensure_chat">ensure_chat() (in module klea_utils.ui.web.nicegui.state)</a>
 </li>
         <li><a href="api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.env_class">env_class (klea_utils.graph.base.BaseLangGraph attribute)</a>
@@ -554,6 +558,8 @@
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/paths.html#klea_utils.paths.get_cache_dir">get_cache_dir() (in module klea_utils.paths)</a>
 </li>
+        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.get_catalog_model_limits">get_catalog_model_limits() (in module klea_utils.models_catalog)</a>
+</li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_chat">get_chat() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
         <li><a href="api/utils/ui-nicegui.html#klea_utils.ui.web.nicegui.state.get_chats_sorted">get_chats_sorted() (in module klea_utils.ui.web.nicegui.state)</a>
@@ -566,14 +572,8 @@
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_messages">get_messages() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
-        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.get_model_context_limit">get_model_context_limit() (in module klea_utils.models_catalog)</a>
-</li>
-        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.get_model_limits">get_model_limits() (in module klea_utils.models_catalog)</a>
-</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.get_model_output_limit">get_model_output_limit() (in module klea_utils.models_catalog)</a>
-</li>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.get_overrides">get_overrides() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.get_provider_allowed_fields">get_provider_allowed_fields() (in module klea_utils.llm)</a>
@@ -618,6 +618,8 @@
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/llm.html#klea_utils.llm.INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR">INPUT_TOKEN_ESTIMATE_SAFETY_FACTOR (in module klea_utils.llm)</a>
+</li>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.instantiate_vector_store">instantiate_vector_store() (in module klea_utils.stores.utils)</a>
 </li>
         <li><a href="api/utils/api.html#klea_utils.api.server.is_loopback_host">is_loopback_host() (in module klea_utils.api.server)</a>
@@ -982,6 +984,8 @@
 </li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.base.MAX_CONTEXT_OVERFLOW_RETRIES">MAX_CONTEXT_OVERFLOW_RETRIES (in module klea_utils.nodes.base)</a>
 </li>
+        <li><a href="api/utils/nodes.html#klea_utils.nodes.base.MAX_OUTPUT_TOKENS_CEILING">MAX_OUTPUT_TOKENS_CEILING (in module klea_utils.nodes.base)</a>
+</li>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.base.MAX_TRUNCATION_RETRIES">MAX_TRUNCATION_RETRIES (in module klea_utils.nodes.base)</a>
 </li>
         <li><a href="glossary.html#term-MCP-server"><strong>MCP server</strong></a>
@@ -1189,6 +1193,8 @@
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig">PerDomainConfig (class in klea_utils.stores.config)</a>
 </li>
+        <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.probe_endpoint_model_limits">probe_endpoint_model_limits() (in module klea_utils.models_catalog)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.base.BaseLLMNode.prompt_prefix">prompt_prefix (klea_utils.nodes.base.BaseLLMNode property)</a>
@@ -1224,6 +1230,8 @@
 </li>
         </ul></li>
         <li><a href="api/utils/paths.html#klea_utils.paths.resolve_app_config_path">resolve_app_config_path() (in module klea_utils.paths)</a>
+</li>
+        <li><a href="api/utils/llm.html#klea_utils.llm.resolve_langchain_endpoint">resolve_langchain_endpoint() (in module klea_utils.llm)</a>
 </li>
         <li><a href="api/utils/llm.html#klea_utils.llm.resolve_output_token_limit">resolve_output_token_limit() (in module klea_utils.llm)</a>
 </li>
@@ -1329,15 +1337,21 @@
 </li>
         <li><a href="api/utils/mcp.html#klea_utils.mcp.schemas.ToolCallSchema">ToolCallSchema (class in klea_utils.mcp.schemas)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/mcp.html#klea_utils.mcp.schemas.ToolCallsSchema">ToolCallsSchema (class in klea_utils.mcp.schemas)</a>
 </li>
         <li><a href="api/utils/mcp.html#klea_utils.mcp.schemas.ToolInfo">ToolInfo (class in klea_utils.mcp.schemas)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/api.html#klea_utils.api.sessions_db.SessionStore.touch_chat">touch_chat() (klea_utils.api.sessions_db.SessionStore method)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.truncate_reference_material">truncate_reference_material() (in module klea_utils.stores.utils)</a>
+</li>
+        <li><a href="api/utils/nodes.html#klea_utils.nodes.base.TRUNCATION_LINEAR_CAP">TRUNCATION_LINEAR_CAP (in module klea_utils.nodes.base)</a>
+</li>
+        <li><a href="api/utils/nodes.html#klea_utils.nodes.base.TRUNCATION_LINEAR_STEP">TRUNCATION_LINEAR_STEP (in module klea_utils.nodes.base)</a>
+</li>
+        <li><a href="api/utils/nodes.html#klea_utils.nodes.base.TRUNCATION_PHASE2_STEP">TRUNCATION_PHASE2_STEP (in module klea_utils.nodes.base)</a>
 </li>
     </ul></td>
   </tr></table>
