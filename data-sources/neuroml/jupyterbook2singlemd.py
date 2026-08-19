@@ -123,7 +123,7 @@ def runner(source: str):
                 if line.startswith(start_ignores):
                     logger.warning(f"Ignoring line: {line = }")
                     continue
-                logger.debug(f"Processing line: {line = }")
+                # logger.debug(f"Processing line: {line = }")
 
                 # section heading
                 if line.startswith("(") and line.strip().endswith(")="):
@@ -157,12 +157,14 @@ def runner(source: str):
                         adding_text_to += line
                         continue
 
-                    if in_block and in_block[-1] == leading_backticks:
-                        adding_text_to += f"{leading_backticks}\n"
+                    if len(in_block) and in_block[-1] == leading_backticks:
+                        logger.debug(f"Leaving block: {leading_backticks}")
+                        adding_text_to += f"{line.rstrip()}\n"
                         in_block.pop()
                         continue
 
                     in_block.append(leading_backticks)
+                    logger.debug(f"Entered block {leading_backticks}")
 
                     if "{literalinclude}" in line:
                         file_to_include = line.split("{literalinclude}")[1].strip()
@@ -202,7 +204,7 @@ def runner(source: str):
                             break
 
                     if not isadmon:
-                        adding_text_to += line.rstrip() + "\n"
+                        adding_text_to += line
 
                 else:
                     adding_text_to += line.rstrip() + "\n"
