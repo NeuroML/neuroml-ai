@@ -145,6 +145,87 @@ def rrf_merge(
     return merged[:num_refs_max]
 
 
+#: Weight given to the normalized relevance (RRF) component of the final
+#: blended score in :func:`rerank_by_recency`.
+RECENCY_WEIGHT_RELEVANCE = 0.9
+
+#: Weight given to the recency (time) component of the final blended score.
+#: Newer documents are boosted because academic work builds on -- and often
+#: corrects -- earlier results, so recent information is more authoritative.
+RECENCY_WEIGHT_TIME = 0.1
+
+#: Recency score assigned to documents without a usable ``year`` metadata
+#: value.  A fixed midpoint (not a derived statistic) so it is immune to
+#: distribution skew: it ranks such documents below known-recent papers but
+#: above the oldest retrieved document.
+RECENCY_MISSING_YEAR_SCORE = 0.5
+
+
+def rerank_by_recency(
+    merged: list[tuple[Document, float]],
+    relevance_weight: float = RECENCY_WEIGHT_RELEVANCE,
+    time_weight: float = RECENCY_WEIGHT_TIME,
+) -> list[tuple[Document, float]]:
+    """Re-rank RRF results blending in document recency.
+
+    Keeps :func:`rrf_merge` pure (relevance only) and applies recency as a
+    separate post-fusion re-rank.  Each document's pure RRF score is
+    min-max normalized to ``[0, 1]`` across the result set, a time score is
+    computed from its ``year`` metadata, and the final score is a weighted
+    combination:
+
+    ``final = relevance_weight * norm_rrf + time_weight * time_score``
+
+    The time score is ``(year - year_min) / (year_max - year_min)`` where
+    ``year_min``/``year_max`` are the min and max ``year`` across the
+    retrieved set (relative normalization).  Documents without a usable
+    ``year`` (missing or non-int) get :data:`RECENCY_MISSING_YEAR_SCORE`.
+
+    Division-by-zero cases are guarded: a single distinct RRF value maps to
+    ``1.0`` and a single distinct year maps to ``1.0``.
+
+    :param merged: ``(doc, rrf_score)`` tuples from :func:`rrf_merge`
+    :param relevance_weight: Weight for the normalized relevance component
+    :param time_weight: Weight for the recency component
+    :returns: The same documents, re-sorted descending by the blended score,
+        with the blended score replacing the pure RRF score in each tuple
+    """
+    if not merged:
+        return []
+
+    rrf_scores = [score for _, score in merged]
+    rrf_min, rrf_max = min(rrf_scores), max(rrf_scores)
+
+    years: list[int] = [
+        doc.metadata["year"]
+        for doc, _ in merged
+        if isinstance(doc.metadata.get("year"), int)
+    ]
+    year_min = min(years) if years else None
+    year_max = max(years) if years else None
+
+    blended: list[tuple[Document, float]] = []
+    for doc, score in merged:
+        if rrf_max > rrf_min:
+            norm_rrf = (score - rrf_min) / (rrf_max - rrf_min)
+        else:
+            norm_rrf = 1.0
+
+        year = doc.metadata.get("year")
+        if isinstance(year, int) and year_max is not None and year_min is not None:
+            if year_max > year_min:
+                time_score = (year - year_min) / (year_max - year_min)
+            else:
+                time_score = 1.0
+        else:
+            time_score = RECENCY_MISSING_YEAR_SCORE
+
+        final = relevance_weight * norm_rrf + time_weight * time_score
+        blended.append((doc, final))
+
+    return sorted(blended, key=lambda tup: tup[1], reverse=True)
+
+
 def truncate_reference_material(
     reference_material: dict[str, list[tuple[Document, float]]],
     max_chars: int,

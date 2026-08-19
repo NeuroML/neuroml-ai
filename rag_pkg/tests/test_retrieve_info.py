@@ -63,6 +63,42 @@ def _doc(content: str) -> Document:
     return Document(page_content=content, metadata={"file_name": "test.md"})
 
 
+def _doc_with_year(content: str, year: int) -> Document:
+    return Document(
+        page_content=content, metadata={"file_name": "test.md", "year": year}
+    )
+
+
+async def test_execute_reranks_equal_relevance_by_recency():
+    """Newer documents are ranked ahead of older ones with equal RRF standing.
+
+    Two documents seen by both sources at swapped ranks end up with equal
+    RRF scores, so recency decides the final order: the newer one wins.
+    """
+    d_new = _doc_with_year("newer paper", 2024)
+    d_old = _doc_with_year("older paper", 2019)
+    # r1 ranks new first, r2 ranks old first -> both docs get equal RRF.
+    r1 = FakeRetriever([(d_new, 0.9), (d_old, 0.8)], name="vector store")
+    r2 = FakeRetriever([(d_old, 4.1), (d_new, 4.0)], name="BM25")
+    node = _make_node([r1, r2])
+
+    state = RAGState(
+        query="papers",
+        query_domains=["NeuroML"],
+        retrieval_query=RetrievalQueryOutput(search_query="papers"),
+    )
+    result = await node.execute(state)
+
+    refs = result["reference_material"]["NeuroML"]
+    logger.info(f"reranked order: {[d.page_content for d, _ in refs]}")
+
+    assert [doc.page_content for doc, _ in refs][:2] == [
+        "newer paper",
+        "older paper",
+    ]
+    assert refs[0][1] > refs[1][1]
+
+
 async def test_execute_merges_retrievers_with_rrf():
     """execute() fuses results from all retrievers with RRF."""
     d1 = _doc("NeuroML standard")

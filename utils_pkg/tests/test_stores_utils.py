@@ -16,6 +16,7 @@ from klea_utils.stores.utils import (
     drop_collection,
     format_source_scores,
     instantiate_vector_store,
+    rerank_by_recency,
     rrf_merge,
     serialize_reference_material,
     truncate_reference_material,
@@ -198,6 +199,95 @@ def test_rrf_merge_preserves_source_scores():
         "vector store": 0.8,
         "BM25": 4.1,
     }
+
+
+def _doc_with_year(content: str, year: int | None) -> Document:
+    """Build a fresh Document with a ``year`` metadata value (None to omit)."""
+    metadata: dict = {"file_name": "test.md"}
+    if year is not None:
+        metadata["year"] = year
+    return Document(page_content=content, metadata=metadata)
+
+
+def test_rerank_by_recency_newer_doc_beats_equal_relevance_older():
+    """With equal RRF relevance, the newer document is ranked first."""
+    d_new = _doc_with_year("newer paper", 2024)
+    d_old = _doc_with_year("older paper", 2019)
+    # Equal pure RRF scores: relevance alone cannot separate them.
+    merged = [(d_new, 0.016), (d_old, 0.016)]
+
+    ranked = rerank_by_recency(merged)
+    logger.info(f"reranked order: {[(d.page_content, s) for d, s in ranked]}")
+
+    assert [d.page_content for d, _ in ranked] == ["newer paper", "older paper"]
+    # d_new: norm_rrf=1.0, time=1.0 -> 0.9*1.0+0.1*1.0 = 1.0
+    # d_old: norm_rrf=1.0, time=0.0 -> 0.9*1.0+0.1*0.0 = 0.9
+    assert ranked[0][1] == pytest.approx(1.0)
+    assert ranked[1][1] == pytest.approx(0.9)
+
+
+def test_rerank_by_recency_relevance_dominates_within_same_year():
+    """Relevance (0.9 weight) still dominates; recency only breaks ties."""
+    d_high = _doc_with_year("high relevance", 2020)
+    d_low = _doc_with_year("low relevance", 2020)
+    # Same year, so time scores are equal; pure RRF score decides.
+    merged = [(d_high, 0.03), (d_low, 0.01)]
+
+    ranked = rerank_by_recency(merged)
+    logger.info(f"reranked order: {[(d.page_content, s) for d, s in ranked]}")
+
+    assert [d.page_content for d, _ in ranked] == ["high relevance", "low relevance"]
+    # norm_rrf: high=(0.03-0.01)/(0.03-0.01)=1.0, low=0.0; time=1.0 both.
+    assert ranked[0][1] == pytest.approx(1.0)
+    assert ranked[1][1] == pytest.approx(0.1 * 1.0)
+
+
+def test_rerank_by_recency_missing_year_scores_midpoint():
+    """Docs without a year land mid-pack: above oldest, below newest."""
+    d_new = _doc_with_year("newest", 2024)
+    d_no_year = _doc("no year")
+    d_old = _doc_with_year("oldest", 2019)
+    merged = [(d_new, 0.016), (d_no_year, 0.016), (d_old, 0.016)]
+
+    ranked = rerank_by_recency(merged)
+    logger.info(f"reranked order: {[(d.page_content, s) for d, s in ranked]}")
+
+    assert [d.page_content for d, _ in ranked] == [
+        "newest",
+        "no year",
+        "oldest",
+    ]
+    # newest: 1.0; no year: 0.5 -> 0.95; oldest: 0.0 -> 0.9
+    assert ranked[1][1] == pytest.approx(0.95)
+
+
+def test_rerank_by_recency_single_distinct_score_and_year_no_div_zero():
+    """Single-value ranges must not divide by zero (norm_rrf and time = 1.0)."""
+    d = _doc_with_year("only doc", 2020)
+    ranked = rerank_by_recency([(d, 0.016)])
+
+    assert len(ranked) == 1
+    assert ranked[0][1] == pytest.approx(1.0)
+
+
+def test_rerank_by_recency_all_same_year_no_div_zero():
+    """A single distinct year gives every doc time score 1.0 (no div by zero)."""
+    d1 = _doc_with_year("a", 2022)
+    d2 = _doc_with_year("b", 2022)
+    merged = [(d1, 0.02), (d2, 0.01)]
+
+    ranked = rerank_by_recency(merged)
+    logger.info(f"reranked order: {[(d.page_content, s) for d, s in ranked]}")
+
+    assert [d.page_content for d, _ in ranked] == ["a", "b"]
+    # a: norm_rrf=1.0, time=1.0 -> 1.0; b: norm_rrf=0.0, time=1.0 -> 0.1
+    assert ranked[0][1] == pytest.approx(1.0)
+    assert ranked[1][1] == pytest.approx(0.1)
+
+
+def test_rerank_by_recency_empty_input():
+    """Empty input returns an empty list."""
+    assert rerank_by_recency([]) == []
 
 
 def test_format_source_scores_joins_sources():

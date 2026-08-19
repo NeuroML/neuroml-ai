@@ -19,8 +19,8 @@ from klea_utils.nodes.abstract import (
 )
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from klea_utils.stores.utils import (
-    format_source_scores,
     normalize_text,
+    rerank_by_recency,
     rrf_merge,
     truncate_reference_material,
 )
@@ -29,19 +29,16 @@ from klea_rag.schemas import RAGState
 
 
 def _format_scores(doc: Any, score: float, precision: int = 2) -> str:
-    """Format a document's scores for the reference material display.
+    """Format a document's blended score for the reference material display.
 
-    Shows the original per-source scores when present (from the RRF merge),
-    otherwise falls back to the single relevance score.
+    The score carried in the tuple is the final recency-blended score (see
+    ``klea_utils.stores.utils.rerank_by_recency``).
 
-    :param doc: Document to format
-    :param score: Relevance score for *doc*
+    :param doc: Document (retained for a stable signature)
+    :param score: Blended relevance/recency score for *doc*
     :param precision: Number of decimal places
-    :returns: Display string, e.g. ``[vector store 0.87, BM25 3.21]``
+    :returns: Display string, e.g. ``[0.87]``
     """
-    source_scores = format_source_scores(doc, precision)
-    if source_scores:
-        return f"[{source_scores}]"
     return f"[{score:.{precision}f}]"
 
 
@@ -124,7 +121,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 for retriever in self.retrievers
             ]
             merged = rrf_merge(result_sets)
-            reference_material[domain_name] = merged
+            reference_material[domain_name] = rerank_by_recency(merged)
 
         reference_material = truncate_reference_material(
             reference_material, max_chars=self.max_refs_size
