@@ -9,9 +9,25 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import json
+import logging
 import re
 import sys
 from pathlib import Path
+
+import colorlog
+
+logging.basicConfig(level=logging.NOTSET)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+formatter = colorlog.ColoredFormatter(
+    "%(log_color)s%(name)s (%(levelname)s): %(message)s"
+)
+handler = colorlog.StreamHandler()
+handler.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
 
 
 def runner(source: str):
@@ -26,9 +42,13 @@ def runner(source: str):
     url_base = "https://docs.neuroml.org"
     url_map = {"DEFAULT": {"url": url_base}}
     with open(toc, "r") as toc_f:
-        for line in toc_f.readlines():
-            if "file:" in line:
-                source_file = Path(line.split("file:")[1].strip())
+        for line in toc_f:
+            if "file:" in line or "root:" in line:
+                if "file:" in line:
+                    source_file = Path(line.split("file:")[1].strip())
+                else:
+                    source_file = Path(line.split("root:")[1].strip())
+
                 if source_file.suffix == "":
                     source_file_full = f"{source_file}.md"
                 else:
@@ -39,6 +59,7 @@ def runner(source: str):
                     continue
                 print(f"Found: {source_file_full}")
                 filelist.append(source_file_full)
+    logger.debug(f"{filelist = }")
 
     text = ""
     schema_text = ""
@@ -56,8 +77,12 @@ def runner(source: str):
         ":widths: ",
         ":width: ",
         ":delim: ",
+        ":all:",
         "%",
     )
+
+    # matches replace below
+    admons = ["admonition", "note", "warning", "tip", "important"]
 
     # note that the order in which these are listed is important, since the
     # regular expression substitutions are done sequentially in multiple passes
@@ -92,40 +117,70 @@ def runner(source: str):
         with open(srcfilepath, "r") as srcfile_f:
             in_block = False
             section_ref = ""
-            for line in srcfile_f.readlines():
+            for line in srcfile_f:
                 # handle code includes
                 if line.startswith(start_ignores):
+                    logger.warning(f"Ignoring line: {line = }")
                     continue
-
-                if not in_block and line.startswith("#"):
-                    header = line.replace("#", "", count=-1)
-                    url_map[header.strip()] = {
-                        "url": f"{url_base}/{srcfile.replace('.md', '.html')}"
-                    }
+                logger.debug(f"Processing line: {line = }")
 
                 # section heading
                 if line.startswith("(") and line.strip().endswith(")="):
                     section_ref = f"<{line[1:-3]}>"
                     continue
 
-                if len(section_ref) > 0:
-                    refs[section_ref] = (
-                        "(see section: " + line.replace("#", "").strip() + ")"
-                    )
-                    section_ref = ""
+                # header
+                if not in_block and line.startswith("#"):
+                    header = line.replace("#", "", count=-1)
+                    url_map[header.strip()] = {
+                        "url": f"{url_base}/{srcfile.replace('.md', '.html')}"
+                    }
 
-                if "{literalinclude}" in line:
-                    in_block = True
-                    file_to_include = line.split("{literalinclude}")[1].strip()
-                    with open(
-                        f"{srcfilepath.parent}/{file_to_include}", "r"
-                    ) as incfile_f:
-                        included_cont = incfile_f.read()
-                        adding_text_to += f"```\n\n{included_cont}\n\n```\n"
-                # exit the block
-                elif "```" in line and in_block:
-                    adding_text_to += "\n"
-                    in_block = False
+                    # section ref preceds headers, processed in the next line after section heading is processed
+                    if len(section_ref) > 0:
+                        refs[section_ref] = (
+                            "(see section: " + line.replace("#", "").strip() + ")"
+                        )
+                        section_ref = ""
+
+                    adding_text_to += "\n" + line
+                    continue
+
+                if line.startswith("```"):
+                    if "{literalinclude}" in line:
+                        in_block = True
+                        file_to_include = line.split("{literalinclude}")[1].strip()
+                        with open(
+                            f"{srcfilepath.parent}/{file_to_include}", "r"
+                        ) as incfile_f:
+                            included_cont = incfile_f.read()
+                            adding_text_to += f"```\n\n{included_cont}\n\n```\n"
+
+                    elif "{bibliography}" in line:
+                        in_block = True
+                        file_to_include = (
+                            line.split("{bibliography}")[1]
+                            .strip()
+                            .replace(".bib", ".md")
+                        )
+                        logger.info(f"Including bibliography file {file_to_include = }")
+                        with open(
+                            f"{srcfilepath.parent}/{file_to_include}", "r"
+                        ) as incfile_f:
+                            included_cont = incfile_f.read()
+                            adding_text_to += f"\n\n{included_cont}\n\n"
+
+                    # exit the block
+                    elif in_block:
+                        adding_text_to += "\n"
+                        in_block = False
+
+                    else:
+                        for m in admons:
+                            if f"{{{m}}}" in line:
+                                in_block = True
+                                adding_text_to += line.split(f"{{{m}}}")[1].strip()
+
                 else:
                     adding_text_to += line
 
