@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import sys
+from itertools import takewhile
 from pathlib import Path
 
 import colorlog
@@ -115,7 +116,7 @@ def runner(source: str):
         adding_text_to = ""
 
         with open(srcfilepath, "r") as srcfile_f:
-            in_block = False
+            in_block: list[str] = []
             section_ref = ""
             for line in srcfile_f:
                 # handle code includes
@@ -146,18 +147,33 @@ def runner(source: str):
                     adding_text_to += "\n" + line
                     continue
 
-                if line.startswith("```"):
+                if line.startswith("`"):
+                    leading_backticks = "".join(
+                        takewhile(lambda char: char == "`", line)
+                    )
+
+                    # single backticks arent blocks
+                    if len(leading_backticks) < 2:
+                        adding_text_to += line
+                        continue
+
+                    if in_block and in_block[-1] == leading_backticks:
+                        adding_text_to += f"{leading_backticks}\n"
+                        in_block.pop()
+                        continue
+
+                    in_block.append(leading_backticks)
+
                     if "{literalinclude}" in line:
-                        in_block = True
                         file_to_include = line.split("{literalinclude}")[1].strip()
                         with open(
                             f"{srcfilepath.parent}/{file_to_include}", "r"
                         ) as incfile_f:
                             included_cont = incfile_f.read()
-                            adding_text_to += f"```\n\n{included_cont}\n\n```\n"
+                            adding_text_to += f"\n\n```\n\n{included_cont}\n\n"
+                        continue
 
-                    elif "{bibliography}" in line:
-                        in_block = True
+                    if "{bibliography}" in line:
                         file_to_include = (
                             line.split("{bibliography}")[1]
                             .strip()
@@ -169,20 +185,27 @@ def runner(source: str):
                         ) as incfile_f:
                             included_cont = incfile_f.read()
                             adding_text_to += f"\n\n{included_cont}\n\n"
+                        continue
 
-                    # exit the block
-                    elif in_block:
-                        adding_text_to += "\n"
-                        in_block = False
+                    isadmon = False
+                    for m in admons:
+                        if f"{{{m}}}" in line:
+                            isadmon = True
+                            admon_text = line.split(f"{{{m}}}")
+                            adding_text_to += (
+                                "```\n"
+                                + m.upper()
+                                + "\n"
+                                + admon_text[1].strip()
+                                + "\n\n"
+                            )
+                            break
 
-                    else:
-                        for m in admons:
-                            if f"{{{m}}}" in line:
-                                in_block = True
-                                adding_text_to += line.split(f"{{{m}}}")[1].strip()
+                    if not isadmon:
+                        adding_text_to += line.rstrip() + "\n"
 
                 else:
-                    adding_text_to += line
+                    adding_text_to += line.rstrip() + "\n"
 
         if "Schemas/" in str(srcfilepath):
             schema_text += adding_text_to
