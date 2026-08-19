@@ -33,8 +33,8 @@ RRF_K = 60
 
 #: Per-document character overhead attributed by :func:`truncate_reference_material`
 #: for the serialized markup that wraps each reference in the LLM context
-#: (``### Document N/M: [file] headings (relevance: ...)`` plus the optional
-#: metadata line).  Approximate; the page content dominates in practice.
+#: (``### Source document N/M: [file]`` plus the optional metadata line).
+#: Approximate; the page content dominates in practice.
 REF_DOC_OVERHEAD = 200
 
 _INTERNAL_META_KEYS = {
@@ -106,7 +106,8 @@ def rrf_merge(
     Scores from different retrievers (e.g. cosine similarity vs BM25) are not
     comparable, so each document is scored purely by its rank within each
     source's result list.  The original per-source scores are preserved in
-    each document's :data:`SOURCE_SCORES_KEY` metadata for display.
+    each document's :data:`SOURCE_SCORES_KEY` metadata for debugging and
+    introspection (they are not shown to the answer LLM).
 
     :param result_sets: List of ``(source_label, results)`` pairs, where each
         *results* is a list of ``(document, score)`` tuples already ranked by
@@ -262,38 +263,6 @@ def truncate_reference_material(
     return budgeted
 
 
-def format_source_scores(doc: Document, precision: int = 2) -> str | None:
-    """Format a document's original per-source scores for display.
-
-    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata
-    :param precision: Number of decimal places per score
-    :returns: Joined string like ``"vector store 0.87, BM25 3.21"``, or
-        ``None`` if the document has no per-source scores
-    """
-    source_scores = doc.metadata.get(SOURCE_SCORES_KEY)
-    if not source_scores:
-        return None
-    return ", ".join(f"{k} {v:.{precision}f}" for k, v in source_scores.items())
-
-
-def _format_score_str(doc: Document, score: float) -> str:
-    """Format a document's relevance scores for prompt context.
-
-    Shows the original per-source scores (e.g. ``vector store 0.8723,
-    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM
-    can interpret scores from different retrievers.  Falls back to the
-    single relevance score for documents without per-source info.
-
-    :param doc: Document to format
-    :param score: Relevance score for *doc*
-    :returns: Score string to append to a document heading
-    """
-    source_scores = format_source_scores(doc, precision=4)
-    if source_scores:
-        return f" (relevance: {source_scores})"
-    return f" (relevance score: {score:.4f})"
-
-
 def serialize_reference_material(
     reference_material: dict[str, list[tuple[Document, float]]],
 ) -> str:
@@ -307,8 +276,9 @@ def serialize_reference_material(
     is also hoisted to the header when the whole file shares the same
     value.  Per-chunk metadata that differs (e.g. a heading-specific
     ``url``) is emitted inline so no chunk is misattributed.  Files are
-    ordered by their best chunk's relevance score; chunks within a file
-    by score.
+    ordered by their best chunk's score; chunks within a file by score.
+    Relevance scores are not included in the prompt -- the ranked order is
+    what matters to the answer LLM.
 
     Uses Docling ``HybridChunker`` metadata format:
 
@@ -335,7 +305,7 @@ def serialize_reference_material(
         )
         for ctr, (file_name, file_docs) in enumerate(ordered_files, 1):
             file_docs.sort(key=lambda item: item[1], reverse=True)
-            first_doc, first_score = file_docs[0]
+            first_doc = file_docs[0][0]
 
             # Document-level metadata: the shared bibliographic fields
             # (authors, year, journal, ...) come from the file's top chunk
@@ -357,20 +327,17 @@ def serialize_reference_material(
                     file_meta[url_key] = first_doc.metadata.get(url_key)
 
             heading_str = f"[{file_name}]" if file_name else "(no file)"
-            score_str = _format_score_str(first_doc, first_score)
             serialized += (
-                f"\n### Source document {ctr}/{len(ordered_files)}: "
-                f"{heading_str}{score_str}\n"
+                f"\n### Source document {ctr}/{len(ordered_files)}: {heading_str}\n"
             )
             if file_meta:
                 meta_str = " | ".join(f"{k}={v}" for k, v in file_meta.items())
                 serialized += f"Metadata: {meta_str}\n"
 
-            for chunk_ctr, (doc, score) in enumerate(file_docs, 1):
+            for chunk_ctr, (doc, _score) in enumerate(file_docs, 1):
                 headings = doc.metadata.get("headings", [])
                 heading_str = " > ".join(headings) if headings else "(no heading)"
-                score_str = _format_score_str(doc, score)
-                serialized += f"\n  Chunk {chunk_ctr}: {heading_str}{score_str}\n"
+                serialized += f"\n  Chunk {chunk_ctr}: {heading_str}\n"
 
                 # Chunk-level metadata: non-internal keys not already on the
                 # file level (shared bibliographic fields, and url keys the

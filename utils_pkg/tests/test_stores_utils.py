@@ -14,7 +14,6 @@ import pytest
 from klea_utils.stores.utils import (
     REF_DOC_OVERHEAD,
     drop_collection,
-    format_source_scores,
     instantiate_vector_store,
     rerank_by_recency,
     rrf_merge,
@@ -290,48 +289,36 @@ def test_rerank_by_recency_empty_input():
     assert rerank_by_recency([]) == []
 
 
-def test_format_source_scores_joins_sources():
-    """format_source_scores joins per-source scores with the given precision."""
-    doc = _doc("Hodgkin-Huxley action potential")
-    doc.metadata["_source_scores"] = {"vector store": 0.87234, "BM25": 3.21001}
-
-    joined = format_source_scores(doc, precision=2)
-    logger.info(f"{joined = }")
-
-    assert joined == "vector store 0.87, BM25 3.21"
-    assert format_source_scores(doc, precision=4) == "vector store 0.8723, BM25 3.2100"
-
-
-def test_format_source_scores_none_when_absent():
-    """format_source_scores returns None when a doc has no per-source scores."""
-    doc = _doc("plain content")
-
-    result = format_source_scores(doc, precision=2)
-    logger.info(f"{result = }")
-
-    assert result is None
-
-
-def test_serialize_reference_material_shows_per_source_scores():
-    """serialize_reference_material labels per-source scores for the LLM."""
+def test_serialize_reference_material_omits_scores():
+    """serialize_reference_material does not show relevance scores to the LLM."""
     d1 = _doc("Hodgkin-Huxley action potential")
     d1.metadata["_source_scores"] = {"vector store": 0.8723, "BM25": 3.2100}
 
     text = serialize_reference_material({"NeuroML": [(d1, 0.0323)]})
     logger.info(f"serialized text:\n{text}")
 
-    assert "relevance: vector store 0.8723, BM25 3.2100" in text
+    assert "relevance" not in text
+    assert "vector store" not in text
+    assert "_source_scores" not in text
 
 
-def test_serialize_reference_material_falls_back_to_relevance_score():
-    """Untagged docs fall back to the plain relevance score."""
-    d1 = _doc("plain content")
+def test_serialize_reference_material_keeps_ranked_ordering():
+    """Chunks are still emitted in score order, just without the scores."""
+    d1 = Document(
+        page_content="first chunk",
+        metadata={"file_name": "paper.pdf", "headings": ["Intro"]},
+    )
+    d2 = Document(
+        page_content="second chunk",
+        metadata={"file_name": "paper.pdf", "headings": ["Intro", "Methods"]},
+    )
 
-    text = serialize_reference_material({"NeuroML": [(d1, 0.42)]})
+    text = serialize_reference_material({"NeuroML": [(d2, 0.9), (d1, 0.7)]})
     logger.info(f"serialized text:\n{text}")
 
-    assert "relevance score: 0.4200" in text
-    assert "_source_scores" not in text
+    # d2 (higher score) is emitted as the first chunk.
+    assert text.index("second chunk") < text.index("first chunk")
+    assert "relevance" not in text
 
 
 def test_serialize_reference_material_groups_chunks_by_file():
