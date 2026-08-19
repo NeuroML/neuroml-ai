@@ -14,6 +14,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+import colorlog
+
 #: Klea logger namespaces that are turned up to DEBUG by
 #: ``setup_root_logger``.  Everything else (third-party libraries) inherits
 #: the root logger's INFO level, so their DEBUG output is filtered at the
@@ -40,11 +42,14 @@ class LoggerInfoFilter(logging.Filter):
         return record.levelno == logging.INFO
 
 
-logger_formatter_info = logging.Formatter(
-    "%(asctime)s %(name)s (%(levelname)s) >>> %(message)s\n\n"
+#: Console formatters colorize each line by level (whole-line color via the
+#: ``%(log_color)s`` prefix).  The file formatter stays plain so ANSI escape
+#: codes never end up in log files.
+logger_formatter_info = colorlog.ColoredFormatter(
+    "%(log_color)s%(asctime)s %(name)s (%(levelname)s) >>> %(message)s\n\n"
 )
-logger_formatter_other = logging.Formatter(
-    "%(asctime)s %(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n"
+logger_formatter_other = colorlog.ColoredFormatter(
+    "%(log_color)s%(asctime)s %(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s\n\n"
 )
 logger_formatter_file = logging.Formatter(
     "%(asctime)s %(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s"
