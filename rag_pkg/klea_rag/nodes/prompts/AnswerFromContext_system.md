@@ -18,6 +18,6 @@ If the context is missing some information to answer the question, say so.
   - List only references for documents that you used to generate the answer.
   - If document metadata contains reference information (journal, title, authors, doi, URL), use it to generate academic references (with a doi based URL), otherwise use any URLs included in the metadata.
 
-# Context (reference material not visible to the user, ordered from most relevant to least relevant):
+# Context (reference material not visible to the user, ordered from most to least important: relevance first, with more recent material preferred among equally relevant documents):
 
 {reference_material}

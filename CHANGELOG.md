@@ -149,6 +149,17 @@
   server) now lives in `klea_utils.mcp.server` (`bundled.py` +
   `bundled_tools.py`); `neuroml_mcp` tools were retagged with the
   documented scope/domain vocabulary.
+- Retrieved references are now re-ranked with a small recency bias:
+  `rrf_merge` stays pure relevance, then `rerank_by_recency` normalizes
+  the RRF score to `[0, 1]` and blends it
+  `0.9 * relevance + 0.1 * time`, where the time term is
+  `(year - year_min) / (year_max - year_min)` across the retrieved set
+  (missing year -> `0.5`).  Newer work outranks older work of equal
+  relevance, reflecting that papers build on and correct earlier results.
+- Relevance scores are no longer included in the reference material sent
+  to the answer/evaluator LLM (the ranked order conveys priority); they
+  remain visible in the UI/reference display and the per-source scores
+  stay in document metadata for debugging.
 
 ### Fixed
 
