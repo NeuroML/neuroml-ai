@@ -299,6 +299,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">colorlog</span>
+
 <span class="c1">#: Klea logger namespaces that are turned up to DEBUG by</span>
 <span class="c1">#: ``setup_root_logger``.  Everything else (third-party libraries) inherits</span>
 <span class="c1">#: the root logger's INFO level, so their DEBUG output is filtered at the</span>
@@ -337,11 +339,14 @@
 
 
 
-<span class="n">logger_formatter_info</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
+<span class="c1">#: Console formatters colorize each line by level (whole-line color via the</span>
+<span class="c1">#: ``%(log_color)s`` prefix).  The file formatter stays plain so ANSI escape</span>
+<span class="c1">#: codes never end up in log files.</span>
+<span class="n">logger_formatter_info</span> <span class="o">=</span> <span class="n">colorlog</span><span class="o">.</span><span class="n">ColoredFormatter</span><span class="p">(</span>
+    <span class="s2">"</span><span class="si">%(log_color)s%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
 <span class="p">)</span>
-<span class="n">logger_formatter_other</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
-    <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in '</span><span class="si">%(funcName)s</span><span class="s2">' &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
+<span class="n">logger_formatter_other</span> <span class="o">=</span> <span class="n">colorlog</span><span class="o">.</span><span class="n">ColoredFormatter</span><span class="p">(</span>
+    <span class="s2">"</span><span class="si">%(log_color)s%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in '</span><span class="si">%(funcName)s</span><span class="s2">' &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="se">\n\n</span><span class="s2">"</span>
 <span class="p">)</span>
 <span class="n">logger_formatter_file</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
     <span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> (</span><span class="si">%(levelname)s</span><span class="s2">) in '</span><span class="si">%(funcName)s</span><span class="s2">' &gt;&gt;&gt; </span><span class="si">%(message)s</span><span class="s2">"</span>
