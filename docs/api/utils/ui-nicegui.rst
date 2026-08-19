@@ -24,3 +24,10 @@ UI — NiceGUI
 .. automodule:: klea_utils.ui.web.nicegui.parser
    :members:
    :show-inheritance:
+
+Text helpers
+------------
+
+.. automodule:: klea_utils.ui.linkify
+   :members:
+   :show-inheritance:

@@ -118,7 +118,7 @@ async def list_files(
     Do not use for:
     - Reading a file's contents (use the read file tool instead).
 
-    Example: list_files(path=".", pattern="*.py", recursive=True)
+    Example: ``list_files(path=".", pattern="*.py", recursive=True)``
 
     Args:
         path: Directory path to list. Must be relative to the current working
