@@ -227,7 +227,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -409,8 +409,8 @@ are merged without comparing their raw scores (cosine similarity and
 BM25 scores are not on the same scale).  Duplicate chunks are removed
 and the top <code class="docutils literal notranslate"><span class="pre">k</span></code> references are kept.</p>
 <p>The original per-source scores are preserved in each document’s
-<code class="docutils literal notranslate"><span class="pre">_source_scores</span></code> metadata, so the answer LLM sees e.g. both the
-vector-store similarity and the BM25 score, labelled by source.</p>
+<code class="docutils literal notranslate"><span class="pre">_source_scores</span></code> metadata for debugging and introspection, but they are
+not shown to the answer LLM.</p>
 <p>These per-source scores are informational context, not a comparable
 ranking.  The vector-store score is a cosine similarity in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>
 (1 = most similar to the query), while the BM25 score is a raw keyword
@@ -419,6 +419,15 @@ The two are on different scales, so a BM25 value of e.g. <code class="docutils l
 not mean the chunk is “better” than one with a vector-store score of
 <code class="docutils literal notranslate"><span class="pre">0.68</span></code>.  Documents are ordered by the RRF rank fusion above, never by
 comparing these raw values.</p>
+<p>After fusion, the RRF ranking is given a small recency bias
+(<code class="docutils literal notranslate"><span class="pre">rerank_by_recency</span></code>): the pure RRF score is normalized to <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code>
+and blended <code class="docutils literal notranslate"><span class="pre">0.9</span> <span class="pre">*</span> <span class="pre">relevance</span> <span class="pre">+</span> <span class="pre">0.1</span> <span class="pre">*</span> <span class="pre">time</span></code>, where the time term is
+<code class="docutils literal notranslate"><span class="pre">(year</span> <span class="pre">-</span> <span class="pre">year_min)</span> <span class="pre">/</span> <span class="pre">(year_max</span> <span class="pre">-</span> <span class="pre">year_min)</span></code> across the retrieved set
+(relative to the newest and oldest document retrieved).  Documents
+without a usable <code class="docutils literal notranslate"><span class="pre">year</span></code> get a neutral <code class="docutils literal notranslate"><span class="pre">0.5</span></code> time score.  Because
+academic work builds on – and often corrects – earlier results, a
+newer document outranks an older one of equal relevance, while relevance
+still dominates the final ordering.</p>
 <p>To create a BM25 store alongside a vector store, pass
 <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> (see
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>), then add a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
@@ -430,16 +439,15 @@ entry to the domain config pointing at the written corpus file.</p>
 <em>reference material</em>, grouped by source file.  Each file’s shared
 bibliographic metadata (authors, year, journal, DOI) is shown once on a
 “source document” header, and the file’s chunks are listed underneath,
-each carrying its own inline relevance score and numbered within the
-file.  Chunk-level metadata that differs from the file’s (e.g. a
-heading-specific URL) stays inline on the chunk.</p>
-<p>Grouping and scores are deliberately kept separate: chunks are ordered
-by their file’s best relevance score, so a low-scoring chunk in an
-early file can appear before a higher-scoring chunk in a later file.
-Every chunk therefore carries its own score, so position is never
-mistaken for relevance.  The exact serialized layout is described in
-the <a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.utils.serialize_reference_material" title="klea_utils.stores.utils.serialize_reference_material"><code class="xref py py-class docutils literal notranslate"><span class="pre">serialize_reference_material</span></code></a> API
-reference.</p>
+numbered within the file.  Chunk-level metadata that differs from the
+file’s (e.g. a heading-specific URL) stays inline on the chunk.</p>
+<p>The documents appear in the blended priority order (relevance, with
+recency as a tiebreaker) described above.  Relevance scores are not
+included in the reference material – the LLM relies on the given order,
+not numeric values.  Files are ordered by their best chunk’s score, and
+chunks within a file by score.  The exact serialized layout is described
+in the <a class="reference internal" href="../api/utils/stores.html#klea_utils.stores.utils.serialize_reference_material" title="klea_utils.stores.utils.serialize_reference_material"><code class="xref py py-class docutils literal notranslate"><span class="pre">serialize_reference_material</span></code></a>
+API reference.</p>
 </section>
 <section id="bibliographic-metadata-extraction">
 <span id="metadata-extraction"></span><h2>Bibliographic metadata extraction<a class="headerlink" href="#bibliographic-metadata-extraction" title="Link to this heading">¶</a></h2>

@@ -132,8 +132,8 @@ BM25 scores are not on the same scale).  Duplicate chunks are removed
 and the top ``k`` references are kept.
 
 The original per-source scores are preserved in each document's
-``_source_scores`` metadata, so the answer LLM sees e.g. both the
-vector-store similarity and the BM25 score, labelled by source.
+``_source_scores`` metadata for debugging and introspection, but they are
+not shown to the answer LLM.
 
 These per-source scores are informational context, not a comparable
 ranking.  The vector-store score is a cosine similarity in ``[0, 1]``
@@ -143,6 +143,16 @@ The two are on different scales, so a BM25 value of e.g. ``5.1`` does
 not mean the chunk is "better" than one with a vector-store score of
 ``0.68``.  Documents are ordered by the RRF rank fusion above, never by
 comparing these raw values.
+
+After fusion, the RRF ranking is given a small recency bias
+(``rerank_by_recency``): the pure RRF score is normalized to ``[0, 1]``
+and blended ``0.9 * relevance + 0.1 * time``, where the time term is
+``(year - year_min) / (year_max - year_min)`` across the retrieved set
+(relative to the newest and oldest document retrieved).  Documents
+without a usable ``year`` get a neutral ``0.5`` time score.  Because
+academic work builds on -- and often corrects -- earlier results, a
+newer document outranks an older one of equal relevance, while relevance
+still dominates the final ordering.
 
 To create a BM25 store alongside a vector store, pass
 ``--bm25-store`` to ``klea-stores-create`` (see
@@ -158,17 +168,16 @@ The fused retrieval results are handed to the answer LLM as
 *reference material*, grouped by source file.  Each file's shared
 bibliographic metadata (authors, year, journal, DOI) is shown once on a
 "source document" header, and the file's chunks are listed underneath,
-each carrying its own inline relevance score and numbered within the
-file.  Chunk-level metadata that differs from the file's (e.g. a
-heading-specific URL) stays inline on the chunk.
+numbered within the file.  Chunk-level metadata that differs from the
+file's (e.g. a heading-specific URL) stays inline on the chunk.
 
-Grouping and scores are deliberately kept separate: chunks are ordered
-by their file's best relevance score, so a low-scoring chunk in an
-early file can appear before a higher-scoring chunk in a later file.
-Every chunk therefore carries its own score, so position is never
-mistaken for relevance.  The exact serialized layout is described in
-the :class:`~klea_utils.stores.utils.serialize_reference_material` API
-reference.
+The documents appear in the blended priority order (relevance, with
+recency as a tiebreaker) described above.  Relevance scores are not
+included in the reference material -- the LLM relies on the given order,
+not numeric values.  Files are ordered by their best chunk's score, and
+chunks within a file by score.  The exact serialized layout is described
+in the :class:`~klea_utils.stores.utils.serialize_reference_material`
+API reference.
 
 .. _metadata-extraction:
 

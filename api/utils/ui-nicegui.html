@@ -227,7 +227,7 @@
 <li class="toctree-l3"><a class="reference internal" href="stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l3 current has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -511,6 +511,30 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 </dl>
 </dd></dl>
 
+<section id="module-klea_utils.ui.linkify">
+<span id="text-helpers"></span><h2>Text helpers<a class="headerlink" href="#module-klea_utils.ui.linkify" title="Link to this heading">¶</a></h2>
+<p>Bare-URL linkification for markdown text</p>
+<p>File: klea_utils/ui/linkify.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.ui.linkify.linkify_md">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.ui.linkify.</span></span><span class="sig-name descname"><span class="pre">linkify_md</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/ui/linkify.html#linkify_md"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.ui.linkify.linkify_md" title="Link to this definition">¶</a></dt>
+<dd><p>Convert bare URLs in markdown <em>text</em> to <code class="docutils literal notranslate"><span class="pre">[url](url)</span></code> links.</p>
+<p>Existing <code class="docutils literal notranslate"><span class="pre">[text](url)</span></code> links are returned verbatim so they are not
+re-wrapped.  Callers pass the result to a markdown renderer, which
+turns the wrapped URLs into clickable anchors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> – Markdown source text</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Text with bare URLs wrapped as <code class="docutils literal notranslate"><span class="pre">[url](url)</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 </section>
 
         </article>
@@ -580,6 +604,10 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.state.ensure_chat"><code class="docutils literal notranslate"><span class="pre">ensure_chat()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.state.get_chats_sorted"><code class="docutils literal notranslate"><span class="pre">get_chats_sorted()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.ui.web.nicegui.parser.make_parser"><code class="docutils literal notranslate"><span class="pre">make_parser()</span></code></a></li>
+<li><a class="reference internal" href="#module-klea_utils.ui.linkify">Text helpers</a><ul>
+<li><a class="reference internal" href="#klea_utils.ui.linkify.linkify_md"><code class="docutils literal notranslate"><span class="pre">linkify_md()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

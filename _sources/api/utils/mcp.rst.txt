@@ -1,8 +1,93 @@
-MCP schemas
-===========
+MCP utilities
+=============
 
-Shared metadata schemas used by MCP servers and clients.
+Shared machinery for building MCP servers and clients used by Klea apps:
+metadata schemas, tool registration, an httpx session lifespan, path
+permission checks, and the reusable bundled tools server.
+
+Schemas
+-------
 
 .. automodule:: klea_utils.mcp.schemas
+   :members:
+   :show-inheritance:
+
+Errors
+------
+
+.. automodule:: klea_utils.mcp.errors
+   :members:
+   :show-inheritance:
+
+Tool registration
+-----------------
+
+.. automodule:: klea_utils.mcp.registry
+   :members:
+   :show-inheritance:
+
+Tool call dispatch
+------------------
+
+.. automodule:: klea_utils.mcp.dispatch
+   :members:
+   :show-inheritance:
+
+HTTP session lifespan
+---------------------
+
+.. automodule:: klea_utils.mcp.lifespan
+   :members:
+   :show-inheritance:
+
+Shared tool implementations
+---------------------------
+
+Framework-agnostic tool bodies that apps wrap into FastMCP tools, passing
+their httpx session via the lifespan context.
+
+.. automodule:: klea_utils.mcp.tool_impls.permission
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.session
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.ssrf
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.web_fetch
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.list_files
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.read_file
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.download_file
+   :members:
+   :show-inheritance:
+
+Bundled tools server
+--------------------
+
+The bundled tools server (auto-launched by apps as a stdio subprocess and
+exposed standalone via the ``klea-mcp`` CLI) and its configuration.
+
+.. autoclass:: klea_utils.mcp.server.config.BundledToolsConfig
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.server.bundled
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.server.bundled_tools
    :members:
    :show-inheritance:

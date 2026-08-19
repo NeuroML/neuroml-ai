@@ -227,7 +227,7 @@
 <li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mcp.html">MCP utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -370,6 +370,53 @@ the store (e.g. a LangChain VectorStore or BM25Retriever).</p>
 <dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
 </dd></dl>
 
+</dd></dl>
+
+</section>
+<section id="module-klea_utils.stores.metadata">
+<span id="stored-metadata-schema"></span><h2>Stored metadata schema<a class="headerlink" href="#module-klea_utils.stores.metadata" title="Link to this heading">¶</a></h2>
+<p>Stored-metadata schema for vector store ingestion.</p>
+<p>File: klea_utils/stores/metadata.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.metadata.ALWAYS_STORED_METADATA_KEYS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">ALWAYS_STORED_METADATA_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'authors',</span> <span class="pre">'doi',</span> <span class="pre">'file_hash',</span> <span class="pre">'file_name',</span> <span class="pre">'headings',</span> <span class="pre">'journal',</span> <span class="pre">'keywords',</span> <span class="pre">'title',</span> <span class="pre">'year'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.ALWAYS_STORED_METADATA_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata keys that are always stored in the vector store, together with
+the bibliographic fields produced by the extraction cascade
+(<code class="docutils literal notranslate"><span class="pre">title</span></code>, <code class="docutils literal notranslate"><span class="pre">authors</span></code>, <code class="docutils literal notranslate"><span class="pre">keywords</span></code>, <code class="docutils literal notranslate"><span class="pre">year</span></code>, <code class="docutils literal notranslate"><span class="pre">journal</span></code>, <code class="docutils literal notranslate"><span class="pre">doi</span></code>).
+Any <code class="docutils literal notranslate"><span class="pre">url*</span></code> key (<code class="docutils literal notranslate"><span class="pre">url</span></code>, <code class="docutils literal notranslate"><span class="pre">url_1</span></code>, <code class="docutils literal notranslate"><span class="pre">url_doi</span></code>, …) is also always
+stored.  This whitelist documents the guaranteed stored schema; <em>presence</em>
+of the cascade fields is determined by the metadata map (whose
+researcher-curated keys pass through unmodified).  See
+<code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.ingestion._apply_store_metadata_policy()</span></code>.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.metadata.MACHINE_SET_METADATA_KEYS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">MACHINE_SET_METADATA_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'file_hash',</span> <span class="pre">'file_name',</span> <span class="pre">'headings'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.MACHINE_SET_METADATA_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata keys set on every chunk by the ingestion pipeline itself,
+rather than supplied by the metadata map.  They are always stored.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.metadata.SHARED_DOC_METADATA_KEYS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">SHARED_DOC_METADATA_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'authors',</span> <span class="pre">'doi',</span> <span class="pre">'journal',</span> <span class="pre">'keywords',</span> <span class="pre">'title',</span> <span class="pre">'year'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.SHARED_DOC_METADATA_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Bibliographic fields that every chunk of a source file is expected to
+share (they come from the file’s DEFAULT metadata map entry).  When
+serializing reference material, these are emitted once per source file
+rather than repeated on every chunk.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.metadata.STORE_DROPPED_METADATA_KEYS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">STORE_DROPPED_METADATA_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'source_path',</span> <span class="pre">'source_type',</span> <span class="pre">'source_url'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.STORE_DROPPED_METADATA_KEYS" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata keys that are never stored.  Provenance keys from the biblio
+cascade; keys starting with <code class="docutils literal notranslate"><span class="pre">_</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code>,
+<code class="docutils literal notranslate"><span class="pre">_sources</span></code>, <code class="docutils literal notranslate"><span class="pre">_source_scores</span></code>) are also always dropped.  These guide
+the researcher reviewing <code class="docutils literal notranslate"><span class="pre">metadata-map.template.json</span></code> but carry no
+meaning in a store.  See
+<code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.ingestion._apply_store_metadata_policy()</span></code>.</p>
 </dd></dl>
 
 </section>
@@ -539,6 +586,92 @@ written into its cache folder)</p></li>
 </dd></dl>
 
 </section>
+<section id="module-klea_utils.stores.map_lint">
+<span id="metadata-map-linting"></span><h2>Metadata map linting<a class="headerlink" href="#module-klea_utils.stores.map_lint" title="Link to this heading">¶</a></h2>
+<p>LLM-free linting of a metadata map.</p>
+<p>File: klea_utils/stores/map_lint.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.CORE_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">CORE_FIELDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('authors',</span> <span class="pre">'doi',</span> <span class="pre">'journal',</span> <span class="pre">'keywords',</span> <span class="pre">'title',</span> <span class="pre">'year')</span></span><a class="headerlink" href="#klea_utils.stores.map_lint.CORE_FIELDS" title="Link to this definition">¶</a></dt>
+<dd><p>Core bibliographic fields a complete DEFAULT entry should carry – the
+shared document fields every chunk inherits.  Derived (not duplicated)
+so a change to the stored schema is picked up here.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.URL_WARN_THRESHOLD">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">URL_WARN_THRESHOLD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">5</span></span><a class="headerlink" href="#klea_utils.stores.map_lint.URL_WARN_THRESHOLD" title="Link to this definition">¶</a></dt>
+<dd><p>DEFAULT entries with more than this many <code class="docutils literal notranslate"><span class="pre">url*</span></code> keys almost certainly
+picked up reference URLs during extraction (a paper typically carries a
+DOI page, a journal page, and a couple of extras).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.YEAR_MAX">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">YEAR_MAX</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2028</span></span><a class="headerlink" href="#klea_utils.stores.map_lint.YEAR_MAX" title="Link to this definition">¶</a></dt>
+<dd><p>the current year plus a small
+margin for in-press/early-access items (a hardcoded far-future cap
+would go stale as the current year advances).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Latest plausible publication year</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.YEAR_MIN">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">YEAR_MIN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1800</span></span><a class="headerlink" href="#klea_utils.stores.map_lint.YEAR_MIN" title="Link to this definition">¶</a></dt>
+<dd><p>Earliest plausible publication year.  Anything before this is flagged.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.format_metadata_lint_report">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">format_metadata_lint_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/map_lint.html#format_metadata_lint_report"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.map_lint.format_metadata_lint_report" title="Link to this definition">¶</a></dt>
+<dd><p>Render a <a class="reference internal" href="#klea_utils.stores.map_lint.lint_metadata_map" title="klea_utils.stores.map_lint.lint_metadata_map"><code class="xref py py-func docutils literal notranslate"><span class="pre">lint_metadata_map()</span></code></a> report as compact text.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.lint_file_metadata">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">lint_file_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/map_lint.html#lint_file_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.map_lint.lint_file_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Return human-readable issues for one metadata-map file entry.</p>
+<p><em>entry</em> is the per-file dict from a metadata map: a <code class="docutils literal notranslate"><span class="pre">&quot;DEFAULT&quot;</span></code>
+metadata dict plus one dict per heading chain (empty <code class="docutils literal notranslate"><span class="pre">{}</span></code>
+placeholders in a generated template).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_name</strong> – Source filename (used for the year-vs-stem check)</p></li>
+<li><p><strong>entry</strong> – Per-file metadata-map entry</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sorted list of issue strings; empty when the entry is clean</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.map_lint.lint_metadata_map">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.map_lint.</span></span><span class="sig-name descname"><span class="pre">lint_metadata_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/map_lint.html#lint_metadata_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.map_lint.lint_metadata_map" title="Link to this definition">¶</a></dt>
+<dd><p>Lint a whole metadata map and return a structured report.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – Parsed metadata-map JSON (<code class="docutils literal notranslate"><span class="pre">{file_name:</span> <span class="pre">entry}</span></code>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict with <code class="docutils literal notranslate"><span class="pre">files</span></code> (total), <code class="docutils literal notranslate"><span class="pre">complete</span></code> (count of
+<code class="docutils literal notranslate"><span class="pre">_metadata_complete</span></code> DEFAULTs), <code class="docutils literal notranslate"><span class="pre">issues</span></code> (<code class="docutils literal notranslate"><span class="pre">{file_name:</span>
+<span class="pre">[issue,</span> <span class="pre">...]}</span></code> for files with at least one issue), and
+<code class="docutils literal notranslate"><span class="pre">placeholders</span></code> (<code class="docutils literal notranslate"><span class="pre">{file_name:</span> <span class="pre">int}</span></code> count of empty heading
+placeholders per file)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="retrieval">
 <h2>Retrieval<a class="headerlink" href="#retrieval" title="Link to this heading">¶</a></h2>
 <dl class="py class">
@@ -629,7 +762,7 @@ loaded keep their default k until they are loaded.</p>
 <li><p><strong>domain_name</strong> – Name of the domain to search in</p></li>
 <li><p><strong>query</strong> – User query string</p></li>
 <li><p><strong>metadata_filter</strong> – Optional metadata filter in the DSL (see
-<code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.filters.validate_metadata_filter()</span></code>).
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.filters.validate_metadata_filter()</span></code></a>).
 Applied natively by stores that support a backend filter and
 post-filtered for stores that do not (BM25)</p></li>
 </ul>
@@ -713,6 +846,310 @@ full-text search) instead.</p>
 </dd></dl>
 
 </section>
+<section id="module-klea_utils.stores.filters">
+<span id="metadata-filters"></span><h2>Metadata filters<a class="headerlink" href="#module-klea_utils.stores.filters" title="Link to this heading">¶</a></h2>
+<p>Metadata filter translation for store backends</p>
+<p>File: klea_utils/stores/filters.py</p>
+<p>Copyright 2026 Ankur Sinha
+Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.FIELD_OPERATORS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">FIELD_OPERATORS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'$contains',</span> <span class="pre">'$eq',</span> <span class="pre">'$gt',</span> <span class="pre">'$gte',</span> <span class="pre">'$in',</span> <span class="pre">'$lt',</span> <span class="pre">'$lte',</span> <span class="pre">'$ne',</span> <span class="pre">'$nin'})</span></span><a class="headerlink" href="#klea_utils.stores.filters.FIELD_OPERATORS" title="Link to this definition">¶</a></dt>
+<dd><p>Operators valid inside a single field clause of the normalized filter DSL.
+<code class="docutils literal notranslate"><span class="pre">$contains</span></code> is the element-membership operator for list-valued fields
+(e.g. <code class="docutils literal notranslate"><span class="pre">authors</span></code>, <code class="docutils literal notranslate"><span class="pre">keywords</span></code>).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.LOGICAL_OPERATORS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">LOGICAL_OPERATORS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'$and',</span> <span class="pre">'$or'})</span></span><a class="headerlink" href="#klea_utils.stores.filters.LOGICAL_OPERATORS" title="Link to this definition">¶</a></dt>
+<dd><p>Logical combinators valid at any level of the normalized filter DSL.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.filter_docs_by_metadata">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">filter_docs_by_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">docs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#filter_docs_by_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.filter_docs_by_metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Return the subset of <em>docs</em> whose metadata matches the filter.</p>
+<p>Python-side matcher for backends without native filter support: the
+BM25 store post-filters its results through this (the <code class="docutils literal notranslate"><span class="pre">rank_bm25</span></code>
+index has no filter).  Documents without the filter’s metadata field
+never match.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">docs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Document</span><span class="p">(</span><span class="n">page_content</span><span class="o">=</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Magee"</span><span class="p">]}),</span>
+        <span class="n">Document</span><span class="p">(</span><span class="n">page_content</span><span class="o">=</span><span class="s2">"b"</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Jones"</span><span class="p">]})]</span>
+<span class="n">filter_docs_by_metadata</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="p">[</span><span class="n">Document</span><span class="p">(</span><span class="n">page_content</span><span class="o">=</span><span class="s2">"a"</span><span class="p">,</span> <span class="o">...</span><span class="p">)]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>docs</strong> – Documents to filter, each carrying <code class="docutils literal notranslate"><span class="pre">metadata</span></code></p></li>
+<li><p><strong>f</strong> – Metadata filter in the DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Documents whose metadata satisfies the filter</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the filter is not well-formed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.to_chroma_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">to_chroma_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#to_chroma_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.to_chroma_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Translate a filter to a Chroma <code class="docutils literal notranslate"><span class="pre">where</span></code> dict.</p>
+<p>The canonical normalized form is Chroma’s native <code class="docutils literal notranslate"><span class="pre">where</span></code> syntax
+(single-operator field clauses, <code class="docutils literal notranslate"><span class="pre">$and</span></code>/<code class="docutils literal notranslate"><span class="pre">$or</span></code> combinators, and the
+<code class="docutils literal notranslate"><span class="pre">$contains</span></code> array-membership operator), so this validates the
+filter and returns the normalized form unchanged.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">to_chroma_filter</span><span class="p">({</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>f</strong> – Metadata filter in the DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Chroma <code class="docutils literal notranslate"><span class="pre">where</span></code> dict, passable as <code class="docutils literal notranslate"><span class="pre">filter=</span></code> to a
+<code class="docutils literal notranslate"><span class="pre">langchain_chroma</span></code> store’s similarity search</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the filter is not well-formed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.to_pgvector_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">to_pgvector_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#to_pgvector_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.to_pgvector_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Translate a filter to a <code class="docutils literal notranslate"><span class="pre">langchain_postgres</span></code> filter dict.</p>
+<p><code class="docutils literal notranslate"><span class="pre">langchain_postgres</span></code> accepts the canonical normalized form
+directly.  The one gap is <code class="docutils literal notranslate"><span class="pre">$contains</span></code>: the backend has no array
+containment operator for metadata fields, so it is approximated with
+<code class="docutils literal notranslate"><span class="pre">$like</span></code> over the serialized JSON array text (e.g. a substring match
+against <code class="docutils literal notranslate"><span class="pre">[&quot;Magee&quot;,&quot;Smith&quot;]</span></code>).  This is a documented approximation
+for the Postgres backend only.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">to_pgvector_filter</span><span class="p">({</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$like"</span><span class="p">:</span> <span class="s2">"%Magee%"</span><span class="p">}}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>f</strong> – Metadata filter in the DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">langchain_postgres</span></code> filter dict, passable as
+<code class="docutils literal notranslate"><span class="pre">filter=</span></code> to a <code class="docutils literal notranslate"><span class="pre">langchain_postgres</span></code> store’s similarity search</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the filter is not well-formed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.to_qdrant_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">to_qdrant_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#to_qdrant_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.to_qdrant_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Translate a filter to a Qdrant <code class="docutils literal notranslate"><span class="pre">models.Filter</span></code> object.</p>
+<p>Scalar equality and <code class="docutils literal notranslate"><span class="pre">$contains</span></code> become <code class="docutils literal notranslate"><span class="pre">MatchValue</span></code> (an array
+element match), <code class="docutils literal notranslate"><span class="pre">$in</span></code>/<code class="docutils literal notranslate"><span class="pre">$nin</span></code> become <code class="docutils literal notranslate"><span class="pre">MatchAny</span></code>/<code class="docutils literal notranslate"><span class="pre">MatchExcept</span></code>,
+and range operators become a <code class="docutils literal notranslate"><span class="pre">Range</span></code> condition.  Compound clauses
+are grouped as nested <code class="docutils literal notranslate"><span class="pre">Filter</span></code> objects.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">to_qdrant_filter</span><span class="p">({</span><span class="s2">"year"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$gte"</span><span class="p">:</span> <span class="mi">2020</span><span class="p">,</span> <span class="s2">"$lte"</span><span class="p">:</span> <span class="mi">2025</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="n">Filter</span><span class="p">(</span><span class="n">must</span><span class="o">=</span><span class="p">[</span><span class="n">Filter</span><span class="p">(</span><span class="n">must</span><span class="o">=</span><span class="p">[</span><span class="n">FieldCondition</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s1">'year'</span><span class="p">,</span>
+                                            <span class="nb">range</span><span class="o">=</span><span class="n">Range</span><span class="p">(</span><span class="n">gte</span><span class="o">=</span><span class="mf">2020.0</span><span class="p">))]),</span>
+                <span class="n">Filter</span><span class="p">(</span><span class="n">must</span><span class="o">=</span><span class="p">[</span><span class="n">FieldCondition</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s1">'year'</span><span class="p">,</span>
+                                            <span class="nb">range</span><span class="o">=</span><span class="n">Range</span><span class="p">(</span><span class="n">lte</span><span class="o">=</span><span class="mf">2025.0</span><span class="p">))])])</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>f</strong> – Metadata filter in the DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Qdrant <code class="docutils literal notranslate"><span class="pre">models.Filter</span></code> object, passable as <code class="docutils literal notranslate"><span class="pre">filter=</span></code>
+to a <code class="docutils literal notranslate"><span class="pre">langchain_qdrant</span></code> store’s similarity search</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the filter is not well-formed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.translate_metadata_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">translate_metadata_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#translate_metadata_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.translate_metadata_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Translate a filter for the backend named by a store path.</p>
+<p>Dispatch helper used by the retrievers: reads the URI scheme from a
+store path (e.g. <code class="docutils literal notranslate"><span class="pre">chroma:/data/store</span></code>) and returns the matching
+backend-native filter.  <code class="docutils literal notranslate"><span class="pre">filter_docs_by_metadata</span></code> is <em>not</em> returned
+here – callers that need the in-memory matcher (the BM25 store)
+call it directly.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">translate_metadata_filter</span><span class="p">(</span><span class="s2">"chroma:/data/store"</span><span class="p">,</span>
+                          <span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="p">{</span><span class="s2">"authors"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"Magee"</span><span class="p">}}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – Store URI (<code class="docutils literal notranslate"><span class="pre">scheme:location</span></code>)</p></li>
+<li><p><strong>f</strong> – Metadata filter in the DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Backend-native filter for the store’s scheme</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the scheme is missing or unknown</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.validate_metadata_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">validate_metadata_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#validate_metadata_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.validate_metadata_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Validate a filter and normalize it to the canonical form.</p>
+<p>Filters use a small backend-agnostic DSL: a dict mapping a metadata
+field name to either a bare value (implicit <code class="docutils literal notranslate"><span class="pre">$eq</span></code>) or an operator
+expression <code class="docutils literal notranslate"><span class="pre">{op:</span> <span class="pre">value}</span></code>, combined with the <code class="docutils literal notranslate"><span class="pre">$and</span></code>/<code class="docutils literal notranslate"><span class="pre">$or</span></code>
+combinators.  Supported operators are <code class="docutils literal notranslate"><span class="pre">$eq</span></code>, <code class="docutils literal notranslate"><span class="pre">$ne</span></code>, <code class="docutils literal notranslate"><span class="pre">$gt</span></code>,
+<code class="docutils literal notranslate"><span class="pre">$gte</span></code>, <code class="docutils literal notranslate"><span class="pre">$lt</span></code>, <code class="docutils literal notranslate"><span class="pre">$lte</span></code>, <code class="docutils literal notranslate"><span class="pre">$in</span></code>, <code class="docutils literal notranslate"><span class="pre">$nin</span></code> and <code class="docutils literal notranslate"><span class="pre">$contains</span></code>
+(the last matches a list-valued field, e.g. <code class="docutils literal notranslate"><span class="pre">authors</span></code>, that
+contains the value).</p>
+<p>The canonical form is the one every backend translator accepts:</p>
+<ul class="simple">
+<li><p>every field value is an operator expression with exactly one
+operator (bare values are wrapped as <code class="docutils literal notranslate"><span class="pre">{&quot;$eq&quot;:</span> <span class="pre">value}</span></code>)</p></li>
+<li><p>several constraints (multiple top-level fields, or several
+operators on one field) are combined with <code class="docutils literal notranslate"><span class="pre">$and</span></code></p></li>
+<li><p>the top level has exactly one key (a field, <code class="docutils literal notranslate"><span class="pre">$and</span></code> or <code class="docutils literal notranslate"><span class="pre">$or</span></code>)</p></li>
+</ul>
+<p>Chroma and <code class="docutils literal notranslate"><span class="pre">langchain_postgres</span></code> reject multi-operator field
+expressions and multi-key top levels, so this normalization is what
+makes a single filter usable across all backends.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">validate_metadata_filter</span><span class="p">({</span><span class="s2">"year"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$gte"</span><span class="p">:</span> <span class="mi">2020</span><span class="p">,</span> <span class="s2">"$lte"</span><span class="p">:</span> <span class="mi">2025</span><span class="p">}})</span>
+<span class="o">-&gt;</span> <span class="p">{</span><span class="s2">"$and"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"year"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$gte"</span><span class="p">:</span> <span class="mi">2020</span><span class="p">}},</span> <span class="p">{</span><span class="s2">"year"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$lte"</span><span class="p">:</span> <span class="mi">2025</span><span class="p">}}]}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>f</strong> – Metadata filter in the DSL described above</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Canonical normalized filter</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the filter is not well-formed (empty,
+unknown operator, malformed operand)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="bm25-index">
+<h2>BM25 index<a class="headerlink" href="#bm25-index" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.langchain_bm25.</span></span><span class="sig-name descname"><span class="pre">BM25Retriever</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/langchain_bm25.html#BM25Retriever"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseRetriever</span></code></p>
+<p>BM25 retriever using rank_bm25 for keyword-based document scoring.</p>
+<p>This retriever processes a collection of documents into an in-memory Okapi BM25
+index using the <cite>rank_bm25</cite> package. It tokenizes page contents and ranks
+documents based on term frequency and inverse document frequency (TF-IDF derivative).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.vectorizer">
+<span class="sig-name descname"><span class="pre">vectorizer</span></span><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.vectorizer" title="Link to this definition">¶</a></dt>
+<dd><p>The underlying rank_bm25 search index object (BM25Okapi).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.docs">
+<span class="sig-name descname"><span class="pre">docs</span></span><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.docs" title="Link to this definition">¶</a></dt>
+<dd><p>List of underlying LangChain Document objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Document]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.k">
+<span class="sig-name descname"><span class="pre">k</span></span><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.k" title="Link to this definition">¶</a></dt>
+<dd><p>Default number of documents to return per query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.preprocess_func">
+<span class="sig-name descname"><span class="pre">preprocess_func</span></span><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.preprocess_func" title="Link to this definition">¶</a></dt>
+<dd><p>Function used to tokenize text.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Callable[[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>], List[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.from_documents">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">documents:</span> <span class="pre">~collections.abc.Iterable[langchain_core.documents.Document],</span> <span class="pre">*,</span> <span class="pre">bm25_params:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">preprocess_func:</span> <span class="pre">~collections.abc.Callable[[str],</span> <span class="pre">list[str]]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">default_preprocessing_func&gt;,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever" title="klea_utils.stores.langchain_bm25.BM25Retriever"><span class="pre">BM25Retriever</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/langchain_bm25.html#BM25Retriever.from_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.from_documents" title="Link to this definition">¶</a></dt>
+<dd><p>Create a BM25Retriever from a list of Documents.
+:param documents: A list of Documents to vectorize.
+:param bm25_params: Parameters to pass to the BM25 vectorizer.
+:param preprocess_func: A function to preprocess each text before vectorization.
+:param **kwargs: Any other arguments to pass to the retriever.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A BM25Retriever instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="klea_utils.stores.langchain_bm25.BM25Retriever.from_texts">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_texts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">texts:</span> <span class="pre">~collections.abc.Iterable[str],</span> <span class="pre">metadatas:</span> <span class="pre">~collections.abc.Iterable[dict]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">ids:</span> <span class="pre">~collections.abc.Iterable[str]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">bm25_params:</span> <span class="pre">dict[str,</span> <span class="pre">~typing.Any]</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">preprocess_func:</span> <span class="pre">~collections.abc.Callable[[str],</span> <span class="pre">list[str]]</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">default_preprocessing_func&gt;,</span> <span class="pre">**kwargs:</span> <span class="pre">~typing.Any</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever" title="klea_utils.stores.langchain_bm25.BM25Retriever"><span class="pre">BM25Retriever</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/langchain_bm25.html#BM25Retriever.from_texts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.langchain_bm25.BM25Retriever.from_texts" title="Link to this definition">¶</a></dt>
+<dd><p>Create a BM25Retriever from a list of texts.
+:param texts: A list of texts to vectorize.
+:param metadatas: A list of metadata dicts to associate with each text.
+:param ids: A list of ids to associate with each text.
+:param bm25_params: Parameters to pass to the BM25 vectorizer.
+:param preprocess_func: A function to preprocess each text before vectorization.
+:param **kwargs: Any other arguments to pass to the retriever.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A BM25Retriever instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-klea_utils.stores.utils">
 <span id="utilities"></span><h2>Utilities<a class="headerlink" href="#module-klea_utils.stores.utils" title="Link to this heading">¶</a></h2>
 <p>Vector store utilities</p>
@@ -729,12 +1166,36 @@ cosine similarity.</p>
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.RECENCY_MISSING_YEAR_SCORE">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">RECENCY_MISSING_YEAR_SCORE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.5</span></span><a class="headerlink" href="#klea_utils.stores.utils.RECENCY_MISSING_YEAR_SCORE" title="Link to this definition">¶</a></dt>
+<dd><p>Recency score assigned to documents without a usable <code class="docutils literal notranslate"><span class="pre">year</span></code> metadata
+value.  A fixed midpoint (not a derived statistic) so it is immune to
+distribution skew: it ranks such documents below known-recent papers but
+above the oldest retrieved document.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.RECENCY_WEIGHT_RELEVANCE">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">RECENCY_WEIGHT_RELEVANCE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.9</span></span><a class="headerlink" href="#klea_utils.stores.utils.RECENCY_WEIGHT_RELEVANCE" title="Link to this definition">¶</a></dt>
+<dd><p>Weight given to the normalized relevance (RRF) component of the final
+blended score in <a class="reference internal" href="#klea_utils.stores.utils.rerank_by_recency" title="klea_utils.stores.utils.rerank_by_recency"><code class="xref py py-func docutils literal notranslate"><span class="pre">rerank_by_recency()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.RECENCY_WEIGHT_TIME">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">RECENCY_WEIGHT_TIME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.1</span></span><a class="headerlink" href="#klea_utils.stores.utils.RECENCY_WEIGHT_TIME" title="Link to this definition">¶</a></dt>
+<dd><p>Weight given to the recency (time) component of the final blended score.
+Newer documents are boosted because academic work builds on – and often
+corrects – earlier results, so recent information is more authoritative.</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.REF_DOC_OVERHEAD">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">REF_DOC_OVERHEAD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">200</span></span><a class="headerlink" href="#klea_utils.stores.utils.REF_DOC_OVERHEAD" title="Link to this definition">¶</a></dt>
 <dd><p>Per-document character overhead attributed by <a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material" title="klea_utils.stores.utils.truncate_reference_material"><code class="xref py py-func docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a>
 for the serialized markup that wraps each reference in the LLM context
-(<code class="docutils literal notranslate"><span class="pre">###</span> <span class="pre">Document</span> <span class="pre">N/M:</span> <span class="pre">[file]</span> <span class="pre">headings</span> <span class="pre">(relevance:</span> <span class="pre">...)</span></code> plus the optional
-metadata line).  Approximate; the page content dominates in practice.</p>
+(<code class="docutils literal notranslate"><span class="pre">###</span> <span class="pre">Source</span> <span class="pre">document</span> <span class="pre">N/M:</span> <span class="pre">[file]</span></code> plus the optional metadata line).
+Approximate; the page content dominates in practice.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -770,24 +1231,6 @@ instead.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the scheme is missing or unknown</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="klea_utils.stores.utils.format_source_scores">
-<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">format_source_scores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">doc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">langchain_core.documents.Document</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#format_source_scores"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.format_source_scores" title="Link to this definition">¶</a></dt>
-<dd><p>Format a document’s original per-source scores for display.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>doc</strong> – Document with <a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY" title="klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a> metadata</p></li>
-<li><p><strong>precision</strong> – Number of decimal places per score</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Joined string like <code class="docutils literal notranslate"><span class="pre">&quot;vector</span> <span class="pre">store</span> <span class="pre">0.87,</span> <span class="pre">BM25</span> <span class="pre">3.21&quot;</span></code>, or
-<code class="docutils literal notranslate"><span class="pre">None</span></code> if the document has no per-source scores</p>
 </dd>
 </dl>
 </dd></dl>
@@ -867,13 +1310,45 @@ unchanged.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.rerank_by_recency">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">rerank_by_recency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">merged</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relevance_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#rerank_by_recency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.rerank_by_recency" title="Link to this definition">¶</a></dt>
+<dd><p>Re-rank RRF results blending in document recency.</p>
+<p>Keeps <a class="reference internal" href="#klea_utils.stores.utils.rrf_merge" title="klea_utils.stores.utils.rrf_merge"><code class="xref py py-func docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a> pure (relevance only) and applies recency as a
+separate post-fusion re-rank.  Each document’s pure RRF score is
+min-max normalized to <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1]</span></code> across the result set, a time score is
+computed from its <code class="docutils literal notranslate"><span class="pre">year</span></code> metadata, and the final score is a weighted
+combination:</p>
+<p><code class="docutils literal notranslate"><span class="pre">final</span> <span class="pre">=</span> <span class="pre">relevance_weight</span> <span class="pre">*</span> <span class="pre">norm_rrf</span> <span class="pre">+</span> <span class="pre">time_weight</span> <span class="pre">*</span> <span class="pre">time_score</span></code></p>
+<p>The time score is <code class="docutils literal notranslate"><span class="pre">(year</span> <span class="pre">-</span> <span class="pre">year_min)</span> <span class="pre">/</span> <span class="pre">(year_max</span> <span class="pre">-</span> <span class="pre">year_min)</span></code> where
+<code class="docutils literal notranslate"><span class="pre">year_min</span></code>/<code class="docutils literal notranslate"><span class="pre">year_max</span></code> are the min and max <code class="docutils literal notranslate"><span class="pre">year</span></code> across the
+retrieved set (relative normalization).  Documents without a usable
+<code class="docutils literal notranslate"><span class="pre">year</span></code> (missing or non-int) get <a class="reference internal" href="#klea_utils.stores.utils.RECENCY_MISSING_YEAR_SCORE" title="klea_utils.stores.utils.RECENCY_MISSING_YEAR_SCORE"><code class="xref py py-data docutils literal notranslate"><span class="pre">RECENCY_MISSING_YEAR_SCORE</span></code></a>.</p>
+<p>Division-by-zero cases are guarded: a single distinct RRF value maps to
+<code class="docutils literal notranslate"><span class="pre">1.0</span></code> and a single distinct year maps to <code class="docutils literal notranslate"><span class="pre">1.0</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>merged</strong> – <code class="docutils literal notranslate"><span class="pre">(doc,</span> <span class="pre">rrf_score)</span></code> tuples from <a class="reference internal" href="#klea_utils.stores.utils.rrf_merge" title="klea_utils.stores.utils.rrf_merge"><code class="xref py py-func docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a></p></li>
+<li><p><strong>relevance_weight</strong> – Weight for the normalized relevance component</p></li>
+<li><p><strong>time_weight</strong> – Weight for the recency component</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The same documents, re-sorted descending by the blended score,
+with the blended score replacing the pure RRF score in each tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.rrf_merge">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">rrf_merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_refs_max</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><span class="pre">langchain_core.documents.Document</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#rrf_merge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.rrf_merge" title="Link to this definition">¶</a></dt>
 <dd><p>Fuse per-source retrieval results with Reciprocal Rank Fusion.</p>
 <p>Scores from different retrievers (e.g. cosine similarity vs BM25) are not
 comparable, so each document is scored purely by its rank within each
 source’s result list.  The original per-source scores are preserved in
-each document’s <a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY" title="klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a> metadata for display.</p>
+each document’s <a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY" title="klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="xref py py-data docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a> metadata for debugging and
+introspection (they are not shown to the answer LLM).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -905,8 +1380,9 @@ a file, so they are listed once on the source header; a <code class="docutils li
 is also hoisted to the header when the whole file shares the same
 value.  Per-chunk metadata that differs (e.g. a heading-specific
 <code class="docutils literal notranslate"><span class="pre">url</span></code>) is emitted inline so no chunk is misattributed.  Files are
-ordered by their best chunk’s relevance score; chunks within a file
-by score.</p>
+ordered by their best chunk’s score; chunks within a file by score.
+Relevance scores are not included in the prompt – the ranked order is
+what matters to the answer LLM.</p>
 <p>Uses Docling <code class="docutils literal notranslate"><span class="pre">HybridChunker</span></code> metadata format:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">headings</span></code>: list of heading hierarchy (most specific last)</p></li>
@@ -1030,6 +1506,13 @@ budget</p>
 </li>
 </ul>
 </li>
+<li><a class="reference internal" href="#module-klea_utils.stores.metadata">Stored metadata schema</a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.metadata.ALWAYS_STORED_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">ALWAYS_STORED_METADATA_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.metadata.MACHINE_SET_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">MACHINE_SET_METADATA_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.metadata.SHARED_DOC_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">SHARED_DOC_METADATA_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.metadata.STORE_DROPPED_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">STORE_DROPPED_METADATA_KEYS</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#ingestion">Ingestion</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.StoresBuilder"><code class="docutils literal notranslate"><span class="pre">StoresBuilder</span></code></a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.StoresBuilder.DEFAULT_EMBED_BATCH_SIZE"><code class="docutils literal notranslate"><span class="pre">StoresBuilder.DEFAULT_EMBED_BATCH_SIZE</span></code></a></li>
@@ -1040,6 +1523,16 @@ budget</p>
 <li><a class="reference internal" href="#klea_utils.stores.ingestion.StoresBuilder.write_heading_template"><code class="docutils literal notranslate"><span class="pre">StoresBuilder.write_heading_template()</span></code></a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-klea_utils.stores.map_lint">Metadata map linting</a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.CORE_FIELDS"><code class="docutils literal notranslate"><span class="pre">CORE_FIELDS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.URL_WARN_THRESHOLD"><code class="docutils literal notranslate"><span class="pre">URL_WARN_THRESHOLD</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.YEAR_MAX"><code class="docutils literal notranslate"><span class="pre">YEAR_MAX</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.YEAR_MIN"><code class="docutils literal notranslate"><span class="pre">YEAR_MIN</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.format_metadata_lint_report"><code class="docutils literal notranslate"><span class="pre">format_metadata_lint_report()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.lint_file_metadata"><code class="docutils literal notranslate"><span class="pre">lint_file_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.map_lint.lint_metadata_map"><code class="docutils literal notranslate"><span class="pre">lint_metadata_map()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#retrieval">Retrieval</a><ul>
@@ -1066,15 +1559,41 @@ budget</p>
 </li>
 </ul>
 </li>
+<li><a class="reference internal" href="#module-klea_utils.stores.filters">Metadata filters</a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.filters.FIELD_OPERATORS"><code class="docutils literal notranslate"><span class="pre">FIELD_OPERATORS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.LOGICAL_OPERATORS"><code class="docutils literal notranslate"><span class="pre">LOGICAL_OPERATORS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.filter_docs_by_metadata"><code class="docutils literal notranslate"><span class="pre">filter_docs_by_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.to_chroma_filter"><code class="docutils literal notranslate"><span class="pre">to_chroma_filter()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.to_pgvector_filter"><code class="docutils literal notranslate"><span class="pre">to_pgvector_filter()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.to_qdrant_filter"><code class="docutils literal notranslate"><span class="pre">to_qdrant_filter()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.translate_metadata_filter"><code class="docutils literal notranslate"><span class="pre">translate_metadata_filter()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter"><code class="docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bm25-index">BM25 index</a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever"><code class="docutils literal notranslate"><span class="pre">BM25Retriever</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.vectorizer"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.vectorizer</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.docs"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.docs</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.k"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.k</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.preprocess_func"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.preprocess_func</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.from_documents"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.from_documents()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.langchain_bm25.BM25Retriever.from_texts"><code class="docutils literal notranslate"><span class="pre">BM25Retriever.from_texts()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><a class="reference internal" href="#module-klea_utils.stores.utils">Utilities</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.utils.CHROMA_HNSW_SPACE"><code class="docutils literal notranslate"><span class="pre">CHROMA_HNSW_SPACE</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.RECENCY_MISSING_YEAR_SCORE"><code class="docutils literal notranslate"><span class="pre">RECENCY_MISSING_YEAR_SCORE</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.RECENCY_WEIGHT_RELEVANCE"><code class="docutils literal notranslate"><span class="pre">RECENCY_WEIGHT_RELEVANCE</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.RECENCY_WEIGHT_TIME"><code class="docutils literal notranslate"><span class="pre">RECENCY_WEIGHT_TIME</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.REF_DOC_OVERHEAD"><code class="docutils literal notranslate"><span class="pre">REF_DOC_OVERHEAD</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.RRF_K"><code class="docutils literal notranslate"><span class="pre">RRF_K</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.drop_collection"><code class="docutils literal notranslate"><span class="pre">drop_collection()</span></code></a></li>
-<li><a class="reference internal" href="#klea_utils.stores.utils.format_source_scores"><code class="docutils literal notranslate"><span class="pre">format_source_scores()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.instantiate_vector_store"><code class="docutils literal notranslate"><span class="pre">instantiate_vector_store()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.rerank_by_recency"><code class="docutils literal notranslate"><span class="pre">rerank_by_recency()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.rrf_merge"><code class="docutils literal notranslate"><span class="pre">rrf_merge()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.serialize_reference_material"><code class="docutils literal notranslate"><span class="pre">serialize_reference_material()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.truncate_reference_material"><code class="docutils literal notranslate"><span class="pre">truncate_reference_material()</span></code></a></li>

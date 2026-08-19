@@ -226,7 +226,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/utils/mcp.html">MCP utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -283,7 +283,8 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>All modules for which code is available</h1>
-<ul><li><a href="klea_utils/api/app.html">klea_utils.api.app</a></li>
+<ul><li><a href="fastmcp.html">fastmcp</a></li>
+<li><a href="klea_utils/api/app.html">klea_utils.api.app</a></li>
 <li><a href="klea_utils/api/chat.html">klea_utils.api.chat</a></li>
 <li><a href="klea_utils/api/health.html">klea_utils.api.health</a></li>
 <li><a href="klea_utils/api/messages.html">klea_utils.api.messages</a></li>
@@ -303,7 +304,21 @@
 <li><a href="klea_utils/graph/reducers.html">klea_utils.graph.reducers</a></li>
 <li><a href="klea_utils/graph/schemas.html">klea_utils.graph.schemas</a></li>
 <li><a href="klea_utils/llm.html">klea_utils.llm</a></li>
+<li><a href="klea_utils/mcp/dispatch.html">klea_utils.mcp.dispatch</a></li>
+<li><a href="klea_utils/mcp/errors.html">klea_utils.mcp.errors</a></li>
+<li><a href="klea_utils/mcp/lifespan.html">klea_utils.mcp.lifespan</a></li>
+<li><a href="klea_utils/mcp/registry.html">klea_utils.mcp.registry</a></li>
 <li><a href="klea_utils/mcp/schemas.html">klea_utils.mcp.schemas</a></li>
+<li><a href="klea_utils/mcp/server/bundled.html">klea_utils.mcp.server.bundled</a></li>
+<li><a href="klea_utils/mcp/server/bundled_tools.html">klea_utils.mcp.server.bundled_tools</a></li>
+<li><a href="klea_utils/mcp/server/config.html">klea_utils.mcp.server.config</a></li>
+<li><a href="klea_utils/mcp/tool_impls/download_file.html">klea_utils.mcp.tool_impls.download_file</a></li>
+<li><a href="klea_utils/mcp/tool_impls/list_files.html">klea_utils.mcp.tool_impls.list_files</a></li>
+<li><a href="klea_utils/mcp/tool_impls/permission.html">klea_utils.mcp.tool_impls.permission</a></li>
+<li><a href="klea_utils/mcp/tool_impls/read_file.html">klea_utils.mcp.tool_impls.read_file</a></li>
+<li><a href="klea_utils/mcp/tool_impls/session.html">klea_utils.mcp.tool_impls.session</a></li>
+<li><a href="klea_utils/mcp/tool_impls/ssrf.html">klea_utils.mcp.tool_impls.ssrf</a></li>
+<li><a href="klea_utils/mcp/tool_impls/web_fetch.html">klea_utils.mcp.tool_impls.web_fetch</a></li>
 <li><a href="klea_utils/models_catalog.html">klea_utils.models_catalog</a></li>
 <li><a href="klea_utils/nodes/abstract.html">klea_utils.nodes.abstract</a></li>
 <li><a href="klea_utils/nodes/answer_general.html">klea_utils.nodes.answer_general</a></li>
@@ -312,16 +327,22 @@
 <li><a href="klea_utils/nodes/guard.html">klea_utils.nodes.guard</a></li>
 <li><a href="klea_utils/nodes/guard_router.html">klea_utils.nodes.guard_router</a></li>
 <li><a href="klea_utils/nodes/summarise_memory.html">klea_utils.nodes.summarise_memory</a></li>
+<li><a href="klea_utils/nodes/tools_caller.html">klea_utils.nodes.tools_caller</a></li>
+<li><a href="klea_utils/nodes/tools_picker.html">klea_utils.nodes.tools_picker</a></li>
 <li><a href="klea_utils/paths.html">klea_utils.paths</a></li>
 <li><a href="klea_utils/plogging.html">klea_utils.plogging</a></li>
 <li><a href="klea_utils/stores/config.html">klea_utils.stores.config</a></li>
+<li><a href="klea_utils/stores/filters.html">klea_utils.stores.filters</a></li>
 <li><a href="klea_utils/stores/ingestion.html">klea_utils.stores.ingestion</a></li>
+<li><a href="klea_utils/stores/langchain_bm25.html">klea_utils.stores.langchain_bm25</a></li>
+<li><a href="klea_utils/stores/map_lint.html">klea_utils.stores.map_lint</a></li>
 <li><a href="klea_utils/stores/retrieval/base.html">klea_utils.stores.retrieval.base</a></li>
 <li><a href="klea_utils/stores/retrieval/bm25.html">klea_utils.stores.retrieval.bm25</a></li>
 <li><a href="klea_utils/stores/retrieval/vs.html">klea_utils.stores.retrieval.vs</a></li>
 <li><a href="klea_utils/stores/utils.html">klea_utils.stores.utils</a></li>
 <li><a href="klea_utils/tools.html">klea_utils.tools</a></li>
 <li><a href="klea_utils/ui/cli.html">klea_utils.ui.cli</a></li>
+<li><a href="klea_utils/ui/linkify.html">klea_utils.ui.linkify</a></li>
 <li><a href="klea_utils/ui/stores_create.html">klea_utils.ui.stores_create</a></li>
 <li><a href="klea_utils/ui/tui/repl.html">klea_utils.ui.tui.repl</a></li>
 <li><a href="klea_utils/ui/web/nicegui/client.html">klea_utils.ui.web.nicegui.client</a></li>

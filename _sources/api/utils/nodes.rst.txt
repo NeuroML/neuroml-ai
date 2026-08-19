@@ -37,6 +37,17 @@ Answer / response nodes
    :members:
    :show-inheritance:
 
+Tool nodes
+----------
+
+.. automodule:: klea_utils.nodes.tools_picker
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.nodes.tools_caller
+   :members:
+   :show-inheritance:
+
 Memory
 ------
 

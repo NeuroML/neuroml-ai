@@ -226,7 +226,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/stores.html">Vector stores</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/biblio.html">Bibliographic metadata extraction (<code class="docutils literal notranslate"><span class="pre">klea\_utils.biblio</span></code>)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/llm.html">LLM utilities</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP schemas</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/utils/mcp.html">MCP utilities</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/models_catalog.html">Model catalog</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/utils/api.html">API</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/utils/ui.html">UI</a><input aria-label="Toggle navigation of UI" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -318,8 +318,8 @@
 
 <span class="c1">#: Per-document character overhead attributed by :func:`truncate_reference_material`</span>
 <span class="c1">#: for the serialized markup that wraps each reference in the LLM context</span>
-<span class="c1">#: (``### Document N/M: [file] headings (relevance: ...)`` plus the optional</span>
-<span class="c1">#: metadata line).  Approximate; the page content dominates in practice.</span>
+<span class="c1">#: (``### Source document N/M: [file]`` plus the optional metadata line).</span>
+<span class="c1">#: Approximate; the page content dominates in practice.</span>
 <span class="n">REF_DOC_OVERHEAD</span> <span class="o">=</span> <span class="mi">200</span>
 
 <span class="n">_INTERNAL_META_KEYS</span> <span class="o">=</span> <span class="p">{</span>
@@ -396,7 +396,8 @@
 <span class="sd">    Scores from different retrievers (e.g. cosine similarity vs BM25) are not</span>
 <span class="sd">    comparable, so each document is scored purely by its rank within each</span>
 <span class="sd">    source's result list.  The original per-source scores are preserved in</span>
-<span class="sd">    each document's :data:`SOURCE_SCORES_KEY` metadata for display.</span>
+<span class="sd">    each document's :data:`SOURCE_SCORES_KEY` metadata for debugging and</span>
+<span class="sd">    introspection (they are not shown to the answer LLM).</span>
 
 <span class="sd">    :param result_sets: List of ``(source_label, results)`` pairs, where each</span>
 <span class="sd">        *results* is a list of ``(document, score)`` tuples already ranked by</span>
@@ -433,6 +434,90 @@
     <span class="k">if</span> <span class="n">num_refs_max</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">merged</span>
     <span class="k">return</span> <span class="n">merged</span><span class="p">[:</span><span class="n">num_refs_max</span><span class="p">]</span></div>
+
+
+
+<span class="c1">#: Weight given to the normalized relevance (RRF) component of the final</span>
+<span class="c1">#: blended score in :func:`rerank_by_recency`.</span>
+<span class="n">RECENCY_WEIGHT_RELEVANCE</span> <span class="o">=</span> <span class="mf">0.9</span>
+
+<span class="c1">#: Weight given to the recency (time) component of the final blended score.</span>
+<span class="c1">#: Newer documents are boosted because academic work builds on -- and often</span>
+<span class="c1">#: corrects -- earlier results, so recent information is more authoritative.</span>
+<span class="n">RECENCY_WEIGHT_TIME</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+<span class="c1">#: Recency score assigned to documents without a usable ``year`` metadata</span>
+<span class="c1">#: value.  A fixed midpoint (not a derived statistic) so it is immune to</span>
+<span class="c1">#: distribution skew: it ranks such documents below known-recent papers but</span>
+<span class="c1">#: above the oldest retrieved document.</span>
+<span class="n">RECENCY_MISSING_YEAR_SCORE</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+
+<div class="viewcode-block" id="rerank_by_recency">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.rerank_by_recency">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rerank_by_recency</span><span class="p">(</span>
+    <span class="n">merged</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+    <span class="n">relevance_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">RECENCY_WEIGHT_RELEVANCE</span><span class="p">,</span>
+    <span class="n">time_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">RECENCY_WEIGHT_TIME</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Re-rank RRF results blending in document recency.</span>
+
+<span class="sd">    Keeps :func:`rrf_merge` pure (relevance only) and applies recency as a</span>
+<span class="sd">    separate post-fusion re-rank.  Each document's pure RRF score is</span>
+<span class="sd">    min-max normalized to ``[0, 1]`` across the result set, a time score is</span>
+<span class="sd">    computed from its ``year`` metadata, and the final score is a weighted</span>
+<span class="sd">    combination:</span>
+
+<span class="sd">    ``final = relevance_weight * norm_rrf + time_weight * time_score``</span>
+
+<span class="sd">    The time score is ``(year - year_min) / (year_max - year_min)`` where</span>
+<span class="sd">    ``year_min``/``year_max`` are the min and max ``year`` across the</span>
+<span class="sd">    retrieved set (relative normalization).  Documents without a usable</span>
+<span class="sd">    ``year`` (missing or non-int) get :data:`RECENCY_MISSING_YEAR_SCORE`.</span>
+
+<span class="sd">    Division-by-zero cases are guarded: a single distinct RRF value maps to</span>
+<span class="sd">    ``1.0`` and a single distinct year maps to ``1.0``.</span>
+
+<span class="sd">    :param merged: ``(doc, rrf_score)`` tuples from :func:`rrf_merge`</span>
+<span class="sd">    :param relevance_weight: Weight for the normalized relevance component</span>
+<span class="sd">    :param time_weight: Weight for the recency component</span>
+<span class="sd">    :returns: The same documents, re-sorted descending by the blended score,</span>
+<span class="sd">        with the blended score replacing the pure RRF score in each tuple</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">merged</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">rrf_scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">score</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">merged</span><span class="p">]</span>
+    <span class="n">rrf_min</span><span class="p">,</span> <span class="n">rrf_max</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rrf_scores</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rrf_scores</span><span class="p">)</span>
+
+    <span class="n">years</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">"year"</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">merged</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"year"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">year_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">years</span><span class="p">)</span> <span class="k">if</span> <span class="n">years</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">year_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">years</span><span class="p">)</span> <span class="k">if</span> <span class="n">years</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="n">blended</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">merged</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">rrf_max</span> <span class="o">&gt;</span> <span class="n">rrf_min</span><span class="p">:</span>
+            <span class="n">norm_rrf</span> <span class="o">=</span> <span class="p">(</span><span class="n">score</span> <span class="o">-</span> <span class="n">rrf_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">rrf_max</span> <span class="o">-</span> <span class="n">rrf_min</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">norm_rrf</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="n">year</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"year"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">year_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">year_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">year_max</span> <span class="o">&gt;</span> <span class="n">year_min</span><span class="p">:</span>
+                <span class="n">time_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">year</span> <span class="o">-</span> <span class="n">year_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">year_max</span> <span class="o">-</span> <span class="n">year_min</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">time_score</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">time_score</span> <span class="o">=</span> <span class="n">RECENCY_MISSING_YEAR_SCORE</span>
+
+        <span class="n">final</span> <span class="o">=</span> <span class="n">relevance_weight</span> <span class="o">*</span> <span class="n">norm_rrf</span> <span class="o">+</span> <span class="n">time_weight</span> <span class="o">*</span> <span class="n">time_score</span>
+        <span class="n">blended</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">doc</span><span class="p">,</span> <span class="n">final</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">blended</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
 
 
@@ -475,41 +560,6 @@
 
 
 
-<div class="viewcode-block" id="format_source_scores">
-<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.format_source_scores">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">precision</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Format a document's original per-source scores for display.</span>
-
-<span class="sd">    :param doc: Document with :data:`SOURCE_SCORES_KEY` metadata</span>
-<span class="sd">    :param precision: Number of decimal places per score</span>
-<span class="sd">    :returns: Joined string like ``"vector store 0.87, BM25 3.21"``, or</span>
-<span class="sd">        ``None`` if the document has no per-source scores</span>
-<span class="sd">    """</span>
-    <span class="n">source_scores</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">source_scores</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">precision</span><span class="si">}</span><span class="s2">f</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">source_scores</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div>
-
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">,</span> <span class="n">score</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Format a document's relevance scores for prompt context.</span>
-
-<span class="sd">    Shows the original per-source scores (e.g. ``vector store 0.8723,</span>
-<span class="sd">    BM25 3.2100``) when present in ``_source_scores`` metadata, so the LLM</span>
-<span class="sd">    can interpret scores from different retrievers.  Falls back to the</span>
-<span class="sd">    single relevance score for documents without per-source info.</span>
-
-<span class="sd">    :param doc: Document to format</span>
-<span class="sd">    :param score: Relevance score for *doc*</span>
-<span class="sd">    :returns: Score string to append to a document heading</span>
-<span class="sd">    """</span>
-    <span class="n">source_scores</span> <span class="o">=</span> <span class="n">format_source_scores</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">source_scores</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">" (relevance: </span><span class="si">{</span><span class="n">source_scores</span><span class="si">}</span><span class="s2">)"</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">" (relevance score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">)"</span>
-
-
 <div class="viewcode-block" id="serialize_reference_material">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.serialize_reference_material">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">serialize_reference_material</span><span class="p">(</span>
@@ -525,8 +575,9 @@
 <span class="sd">    is also hoisted to the header when the whole file shares the same</span>
 <span class="sd">    value.  Per-chunk metadata that differs (e.g. a heading-specific</span>
 <span class="sd">    ``url``) is emitted inline so no chunk is misattributed.  Files are</span>
-<span class="sd">    ordered by their best chunk's relevance score; chunks within a file</span>
-<span class="sd">    by score.</span>
+<span class="sd">    ordered by their best chunk's score; chunks within a file by score.</span>
+<span class="sd">    Relevance scores are not included in the prompt -- the ranked order is</span>
+<span class="sd">    what matters to the answer LLM.</span>
 
 <span class="sd">    Uses Docling ``HybridChunker`` metadata format:</span>
 
@@ -553,7 +604,7 @@
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">file_docs</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">file_docs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span> <span class="o">=</span> <span class="n">file_docs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">first_doc</span> <span class="o">=</span> <span class="n">file_docs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
 
             <span class="c1"># Document-level metadata: the shared bibliographic fields</span>
             <span class="c1"># (authors, year, journal, ...) come from the file's top chunk</span>
@@ -575,20 +626,17 @@
                     <span class="n">file_meta</span><span class="p">[</span><span class="n">url_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_key</span><span class="p">)</span>
 
             <span class="n">heading_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">]"</span> <span class="k">if</span> <span class="n">file_name</span> <span class="k">else</span> <span class="s2">"(no file)"</span>
-            <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">first_doc</span><span class="p">,</span> <span class="n">first_score</span><span class="p">)</span>
             <span class="n">serialized</span> <span class="o">+=</span> <span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">### Source document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: "</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">### Source document </span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_files</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">file_meta</span><span class="p">:</span>
                 <span class="n">meta_str</span> <span class="o">=</span> <span class="s2">" | "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">file_meta</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
                 <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"Metadata: </span><span class="si">{</span><span class="n">meta_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
-            <span class="k">for</span> <span class="n">chunk_ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_docs</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">chunk_ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">_score</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">file_docs</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"headings"</span><span class="p">,</span> <span class="p">[])</span>
                 <span class="n">heading_str</span> <span class="o">=</span> <span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="k">if</span> <span class="n">headings</span> <span class="k">else</span> <span class="s2">"(no heading)"</span>
-                <span class="n">score_str</span> <span class="o">=</span> <span class="n">_format_score_str</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
-                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Chunk </span><span class="si">{</span><span class="n">chunk_ctr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}{</span><span class="n">score_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="n">serialized</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Chunk </span><span class="si">{</span><span class="n">chunk_ctr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">heading_str</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
 
                 <span class="c1"># Chunk-level metadata: non-internal keys not already on the</span>
                 <span class="c1"># file level (shared bibliographic fields, and url keys the</span>
