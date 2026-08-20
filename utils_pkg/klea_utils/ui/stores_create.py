@@ -13,9 +13,15 @@ from pathlib import Path
 
 import typer
 
-from ..plogging import setup_root_logger
+from ..plogging import resolve_log_level, setup_root_logger
 
 app = typer.Typer(help="Create stores from documents")
+
+#: Shared ``--debug`` option attached to every command.  When given, the
+#: console shows full DEBUG logging; otherwise the console stays at INFO
+#: (progress on stdout, warnings/errors on stderr).  See
+#: :func:`klea_utils.plogging.resolve_log_level` for the flag/env precedence.
+debug_option = typer.Option(False, "--debug", help="Enable debug logging")
 
 
 def _store_dir(store_path: str) -> Path | None:
@@ -54,6 +60,7 @@ def pre_check(
         "scratch directory, then chunk and store each subdirectory into "
         "the same collection",
     ),
+    debug: bool = debug_option,
 ):
     """Decide which PDFs need OCR before chunking.
 
@@ -68,7 +75,7 @@ def pre_check(
     originals are never modified), then prints the recommended chunk and
     store commands to build both into the same collection.
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     source_path = Path(source_dir).resolve()
@@ -138,6 +145,7 @@ def chunk(
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
+    debug: bool = debug_option,
 ):
     """Chunk and cache documents without writing to a vector store.
 
@@ -148,7 +156,7 @@ def chunk(
     metadata values and pass the file to
     ``klea-stores-create store --metadata-map``.
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     logger.info(f"Chunking documents in {source_dir}\n  Max tokens: {max_tokens}")
@@ -227,6 +235,7 @@ def map_lint(
         help="Explicit metadata-map JSON file to lint, instead of the "
         "template in SOURCE_DIR",
     ),
+    debug: bool = debug_option,
 ):
     """Report issues in a metadata map so it can be reviewed efficiently.
 
@@ -240,7 +249,7 @@ def map_lint(
     the full report is printed first and the command then exits non-zero
     when any such file is found.
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     try:
@@ -356,6 +365,7 @@ def store(
         "files are updated in place.  Does not reconvert: files must "
         "already be cached by 'chunk'",
     ),
+    debug: bool = debug_option,
 ):
     """Write cached document chunks to a vector store.
 
@@ -379,7 +389,7 @@ def store(
     Run ``klea-stores-create chunk`` first to populate the cache and
     generate a ``metadata-map.template.json``.
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     logger.info(
@@ -494,6 +504,7 @@ def store_lint(
         "human review.  Pass 0 to suppress sampling",
         show_default=True,
     ),
+    debug: bool = debug_option,
 ):
     """Report issues in a stored corpus so it can be reviewed efficiently.
 
@@ -508,7 +519,7 @@ def store_lint(
     printed automatically at the end of ``store`` when a BM25 corpus was
     written.
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     corpus = Path(corpus_path)
@@ -612,6 +623,7 @@ def build(
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
+    debug: bool = debug_option,
 ):
     """Full pipeline: chunk, embed, and write to a vector store.
 
@@ -645,7 +657,7 @@ def build(
             }
         }
     """
-    setup_root_logger("klea-stores-create")
+    setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
     logger.info(
