@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -27,6 +28,8 @@ KLEA_LOG_NAMESPACES = (
     "neuroml_mcp",
 )
 
+logger = logging.getLogger(__name__)
+
 
 class LoggerNotInfoFilter(logging.Filter):
     """Allow only non INFO messages"""
@@ -40,6 +43,60 @@ class LoggerInfoFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno == logging.INFO
+
+
+#: Environment variable that selects the console logging level across all
+#: Klea CLIs (see :func:`resolve_log_level`).  Read from the process
+#: environment only -- the app env files (e.g. ``klea_agent.env``) are
+#: loaded after logging is configured, so this var cannot be set there.
+KLEA_LOG_LEVEL_ENV = "KLEA_LOG_LEVEL"
+
+
+def resolve_log_level(debug: bool = False) -> int:
+    """Return the console logging level for the current process.
+
+    Precedence, highest first:
+
+    #. ``--debug`` (the *debug* flag) -- always ``DEBUG``
+    #. the :data:`KLEA_LOG_LEVEL_ENV` environment variable -- accepted as a
+       case-insensitive level name (``debug``/``info``/``warning``/``error``/
+       ``critical``) or a numeric level
+    #. ``INFO``
+
+    An unknown :data:`KLEA_LOG_LEVEL_ENV` value is logged as a warning and
+    falls back to ``INFO``.  Intended to be shared by every Klea CLI so the
+    ``--debug`` flag and env var behave consistently across them.
+
+    :param debug: ``True`` when the ``--debug`` flag was given
+    :returns: A :mod:`logging` level constant
+    """
+    if debug:
+        return logging.DEBUG
+    raw = os.environ.get(KLEA_LOG_LEVEL_ENV)
+    if not raw:
+        return logging.INFO
+    if raw.strip().lstrip("-").isdigit():
+        level = int(raw)
+    else:
+        try:
+            level = logging.getLevelName(raw.upper())
+        except TypeError:
+            level = 0
+    if isinstance(level, int) and logging.DEBUG <= level <= logging.CRITICAL:
+        return level
+    logger.warning(f"Unknown {KLEA_LOG_LEVEL_ENV}={raw!r}; using INFO")
+    return logging.INFO
+
+
+def enable_debug_logging() -> None:
+    """Set :data:`KLEA_LOG_LEVEL_ENV` to ``debug`` in this process.
+
+    Called by a ``--debug`` flag on a CLI that spawns child processes (a
+    client starting a server, a serve command) so the child resolves
+    ``DEBUG`` via :func:`resolve_log_level` -- environment variables are
+    inherited across the subprocess boundary.
+    """
+    os.environ[KLEA_LOG_LEVEL_ENV] = "debug"
 
 
 #: Console formatters colorize each line by level (whole-line color via the
@@ -58,7 +115,7 @@ logger_formatter_file = logging.Formatter(
 
 def setup_root_logger(
     app_name: str,
-    stderr_level: int = logging.DEBUG,
+    stderr_level: int = logging.INFO,
     log_dir: str | Path | None = None,
 ) -> logging.Logger:
     """Configure the root logger once per process.
@@ -83,9 +140,17 @@ def setup_root_logger(
     Third-party libraries inherit the root's INFO level, so their DEBUG
     output is filtered at the source without enumerating them.
 
+    The console default is ``INFO`` (progress on stdout, warnings and
+    errors on stderr) -- end users see no debug noise.  Pass
+    ``stderr_level=logging.DEBUG`` (e.g. from :func:`resolve_log_level`
+    when ``--debug`` / ``KLEA_LOG_LEVEL`` request it) to surface full
+    detail on the console.  The rotating log file always captures
+    ``DEBUG`` regardless, so verbose logs remain available for
+    diagnostics.
+
     :param app_name: Application name, used as the log file name to keep
         per-app logs separate (e.g. ``"klea-rag"``).
-    :param stderr_level: Level for the stderr handler (default ``DEBUG``)
+    :param stderr_level: Level for the stderr handler (default ``INFO``)
     :param log_dir: Directory for the log file.  ``None`` disables file
         logging.
     :returns: The configured root logger
