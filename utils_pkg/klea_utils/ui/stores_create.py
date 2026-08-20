@@ -40,144 +40,82 @@ def _store_dir(store_path: str) -> Path | None:
 
 
 @app.command()
-def build(
-    source_dir: str = typer.Argument(help="Directory containing source documents"),
-    collection_name: str = typer.Option(
-        ...,
-        "--collection",
-        "-n",
-        help="Collection name for the vector store. Must match the "
-        "'name' of the corresponding vector_stores/bm25_stores entry in "
-        "the RAG config file (e.g. klea.json); a different name on an "
-        "existing store file creates a new collection",
+def pre_check(
+    source_dir: str = typer.Argument(
+        help="Directory containing source documents (PDFs)"
     ),
-    store_path: str = typer.Option(
-        ...,
-        "--store",
-        "-s",
-        help="Vector store URI (e.g. chroma:/path/to/store). For local "
-        "Chroma stores, point at the store folder: the database file "
-        "inside it is always named chroma.sqlite3",
-    ),
-    embedding_model: str = typer.Option(
-        "ollama:bge-m3:latest",
-        "--model",
-        "-m",
-        help="Embedding model identifier",
-    ),
-    max_tokens: int = typer.Option(
-        450, "--max-tokens", help="Maximum tokens per chunk"
-    ),
-    ocr: bool = typer.Option(
-        True,
-        "--ocr/--no-ocr",
-        help="Whether to perform optical character recognition (OCR) "
-        "during PDF conversion (default: on). Keep for scanned/image "
-        "PDFs; disable for text-based PDFs to speed up conversion "
-        "significantly",
-    ),
-    metadata_map_path: str = typer.Option(
-        None,
-        "--metadata-map",
-        "-M",
-        help="JSON file keyed by source filename; each file entry maps "
-        "heading chains to metadata dicts (with per-file DEFAULT fallback). "
-        "If not given, build generates metadata-map.template.json from the "
-        "extraction and uses it without a review step",
-    ),
-    bm25_store: str = typer.Option(
-        None,
-        "--bm25-store",
-        help="Write the combined document corpus to this path for BM25 "
-        "retrieval (a pickle of all chunked documents). Defaults to "
-        "<collection>.pkl in the current directory; the file can be "
-        "moved after creation",
-        show_default="<collection>.pkl",
-    ),
-    embed_batch_size: int = typer.Option(
-        256,
-        "--embed-batch-size",
-        help="Number of chunks embedded per store write call. Smaller "
-        "values report progress more frequently; larger values reduce "
-        "per-request overhead on very large corpora",
-    ),
-    force: bool = typer.Option(
-        False, "--force", "-f", help="Re-process all files even if unchanged"
+    organise: bool = typer.Option(
+        False,
+        "--organise",
+        help="Copy classified files into 'ocr/' (scanned/image PDFs) and "
+        "'no-ocr/' (text PDFs plus all non-PDF files) subdirectories. "
+        "Copies, never moves -- your original bibliography directory is "
+        "left untouched. Recommended workflow: relocate the copies to a "
+        "scratch directory, then chunk and store each subdirectory into "
+        "the same collection",
     ),
 ):
-    """Full pipeline: chunk, embed, and write to a vector store.
+    """Decide which PDFs need OCR before chunking.
 
-    Processes all files in SOURCE_DIR: converts them with Docling,
-    chunks them, embeds them, and writes to the vector store.
-    Processed chunks are cached in ``<source_dir>/.klea-cache/`` so
-    subsequent runs (e.g. with ``--metadata-map``) skip conversion.
+    Reads each PDF's embedded text layer with pypdfium2 and reports
+    whether it is image-based (scanned, needs OCR) or text-based (no OCR
+    needed).  This lets you avoid the cost of OCR on born-digital PDFs
+    while keeping it for older scanned papers -- without guessing by
+    publication year.
 
-    The ``--bm25-store`` option (default ``<collection>.pkl`` in the
-    current directory) writes the combined chunked documents to a single
-    pickle file that can be used as a BM25 store.
-
-    The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file
-    organised by source file.  Within each file entry, the most specific
-    heading chain match wins; a ``DEFAULT`` entry provides fallback for
-    any heading not listed.
-
-    Example metadata-map.json::
-
-        {
-            "PrimerOnCElegans.md": {
-                "DEFAULT": {},
-                "C. elegans tissue morphology": {
-                    "url": "https://example.com/worm"
-                }
-            },
-            "c302-paper.pdf": {
-                "DEFAULT": {
-                    "url": "https://example.com/c302"
-                }
-            }
-        }
+    Without ``--organise`` the command only reports.  With ``--organise``
+    it copies files into ``ocr/`` and ``no-ocr/`` subdirectories (the
+    originals are never modified), then prints the recommended chunk and
+    store commands to build both into the same collection.
     """
     setup_root_logger("klea-stores-create")
     logger = logging.getLogger("klea-stores-create")
 
-    logger.info(
-        f"Building vector store '{collection_name}' at {store_path}"
-        f"\n  Source: {source_dir}"
-        f"\n  Model: {embedding_model}"
-        f"\n  Max tokens: {max_tokens}"
-        f"\n  Metadata map: {metadata_map_path or '(none)'}"
-    )
-
-    # Typer cannot compute a default that depends on another argument, so
-    # the dynamic --bm25-store default is resolved here.
-    if bm25_store is None:
-        bm25_store = f"{collection_name}.pkl"
-    logger.info(f"BM25 store: {bm25_store}")
+    source_path = Path(source_dir).resolve()
+    if not source_path.is_dir():
+        logger.error(f"Source directory not found: {source_path}")
+        raise typer.Exit(1)
 
     try:
-        # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
-        # langchain_huggingface/langchain_ollama, stores/utils.py ->
-        # chromadb/qdrant etc.  Deferring to function body keeps
-        # --help fast (Python only needs the function signature).
-        from klea_utils.stores.ingestion import StoresBuilder
+        # Lazy: importing the pre-check module pulls in pypdfium2 (native
+        # pdfium bindings) and ingestion (docling etc.).  Deferring keeps
+        # --help fast -- Python only needs the function signature.
+        from klea_utils.stores.precheck import (
+            classify_directory,
+            format_precheck_report,
+            organise_directory,
+        )
 
-        builder = StoresBuilder(
-            embedding_model=embedding_model,
-            logger=logger,
-            max_tokens=max_tokens,
-            do_ocr=ocr,
-            embed_batch_size=embed_batch_size,
-            store_dir=_store_dir(store_path),
-        )
-        builder.build(
-            source_dir=source_dir,
-            store_uri=store_path,
-            collection_name=collection_name,
-            force=force,
-            metadata_map_path=metadata_map_path,
-            bm25_path=bm25_store,
-        )
-        logger.info(f"Done -- collection '{collection_name}' is ready")
+        classifications = classify_directory(source_path)
+        print(format_precheck_report(classifications))
+
+        if not classifications:
+            logger.info("No PDFs found to classify")
+            raise typer.Exit(0)
+
+        if organise:
+            ocr_dir, no_ocr_dir = organise_directory(source_path, classifications)
+            print()
+            print(f"Organised copies into {ocr_dir.name}/ and {no_ocr_dir.name}/")
+            print("(originals untouched; output dirs are skipped on re-runs)")
+            print()
+            print("Recommended workflow -- relocate the copies to a scratch dir:")
+            print(f"  mv {ocr_dir.name}/ {no_ocr_dir.name}/ /tmp/biblio-build/")
+            print("  cd /tmp/biblio-build")
+            print(f"  klea-stores-create chunk {no_ocr_dir.name}/ --no-ocr")
+            print(f"  klea-stores-create chunk {ocr_dir.name}/")
+            print(
+                f"  klea-stores-create store {no_ocr_dir.name}/ "
+                "--collection <name> --store chroma:/path"
+            )
+            print(
+                f"  klea-stores-create store {ocr_dir.name}/ "
+                "--collection <name> --store chroma:/path"
+            )
+            print()
+            print("(both store runs target the SAME collection, so they merge)")
+    except typer.Exit:
+        raise
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
@@ -273,6 +211,61 @@ def chunk(
         print(format_metadata_lint_report(lint_metadata_map(data)))
     except Exception as e:
         logger.warning(f"Could not lint metadata map: {e}")
+
+
+@app.command()
+def map_lint(
+    source_dir: str = typer.Argument(
+        help="Directory containing the metadata map (uses "
+        "metadata-map.template.json in the .klea-cache folder unless "
+        "--metadata-map is given)"
+    ),
+    metadata_map_path: str = typer.Option(
+        None,
+        "--metadata-map",
+        "-M",
+        help="Explicit metadata-map JSON file to lint, instead of the "
+        "template in SOURCE_DIR",
+    ),
+):
+    """Report issues in a metadata map so it can be reviewed efficiently.
+
+    Runs only deterministic checks (missing fields, suspicious titles or
+    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,
+    placeholder counts) -- no LLM is needed.  Useful after editing the
+    map by hand, and printed automatically at the end of 'chunk'.
+    """
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
+
+    try:
+        import json
+        from pathlib import Path
+
+        from klea_utils.stores.ingestion import CACHE_DIR_NAME, TEMPLATE_FILE_NAME
+        from klea_utils.stores.map_lint import (
+            format_metadata_lint_report,
+            lint_metadata_map,
+        )
+
+        source_path = Path(source_dir).resolve()
+        if not source_path.is_dir():
+            raise FileNotFoundError(f"Source directory not found: {source_path}")
+
+        if metadata_map_path:
+            map_path = Path(metadata_map_path)
+        else:
+            map_path = source_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
+        if not map_path.is_file():
+            raise FileNotFoundError(f"Metadata map not found: {map_path}")
+
+        with open(map_path) as f:
+            data = json.load(f)
+        report = lint_metadata_map(data)
+        print(format_metadata_lint_report(report))
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -463,61 +456,6 @@ def store(
 
 
 @app.command()
-def map_lint(
-    source_dir: str = typer.Argument(
-        help="Directory containing the metadata map (uses "
-        "metadata-map.template.json in the .klea-cache folder unless "
-        "--metadata-map is given)"
-    ),
-    metadata_map_path: str = typer.Option(
-        None,
-        "--metadata-map",
-        "-M",
-        help="Explicit metadata-map JSON file to lint, instead of the "
-        "template in SOURCE_DIR",
-    ),
-):
-    """Report issues in a metadata map so it can be reviewed efficiently.
-
-    Runs only deterministic checks (missing fields, suspicious titles or
-    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,
-    placeholder counts) -- no LLM is needed.  Useful after editing the
-    map by hand, and printed automatically at the end of 'chunk'.
-    """
-    setup_root_logger("klea-stores-create")
-    logger = logging.getLogger("klea-stores-create")
-
-    try:
-        import json
-        from pathlib import Path
-
-        from klea_utils.stores.ingestion import CACHE_DIR_NAME, TEMPLATE_FILE_NAME
-        from klea_utils.stores.map_lint import (
-            format_metadata_lint_report,
-            lint_metadata_map,
-        )
-
-        source_path = Path(source_dir).resolve()
-        if not source_path.is_dir():
-            raise FileNotFoundError(f"Source directory not found: {source_path}")
-
-        if metadata_map_path:
-            map_path = Path(metadata_map_path)
-        else:
-            map_path = source_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME
-        if not map_path.is_file():
-            raise FileNotFoundError(f"Metadata map not found: {map_path}")
-
-        with open(map_path) as f:
-            data = json.load(f)
-        report = lint_metadata_map(data)
-        print(format_metadata_lint_report(report))
-    except Exception as e:
-        logger.error(f"Failed: {e}")
-        raise typer.Exit(1) from None
-
-
-@app.command()
 def store_lint(
     corpus_path: str = typer.Argument(
         help="Path to the pickled BM25/vector corpus (e.g. <collection>.pkl)"
@@ -584,82 +522,144 @@ def store_lint(
 
 
 @app.command()
-def pre_check(
-    source_dir: str = typer.Argument(
-        help="Directory containing source documents (PDFs)"
+def build(
+    source_dir: str = typer.Argument(help="Directory containing source documents"),
+    collection_name: str = typer.Option(
+        ...,
+        "--collection",
+        "-n",
+        help="Collection name for the vector store. Must match the "
+        "'name' of the corresponding vector_stores/bm25_stores entry in "
+        "the RAG config file (e.g. klea.json); a different name on an "
+        "existing store file creates a new collection",
     ),
-    organise: bool = typer.Option(
-        False,
-        "--organise",
-        help="Copy classified files into 'ocr/' (scanned/image PDFs) and "
-        "'no-ocr/' (text PDFs plus all non-PDF files) subdirectories. "
-        "Copies, never moves -- your original bibliography directory is "
-        "left untouched. Recommended workflow: relocate the copies to a "
-        "scratch directory, then chunk and store each subdirectory into "
-        "the same collection",
+    store_path: str = typer.Option(
+        ...,
+        "--store",
+        "-s",
+        help="Vector store URI (e.g. chroma:/path/to/store). For local "
+        "Chroma stores, point at the store folder: the database file "
+        "inside it is always named chroma.sqlite3",
+    ),
+    embedding_model: str = typer.Option(
+        "ollama:bge-m3:latest",
+        "--model",
+        "-m",
+        help="Embedding model identifier",
+    ),
+    max_tokens: int = typer.Option(
+        450, "--max-tokens", help="Maximum tokens per chunk"
+    ),
+    ocr: bool = typer.Option(
+        True,
+        "--ocr/--no-ocr",
+        help="Whether to perform optical character recognition (OCR) "
+        "during PDF conversion (default: on). Keep for scanned/image "
+        "PDFs; disable for text-based PDFs to speed up conversion "
+        "significantly",
+    ),
+    metadata_map_path: str = typer.Option(
+        None,
+        "--metadata-map",
+        "-M",
+        help="JSON file keyed by source filename; each file entry maps "
+        "heading chains to metadata dicts (with per-file DEFAULT fallback). "
+        "If not given, build generates metadata-map.template.json from the "
+        "extraction and uses it without a review step",
+    ),
+    bm25_store: str = typer.Option(
+        None,
+        "--bm25-store",
+        help="Write the combined document corpus to this path for BM25 "
+        "retrieval (a pickle of all chunked documents). Defaults to "
+        "<collection>.pkl in the current directory; the file can be "
+        "moved after creation",
+        show_default="<collection>.pkl",
+    ),
+    embed_batch_size: int = typer.Option(
+        256,
+        "--embed-batch-size",
+        help="Number of chunks embedded per store write call. Smaller "
+        "values report progress more frequently; larger values reduce "
+        "per-request overhead on very large corpora",
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
 ):
-    """Decide which PDFs need OCR before chunking.
+    """Full pipeline: chunk, embed, and write to a vector store.
 
-    Reads each PDF's embedded text layer with pypdfium2 and reports
-    whether it is image-based (scanned, needs OCR) or text-based (no OCR
-    needed).  This lets you avoid the cost of OCR on born-digital PDFs
-    while keeping it for older scanned papers -- without guessing by
-    publication year.
+    Processes all files in SOURCE_DIR: converts them with Docling,
+    chunks them, embeds them, and writes to the vector store.
+    Processed chunks are cached in ``<source_dir>/.klea-cache/`` so
+    subsequent runs (e.g. with ``--metadata-map``) skip conversion.
 
-    Without ``--organise`` the command only reports.  With ``--organise``
-    it copies files into ``ocr/`` and ``no-ocr/`` subdirectories (the
-    originals are never modified), then prints the recommended chunk and
-    store commands to build both into the same collection.
+    The ``--bm25-store`` option (default ``<collection>.pkl`` in the
+    current directory) writes the combined chunked documents to a single
+    pickle file that can be used as a BM25 store.
+
+    The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file
+    organised by source file.  Within each file entry, the most specific
+    heading chain match wins; a ``DEFAULT`` entry provides fallback for
+    any heading not listed.
+
+    Example metadata-map.json::
+
+        {
+            "PrimerOnCElegans.md": {
+                "DEFAULT": {},
+                "C. elegans tissue morphology": {
+                    "url": "https://example.com/worm"
+                }
+            },
+            "c302-paper.pdf": {
+                "DEFAULT": {
+                    "url": "https://example.com/c302"
+                }
+            }
+        }
     """
     setup_root_logger("klea-stores-create")
     logger = logging.getLogger("klea-stores-create")
 
-    source_path = Path(source_dir).resolve()
-    if not source_path.is_dir():
-        logger.error(f"Source directory not found: {source_path}")
-        raise typer.Exit(1)
+    logger.info(
+        f"Building vector store '{collection_name}' at {store_path}"
+        f"\n  Source: {source_dir}"
+        f"\n  Model: {embedding_model}"
+        f"\n  Max tokens: {max_tokens}"
+        f"\n  Metadata map: {metadata_map_path or '(none)'}"
+    )
+
+    # Typer cannot compute a default that depends on another argument, so
+    # the dynamic --bm25-store default is resolved here.
+    if bm25_store is None:
+        bm25_store = f"{collection_name}.pkl"
+    logger.info(f"BM25 store: {bm25_store}")
 
     try:
-        # Lazy: importing the pre-check module pulls in pypdfium2 (native
-        # pdfium bindings) and ingestion (docling etc.).  Deferring keeps
-        # --help fast -- Python only needs the function signature.
-        from klea_utils.stores.precheck import (
-            classify_directory,
-            format_precheck_report,
-            organise_directory,
+        # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
+        # langchain_huggingface/langchain_ollama, stores/utils.py ->
+        # chromadb/qdrant etc.  Deferring to function body keeps
+        # --help fast (Python only needs the function signature).
+        from klea_utils.stores.ingestion import StoresBuilder
+
+        builder = StoresBuilder(
+            embedding_model=embedding_model,
+            logger=logger,
+            max_tokens=max_tokens,
+            do_ocr=ocr,
+            embed_batch_size=embed_batch_size,
+            store_dir=_store_dir(store_path),
         )
-
-        classifications = classify_directory(source_path)
-        print(format_precheck_report(classifications))
-
-        if not classifications:
-            logger.info("No PDFs found to classify")
-            raise typer.Exit(0)
-
-        if organise:
-            ocr_dir, no_ocr_dir = organise_directory(source_path, classifications)
-            print()
-            print(f"Organised copies into {ocr_dir.name}/ and {no_ocr_dir.name}/")
-            print("(originals untouched; output dirs are skipped on re-runs)")
-            print()
-            print("Recommended workflow -- relocate the copies to a scratch dir:")
-            print(f"  mv {ocr_dir.name}/ {no_ocr_dir.name}/ /tmp/biblio-build/")
-            print("  cd /tmp/biblio-build")
-            print(f"  klea-stores-create chunk {no_ocr_dir.name}/ --no-ocr")
-            print(f"  klea-stores-create chunk {ocr_dir.name}/")
-            print(
-                f"  klea-stores-create store {no_ocr_dir.name}/ "
-                "--collection <name> --store chroma:/path"
-            )
-            print(
-                f"  klea-stores-create store {ocr_dir.name}/ "
-                "--collection <name> --store chroma:/path"
-            )
-            print()
-            print("(both store runs target the SAME collection, so they merge)")
-    except typer.Exit:
-        raise
+        builder.build(
+            source_dir=source_dir,
+            store_uri=store_path,
+            collection_name=collection_name,
+            force=force,
+            metadata_map_path=metadata_map_path,
+            bm25_path=bm25_store,
+        )
+        logger.info(f"Done -- collection '{collection_name}' is ready")
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
