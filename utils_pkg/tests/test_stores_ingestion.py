@@ -1280,6 +1280,62 @@ class TestIngestion:
 
         assert "No metadata resolved" not in caplog.text
 
+    def test_chunk_all_warns_on_zero_chunks(self, caplog, monkeypatch):
+        """chunk_all warns when conversion yields zero chunks (scanned PDF)."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Keep the test fast and deterministic: no tokenizer, no resolver,
+        # and a converter that produces no chunks (the empty-chunk signal a
+        # scanned PDF gives with OCR disabled).
+        monkeypatch.setattr(builder, "_ensure_tokenizer", lambda: None)
+        monkeypatch.setattr(builder, "_make_resolver", lambda source_path: None)
+        monkeypatch.setattr(
+            builder, "_convert_and_chunk", lambda file_path, resolver: ([], {})
+        )
+
+        with caplog.at_level(logging.WARNING):
+            builder.chunk_all(self.tmpdir_path)
+
+        assert "No chunks produced for test.md" in caplog.text
+        assert "OCR" in caplog.text
+
+    def test_chunk_all_no_warning_when_chunks_produced(self, caplog, monkeypatch):
+        """chunk_all stays quiet when conversion produces chunks."""
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        monkeypatch.setattr(builder, "_ensure_tokenizer", lambda: None)
+        monkeypatch.setattr(builder, "_make_resolver", lambda source_path: None)
+        doc = Document(page_content="content", metadata={"headings": ["Intro"]})
+        monkeypatch.setattr(
+            builder, "_convert_and_chunk", lambda file_path, resolver: ([doc], {})
+        )
+
+        with caplog.at_level(logging.WARNING):
+            builder.chunk_all(self.tmpdir_path)
+
+        assert "No chunks produced" not in caplog.text
+
+    def test_load_and_fold_results_warns_on_empty_cached_chunks(self, caplog):
+        """_load_and_fold_results warns for a cache entry with zero chunks."""
+        from klea_utils.stores.ingestion import _hash_file
+
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Cache an empty-chunk entry directly (simulates a scanned PDF that
+        # was converted to nothing), then load it on the store path.
+        builder._save_to_cache([], {}, self.tmpdir_path, _hash_file(md_file))
+
+        with caplog.at_level(logging.WARNING):
+            builder._load_and_fold_results(self.tmpdir_path, None)
+
+        assert "No cached chunks for test.md" in caplog.text
+
     def test_write_bm25_store(self):
         """write_bm25_store pickles the combined chunked documents."""
         doc = Document(

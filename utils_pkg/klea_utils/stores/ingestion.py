@@ -285,6 +285,14 @@ class StoresBuilder:
                 except Exception as e:
                     self.logger.error(f"Failed to process {file_path.name}: {e}")
                     continue
+                if not docs:
+                    self.logger.warning(
+                        f"No chunks produced for {file_path.name}. This usually "
+                        f"means the PDF is scanned/image-based and its text "
+                        f"could not be extracted with OCR disabled. Re-run "
+                        f"with OCR enabled (drop --no-ocr) or run "
+                        f"'klea-stores-create pre-check' to classify it."
+                    )
             else:
                 self.logger.debug(
                     f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
@@ -438,6 +446,13 @@ class StoresBuilder:
             self.logger.debug(
                 f"Using cached chunks for: {file_path.name} ({ctr}/{len(files)})"
             )
+            if not docs:
+                self.logger.warning(
+                    f"No cached chunks for {file_path.name}; it was converted "
+                    f"to zero chunks (likely a scanned/image PDF with OCR "
+                    f"disabled). Re-run 'klea-stores-create chunk' with OCR "
+                    f"enabled or re-classify with 'klea-stores-create pre-check'."
+                )
 
             for doc in docs:
                 doc.metadata.update(
