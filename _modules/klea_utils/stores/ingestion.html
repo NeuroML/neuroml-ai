@@ -577,6 +577,14 @@
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed to process </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="k">continue</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">docs</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"No chunks produced for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. This usually "</span>
+                        <span class="sa">f</span><span class="s2">"means the PDF is scanned/image-based and its text "</span>
+                        <span class="sa">f</span><span class="s2">"could not be extracted with OCR disabled. Re-run "</span>
+                        <span class="sa">f</span><span class="s2">"with OCR enabled (drop --no-ocr) or run "</span>
+                        <span class="sa">f</span><span class="s2">"'klea-stores-create pre-check' to classify it."</span>
+                    <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                     <span class="sa">f</span><span class="s2">"Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)"</span>
@@ -731,6 +739,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
             <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">docs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No cached chunks for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">; it was converted "</span>
+                    <span class="sa">f</span><span class="s2">"to zero chunks (likely a scanned/image PDF with OCR "</span>
+                    <span class="sa">f</span><span class="s2">"disabled). Re-run 'klea-stores-create chunk' with OCR "</span>
+                    <span class="sa">f</span><span class="s2">"enabled or re-classify with 'klea-stores-create pre-check'."</span>
+                <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
@@ -1269,13 +1284,16 @@
 <span class="w">        </span><span class="sd">"""Resolve a metadata dict for a chunk using the per-file metadata map.</span>
 
 <span class="sd">        Looks up the file in the map, then matches the heading chain</span>
-<span class="sd">        from most specific to least specific.  The first non-empty</span>
-<span class="sd">        matching heading entry is merged over ``DEFAULT`` (gap-fill:</span>
-<span class="sd">        heading-specific keys win, ``DEFAULT`` fills everything else),</span>
-<span class="sd">        so a heading that only sets e.g. a ``url`` still inherits the</span>
-<span class="sd">        file's authors/year/journal.  An entry that matches a heading</span>
-<span class="sd">        but is empty (a ``{}`` placeholder the user did not fill in)</span>
-<span class="sd">        falls through to the next heading, and finally to ``DEFAULT``.</span>
+<span class="sd">        from most specific to least specific: the full joined chain, then</span>
+<span class="sd">        progressively shorter suffixes, then progressively shallower</span>
+<span class="sd">        ancestor chains.  The first non-empty matching entry is merged</span>
+<span class="sd">        over ``DEFAULT`` (gap-fill: heading-specific keys win, ``DEFAULT``</span>
+<span class="sd">        fills everything else), so a heading that only sets e.g. a ``url``</span>
+<span class="sd">        still inherits the file's authors/year/journal, and a leaf section</span>
+<span class="sd">        with no metadata inherits its nearest ancestor's.  An entry that</span>
+<span class="sd">        matches a heading but is empty (a ``{}`` placeholder the user did</span>
+<span class="sd">        not fill in) falls through to the next candidate, and finally to</span>
+<span class="sd">        ``DEFAULT``.</span>
 
 <span class="sd">        :param file_name: Source filename to look up in the map</span>
 <span class="sd">        :param headings: Heading hierarchy for the chunk (most specific</span>
@@ -1286,24 +1304,43 @@
 <span class="sd">        """</span>
         <span class="n">file_map</span> <span class="o">=</span> <span class="n">metadata_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">file_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No metadata map entry for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">; nothing to "</span>
+                    <span class="sa">f</span><span class="s2">"resolve (falling back to no metadata)"</span>
+                <span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">fallback</span> <span class="o">=</span> <span class="n">file_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DEFAULT"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
-            <span class="c1"># NOTE: only individual headings are matched here, never the</span>
-            <span class="c1"># full heading chain (e.g. "A &gt; B").  The metadata map keys</span>
-            <span class="c1"># written by write_heading_template are full chains, so deep</span>
-            <span class="c1"># chunks resolve to the top-level heading's metadata (usually</span>
-            <span class="c1"># the page URL) rather than the most specific section entry.</span>
-            <span class="c1"># Page-level links are acceptable for now; if per-section</span>
-            <span class="c1"># anchors are ever needed, try the joined chain first, then</span>
-            <span class="c1"># progressively shorter suffixes.</span>
-            <span class="k">for</span> <span class="n">heading</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">headings</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">heading</span> <span class="ow">in</span> <span class="n">file_map</span><span class="p">:</span>
-                    <span class="n">matched</span> <span class="o">=</span> <span class="n">file_map</span><span class="p">[</span><span class="n">heading</span><span class="p">]</span>
+            <span class="c1"># Match the heading hierarchy from most specific to least</span>
+            <span class="c1"># specific.  The template keys written by</span>
+            <span class="c1"># :meth:`write_heading_template` are full heading chains</span>
+            <span class="c1"># (e.g. ``"Chapter &gt; Section"``), so try the joined chain</span>
+            <span class="c1"># first, then progressively shorter suffixes (e.g.</span>
+            <span class="c1"># ``"Section"``), then progressively shallower ancestor</span>
+            <span class="c1"># chains (e.g. ``"Chapter"``).  This makes the autogenerated</span>
+            <span class="c1"># template keys actually consumable: a researcher can fill in</span>
+            <span class="c1"># a chain key for a deep section, a shorter suffix for a</span>
+            <span class="c1"># chapter, or a single heading, and the most specific</span>
+            <span class="c1"># populated entry wins -- a leaf section with no metadata of</span>
+            <span class="c1"># its own inherits the nearest ancestor's.  Single-heading</span>
+            <span class="c1"># maps still work -- a one-element suffix is just the</span>
+            <span class="c1"># individual heading.</span>
+            <span class="n">suffixes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">[</span><span class="n">i</span><span class="p">:])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">headings</span><span class="p">))]</span>
+            <span class="n">prefixes</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">]</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="n">suffixes</span> <span class="o">+</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">prefixes</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">suffixes</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Resolving metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: trying keys </span><span class="si">{</span><span class="n">candidates</span><span class="si">}</span><span class="s2"> in order"</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">file_map</span><span class="p">:</span>
+                    <span class="n">matched</span> <span class="o">=</span> <span class="n">file_map</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">matched</span><span class="p">:</span>
                         <span class="n">merged</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="p">(</span><span class="n">fallback</span> <span class="ow">or</span> <span class="p">{}),</span> <span class="o">**</span><span class="n">matched</span><span class="p">}</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">"Resolved metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: '</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">' "</span>
+                            <span class="sa">f</span><span class="s2">"Resolved metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: '</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">' "</span>
                             <span class="sa">f</span><span class="s2">"(merged over DEFAULT)"</span>
                         <span class="p">)</span>
                         <span class="k">return</span> <span class="n">merged</span>
@@ -1312,10 +1349,20 @@
                     <span class="c1"># returning metadata that strips the DEFAULT values.</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"Empty metadata entry for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: "</span>
-                        <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">heading</span><span class="si">}</span><span class="s2">'; falling through"</span>
+                        <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">'; falling through"</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"No map entry for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">: '</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">'; "</span>
+                        <span class="sa">f</span><span class="s2">"trying the next candidate"</span>
                     <span class="p">)</span>
         <span class="k">if</span> <span class="n">fallback</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Resolved DEFAULT metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"No metadata resolved for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2"> from the map "</span>
+                <span class="sa">f</span><span class="s2">"(no matching heading entry and no DEFAULT)"</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">fallback</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>

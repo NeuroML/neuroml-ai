@@ -297,6 +297,16 @@ which writes the combined chunked documents to a single pickle that can
 be configured as a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code> entry in the RAG config.  When
 <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> is omitted, the corpus is written to
 <code class="docutils literal notranslate"><span class="pre">&lt;collection&gt;.pkl</span></code> in the current directory.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">pre-check</span></code> command classifies each PDF by whether it needs OCR
+(based on whether it carries an embedded text layer) and, with
+<code class="docutils literal notranslate"><span class="pre">--organise</span></code>, copies files into <code class="docutils literal notranslate"><span class="pre">ocr/</span></code> and <code class="docutils literal notranslate"><span class="pre">no-ocr/</span></code> subdirectories
+so you can chunk each with the right <code class="docutils literal notranslate"><span class="pre">--ocr</span></code> / <code class="docutils literal notranslate"><span class="pre">--no-ocr</span></code> flag.  See
+<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a> for the worked workflow.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">store-lint</span></code> command reviews a stored corpus (the BM25 pickle) with
+LLM-free checks and prints a summary, suspicious chunks, and
+<code class="docutils literal notranslate"><span class="pre">--samples</span></code> evenly-spaced windows of contiguous chunks for human
+review.  It is printed automatically at the end of <code class="docutils literal notranslate"><span class="pre">store</span></code> when a BM25
+corpus is written.</p>
 <p>Three options deserve special attention:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--collection</span></code> – the collection name inside the store.  It must
@@ -326,15 +336,258 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Commands ─────────────────────────────────────────────────────────╮
-│ build     Full pipeline: chunk, embed, and write to a vector       │
-│           store.                                                   │
-│ chunk     Chunk and cache documents without writing to a vector    │
-│           store.                                                   │
-│ store     Write cached document chunks to a vector store.          │
-│ map-lint  Report issues in a metadata map so it can be reviewed    │
-│           efficiently.                                             │
+│ pre-check   Decide which PDFs need OCR before chunking.            │
+│ chunk       Chunk and cache documents without writing to a vector  │
+│             store.                                                 │
+│ map-lint    Report issues in a metadata map so it can be reviewed  │
+│             efficiently.                                           │
+│ store       Write cached document chunks to a vector store.        │
+│ store-lint  Report issues in a stored corpus so it can be reviewed │
+│             efficiently.                                           │
+│ build       Full pipeline: chunk, embed, and write to a vector     │
+│             store.                                                 │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create pre-check [OPTIONS] SOURCE_DIR             
+                                                                      
+ Decide which PDFs need OCR before chunking.                          
+                                                                      
+ Reads each PDF's embedded text layer with pypdfium2 and reports      
+ whether it is image-based (scanned, needs OCR) or text-based (no OCR 
+ needed).  This lets you avoid the cost of OCR on born-digital PDFs   
+ while keeping it for older scanned papers -- without guessing by     
+ publication year.                                                    
+                                                                      
+ Without ``--organise`` the command only reports.  With               
+ ``--organise``                                                       
+ it copies files into ``ocr/`` and ``no-ocr/`` subdirectories (the    
+ originals are never modified), then prints the recommended chunk and 
+ store commands to build both into the same collection.               
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            (PDFs)                                  │
+│                            [required]                              │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --organise          Copy classified files into 'ocr/'              │
+│                     (scanned/image PDFs) and 'no-ocr/' (text PDFs  │
+│                     plus all non-PDF files) subdirectories.        │
+│                     Copies, never moves -- your original           │
+│                     bibliography directory is left untouched.      │
+│                     Recommended workflow: relocate the copies to a │
+│                     scratch directory, then chunk and store each   │
+│                     subdirectory into the same collection          │
+│ --help              Show this message and exit.                    │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create chunk [OPTIONS] SOURCE_DIR                 
+                                                                      
+ Chunk and cache documents without writing to a vector store.         
+                                                                      
+ Converts all files in SOURCE_DIR with Docling, chunks them, and      
+ caches the result in ``&lt;source_dir&gt;/.klea-cache/``.  Also writes a   
+ ``metadata-map.template.json`` file organised by source file, with   
+ empty ``{}`` placeholders for each heading chain.  Fill in the       
+ metadata values and pass the file to                                 
+ ``klea-stores-create store --metadata-map``.                         
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            [required]                              │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --max-tokens                  INTEGER  Maximum tokens per chunk    │
+│                                        [default: 450]              │
+│ --ocr             --no-ocr             Whether to perform optical  │
+│                                        character recognition (OCR) │
+│                                        during PDF conversion       │
+│                                        (default: on). Keep for     │
+│                                        scanned/image PDFs; disable │
+│                                        for text-based PDFs to      │
+│                                        speed up conversion         │
+│                                        significantly               │
+│                                        [default: ocr]              │
+│ --force       -f                       Re-process all files even   │
+│                                        if unchanged                │
+│ --help                                 Show this message and exit. │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create map-lint [OPTIONS] SOURCE_DIR              
+                                                                      
+ Report issues in a metadata map so it can be reviewed efficiently.   
+                                                                      
+ Runs only deterministic checks (missing fields, suspicious titles or 
+ DOIs, year/filename mismatches, stale 'venue' keys, excess url*      
+ keys,                                                                
+ placeholder counts) -- no LLM is needed.  Useful after editing the   
+ map by hand, and printed automatically at the end of 'chunk'.        
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    source_dir      TEXT  Directory containing the metadata map   │
+│                            (uses metadata-map.template.json in the │
+│                            .klea-cache folder unless               │
+│                            --metadata-map is given)                │
+│                            [required]                              │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --metadata-map  -M      TEXT  Explicit metadata-map JSON file to   │
+│                               lint, instead of the template in     │
+│                               SOURCE_DIR                           │
+│ --help                        Show this message and exit.          │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create store [OPTIONS] SOURCE_DIR                 
+                                                                      
+ Write cached document chunks to a vector store.                      
+                                                                      
+ Cache-only: every source file must already have a cache entry (run   
+ ``klea-stores-create chunk`` first).  Reads the cached chunks from   
+ ``&lt;source_dir&gt;/.klea-cache/``, applies the metadata map, and writes  
+ them to the vector store.  Conversion settings (OCR, max tokens)     
+ belong to ``chunk``; ``store`` never converts on the fly.            
+                                                                      
+ Incremental by default: a store manifest in                          
+ ``&lt;source_dir&gt;/.klea-cache/`` records which files are in the         
+ collection, so unchanged files are skipped and changed files are     
+ updated in place.  Pass ``--force`` to drop the whole collection     
+ and rebuild it (documents within a collection cannot be updated in   
+ place across all backends).                                          
+                                                                      
+ The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
+ current directory) writes the combined chunked documents to a single 
+ pickle file that can be used as a BM25 store.                        
+                                                                      
+ Run ``klea-stores-create chunk`` first to populate the cache and     
+ generate a ``metadata-map.template.json``.                           
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    source_dir      TEXT  Directory containing source documents   │
+│                            [required]                              │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ *  --collection        -n      TEXT     Collection name for the    │
+│                                         vector store. Must match   │
+│                                         the 'name' of the          │
+│                                         corresponding              │
+│                                         vector_stores/bm25_stores  │
+│                                         entry in the RAG config    │
+│                                         file (e.g. klea.json); a   │
+│                                         different name on an       │
+│                                         existing store file        │
+│                                         creates a new collection   │
+│                                         [required]                 │
+│ *  --store             -s      TEXT     Vector store URI (e.g.     │
+│                                         chroma:/path/to/store).    │
+│                                         For local Chroma stores,   │
+│                                         point at the store folder: │
+│                                         the database file inside   │
+│                                         it is always named         │
+│                                         chroma.sqlite3             │
+│                                         [required]                 │
+│    --model             -m      TEXT     Embedding model identifier │
+│                                         [default:                  │
+│                                         ollama:bge-m3:latest]      │
+│    --metadata-map      -M      TEXT     JSON file keyed by source  │
+│                                         filename; each file entry  │
+│                                         maps heading chains to     │
+│                                         metadata dicts (with       │
+│                                         per-file DEFAULT           │
+│                                         fallback). Defaults to     │
+│                                         metadata-map.template.json │
+│                                         in the source directory's  │
+│                                         cache folder; required     │
+│                                         when no template exists    │
+│    --bm25-store                TEXT     Write the combined         │
+│                                         document corpus to this    │
+│                                         path for BM25 retrieval (a │
+│                                         pickle of all chunked      │
+│                                         documents). Defaults to    │
+│                                         &lt;collection&gt;.pkl in the    │
+│                                         current directory; the     │
+│                                         file can be moved after    │
+│                                         creation                   │
+│                                         [default:                  │
+│                                         (&lt;collection&gt;.pkl)]        │
+│    --embed-batch-size          INTEGER  Number of chunks embedded  │
+│                                         per store write call.      │
+│                                         Smaller values report      │
+│                                         progress more frequently;  │
+│                                         larger values reduce       │
+│                                         per-request overhead on    │
+│                                         very large corpora         │
+│                                         [default: 256]             │
+│    --force             -f               Drop the collection and    │
+│                                         re-store all files from    │
+│                                         scratch (the portable way  │
+│                                         to update a collection;    │
+│                                         documents within a         │
+│                                         collection cannot be       │
+│                                         updated in place).         │
+│                                         Without --force, `store`   │
+│                                         is incremental: unchanged  │
+│                                         files are skipped and      │
+│                                         changed files are updated  │
+│                                         in place.  Does not        │
+│                                         reconvert: files must      │
+│                                         already be cached by       │
+│                                         'chunk'                    │
+│    --help                               Show this message and      │
+│                                         exit.                      │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+</div>
+<div class="docutils container">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
+ Usage: klea-stores-create store-lint [OPTIONS] CORPUS_PATH           
+                                                                      
+ Report issues in a stored corpus so it can be reviewed efficiently.  
+                                                                      
+ Loads the pickled BM25 corpus (a list of chunked documents) and runs 
+ only deterministic checks (no LLM): a corpus summary, suspicious     
+ chunks (near-empty text from a conversion/OCR miss, or missing       
+ bibliographic metadata), and structural problems (chunks without a   
+ ``file_name``, invalid ``page_content`` / ``year`` types).  Also     
+ prints ``--samples`` evenly-spaced windows of contiguous chunks so   
+ you                                                                  
+ can eyeball that chunking and metadata look right across the corpus  
+ --                                                                   
+ no need to unpickle the file yourself.  Useful after ``store``, and  
+ printed automatically at the end of ``store`` when a BM25 corpus was 
+ written.                                                             
+                                                                      
+╭─ Arguments ────────────────────────────────────────────────────────╮
+│ *    corpus_path      TEXT  Path to the pickled BM25/vector corpus │
+│                             (e.g. &lt;collection&gt;.pkl)                │
+│                             [required]                             │
+╰────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────╮
+│ --samples        INTEGER  Number of evenly-spaced sampling         │
+│                           locations across the corpus; each shows  │
+│                           3 contiguous chunks (truncated text +    │
+│                           metadata) for human review.  Pass 0 to   │
+│                           suppress sampling                        │
+│                           [default: 3]                             │
+│ --help                    Show this message and exit.              │
+╰────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
 </div>
 <div class="docutils container">
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
@@ -469,173 +722,6 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                                                 unchanged          │
 │    --help                                       Show this message  │
 │                                                 and exit.          │
-╰────────────────────────────────────────────────────────────────────╯
-</pre></div>
-</div>
-</div>
-<div class="docutils container">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-stores-create chunk [OPTIONS] SOURCE_DIR                 
-                                                                      
- Chunk and cache documents without writing to a vector store.         
-                                                                      
- Converts all files in SOURCE_DIR with Docling, chunks them, and      
- caches the result in ``&lt;source_dir&gt;/.klea-cache/``.  Also writes a   
- ``metadata-map.template.json`` file organised by source file, with   
- empty ``{}`` placeholders for each heading chain.  Fill in the       
- metadata values and pass the file to                                 
- ``klea-stores-create store --metadata-map``.                         
-                                                                      
-╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      TEXT  Directory containing source documents   │
-│                            [required]                              │
-╰────────────────────────────────────────────────────────────────────╯
-╭─ Options ──────────────────────────────────────────────────────────╮
-│ --max-tokens                  INTEGER  Maximum tokens per chunk    │
-│                                        [default: 450]              │
-│ --ocr             --no-ocr             Whether to perform optical  │
-│                                        character recognition (OCR) │
-│                                        during PDF conversion       │
-│                                        (default: on). Keep for     │
-│                                        scanned/image PDFs; disable │
-│                                        for text-based PDFs to      │
-│                                        speed up conversion         │
-│                                        significantly               │
-│                                        [default: ocr]              │
-│ --force       -f                       Re-process all files even   │
-│                                        if unchanged                │
-│ --help                                 Show this message and exit. │
-╰────────────────────────────────────────────────────────────────────╯
-</pre></div>
-</div>
-</div>
-<div class="docutils container">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-stores-create store [OPTIONS] SOURCE_DIR                 
-                                                                      
- Write cached document chunks to a vector store.                      
-                                                                      
- Cache-only: every source file must already have a cache entry (run   
- ``klea-stores-create chunk`` first).  Reads the cached chunks from   
- ``&lt;source_dir&gt;/.klea-cache/``, applies the metadata map, and writes  
- them to the vector store.  Conversion settings (OCR, max tokens)     
- belong to ``chunk``; ``store`` never converts on the fly.            
-                                                                      
- Incremental by default: a store manifest in                          
- ``&lt;source_dir&gt;/.klea-cache/`` records which files are in the         
- collection, so unchanged files are skipped and changed files are     
- updated in place.  Pass ``--force`` to drop the whole collection     
- and rebuild it (documents within a collection cannot be updated in   
- place across all backends).                                          
-                                                                      
- The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the     
- current directory) writes the combined chunked documents to a single 
- pickle file that can be used as a BM25 store.                        
-                                                                      
- Run ``klea-stores-create chunk`` first to populate the cache and     
- generate a ``metadata-map.template.json``.                           
-                                                                      
-╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      TEXT  Directory containing source documents   │
-│                            [required]                              │
-╰────────────────────────────────────────────────────────────────────╯
-╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection        -n      TEXT     Collection name for the    │
-│                                         vector store. Must match   │
-│                                         the 'name' of the          │
-│                                         corresponding              │
-│                                         vector_stores/bm25_stores  │
-│                                         entry in the RAG config    │
-│                                         file (e.g. klea.json); a   │
-│                                         different name on an       │
-│                                         existing store file        │
-│                                         creates a new collection   │
-│                                         [required]                 │
-│ *  --store             -s      TEXT     Vector store URI (e.g.     │
-│                                         chroma:/path/to/store).    │
-│                                         For local Chroma stores,   │
-│                                         point at the store folder: │
-│                                         the database file inside   │
-│                                         it is always named         │
-│                                         chroma.sqlite3             │
-│                                         [required]                 │
-│    --model             -m      TEXT     Embedding model identifier │
-│                                         [default:                  │
-│                                         ollama:bge-m3:latest]      │
-│    --metadata-map      -M      TEXT     JSON file keyed by source  │
-│                                         filename; each file entry  │
-│                                         maps heading chains to     │
-│                                         metadata dicts (with       │
-│                                         per-file DEFAULT           │
-│                                         fallback). Defaults to     │
-│                                         metadata-map.template.json │
-│                                         in the source directory's  │
-│                                         cache folder; required     │
-│                                         when no template exists    │
-│    --bm25-store                TEXT     Write the combined         │
-│                                         document corpus to this    │
-│                                         path for BM25 retrieval (a │
-│                                         pickle of all chunked      │
-│                                         documents). Defaults to    │
-│                                         &lt;collection&gt;.pkl in the    │
-│                                         current directory; the     │
-│                                         file can be moved after    │
-│                                         creation                   │
-│                                         [default:                  │
-│                                         (&lt;collection&gt;.pkl)]        │
-│    --embed-batch-size          INTEGER  Number of chunks embedded  │
-│                                         per store write call.      │
-│                                         Smaller values report      │
-│                                         progress more frequently;  │
-│                                         larger values reduce       │
-│                                         per-request overhead on    │
-│                                         very large corpora         │
-│                                         [default: 256]             │
-│    --force             -f               Drop the collection and    │
-│                                         re-store all files from    │
-│                                         scratch (the portable way  │
-│                                         to update a collection;    │
-│                                         documents within a         │
-│                                         collection cannot be       │
-│                                         updated in place).         │
-│                                         Without --force, `store`   │
-│                                         is incremental: unchanged  │
-│                                         files are skipped and      │
-│                                         changed files are updated  │
-│                                         in place.  Does not        │
-│                                         reconvert: files must      │
-│                                         already be cached by       │
-│                                         'chunk'                    │
-│    --help                               Show this message and      │
-│                                         exit.                      │
-╰────────────────────────────────────────────────────────────────────╯
-</pre></div>
-</div>
-</div>
-<div class="docutils container">
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                                                                      
- Usage: klea-stores-create map-lint [OPTIONS] SOURCE_DIR              
-                                                                      
- Report issues in a metadata map so it can be reviewed efficiently.   
-                                                                      
- Runs only deterministic checks (missing fields, suspicious titles or 
- DOIs, year/filename mismatches, stale 'venue' keys, excess url*      
- keys,                                                                
- placeholder counts) -- no LLM is needed.  Useful after editing the   
- map by hand, and printed automatically at the end of 'chunk'.        
-                                                                      
-╭─ Arguments ────────────────────────────────────────────────────────╮
-│ *    source_dir      TEXT  Directory containing the metadata map   │
-│                            (uses metadata-map.template.json in the │
-│                            .klea-cache folder unless               │
-│                            --metadata-map is given)                │
-│                            [required]                              │
-╰────────────────────────────────────────────────────────────────────╯
-╭─ Options ──────────────────────────────────────────────────────────╮
-│ --metadata-map  -M      TEXT  Explicit metadata-map JSON file to   │
-│                               lint, instead of the template in     │
-│                               SOURCE_DIR                           │
-│ --help                        Show this message and exit.          │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>

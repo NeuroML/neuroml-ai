@@ -324,147 +324,85 @@
     <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="build">
-<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.build">[docs]</a>
+<div class="viewcode-block" id="pre_check">
+<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.pre_check">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
-    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents"</span><span class="p">),</span>
-    <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span>
-        <span class="s2">"--collection"</span><span class="p">,</span>
-        <span class="s2">"-n"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Collection name for the vector store. Must match the "</span>
-        <span class="s2">"'name' of the corresponding vector_stores/bm25_stores entry in "</span>
-        <span class="s2">"the RAG config file (e.g. klea.json); a different name on an "</span>
-        <span class="s2">"existing store file creates a new collection"</span><span class="p">,</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">pre_check</span><span class="p">(</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents (PDFs)"</span>
     <span class="p">),</span>
-    <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="o">...</span><span class="p">,</span>
-        <span class="s2">"--store"</span><span class="p">,</span>
-        <span class="s2">"-s"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Vector store URI (e.g. chroma:/path/to/store). For local "</span>
-        <span class="s2">"Chroma stores, point at the store folder: the database file "</span>
-        <span class="s2">"inside it is always named chroma.sqlite3"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="s2">"ollama:bge-m3:latest"</span><span class="p">,</span>
-        <span class="s2">"--model"</span><span class="p">,</span>
-        <span class="s2">"-m"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Embedding model identifier"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="mi">450</span><span class="p">,</span> <span class="s2">"--max-tokens"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Maximum tokens per chunk"</span>
-    <span class="p">),</span>
-    <span class="n">ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">True</span><span class="p">,</span>
-        <span class="s2">"--ocr/--no-ocr"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Whether to perform optical character recognition (OCR) "</span>
-        <span class="s2">"during PDF conversion (default: on). Keep for scanned/image "</span>
-        <span class="s2">"PDFs; disable for text-based PDFs to speed up conversion "</span>
-        <span class="s2">"significantly"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">"--metadata-map"</span><span class="p">,</span>
-        <span class="s2">"-M"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"JSON file keyed by source filename; each file entry maps "</span>
-        <span class="s2">"heading chains to metadata dicts (with per-file DEFAULT fallback). "</span>
-        <span class="s2">"If not given, build generates metadata-map.template.json from the "</span>
-        <span class="s2">"extraction and uses it without a review step"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">"--bm25-store"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Write the combined document corpus to this path for BM25 "</span>
-        <span class="s2">"retrieval (a pickle of all chunked documents). Defaults to "</span>
-        <span class="s2">"&lt;collection&gt;.pkl in the current directory; the file can be "</span>
-        <span class="s2">"moved after creation"</span><span class="p">,</span>
-        <span class="n">show_default</span><span class="o">=</span><span class="s2">"&lt;collection&gt;.pkl"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">embed_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="mi">256</span><span class="p">,</span>
-        <span class="s2">"--embed-batch-size"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of chunks embedded per store write call. Smaller "</span>
-        <span class="s2">"values report progress more frequently; larger values reduce "</span>
-        <span class="s2">"per-request overhead on very large corpora"</span><span class="p">,</span>
-    <span class="p">),</span>
-    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
-        <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
+    <span class="n">organise</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">"--organise"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Copy classified files into 'ocr/' (scanned/image PDFs) and "</span>
+        <span class="s2">"'no-ocr/' (text PDFs plus all non-PDF files) subdirectories. "</span>
+        <span class="s2">"Copies, never moves -- your original bibliography directory is "</span>
+        <span class="s2">"left untouched. Recommended workflow: relocate the copies to a "</span>
+        <span class="s2">"scratch directory, then chunk and store each subdirectory into "</span>
+        <span class="s2">"the same collection"</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Full pipeline: chunk, embed, and write to a vector store.</span>
+<span class="w">    </span><span class="sd">"""Decide which PDFs need OCR before chunking.</span>
 
-<span class="sd">    Processes all files in SOURCE_DIR: converts them with Docling,</span>
-<span class="sd">    chunks them, embeds them, and writes to the vector store.</span>
-<span class="sd">    Processed chunks are cached in ``&lt;source_dir&gt;/.klea-cache/`` so</span>
-<span class="sd">    subsequent runs (e.g. with ``--metadata-map``) skip conversion.</span>
+<span class="sd">    Reads each PDF's embedded text layer with pypdfium2 and reports</span>
+<span class="sd">    whether it is image-based (scanned, needs OCR) or text-based (no OCR</span>
+<span class="sd">    needed).  This lets you avoid the cost of OCR on born-digital PDFs</span>
+<span class="sd">    while keeping it for older scanned papers -- without guessing by</span>
+<span class="sd">    publication year.</span>
 
-<span class="sd">    The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the</span>
-<span class="sd">    current directory) writes the combined chunked documents to a single</span>
-<span class="sd">    pickle file that can be used as a BM25 store.</span>
-
-<span class="sd">    The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file</span>
-<span class="sd">    organised by source file.  Within each file entry, the most specific</span>
-<span class="sd">    heading chain match wins; a ``DEFAULT`` entry provides fallback for</span>
-<span class="sd">    any heading not listed.</span>
-
-<span class="sd">    Example metadata-map.json::</span>
-
-<span class="sd">        {</span>
-<span class="sd">            "PrimerOnCElegans.md": {</span>
-<span class="sd">                "DEFAULT": {},</span>
-<span class="sd">                "C. elegans tissue morphology": {</span>
-<span class="sd">                    "url": "https://example.com/worm"</span>
-<span class="sd">                }</span>
-<span class="sd">            },</span>
-<span class="sd">            "c302-paper.pdf": {</span>
-<span class="sd">                "DEFAULT": {</span>
-<span class="sd">                    "url": "https://example.com/c302"</span>
-<span class="sd">                }</span>
-<span class="sd">            }</span>
-<span class="sd">        }</span>
+<span class="sd">    Without ``--organise`` the command only reports.  With ``--organise``</span>
+<span class="sd">    it copies files into ``ocr/`` and ``no-ocr/`` subdirectories (the</span>
+<span class="sd">    originals are never modified), then prints the recommended chunk and</span>
+<span class="sd">    store commands to build both into the same collection.</span>
 <span class="sd">    """</span>
     <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"Building vector store '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">"</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">"</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">"</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">"</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span>
-    <span class="p">)</span>
-
-    <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
-    <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
-    <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl"</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># Lazy: importing StoresBuilder pulls in ingestion.py -&gt; llm.py -&gt;</span>
-        <span class="c1"># langchain_huggingface/langchain_ollama, stores/utils.py -&gt;</span>
-        <span class="c1"># chromadb/qdrant etc.  Deferring to function body keeps</span>
-        <span class="c1"># --help fast (Python only needs the function signature).</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoresBuilder</span>
+        <span class="c1"># Lazy: importing the pre-check module pulls in pypdfium2 (native</span>
+        <span class="c1"># pdfium bindings) and ingestion (docling etc.).  Deferring keeps</span>
+        <span class="c1"># --help fast -- Python only needs the function signature.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.precheck</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">classify_directory</span><span class="p">,</span>
+            <span class="n">format_precheck_report</span><span class="p">,</span>
+            <span class="n">organise_directory</span><span class="p">,</span>
+        <span class="p">)</span>
 
-        <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
-            <span class="n">embedding_model</span><span class="o">=</span><span class="n">embedding_model</span><span class="p">,</span>
-            <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-            <span class="n">max_tokens</span><span class="o">=</span><span class="n">max_tokens</span><span class="p">,</span>
-            <span class="n">do_ocr</span><span class="o">=</span><span class="n">ocr</span><span class="p">,</span>
-            <span class="n">embed_batch_size</span><span class="o">=</span><span class="n">embed_batch_size</span><span class="p">,</span>
-            <span class="n">store_dir</span><span class="o">=</span><span class="n">_store_dir</span><span class="p">(</span><span class="n">store_path</span><span class="p">),</span>
-        <span class="p">)</span>
-        <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
-            <span class="n">source_dir</span><span class="o">=</span><span class="n">source_dir</span><span class="p">,</span>
-            <span class="n">store_uri</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span>
-            <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span>
-            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
-            <span class="n">metadata_map_path</span><span class="o">=</span><span class="n">metadata_map_path</span><span class="p">,</span>
-            <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Done -- collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' is ready"</span><span class="p">)</span>
+        <span class="n">classifications</span> <span class="o">=</span> <span class="n">classify_directory</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">format_precheck_report</span><span class="p">(</span><span class="n">classifications</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">classifications</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"No PDFs found to classify"</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">organise</span><span class="p">:</span>
+            <span class="n">ocr_dir</span><span class="p">,</span> <span class="n">no_ocr_dir</span> <span class="o">=</span> <span class="n">organise_directory</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">classifications</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organised copies into </span><span class="si">{</span><span class="n">ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ and </span><span class="si">{</span><span class="n">no_ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"(originals untouched; output dirs are skipped on re-runs)"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"Recommended workflow -- relocate the copies to a scratch dir:"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  mv </span><span class="si">{</span><span class="n">ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ </span><span class="si">{</span><span class="n">no_ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ /tmp/biblio-build/"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"  cd /tmp/biblio-build"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  klea-stores-create chunk </span><span class="si">{</span><span class="n">no_ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ --no-ocr"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  klea-stores-create chunk </span><span class="si">{</span><span class="n">ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/"</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"  klea-stores-create store </span><span class="si">{</span><span class="n">no_ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ "</span>
+                <span class="s2">"--collection &lt;name&gt; --store chroma:/path"</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"  klea-stores-create store </span><span class="si">{</span><span class="n">ocr_dir</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">/ "</span>
+                <span class="s2">"--collection &lt;name&gt; --store chroma:/path"</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"(both store runs target the SAME collection, so they merge)"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
+        <span class="k">raise</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
@@ -563,6 +501,64 @@
         <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not lint metadata map: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="map_lint">
+<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.map_lint">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">map_lint</span><span class="p">(</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing the metadata map (uses "</span>
+        <span class="s2">"metadata-map.template.json in the .klea-cache folder unless "</span>
+        <span class="s2">"--metadata-map is given)"</span>
+    <span class="p">),</span>
+    <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"--metadata-map"</span><span class="p">,</span>
+        <span class="s2">"-M"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Explicit metadata-map JSON file to lint, instead of the "</span>
+        <span class="s2">"template in SOURCE_DIR"</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Report issues in a metadata map so it can be reviewed efficiently.</span>
+
+<span class="sd">    Runs only deterministic checks (missing fields, suspicious titles or</span>
+<span class="sd">    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,</span>
+<span class="sd">    placeholder counts) -- no LLM is needed.  Useful after editing the</span>
+<span class="sd">    map by hand, and printed automatically at the end of 'chunk'.</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span><span class="p">,</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.map_lint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">format_metadata_lint_report</span><span class="p">,</span>
+            <span class="n">lint_metadata_map</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">map_path</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">CACHE_DIR_NAME</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">map_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Metadata map not found: </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
 
 
 
@@ -711,6 +707,34 @@
             <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
             <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="c1"># Auto-print a store-lint report of the just-written BM25 corpus,</span>
+        <span class="c1"># so the researcher can review chunking/metadata quality without</span>
+        <span class="c1"># unpickling the file (mirrors map-lint being auto-printed after</span>
+        <span class="c1"># chunk).  Only fires when a BM25 corpus was actually written.</span>
+        <span class="n">bm25_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">bm25_store</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bm25_file</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+
+                <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.postcheck</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                    <span class="n">format_store_lint_report</span><span class="p">,</span>
+                    <span class="n">lint_store</span><span class="p">,</span>
+                    <span class="n">select_sample_windows</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">bm25_file</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">docs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">()</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="n">format_store_lint_report</span><span class="p">(</span>
+                            <span class="n">lint_store</span><span class="p">(</span><span class="n">docs</span><span class="p">),</span>
+                            <span class="n">select_sample_windows</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">anchors</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">self_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+                <span class="n">self_logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not auto-run store-lint: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Done -- collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' is ready"</span><span class="p">)</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span>
 
@@ -728,58 +752,216 @@
 
 
 
-<div class="viewcode-block" id="map_lint">
-<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.map_lint">[docs]</a>
+<div class="viewcode-block" id="store_lint">
+<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.store_lint">[docs]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">map_lint</span><span class="p">(</span>
-    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing the metadata map (uses "</span>
-        <span class="s2">"metadata-map.template.json in the .klea-cache folder unless "</span>
-        <span class="s2">"--metadata-map is given)"</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">store_lint</span><span class="p">(</span>
+    <span class="n">corpus_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Path to the pickled BM25/vector corpus (e.g. &lt;collection&gt;.pkl)"</span>
+    <span class="p">),</span>
+    <span class="n">samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="mi">3</span><span class="p">,</span>
+        <span class="s2">"--samples"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of evenly-spaced sampling locations across the corpus; "</span>
+        <span class="s2">"each shows 3 contiguous chunks (truncated text + metadata) for "</span>
+        <span class="s2">"human review.  Pass 0 to suppress sampling"</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Report issues in a stored corpus so it can be reviewed efficiently.</span>
+
+<span class="sd">    Loads the pickled BM25 corpus (a list of chunked documents) and runs</span>
+<span class="sd">    only deterministic checks (no LLM): a corpus summary, suspicious</span>
+<span class="sd">    chunks (near-empty text from a conversion/OCR miss, or missing</span>
+<span class="sd">    bibliographic metadata), and structural problems (chunks without a</span>
+<span class="sd">    ``file_name``, invalid ``page_content`` / ``year`` types).  Also</span>
+<span class="sd">    prints ``--samples`` evenly-spaced windows of contiguous chunks so you</span>
+<span class="sd">    can eyeball that chunking and metadata look right across the corpus --</span>
+<span class="sd">    no need to unpickle the file yourself.  Useful after ``store``, and</span>
+<span class="sd">    printed automatically at the end of ``store`` when a BM25 corpus was</span>
+<span class="sd">    written.</span>
+<span class="sd">    """</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+
+    <span class="n">corpus</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">corpus_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">corpus</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Corpus file not found: </span><span class="si">{</span><span class="n">corpus</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Lazy: importing the post-check module pulls in langchain-core's</span>
+        <span class="c1"># Document and pickle handling.  Deferring keeps --help fast --</span>
+        <span class="c1"># Python only needs the function signature.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.postcheck</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">format_store_lint_report</span><span class="p">,</span>
+            <span class="n">lint_store</span><span class="p">,</span>
+            <span class="n">select_sample_windows</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">docs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Corpus </span><span class="si">{</span><span class="n">corpus</span><span class="si">}</span><span class="s2"> is not a pickled list of documents; "</span>
+                <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_store</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+        <span class="n">sample_windows</span> <span class="o">=</span> <span class="n">select_sample_windows</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">anchors</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">format_store_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">sample_windows</span><span class="p">))</span>
+    <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="build">
+<a class="viewcode-back" href="../../../api/utils/ui-stores-create.html#klea_utils.ui.stores_create.build">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Directory containing source documents"</span><span class="p">),</span>
+    <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">"--collection"</span><span class="p">,</span>
+        <span class="s2">"-n"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Collection name for the vector store. Must match the "</span>
+        <span class="s2">"'name' of the corresponding vector_stores/bm25_stores entry in "</span>
+        <span class="s2">"the RAG config file (e.g. klea.json); a different name on an "</span>
+        <span class="s2">"existing store file creates a new collection"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="o">...</span><span class="p">,</span>
+        <span class="s2">"--store"</span><span class="p">,</span>
+        <span class="s2">"-s"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Vector store URI (e.g. chroma:/path/to/store). For local "</span>
+        <span class="s2">"Chroma stores, point at the store folder: the database file "</span>
+        <span class="s2">"inside it is always named chroma.sqlite3"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">embedding_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="s2">"ollama:bge-m3:latest"</span><span class="p">,</span>
+        <span class="s2">"--model"</span><span class="p">,</span>
+        <span class="s2">"-m"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Embedding model identifier"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="mi">450</span><span class="p">,</span> <span class="s2">"--max-tokens"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Maximum tokens per chunk"</span>
+    <span class="p">),</span>
+    <span class="n">ocr</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">"--ocr/--no-ocr"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Whether to perform optical character recognition (OCR) "</span>
+        <span class="s2">"during PDF conversion (default: on). Keep for scanned/image "</span>
+        <span class="s2">"PDFs; disable for text-based PDFs to speed up conversion "</span>
+        <span class="s2">"significantly"</span><span class="p">,</span>
     <span class="p">),</span>
     <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">None</span><span class="p">,</span>
         <span class="s2">"--metadata-map"</span><span class="p">,</span>
         <span class="s2">"-M"</span><span class="p">,</span>
-        <span class="n">help</span><span class="o">=</span><span class="s2">"Explicit metadata-map JSON file to lint, instead of the "</span>
-        <span class="s2">"template in SOURCE_DIR"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"JSON file keyed by source filename; each file entry maps "</span>
+        <span class="s2">"heading chains to metadata dicts (with per-file DEFAULT fallback). "</span>
+        <span class="s2">"If not given, build generates metadata-map.template.json from the "</span>
+        <span class="s2">"extraction and uses it without a review step"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">bm25_store</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">"--bm25-store"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Write the combined document corpus to this path for BM25 "</span>
+        <span class="s2">"retrieval (a pickle of all chunked documents). Defaults to "</span>
+        <span class="s2">"&lt;collection&gt;.pkl in the current directory; the file can be "</span>
+        <span class="s2">"moved after creation"</span><span class="p">,</span>
+        <span class="n">show_default</span><span class="o">=</span><span class="s2">"&lt;collection&gt;.pkl"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">embed_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="mi">256</span><span class="p">,</span>
+        <span class="s2">"--embed-batch-size"</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">"Number of chunks embedded per store write call. Smaller "</span>
+        <span class="s2">"values report progress more frequently; larger values reduce "</span>
+        <span class="s2">"per-request overhead on very large corpora"</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
     <span class="p">),</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Report issues in a metadata map so it can be reviewed efficiently.</span>
+<span class="w">    </span><span class="sd">"""Full pipeline: chunk, embed, and write to a vector store.</span>
 
-<span class="sd">    Runs only deterministic checks (missing fields, suspicious titles or</span>
-<span class="sd">    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,</span>
-<span class="sd">    placeholder counts) -- no LLM is needed.  Useful after editing the</span>
-<span class="sd">    map by hand, and printed automatically at the end of 'chunk'.</span>
+<span class="sd">    Processes all files in SOURCE_DIR: converts them with Docling,</span>
+<span class="sd">    chunks them, embeds them, and writes to the vector store.</span>
+<span class="sd">    Processed chunks are cached in ``&lt;source_dir&gt;/.klea-cache/`` so</span>
+<span class="sd">    subsequent runs (e.g. with ``--metadata-map``) skip conversion.</span>
+
+<span class="sd">    The ``--bm25-store`` option (default ``&lt;collection&gt;.pkl`` in the</span>
+<span class="sd">    current directory) writes the combined chunked documents to a single</span>
+<span class="sd">    pickle file that can be used as a BM25 store.</span>
+
+<span class="sd">    The optional ``--metadata-map`` / ``-M`` flag accepts a JSON file</span>
+<span class="sd">    organised by source file.  Within each file entry, the most specific</span>
+<span class="sd">    heading chain match wins; a ``DEFAULT`` entry provides fallback for</span>
+<span class="sd">    any heading not listed.</span>
+
+<span class="sd">    Example metadata-map.json::</span>
+
+<span class="sd">        {</span>
+<span class="sd">            "PrimerOnCElegans.md": {</span>
+<span class="sd">                "DEFAULT": {},</span>
+<span class="sd">                "C. elegans tissue morphology": {</span>
+<span class="sd">                    "url": "https://example.com/worm"</span>
+<span class="sd">                }</span>
+<span class="sd">            },</span>
+<span class="sd">            "c302-paper.pdf": {</span>
+<span class="sd">                "DEFAULT": {</span>
+<span class="sd">                    "url": "https://example.com/c302"</span>
+<span class="sd">                }</span>
+<span class="sd">            }</span>
+<span class="sd">        }</span>
 <span class="sd">    """</span>
     <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Building vector store '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">store_path</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Source: </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Model: </span><span class="si">{</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  Metadata map: </span><span class="si">{</span><span class="n">metadata_map_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Typer cannot compute a default that depends on another argument, so</span>
+    <span class="c1"># the dynamic --bm25-store default is resolved here.</span>
+    <span class="k">if</span> <span class="n">bm25_store</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">bm25_store</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">.pkl"</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 store: </span><span class="si">{</span><span class="n">bm25_store</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+        <span class="c1"># Lazy: importing StoresBuilder pulls in ingestion.py -&gt; llm.py -&gt;</span>
+        <span class="c1"># langchain_huggingface/langchain_ollama, stores/utils.py -&gt;</span>
+        <span class="c1"># chromadb/qdrant etc.  Deferring to function body keeps</span>
+        <span class="c1"># --help fast (Python only needs the function signature).</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoresBuilder</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span><span class="p">,</span> <span class="n">TEMPLATE_FILE_NAME</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.map_lint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-            <span class="n">format_metadata_lint_report</span><span class="p">,</span>
-            <span class="n">lint_metadata_map</span><span class="p">,</span>
+        <span class="n">builder</span> <span class="o">=</span> <span class="n">StoresBuilder</span><span class="p">(</span>
+            <span class="n">embedding_model</span><span class="o">=</span><span class="n">embedding_model</span><span class="p">,</span>
+            <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
+            <span class="n">max_tokens</span><span class="o">=</span><span class="n">max_tokens</span><span class="p">,</span>
+            <span class="n">do_ocr</span><span class="o">=</span><span class="n">ocr</span><span class="p">,</span>
+            <span class="n">embed_batch_size</span><span class="o">=</span><span class="n">embed_batch_size</span><span class="p">,</span>
+            <span class="n">store_dir</span><span class="o">=</span><span class="n">_store_dir</span><span class="p">(</span><span class="n">store_path</span><span class="p">),</span>
         <span class="p">)</span>
-
-        <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source directory not found: </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
-            <span class="n">map_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metadata_map_path</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">map_path</span> <span class="o">=</span> <span class="n">source_path</span> <span class="o">/</span> <span class="n">CACHE_DIR_NAME</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">map_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Metadata map not found: </span><span class="si">{</span><span class="n">map_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">))</span>
+        <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="n">source_dir</span><span class="o">=</span><span class="n">source_dir</span><span class="p">,</span>
+            <span class="n">store_uri</span><span class="o">=</span><span class="n">store_path</span><span class="p">,</span>
+            <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span>
+            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
+            <span class="n">metadata_map_path</span><span class="o">=</span><span class="n">metadata_map_path</span><span class="p">,</span>
+            <span class="n">bm25_path</span><span class="o">=</span><span class="n">bm25_store</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Done -- collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' is ready"</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>

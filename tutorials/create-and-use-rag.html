@@ -348,6 +348,44 @@ images, and more (see <a class="reference external" href="https://docling-projec
 for the full list).</p>
 <p>For this tutorial we will refer to this directory as
 <code class="docutils literal notranslate"><span class="pre">&lt;folder-of-files&gt;</span></code>.</p>
+<section id="deciding-whether-a-pdf-needs-ocr">
+<h3>Deciding whether a PDF needs OCR<a class="headerlink" href="#deciding-whether-a-pdf-needs-ocr" title="Link to this heading">¶</a></h3>
+<p>OCR (see <a class="reference external" href="https://en.wikipedia.org/wiki/Optical_character_recognition">Wikipedia</a>)
+recovers text from scanned/image-based PDFs, but it slows conversion of
+born-digital (text-layer) PDFs considerably.  The <code class="docutils literal notranslate"><span class="pre">--ocr</span></code> / <code class="docutils literal notranslate"><span class="pre">--no-ocr</span></code>
+flag on <code class="docutils literal notranslate"><span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chunk</span></code> toggles it (default: on), but which
+setting a given PDF needs cannot be told from its publication year –
+older papers are often scans, yet many are born-digital, and some recent
+PDFs are scans of print originals.</p>
+<p>Instead, decide per file by whether the PDF has an embedded text layer.
+<code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">pre-check</span> <span class="pre">&lt;folder-of-files&gt;</span></code> reads each PDF with
+pypdfium2 and reports which need OCR:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-stores-create<span class="w"> </span>pre-check<span class="w"> </span>&lt;folder-of-files&gt;
+
+Pre-check:<span class="w"> </span><span class="m">12</span><span class="w"> </span>PDFs,<span class="w"> </span><span class="m">3</span><span class="w"> </span>need<span class="w"> </span>OCR<span class="w"> </span><span class="o">(</span>image-based<span class="o">)</span>,<span class="w"> </span><span class="m">9</span><span class="w"> </span>are<span class="w"> </span>text-based<span class="w"> </span><span class="o">(</span>no<span class="w"> </span>OCR<span class="w"> </span>needed<span class="o">)</span>
+
+<span class="w">  </span>OCR<span class="w">    </span>scanned-paper.pdf<span class="w">         </span><span class="nv">pages</span><span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="nv">image_pages</span><span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="nv">chars</span><span class="o">=</span><span class="m">120</span>
+<span class="w">  </span>no-OCR<span class="w"> </span>modern-paper.pdf<span class="w">          </span><span class="nv">pages</span><span class="o">=</span><span class="m">15</span><span class="w"> </span><span class="nv">image_pages</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">chars</span><span class="o">=</span><span class="m">48231</span>
+</pre></div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">--organise</span></code> it copies the files (never moves them – your
+original directory is left untouched) into <code class="docutils literal notranslate"><span class="pre">ocr/</span></code> and <code class="docutils literal notranslate"><span class="pre">no-ocr/</span></code>
+subdirectories, then prints the recommended workflow:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>klea-stores-create<span class="w"> </span>pre-check<span class="w"> </span>&lt;folder-of-files&gt;<span class="w"> </span>--organise
+
+<span class="c1"># relocate the copies to a scratch dir so the source folder stays clean</span>
+mv<span class="w"> </span>ocr/<span class="w"> </span>no-ocr/<span class="w"> </span>/tmp/biblio-build/
+<span class="nb">cd</span><span class="w"> </span>/tmp/biblio-build
+klea-stores-create<span class="w"> </span>chunk<span class="w"> </span>no-ocr/<span class="w"> </span>--no-ocr
+klea-stores-create<span class="w"> </span>chunk<span class="w"> </span>ocr/
+klea-stores-create<span class="w"> </span>store<span class="w"> </span>no-ocr/<span class="w"> </span>--collection<span class="w"> </span>my-docs<span class="w"> </span>--store<span class="w"> </span>chroma:/path
+klea-stores-create<span class="w"> </span>store<span class="w"> </span>ocr/<span class="w">   </span>--collection<span class="w"> </span>my-docs<span class="w"> </span>--store<span class="w"> </span>chroma:/path
+</pre></div>
+</div>
+<p>The two <code class="docutils literal notranslate"><span class="pre">store</span></code> runs target the <em>same</em> collection, so they merge into
+one store; <code class="docutils literal notranslate"><span class="pre">no-ocr/</span></code> also picks up any non-PDF files (Markdown, DOCX,
+etc.) that never need OCR.</p>
+</section>
 </section>
 <section id="step-2-create-a-vector-store">
 <h2>Step 2: Create a vector store<a class="headerlink" href="#step-2-create-a-vector-store" title="Link to this heading">¶</a></h2>
@@ -758,7 +796,10 @@ ingestion</p></li>
 <li><a class="reference internal" href="#">Create and use a RAG system</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
 <li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
-<li><a class="reference internal" href="#step-1-prepare-source-documents">Step 1: Prepare source documents</a></li>
+<li><a class="reference internal" href="#step-1-prepare-source-documents">Step 1: Prepare source documents</a><ul>
+<li><a class="reference internal" href="#deciding-whether-a-pdf-needs-ocr">Deciding whether a PDF needs OCR</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#step-2-create-a-vector-store">Step 2: Create a vector store</a></li>
 <li><a class="reference internal" href="#step-3-configure-the-rag-system">Step 3: Configure the RAG system</a></li>
 <li><a class="reference internal" href="#step-4-start-the-rag-server">Step 4: Start the RAG server</a></li>

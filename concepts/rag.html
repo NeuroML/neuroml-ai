@@ -432,6 +432,14 @@ still dominates the final ordering.</p>
 <code class="docutils literal notranslate"><span class="pre">--bm25-store</span></code> to <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span></code> (see
 <a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>), then add a <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>
 entry to the domain config pointing at the written corpus file.</p>
+<p>After storing, <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">store-lint</span> <span class="pre">&lt;corpus.pkl&gt;</span></code> reviews the
+corpus with deterministic, LLM-free checks: a summary (chunks, files,
+chunks-per-file, total characters), suspicious chunks (near-empty text
+from a conversion/OCR miss, or missing bibliographic metadata), and
+structural problems (chunks without a <code class="docutils literal notranslate"><span class="pre">file_name</span></code>, invalid types).  It
+also prints <code class="docutils literal notranslate"><span class="pre">--samples</span></code> evenly-spaced windows of contiguous chunks so
+you can eyeball that chunking and metadata look right.  It is printed
+automatically at the end of <code class="docutils literal notranslate"><span class="pre">store</span></code> when a BM25 corpus is written.</p>
 </section>
 <section id="reference-material-for-the-answer-llm">
 <span id="reference-material"></span><h2>Reference material for the answer LLM<a class="headerlink" href="#reference-material-for-the-answer-llm" title="Link to this heading">¶</a></h2>
@@ -495,9 +503,17 @@ precedence order (e.g. <code class="docutils literal notranslate"><span class="p
 <p>These keys are internal: they guide the researcher reviewing the
 template, and are never shown to the answer LLM.</p>
 <p>When storing, each file’s <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> metadata is applied to every chunk,
-and per-heading entries are merged over it (heading-specific keys win,
-<code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> fills the rest).  An empty <code class="docutils literal notranslate"><span class="pre">{}</span></code> placeholder simply falls
-through to <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code>.  <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code> runs
+and per-heading entries are merged over it.  For a chunk, the metadata
+map is matched from the most specific to the least specific entry: the
+full heading chain (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;Chapter</span> <span class="pre">1</span> <span class="pre">&gt;</span> <span class="pre">2.1</span> <span class="pre">Neurons&quot;</span></code>) first, then
+progressively shorter suffixes (<code class="docutils literal notranslate"><span class="pre">&quot;2.1</span> <span class="pre">Neurons&quot;</span></code>), then progressively
+shallower ancestor chains (<code class="docutils literal notranslate"><span class="pre">&quot;Chapter</span> <span class="pre">1&quot;</span></code>).  The first non-empty
+matching entry wins and is merged over <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> (heading-specific keys
+win, <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code> fills the rest).  This means a leaf section with no
+metadata of its own inherits its nearest ancestor’s – so a section with
+no <code class="docutils literal notranslate"><span class="pre">url</span></code> of its own is referred to the closest parent that has one.
+An empty <code class="docutils literal notranslate"><span class="pre">{}</span></code> placeholder simply falls through to the next candidate,
+and finally to <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code>.  <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code> runs
 deterministic, LLM-free checks over the map (missing fields, suspicious
 titles or DOIs, year/filename mismatches, stale <code class="docutils literal notranslate"><span class="pre">venue</span></code> keys, excess
 <code class="docutils literal notranslate"><span class="pre">url*</span></code> keys) and is printed automatically after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>; re-run it
@@ -508,7 +524,10 @@ entirely when no DOI is found in the document.  Optical character
 recognition (OCR), which slows the conversion of text-based PDFs
 considerably, can be disabled with <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">--no-ocr</span></code> (see
 <a class="reference external" href="https://en.wikipedia.org/wiki/Optical_character_recognition">Wikipedia</a>
-for details).</p>
+for details).  Use <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">pre-check</span> <span class="pre">&lt;dir&gt;</span></code> to classify
+which PDFs actually need OCR (based on whether they carry an embedded
+text layer) rather than guessing by publication year – see
+<a class="reference internal" href="../tutorials/create-and-use-rag.html"><span class="doc">Create and use a RAG system</span></a>.</p>
 <p>Docling selects the inference accelerator automatically (CUDA, MPS, or
 CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
 cannot run the Triton-compiled layout model.  Set the <code class="docutils literal notranslate"><span class="pre">DOCLING_DEVICE</span></code>
