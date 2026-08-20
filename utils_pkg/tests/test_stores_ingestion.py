@@ -1143,6 +1143,73 @@ class TestIngestion:
             "url": "https://example.com/methods",
         }
 
+    def test_resolve_metadata_matches_full_template_chain_key(self):
+        """A template-style full heading-chain key resolves for a deep chunk."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Chapter 1", "2.1 Neurons"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"authors": ["A. Sinha"], "year": 2020},
+                    "Chapter 1 > 2.1 Neurons": {"url": "https://e.com/section"},
+                }
+            },
+        )
+        assert meta == {
+            "authors": ["A. Sinha"],
+            "year": 2020,
+            "url": "https://e.com/section",
+        }
+
+    def test_resolve_metadata_deeper_chain_beats_shallower(self):
+        """The most specific populated chain entry wins."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Chapter 1", "2.1 Neurons"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Chapter 1": {"url": "https://e.com/chapter"},
+                    "Chapter 1 > 2.1 Neurons": {"url": "https://e.com/section"},
+                }
+            },
+        )
+        assert meta == {"url": "https://e.com/section"}
+
+    def test_resolve_metadata_empty_leaf_inherits_ancestor(self):
+        """A leaf section with no metadata inherits its nearest ancestor's."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Chapter 1", "2.1 Neurons"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {"authors": ["A. Sinha"]},
+                    "Chapter 1 > 2.1 Neurons": {},
+                    "Chapter 1": {"url": "https://e.com/chapter"},
+                }
+            },
+        )
+        assert meta == {"authors": ["A. Sinha"], "url": "https://e.com/chapter"}
+
+    def test_resolve_metadata_shorter_suffix_beats_ancestor(self):
+        """A shorter suffix (closer to the leaf) beats a shallower ancestor."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        meta = builder._resolve_metadata(
+            "paper.pdf",
+            ["Chapter 1", "2", "2.1 Neurons"],
+            {
+                "paper.pdf": {
+                    "DEFAULT": {},
+                    "Chapter 1": {"url": "https://e.com/chapter"},
+                    "2 > 2.1 Neurons": {"url": "https://e.com/subsection"},
+                }
+            },
+        )
+        assert meta == {"url": "https://e.com/subsection"}
+
     @pytest.mark.localonly
     def test_chunk_all_errors_when_file_missing_from_map(self):
         """chunk_all raises when a source file has no metadata map entry.
