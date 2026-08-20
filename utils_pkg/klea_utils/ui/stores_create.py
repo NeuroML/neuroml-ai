@@ -418,6 +418,34 @@ def store(
             force=force,
             bm25_path=bm25_store,
         )
+        # Auto-print a store-lint report of the just-written BM25 corpus,
+        # so the researcher can review chunking/metadata quality without
+        # unpickling the file (mirrors map-lint being auto-printed after
+        # chunk).  Only fires when a BM25 corpus was actually written.
+        bm25_file = Path(bm25_store)
+        if bm25_file.is_file():
+            try:
+                import pickle
+
+                from klea_utils.stores.postcheck import (
+                    format_store_lint_report,
+                    lint_store,
+                    select_sample_windows,
+                )
+
+                with open(bm25_file, "rb") as f:
+                    docs = pickle.load(f)
+                if isinstance(docs, list):
+                    print()
+                    print(
+                        format_store_lint_report(
+                            lint_store(docs),
+                            select_sample_windows(docs, anchors=3),
+                        )
+                    )
+            except Exception as e:
+                self_logger = logging.getLogger("klea-stores-create")
+                self_logger.warning(f"Could not auto-run store-lint: {e}")
         logger.info(f"Done -- collection '{collection_name}' is ready")
         from klea_utils.stores.ingestion import CACHE_DIR_NAME
 
@@ -484,6 +512,72 @@ def map_lint(
             data = json.load(f)
         report = lint_metadata_map(data)
         print(format_metadata_lint_report(report))
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        raise typer.Exit(1) from None
+
+
+@app.command()
+def store_lint(
+    corpus_path: str = typer.Argument(
+        help="Path to the pickled BM25/vector corpus (e.g. <collection>.pkl)"
+    ),
+    samples: int = typer.Option(
+        3,
+        "--samples",
+        help="Number of evenly-spaced sampling locations across the corpus; "
+        "each shows 3 contiguous chunks (truncated text + metadata) for "
+        "human review.  Pass 0 to suppress sampling",
+        show_default=True,
+    ),
+):
+    """Report issues in a stored corpus so it can be reviewed efficiently.
+
+    Loads the pickled BM25 corpus (a list of chunked documents) and runs
+    only deterministic checks (no LLM): a corpus summary, suspicious
+    chunks (near-empty text from a conversion/OCR miss, or missing
+    bibliographic metadata), and structural problems (chunks without a
+    ``file_name``, invalid ``page_content`` / ``year`` types).  Also
+    prints ``--samples`` evenly-spaced windows of contiguous chunks so you
+    can eyeball that chunking and metadata look right across the corpus --
+    no need to unpickle the file yourself.  Useful after ``store``, and
+    printed automatically at the end of ``store`` when a BM25 corpus was
+    written.
+    """
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
+
+    corpus = Path(corpus_path)
+    if not corpus.is_file():
+        logger.error(f"Corpus file not found: {corpus}")
+        raise typer.Exit(1)
+
+    try:
+        # Lazy: importing the post-check module pulls in langchain-core's
+        # Document and pickle handling.  Deferring keeps --help fast --
+        # Python only needs the function signature.
+        import pickle
+
+        from klea_utils.stores.postcheck import (
+            format_store_lint_report,
+            lint_store,
+            select_sample_windows,
+        )
+
+        with open(corpus, "rb") as f:
+            docs = pickle.load(f)
+        if not isinstance(docs, list):
+            logger.error(
+                f"Corpus {corpus} is not a pickled list of documents; "
+                f"got {type(docs).__name__}"
+            )
+            raise typer.Exit(1)
+
+        report = lint_store(docs)
+        sample_windows = select_sample_windows(docs, anchors=max(samples, 0))
+        print(format_store_lint_report(report, sample_windows))
+    except typer.Exit:
+        raise
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
