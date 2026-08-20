@@ -12,8 +12,10 @@ import logging
 
 import pytest
 from klea_utils.stores.utils import (
+    CACHE_DIR_NAME,
     REF_DOC_OVERHEAD,
     drop_collection,
+    find_source_files,
     instantiate_vector_store,
     rerank_by_recency,
     rrf_merge,
@@ -584,3 +586,65 @@ def test_truncate_reference_material_global_across_domains():
 
     assert len(budgeted["A"]) == 2
     assert len(budgeted["B"]) == 0
+
+
+def test_find_source_files_excludes_cache_dir(tmp_path):
+    """The .klea-cache directory is never ingestible."""
+    src = tmp_path / "doc.md"
+    src.write_text("# Doc\n")
+    cached = tmp_path / CACHE_DIR_NAME / "xxh64_hash.pkl"
+    cached.parent.mkdir()
+    cached.write_bytes(b"cache")
+    assert find_source_files(tmp_path) == [src]
+
+
+def test_find_source_files_excludes_metadata_map_path(tmp_path):
+    """The linted metadata-map file is excluded when it lives in source_dir."""
+    src = tmp_path / "doc.md"
+    src.write_text("# Doc\n")
+    map_path = tmp_path / "metadata-map.json"
+    map_path.write_text('{"doc.md": {"DEFAULT": {}}}')
+    assert find_source_files(tmp_path, metadata_map_path=map_path) == [src]
+
+
+def test_find_source_files_excludes_configured_store_dir(tmp_path):
+    """The configured store directory is never ingested."""
+    src = tmp_path / "doc.md"
+    src.write_text("# Doc\n")
+    store = tmp_path / "celegans-store"
+    store.mkdir()
+    (store / "chroma.sqlite3").write_bytes(b"store")
+    assert find_source_files(tmp_path, store_dir=store) == [src]
+
+
+def test_find_source_files_excludes_chroma_store_heuristically(tmp_path):
+    """A nested store is excluded even without an explicit store_dir."""
+    src = tmp_path / "doc.md"
+    src.write_text("# Doc\n")
+    store = tmp_path / "celegans-store"
+    store.mkdir()
+    (store / "chroma.sqlite3").write_bytes(b"store")
+    assert find_source_files(tmp_path) == [src]
+
+
+def test_find_source_files_skips_unsupported_extensions(tmp_path):
+    """Unsupported extensions are skipped; a logger gets the warning."""
+    src = tmp_path / "doc.md"
+    src.write_text("# Doc\n")
+    bogus = tmp_path / "notes.xyz"
+    bogus.write_text("not a supported doc format")
+    assert find_source_files(tmp_path) == [src]
+
+    assert find_source_files(tmp_path, logger=logging.getLogger(__name__)) == [src]
+
+
+def test_find_source_files_sorted_and_files_only(tmp_path):
+    """Subdirectories are not returned and results are sorted."""
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    b = tmp_path / "b.md"
+    b.write_text("# B\n")
+    a = tmp_path / "a.md"
+    a.write_text("# A\n")
+    (sub / "c.md").write_text("# C\n")
+    assert find_source_files(tmp_path) == [a, b, sub / "c.md"]

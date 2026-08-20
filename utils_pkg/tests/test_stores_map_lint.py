@@ -149,6 +149,75 @@ def test_lint_metadata_map_report():
     assert report["complete"] == 1
     assert "Bad2025.pdf" in report["issues"]
     assert report["placeholders"] == {"Bad2025.pdf": 2}
+    assert report["missing_keys"] == []
+    assert report["unknown_keys"] == []
+
+
+def test_lint_metadata_map_with_matching_source_files_passes():
+    data = {
+        "Good2025.pdf": {"DEFAULT": {"title": "Good", "authors": ["A"], "year": 2025}}
+    }
+    report = lint_metadata_map(data, source_files=["Good2025.pdf"])
+    assert report["missing_keys"] == []
+    assert report["unknown_keys"] == []
+
+
+def test_lint_metadata_map_reports_missing_and_unknown_keys():
+    data = {
+        "Chapter > Section": {"title": "Heading-keyed"},
+        "Open Source Brain": {"title": "Another heading"},
+        "Good2025.pdf": {"DEFAULT": {"title": "Good"}},
+    }
+    report = lint_metadata_map(
+        data,
+        source_files=["Good2025.pdf", "Missing2025.pdf"],
+    )
+    assert report["missing_keys"] == ["Missing2025.pdf"]
+    assert report["unknown_keys"] == ["Chapter > Section", "Open Source Brain"]
+
+
+def test_lint_metadata_map_skips_key_checks_without_source_files():
+    data = {"Chapter > Section": {"title": "Heading-keyed"}}
+    report = lint_metadata_map(data)
+    assert report["missing_keys"] == []
+    assert report["unknown_keys"] == []
+
+
+def test_old_flat_format_entry_reports_structural_issue():
+    data = {
+        "Open Source Brain": {
+            "title": "Open Source Brain",
+            "url": "https://docs.opensourcebrain.org",
+            "authors": ["A. Sinha"],
+            "year": 2026,
+            "keywords": ["neuroscience"],
+        }
+    }
+    report = lint_metadata_map(data)
+    issues = report["issues"]["Open Source Brain"]
+    assert any("old flat format" in issue for issue in issues)
+    assert not any("missing:" in issue for issue in issues)
+
+    issues = lint_file_metadata(
+        "Open Source Brain",
+        {"title": "Open Source Brain", "url": "https://docs.opensourcebrain.org"},
+    )
+    assert any("old flat format" in issue for issue in issues)
+
+
+def test_format_metadata_lint_report_shows_key_sections():
+    report = lint_metadata_map(
+        {
+            "Chapter > Section": {"title": "Heading-keyed"},
+            "Good2025.pdf": {"DEFAULT": {"title": "Good"}},
+        },
+        source_files=["Good2025.pdf", "Missing2025.pdf"],
+    )
+    text = format_metadata_lint_report(report)
+    assert "Source files with no entry (store will FAIL): 1" in text
+    assert "Missing2025.pdf" in text
+    assert "Map keys that are not source files (heading-keyed or stale): 1" in text
+    assert "Chapter > Section" in text
 
 
 def test_format_metadata_lint_report_mentions_issues_and_placeholders(capsys):

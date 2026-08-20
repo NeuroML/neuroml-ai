@@ -232,8 +232,13 @@ def map_lint(
 
     Runs only deterministic checks (missing fields, suspicious titles or
     DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,
-    placeholder counts) -- no LLM is needed.  Useful after editing the
+    placeholder counts, and whether the top-level keys are the actual
+    source filenames) -- no LLM is needed.  Useful after editing the
     map by hand, and printed automatically at the end of 'chunk'.
+
+    A source file with no map entry is fatal (the store step raises), so
+    the full report is printed first and the command then exits non-zero
+    when any such file is found.
     """
     setup_root_logger("klea-stores-create")
     logger = logging.getLogger("klea-stores-create")
@@ -242,10 +247,14 @@ def map_lint(
         import json
         from pathlib import Path
 
-        from klea_utils.stores.ingestion import CACHE_DIR_NAME, TEMPLATE_FILE_NAME
         from klea_utils.stores.map_lint import (
             format_metadata_lint_report,
             lint_metadata_map,
+        )
+        from klea_utils.stores.utils import (
+            CACHE_DIR_NAME,
+            TEMPLATE_FILE_NAME,
+            find_source_files,
         )
 
         source_path = Path(source_dir).resolve()
@@ -261,8 +270,25 @@ def map_lint(
 
         with open(map_path) as f:
             data = json.load(f)
-        report = lint_metadata_map(data)
+        # The expected keys are exactly what the store step would ingest:
+        # the files find_source_files returns, minus the map file itself
+        # (which _load_metadata_map excludes at store time).  This mirrors
+        # the strict parity so a map that lints clean is guaranteed to
+        # resolve at store time.
+        source_files = {
+            f.name
+            for f in find_source_files(
+                source_path,
+                metadata_map_path=map_path.resolve(),
+                logger=logger,
+            )
+        }
+        report = lint_metadata_map(data, source_files=source_files)
         print(format_metadata_lint_report(report))
+        if report["missing_keys"]:
+            raise typer.Exit(1)
+    except typer.Exit:
+        raise
     except Exception as e:
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None

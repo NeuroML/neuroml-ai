@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 import re
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -63,18 +64,42 @@ def _filename_year(file_name: str) -> int | None:
     return None
 
 
+def _is_flat_metadata_entry(entry: dict[str, Any]) -> bool:
+    """True when *entry* holds a flat metadata dict, not the per-file map shape.
+
+    A per-file map entry is ``{"DEFAULT": {...}, "heading chain": {...}}``
+    -- a dict of dicts that always carries a ``"DEFAULT"`` key.  Older
+    maps keyed directly by headings store the metadata dict itself (e.g.
+    ``{"title": ..., "url": ...}``), so the entry has no ``"DEFAULT"``
+    and at least one non-dict value (a string, list, int, ...).
+    """
+    return "DEFAULT" not in entry and any(
+        not isinstance(value, dict) for value in entry.values()
+    )
+
+
 def lint_file_metadata(file_name: str, entry: dict[str, Any]) -> list[str]:
     """Return human-readable issues for one metadata-map file entry.
 
     *entry* is the per-file dict from a metadata map: a ``"DEFAULT"``
     metadata dict plus one dict per heading chain (empty ``{}``
-    placeholders in a generated template).
+    placeholders in a generated template).  A flat metadata dict (the
+    old heading-keyed format) is reported as a single structural issue
+    instead of a misleading list of missing fields.
 
     :param file_name: Source filename (used for the year-vs-stem check)
     :param entry: Per-file metadata-map entry
     :returns: Sorted list of issue strings; empty when the entry is clean
     """
     issues: list[str] = []
+
+    if _is_flat_metadata_entry(entry):
+        issues.append(
+            "old flat format: entry is a metadata dict, not "
+            "{'DEFAULT': {...}, 'heading > chain': {...}}"
+        )
+        return issues
+
     default = entry.get("DEFAULT", {})
 
     missing = [f for f in CORE_FIELDS if f not in default]
@@ -122,15 +147,31 @@ def lint_file_metadata(file_name: str, entry: dict[str, Any]) -> list[str]:
 
 def lint_metadata_map(
     data: dict[str, dict[str, Any]],
+    source_files: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Lint a whole metadata map and return a structured report.
 
+    When *source_files* is given (the basenames of the files the store
+    will ingest, e.g. from
+    :func:`~klea_utils.stores.utils.find_source_files`),
+    the top-level keys are checked against it: a source file with no
+    entry is a fatal error (the ``store`` step raises
+    ``ValueError``), while a key that is not a source file is a stale
+    or heading-keyed leftover that store simply ignores.  With
+    ``None`` (library callers, the auto-print after ``chunk``) these
+    key checks are skipped.
+
     :param data: Parsed metadata-map JSON (``{file_name: entry}``)
+    :param source_files: Optional basenames of the source files the
+        store will ingest; when given, top-level keys are validated
+        against them
     :returns: dict with ``files`` (total), ``complete`` (count of
         ``_metadata_complete`` DEFAULTs), ``issues`` (``{file_name:
-        [issue, ...]}`` for files with at least one issue), and
+        [issue, ...]}`` for files with at least one issue),
         ``placeholders`` (``{file_name: int}`` count of empty heading
-        placeholders per file)
+        placeholders per file), ``missing_keys`` (source files with no
+        map entry -- store will fail), and ``unknown_keys`` (map keys
+        that are not source files -- stale/heading-keyed)
     """
     issues: dict[str, list[str]] = {}
     placeholders: dict[str, int] = {}
@@ -151,11 +192,22 @@ def lint_metadata_map(
         if heading_placeholders:
             placeholders[file_name] = heading_placeholders
 
+    if source_files is None:
+        missing_keys: list[str] = []
+        unknown_keys: list[str] = []
+    else:
+        known = set(source_files)
+        map_keys = set(data)
+        missing_keys = sorted(known - map_keys)
+        unknown_keys = sorted(map_keys - known)
+
     return {
         "files": len(data),
         "complete": complete,
         "issues": issues,
         "placeholders": placeholders,
+        "missing_keys": missing_keys,
+        "unknown_keys": unknown_keys,
     }
 
 
@@ -165,6 +217,8 @@ def format_metadata_lint_report(report: dict[str, Any]) -> str:
     complete = report["complete"]
     issues = report["issues"]
     placeholders = report["placeholders"]
+    missing_keys = report.get("missing_keys", [])
+    unknown_keys = report.get("unknown_keys", [])
 
     lines = [
         (
@@ -172,6 +226,23 @@ def format_metadata_lint_report(report: dict[str, Any]) -> str:
             f"{files - complete} need review"
         )
     ]
+
+    if missing_keys:
+        lines.append("")
+        lines.append(
+            f"Source files with no entry (store will FAIL): {len(missing_keys)}"
+        )
+        for name in missing_keys:
+            lines.append(f"  {name}")
+
+    if unknown_keys:
+        lines.append("")
+        lines.append(
+            f"Map keys that are not source files (heading-keyed or stale): "
+            f"{len(unknown_keys)}"
+        )
+        for name in unknown_keys:
+            lines.append(f"  {name}")
 
     if issues:
         lines.append("")

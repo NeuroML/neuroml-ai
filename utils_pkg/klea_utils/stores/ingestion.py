@@ -22,10 +22,14 @@ from ..llm import setup_embedding
 from .metadata import (
     STORE_DROPPED_METADATA_KEYS,
 )
-from .utils import drop_collection, instantiate_vector_store, normalize_text
-
-CACHE_DIR_NAME = ".klea-cache"
-TEMPLATE_FILE_NAME = "metadata-map.template.json"
+from .utils import (
+    CACHE_DIR_NAME,
+    TEMPLATE_FILE_NAME,
+    drop_collection,
+    find_source_files,
+    instantiate_vector_store,
+    normalize_text,
+)
 
 #: Heading texts that are never a real document title.  When the title
 #: extraction falls back to the filename stem, the first chunk heading is
@@ -1068,60 +1072,21 @@ class StoresBuilder:
     # ------------------------------------------------------------------
 
     def _find_files(self, source_dir: Path) -> list[Path]:
-        """Walk ``source_dir`` and return files whose extensions are in
-        docling's :attr:`~docling.datamodel.base_models.FormatToExtensions`.
+        """Return the ingestible files in *source_dir*.
 
-        Files with unsupported extensions are logged as a warning and skipped.
-        The generated ``metadata-map.template.json``, the metadata map
-        passed via :meth:`_load_metadata_map` (when it lives inside
-        *source_dir*), and the vector store directory are excluded: they
-        are generated artifacts, not source documents.  The store is
-        excluded when it is configured (:attr:`store_dir`) or when it is
-        any directory inside *source_dir* that contains a
-        ``chroma.sqlite3`` (so a store created without setting
-        :attr:`store_dir` is still not ingested).
+        Thin wrapper over :func:`~klea_utils.stores.utils.find_source_files`
+        that supplies this builder's loaded metadata map and configured
+        store directory as exclusions.
 
         :param source_dir: Directory to walk recursively
         :returns: Sorted list of files with supported extensions
         """
-        from docling.datamodel.base_models import FormatToExtensions
-
-        all_exts: set[str] = set()
-        for exts in FormatToExtensions.values():
-            all_exts.update(exts)
-
-        source_resolved = source_dir.resolve()
-
-        # Directories that must never be ingested: the configured store
-        # (when it lives under the source dir) and any Chroma store folder
-        # (a dir containing chroma.sqlite3) inside the source dir.
-        skip_dirs: set[Path] = set()
-        if self.store_dir is not None and source_resolved in self.store_dir.parents:
-            skip_dirs.add(self.store_dir.resolve())
-        for chroma_db in source_dir.rglob("chroma.sqlite3"):
-            if chroma_db.is_file():
-                skip_dirs.add(chroma_db.parent.resolve())
-
-        supported: list[Path] = []
-        for f in sorted(source_dir.rglob("*")):
-            if not f.is_file():
-                continue
-            if CACHE_DIR_NAME in f.parts:
-                continue
-            if (
-                self._metadata_map_path is not None
-                and f.resolve() == self._metadata_map_path
-            ):
-                continue
-            if any(f.resolve().is_relative_to(skip_dir) for skip_dir in skip_dirs):
-                continue
-            suffix = f.suffix.lstrip(".").lower()
-            if suffix in all_exts:
-                supported.append(f)
-            else:
-                self.logger.warning(f"Skipping unsupported file: {f.name}")
-
-        return supported
+        return find_source_files(
+            source_dir,
+            metadata_map_path=self._metadata_map_path,
+            store_dir=self.store_dir,
+            logger=self.logger,
+        )
 
     def _ensure_tokenizer(self) -> None:
         """Download the HuggingFace tokenizer used for token-aware chunking

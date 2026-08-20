@@ -8,14 +8,100 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import unicodedata
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from langchain_core.documents import Document
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 from klea_utils.stores.metadata import SHARED_DOC_METADATA_KEYS
+
+#: Name of the chunk-cache directory created inside a source directory by
+#: the ingestion pipeline (holds the per-file pickled chunks, the
+#: generated metadata-map template, the DOI cache, and store manifests).
+#: Excluded from ingestion by :func:`find_source_files`.
+CACHE_DIR_NAME = ".klea-cache"
+
+#: Name of the metadata-map template ``chunk`` writes into the cache
+#: directory, organised per source file.
+TEMPLATE_FILE_NAME = "metadata-map.template.json"
+
+
+def find_source_files(
+    source_dir: Path,
+    *,
+    metadata_map_path: Path | None = None,
+    store_dir: Path | None = None,
+    logger: logging.Logger | None = None,
+) -> list[Path]:
+    """Walk ``source_dir`` and return files whose extensions are in
+    docling's :class:`~docling.datamodel.base_models.FormatToExtensions`.
+
+    This is the canonical "what will the store ingest" enumeration: the
+    ingestion pipeline and ``map-lint`` both use it, so a metadata map
+    that lints clean against its output is guaranteed to resolve at
+    store time.  Files with unsupported extensions are logged as a
+    warning (when a *logger* is given) and skipped.
+
+    Generated artifacts are excluded: the cache directory
+    (:data:`CACHE_DIR_NAME`, e.g. ``.klea-cache``), the metadata map
+    passed via *metadata_map_path* (when it lives inside *source_dir*),
+    and the vector store directory -- either the configured *store_dir*
+    when it lies under *source_dir*, or any directory inside
+    *source_dir* that contains a ``chroma.sqlite3`` (so a store created
+    without setting *store_dir* is still not ingested).
+
+    :param source_dir: Directory to walk recursively
+    :param metadata_map_path: The metadata-map file to exclude from
+        ingestion (mirrors how the ingestion pipeline remembers the
+        loaded map)
+    :param store_dir: Configured vector store directory that may live
+        inside the source directory; ``None`` for remote backends with
+        no local folder
+    :param logger: Optional logger for the unsupported-extension warning
+    :returns: Sorted list of files with supported extensions
+    """
+    from docling.datamodel.base_models import FormatToExtensions
+
+    all_exts: set[str] = set()
+    for exts in FormatToExtensions.values():
+        all_exts.update(exts)
+
+    source_resolved = source_dir.resolve()
+
+    # Directories that must never be ingested: the configured store
+    # (when it lives under the source dir) and any Chroma store folder
+    # (a dir containing chroma.sqlite3) inside the source dir.
+    skip_dirs: set[Path] = set()
+    if store_dir is not None and source_resolved in store_dir.resolve().parents:
+        skip_dirs.add(store_dir.resolve())
+    for chroma_db in source_dir.rglob("chroma.sqlite3"):
+        if chroma_db.is_file():
+            skip_dirs.add(chroma_db.parent.resolve())
+
+    supported: list[Path] = []
+    for f in sorted(source_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        if CACHE_DIR_NAME in f.parts:
+            continue
+        if metadata_map_path is not None and f.resolve() == metadata_map_path.resolve():
+            continue
+        if any(f.resolve().is_relative_to(skip_dir) for skip_dir in skip_dirs):
+            continue
+        suffix = f.suffix.lstrip(".").lower()
+        if suffix in all_exts:
+            supported.append(f)
+        elif logger is not None:
+            logger.warning(f"Skipping unsupported file: {f.name}")
+
+    return supported
+
 
 #: Metadata key holding each document's original per-source scores (e.g.
 #: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.
