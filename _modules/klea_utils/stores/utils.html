@@ -293,14 +293,103 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">"""</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
+
+<span class="c1">#: Name of the chunk-cache directory created inside a source directory by</span>
+<span class="c1">#: the ingestion pipeline (holds the per-file pickled chunks, the</span>
+<span class="c1">#: generated metadata-map template, the DOI cache, and store manifests).</span>
+<span class="c1">#: Excluded from ingestion by :func:`find_source_files`.</span>
+<span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">".klea-cache"</span>
+
+<span class="c1">#: Name of the metadata-map template ``chunk`` writes into the cache</span>
+<span class="c1">#: directory, organised per source file.</span>
+<span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">"metadata-map.template.json"</span>
+
+
+<div class="viewcode-block" id="find_source_files">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.find_source_files">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_source_files</span><span class="p">(</span>
+    <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">metadata_map_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">store_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Walk ``source_dir`` and return files whose extensions are in</span>
+<span class="sd">    docling's :class:`~docling.datamodel.base_models.FormatToExtensions`.</span>
+
+<span class="sd">    This is the canonical "what will the store ingest" enumeration: the</span>
+<span class="sd">    ingestion pipeline and ``map-lint`` both use it, so a metadata map</span>
+<span class="sd">    that lints clean against its output is guaranteed to resolve at</span>
+<span class="sd">    store time.  Files with unsupported extensions are logged as a</span>
+<span class="sd">    warning (when a *logger* is given) and skipped.</span>
+
+<span class="sd">    Generated artifacts are excluded: the cache directory</span>
+<span class="sd">    (:data:`CACHE_DIR_NAME`, e.g. ``.klea-cache``), the metadata map</span>
+<span class="sd">    passed via *metadata_map_path* (when it lives inside *source_dir*),</span>
+<span class="sd">    and the vector store directory -- either the configured *store_dir*</span>
+<span class="sd">    when it lies under *source_dir*, or any directory inside</span>
+<span class="sd">    *source_dir* that contains a ``chroma.sqlite3`` (so a store created</span>
+<span class="sd">    without setting *store_dir* is still not ingested).</span>
+
+<span class="sd">    :param source_dir: Directory to walk recursively</span>
+<span class="sd">    :param metadata_map_path: The metadata-map file to exclude from</span>
+<span class="sd">        ingestion (mirrors how the ingestion pipeline remembers the</span>
+<span class="sd">        loaded map)</span>
+<span class="sd">    :param store_dir: Configured vector store directory that may live</span>
+<span class="sd">        inside the source directory; ``None`` for remote backends with</span>
+<span class="sd">        no local folder</span>
+<span class="sd">    :param logger: Optional logger for the unsupported-extension warning</span>
+<span class="sd">    :returns: Sorted list of files with supported extensions</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">docling.datamodel.base_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormatToExtensions</span>
+
+    <span class="n">all_exts</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">exts</span> <span class="ow">in</span> <span class="n">FormatToExtensions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">all_exts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">exts</span><span class="p">)</span>
+
+    <span class="n">source_resolved</span> <span class="o">=</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+    <span class="c1"># Directories that must never be ingested: the configured store</span>
+    <span class="c1"># (when it lives under the source dir) and any Chroma store folder</span>
+    <span class="c1"># (a dir containing chroma.sqlite3) inside the source dir.</span>
+    <span class="n">skip_dirs</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">source_resolved</span> <span class="ow">in</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
+        <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">chroma_db</span> <span class="ow">in</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"chroma.sqlite3"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">chroma_db</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">chroma_db</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+
+    <span class="n">supported</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"*"</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">CACHE_DIR_NAME</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">metadata_map_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">==</span> <span class="n">metadata_map_path</span><span class="o">.</span><span class="n">resolve</span><span class="p">():</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">skip_dir</span><span class="p">)</span> <span class="k">for</span> <span class="n">skip_dir</span> <span class="ow">in</span> <span class="n">skip_dirs</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">all_exts</span><span class="p">:</span>
+            <span class="n">supported</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Skipping unsupported file: </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">supported</span></div>
+
+
 
 <span class="c1">#: Metadata key holding each document's original per-source scores (e.g.</span>
 <span class="c1">#: ``{"vector store": 0.87, "BM25": 3.21}``), set by :func:`rrf_merge`.</span>

@@ -415,7 +415,12 @@ Once the basic pipeline works, here are natural next steps:
    any time (or read the summary printed after ``chunk``) for a quick,
    LLM-free health check of the map -- it flags missing fields,
    suspicious titles/DOIs, year/filename mismatches, and other issues to
-   fix before storing.
+   fix before storing.  It also verifies the map's top-level keys are the
+   actual source filenames: a source file with no entry is fatal (the
+   ``store`` step would fail), so the full report is printed first and
+   the command then exits non-zero, while keys that are not source files
+   (e.g. a map keyed by heading titles) are flagged as stale or
+   heading-keyed.
 
 **Different embedding models**
    Swap ``ollama:bge-m3:latest`` for a HuggingFace embedding model

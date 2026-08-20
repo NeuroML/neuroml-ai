@@ -307,10 +307,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drop_collection</span><span class="p">,</span> <span class="n">instantiate_vector_store</span><span class="p">,</span> <span class="n">normalize_text</span>
-
-<span class="n">CACHE_DIR_NAME</span> <span class="o">=</span> <span class="s2">".klea-cache"</span>
-<span class="n">TEMPLATE_FILE_NAME</span> <span class="o">=</span> <span class="s2">"metadata-map.template.json"</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CACHE_DIR_NAME</span><span class="p">,</span>
+    <span class="n">TEMPLATE_FILE_NAME</span><span class="p">,</span>
+    <span class="n">drop_collection</span><span class="p">,</span>
+    <span class="n">find_source_files</span><span class="p">,</span>
+    <span class="n">instantiate_vector_store</span><span class="p">,</span>
+    <span class="n">normalize_text</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1">#: Heading texts that are never a real document title.  When the title</span>
 <span class="c1">#: extraction falls back to the filename stem, the first chunk heading is</span>
@@ -1370,60 +1374,21 @@
     <span class="c1"># ------------------------------------------------------------------</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_find_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Walk ``source_dir`` and return files whose extensions are in</span>
-<span class="sd">        docling's :attr:`~docling.datamodel.base_models.FormatToExtensions`.</span>
+<span class="w">        </span><span class="sd">"""Return the ingestible files in *source_dir*.</span>
 
-<span class="sd">        Files with unsupported extensions are logged as a warning and skipped.</span>
-<span class="sd">        The generated ``metadata-map.template.json``, the metadata map</span>
-<span class="sd">        passed via :meth:`_load_metadata_map` (when it lives inside</span>
-<span class="sd">        *source_dir*), and the vector store directory are excluded: they</span>
-<span class="sd">        are generated artifacts, not source documents.  The store is</span>
-<span class="sd">        excluded when it is configured (:attr:`store_dir`) or when it is</span>
-<span class="sd">        any directory inside *source_dir* that contains a</span>
-<span class="sd">        ``chroma.sqlite3`` (so a store created without setting</span>
-<span class="sd">        :attr:`store_dir` is still not ingested).</span>
+<span class="sd">        Thin wrapper over :func:`~klea_utils.stores.utils.find_source_files`</span>
+<span class="sd">        that supplies this builder's loaded metadata map and configured</span>
+<span class="sd">        store directory as exclusions.</span>
 
 <span class="sd">        :param source_dir: Directory to walk recursively</span>
 <span class="sd">        :returns: Sorted list of files with supported extensions</span>
 <span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">docling.datamodel.base_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">FormatToExtensions</span>
-
-        <span class="n">all_exts</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">exts</span> <span class="ow">in</span> <span class="n">FormatToExtensions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="n">all_exts</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">exts</span><span class="p">)</span>
-
-        <span class="n">source_resolved</span> <span class="o">=</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-
-        <span class="c1"># Directories that must never be ingested: the configured store</span>
-        <span class="c1"># (when it lives under the source dir) and any Chroma store folder</span>
-        <span class="c1"># (a dir containing chroma.sqlite3) inside the source dir.</span>
-        <span class="n">skip_dirs</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">source_resolved</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
-            <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">chroma_db</span> <span class="ow">in</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"chroma.sqlite3"</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">chroma_db</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-                <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">chroma_db</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
-
-        <span class="n">supported</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"*"</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-                <span class="k">continue</span>
-            <span class="k">if</span> <span class="n">CACHE_DIR_NAME</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
-                <span class="k">continue</span>
-            <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                <span class="ow">and</span> <span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span>
-            <span class="p">):</span>
-                <span class="k">continue</span>
-            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">skip_dir</span><span class="p">)</span> <span class="k">for</span> <span class="n">skip_dir</span> <span class="ow">in</span> <span class="n">skip_dirs</span><span class="p">):</span>
-                <span class="k">continue</span>
-            <span class="n">suffix</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="n">all_exts</span><span class="p">:</span>
-                <span class="n">supported</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Skipping unsupported file: </span><span class="si">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">supported</span>
+        <span class="k">return</span> <span class="n">find_source_files</span><span class="p">(</span>
+            <span class="n">source_dir</span><span class="p">,</span>
+            <span class="n">metadata_map_path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_metadata_map_path</span><span class="p">,</span>
+            <span class="n">store_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_dir</span><span class="p">,</span>
+            <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_tokenizer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Download the HuggingFace tokenizer used for token-aware chunking</span>

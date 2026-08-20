@@ -431,8 +431,13 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  Runs only deterministic checks (missing fields, suspicious titles or 
  DOIs, year/filename mismatches, stale 'venue' keys, excess url*      
  keys,                                                                
- placeholder counts) -- no LLM is needed.  Useful after editing the   
+ placeholder counts, and whether the top-level keys are the actual    
+ source filenames) -- no LLM is needed.  Useful after editing the     
  map by hand, and printed automatically at the end of 'chunk'.        
+                                                                      
+ A source file with no map entry is fatal (the store step raises), so 
+ the full report is printed first and the command then exits non-zero 
+ when any such file is found.                                         
                                                                       
 ╭─ Arguments ────────────────────────────────────────────────────────╮
 │ *    source_dir      TEXT  Directory containing the metadata map   │

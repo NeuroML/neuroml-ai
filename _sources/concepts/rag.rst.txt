@@ -253,8 +253,12 @@ An empty ``{}`` placeholder simply falls through to the next candidate,
 and finally to ``DEFAULT``.  ``klea-stores-create map-lint <dir>`` runs
 deterministic, LLM-free checks over the map (missing fields, suspicious
 titles or DOIs, year/filename mismatches, stale ``venue`` keys, excess
-``url*`` keys) and is printed automatically after ``chunk``; re-run it
-after hand-editing the template.
+``url*`` keys, and whether the top-level keys are the actual source
+filenames) and is printed automatically after ``chunk``; re-run it
+after hand-editing the template.  A source file with no map entry is
+fatal (the ``store`` step would fail), so ``map-lint`` prints the full
+report first and then exits non-zero; a map keyed by heading titles
+instead of filenames is flagged as stale/heading-keyed.
 
 DOI resolution uses the APIs' polite pool when ``KLEA_INGEST_MAILTO``
 is set to an email address (higher rate limits).  It is skipped

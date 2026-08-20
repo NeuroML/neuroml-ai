@@ -295,6 +295,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">UTC</span><span class="p">,</span> <span class="n">datetime</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
@@ -348,6 +349,20 @@
     <span class="k">return</span> <span class="kc">None</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_flat_metadata_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""True when *entry* holds a flat metadata dict, not the per-file map shape.</span>
+
+<span class="sd">    A per-file map entry is ``{"DEFAULT": {...}, "heading chain": {...}}``</span>
+<span class="sd">    -- a dict of dicts that always carries a ``"DEFAULT"`` key.  Older</span>
+<span class="sd">    maps keyed directly by headings store the metadata dict itself (e.g.</span>
+<span class="sd">    ``{"title": ..., "url": ...}``), so the entry has no ``"DEFAULT"``</span>
+<span class="sd">    and at least one non-dict value (a string, list, int, ...).</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="s2">"DEFAULT"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">entry</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
 <div class="viewcode-block" id="lint_file_metadata">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.map_lint.lint_file_metadata">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">lint_file_metadata</span><span class="p">(</span><span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -355,13 +370,23 @@
 
 <span class="sd">    *entry* is the per-file dict from a metadata map: a ``"DEFAULT"``</span>
 <span class="sd">    metadata dict plus one dict per heading chain (empty ``{}``</span>
-<span class="sd">    placeholders in a generated template).</span>
+<span class="sd">    placeholders in a generated template).  A flat metadata dict (the</span>
+<span class="sd">    old heading-keyed format) is reported as a single structural issue</span>
+<span class="sd">    instead of a misleading list of missing fields.</span>
 
 <span class="sd">    :param file_name: Source filename (used for the year-vs-stem check)</span>
 <span class="sd">    :param entry: Per-file metadata-map entry</span>
 <span class="sd">    :returns: Sorted list of issue strings; empty when the entry is clean</span>
 <span class="sd">    """</span>
     <span class="n">issues</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">_is_flat_metadata_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">):</span>
+        <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">"old flat format: entry is a metadata dict, not "</span>
+            <span class="s2">"{'DEFAULT': {...}, 'heading &gt; chain': {...}}"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">issues</span>
+
     <span class="n">default</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DEFAULT"</span><span class="p">,</span> <span class="p">{})</span>
 
     <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">CORE_FIELDS</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">default</span><span class="p">]</span>
@@ -412,15 +437,31 @@
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.map_lint.lint_metadata_map">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">lint_metadata_map</span><span class="p">(</span>
     <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">source_files</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Lint a whole metadata map and return a structured report.</span>
 
+<span class="sd">    When *source_files* is given (the basenames of the files the store</span>
+<span class="sd">    will ingest, e.g. from</span>
+<span class="sd">    :func:`~klea_utils.stores.utils.find_source_files`),</span>
+<span class="sd">    the top-level keys are checked against it: a source file with no</span>
+<span class="sd">    entry is a fatal error (the ``store`` step raises</span>
+<span class="sd">    ``ValueError``), while a key that is not a source file is a stale</span>
+<span class="sd">    or heading-keyed leftover that store simply ignores.  With</span>
+<span class="sd">    ``None`` (library callers, the auto-print after ``chunk``) these</span>
+<span class="sd">    key checks are skipped.</span>
+
 <span class="sd">    :param data: Parsed metadata-map JSON (``{file_name: entry}``)</span>
+<span class="sd">    :param source_files: Optional basenames of the source files the</span>
+<span class="sd">        store will ingest; when given, top-level keys are validated</span>
+<span class="sd">        against them</span>
 <span class="sd">    :returns: dict with ``files`` (total), ``complete`` (count of</span>
 <span class="sd">        ``_metadata_complete`` DEFAULTs), ``issues`` (``{file_name:</span>
-<span class="sd">        [issue, ...]}`` for files with at least one issue), and</span>
+<span class="sd">        [issue, ...]}`` for files with at least one issue),</span>
 <span class="sd">        ``placeholders`` (``{file_name: int}`` count of empty heading</span>
-<span class="sd">        placeholders per file)</span>
+<span class="sd">        placeholders per file), ``missing_keys`` (source files with no</span>
+<span class="sd">        map entry -- store will fail), and ``unknown_keys`` (map keys</span>
+<span class="sd">        that are not source files -- stale/heading-keyed)</span>
 <span class="sd">    """</span>
     <span class="n">issues</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">placeholders</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -441,11 +482,22 @@
         <span class="k">if</span> <span class="n">heading_placeholders</span><span class="p">:</span>
             <span class="n">placeholders</span><span class="p">[</span><span class="n">file_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">heading_placeholders</span>
 
+    <span class="k">if</span> <span class="n">source_files</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">missing_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">unknown_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">known</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">source_files</span><span class="p">)</span>
+        <span class="n">map_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">missing_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">known</span> <span class="o">-</span> <span class="n">map_keys</span><span class="p">)</span>
+        <span class="n">unknown_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">map_keys</span> <span class="o">-</span> <span class="n">known</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">"files"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
         <span class="s2">"complete"</span><span class="p">:</span> <span class="n">complete</span><span class="p">,</span>
         <span class="s2">"issues"</span><span class="p">:</span> <span class="n">issues</span><span class="p">,</span>
         <span class="s2">"placeholders"</span><span class="p">:</span> <span class="n">placeholders</span><span class="p">,</span>
+        <span class="s2">"missing_keys"</span><span class="p">:</span> <span class="n">missing_keys</span><span class="p">,</span>
+        <span class="s2">"unknown_keys"</span><span class="p">:</span> <span class="n">unknown_keys</span><span class="p">,</span>
     <span class="p">}</span></div>
 
 
@@ -458,6 +510,8 @@
     <span class="n">complete</span> <span class="o">=</span> <span class="n">report</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">]</span>
     <span class="n">issues</span> <span class="o">=</span> <span class="n">report</span><span class="p">[</span><span class="s2">"issues"</span><span class="p">]</span>
     <span class="n">placeholders</span> <span class="o">=</span> <span class="n">report</span><span class="p">[</span><span class="s2">"placeholders"</span><span class="p">]</span>
+    <span class="n">missing_keys</span> <span class="o">=</span> <span class="n">report</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"missing_keys"</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">unknown_keys</span> <span class="o">=</span> <span class="n">report</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"unknown_keys"</span><span class="p">,</span> <span class="p">[])</span>
 
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
         <span class="p">(</span>
@@ -465,6 +519,23 @@
             <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">files</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">complete</span><span class="si">}</span><span class="s2"> need review"</span>
         <span class="p">)</span>
     <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">missing_keys</span><span class="p">:</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Source files with no entry (store will FAIL): </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing_keys</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">missing_keys</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">unknown_keys</span><span class="p">:</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Map keys that are not source files (heading-keyed or stale): "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unknown_keys</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">unknown_keys</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">issues</span><span class="p">:</span>
         <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>

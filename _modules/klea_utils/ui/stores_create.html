@@ -525,8 +525,13 @@
 
 <span class="sd">    Runs only deterministic checks (missing fields, suspicious titles or</span>
 <span class="sd">    DOIs, year/filename mismatches, stale 'venue' keys, excess url* keys,</span>
-<span class="sd">    placeholder counts) -- no LLM is needed.  Useful after editing the</span>
+<span class="sd">    placeholder counts, and whether the top-level keys are the actual</span>
+<span class="sd">    source filenames) -- no LLM is needed.  Useful after editing the</span>
 <span class="sd">    map by hand, and printed automatically at the end of 'chunk'.</span>
+
+<span class="sd">    A source file with no map entry is fatal (the store step raises), so</span>
+<span class="sd">    the full report is printed first and the command then exits non-zero</span>
+<span class="sd">    when any such file is found.</span>
 <span class="sd">    """</span>
     <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
@@ -535,10 +540,14 @@
         <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.ingestion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CACHE_DIR_NAME</span><span class="p">,</span> <span class="n">TEMPLATE_FILE_NAME</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.map_lint</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
             <span class="n">format_metadata_lint_report</span><span class="p">,</span>
             <span class="n">lint_metadata_map</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">CACHE_DIR_NAME</span><span class="p">,</span>
+            <span class="n">TEMPLATE_FILE_NAME</span><span class="p">,</span>
+            <span class="n">find_source_files</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
@@ -554,8 +563,25 @@
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">map_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># The expected keys are exactly what the store step would ingest:</span>
+        <span class="c1"># the files find_source_files returns, minus the map file itself</span>
+        <span class="c1"># (which _load_metadata_map excludes at store time).  This mirrors</span>
+        <span class="c1"># the strict parity so a map that lints clean is guaranteed to</span>
+        <span class="c1"># resolve at store time.</span>
+        <span class="n">source_files</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">find_source_files</span><span class="p">(</span>
+                <span class="n">source_path</span><span class="p">,</span>
+                <span class="n">metadata_map_path</span><span class="o">=</span><span class="n">map_path</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span>
+                <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="n">lint_metadata_map</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">source_files</span><span class="o">=</span><span class="n">source_files</span><span class="p">)</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">format_metadata_lint_report</span><span class="p">(</span><span class="n">report</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">report</span><span class="p">[</span><span class="s2">"missing_keys"</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">:</span>
+        <span class="k">raise</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>

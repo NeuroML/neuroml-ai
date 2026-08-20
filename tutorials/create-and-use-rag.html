@@ -655,7 +655,12 @@ with <code class="docutils literal notranslate"><span class="pre">--metadata-map
 any time (or read the summary printed after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>) for a quick,
 LLM-free health check of the map – it flags missing fields,
 suspicious titles/DOIs, year/filename mismatches, and other issues to
-fix before storing.</p>
+fix before storing.  It also verifies the map’s top-level keys are the
+actual source filenames: a source file with no entry is fatal (the
+<code class="docutils literal notranslate"><span class="pre">store</span></code> step would fail), so the full report is printed first and
+the command then exits non-zero, while keys that are not source files
+(e.g. a map keyed by heading titles) are flagged as stale or
+heading-keyed.</p>
 </dd>
 <dt><strong>Different embedding models</strong></dt><dd><p>Swap <code class="docutils literal notranslate"><span class="pre">ollama:bge-m3:latest</span></code> for a HuggingFace embedding model
 (see <a class="reference internal" href="../install.html"><span class="doc">Installation</span></a> for model naming conventions).</p>

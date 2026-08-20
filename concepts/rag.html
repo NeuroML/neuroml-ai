@@ -516,8 +516,12 @@ An empty <code class="docutils literal notranslate"><span class="pre">{}</span><
 and finally to <code class="docutils literal notranslate"><span class="pre">DEFAULT</span></code>.  <code class="docutils literal notranslate"><span class="pre">klea-stores-create</span> <span class="pre">map-lint</span> <span class="pre">&lt;dir&gt;</span></code> runs
 deterministic, LLM-free checks over the map (missing fields, suspicious
 titles or DOIs, year/filename mismatches, stale <code class="docutils literal notranslate"><span class="pre">venue</span></code> keys, excess
-<code class="docutils literal notranslate"><span class="pre">url*</span></code> keys) and is printed automatically after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>; re-run it
-after hand-editing the template.</p>
+<code class="docutils literal notranslate"><span class="pre">url*</span></code> keys, and whether the top-level keys are the actual source
+filenames) and is printed automatically after <code class="docutils literal notranslate"><span class="pre">chunk</span></code>; re-run it
+after hand-editing the template.  A source file with no map entry is
+fatal (the <code class="docutils literal notranslate"><span class="pre">store</span></code> step would fail), so <code class="docutils literal notranslate"><span class="pre">map-lint</span></code> prints the full
+report first and then exits non-zero; a map keyed by heading titles
+instead of filenames is flagged as stale/heading-keyed.</p>
 <p>DOI resolution uses the APIs’ polite pool when <code class="docutils literal notranslate"><span class="pre">KLEA_INGEST_MAILTO</span></code>
 is set to an email address (higher rate limits).  It is skipped
 entirely when no DOI is found in the document.  Optical character
