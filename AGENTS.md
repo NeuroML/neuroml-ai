@@ -248,6 +248,15 @@ Git log has the step-by-step edits. Omit routine work.
   )
   ```
 - This avoids manual label strings and keeps the variable name in the log output.
+- Every Klea CLI defaults to `INFO` console logging (progress on stdout,
+  warnings/errors on stderr).  Expose a `--debug` flag and honor the
+  `KLEA_LOG_LEVEL` env var via `klea_utils.plogging.resolve_log_level`
+  (`--debug` > env var > default `INFO`); `enable_debug_logging()` sets
+  the env var so `--debug` propagates to spawned child processes.
+  `setup_root_logger` defaults its stderr handler to `INFO`; the
+  rotating log file always captures `DEBUG`.  When adding a new CLI,
+  wire its `setup_root_logger` call through `resolve_log_level` and add
+  the shared `--debug` option.
 
 ## DO NOT SPECULATE OR GUESS
 

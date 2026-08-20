@@ -32,6 +32,11 @@
 - `neuroml_mcp` tool names dropped the `_tool` suffix (e.g.
   `get_models_from_neuromldb_tool` -> `get_models_from_neuromldb`); clients
   that call tools by hardcoded name must update them.
+- The auto-reload flag was renamed to `--reload` so `--debug` could mean
+  verbose logging across all CLIs: the NiceGUI web clients
+  (`klea web`, `klea-rag web`) dropped `--debug`/`-d` in favour of
+  `--reload`/`-r`, and the serve commands (`klea-serve`,
+  `klea-rag-serve`) dropped `--dev` in favour of `--reload`.
 
 ### Added
 
@@ -127,6 +132,12 @@
 
 ### Changed
 
+- All Klea CLIs now default to `INFO` console logging (progress on
+  stdout, warnings/errors on stderr) instead of debug noise.  Pass
+  `--debug` or set the `KLEA_LOG_LEVEL` env var (a level name or
+  number) on any CLI to see full debug logs; `--debug` wins over the
+  env var.  The rotating log file still captures `DEBUG` regardless of
+  the console level.
 - `klea-stores-create map-lint <dir>` now verifies the map's top-level
   keys are the actual source filenames: a source file with no entry is
   fatal (the `store` step would fail), so the full report is printed
