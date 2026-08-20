@@ -186,6 +186,44 @@ class TestClassifyDirectory:
         """An empty directory yields no classifications."""
         assert classify_directory(tmp_path) == {}
 
+    def test_logs_progress_at_info(self, tmp_path, caplog):
+        """classify_directory logs INFO progress ~every 10% of PDFs."""
+        for i in range(15):
+            _build_text_pdf(tmp_path / f"doc{i:02}.pdf", _LONG_TEXT)
+
+        with caplog.at_level(logging.INFO, logger="klea_utils.stores.precheck"):
+            results = classify_directory(tmp_path)
+
+        assert len(results) == 15
+        progress = [
+            r.message
+            for r in caplog.records
+            if getattr(r, "name", "") == "klea_utils.stores.precheck"
+            and "Pre-checking PDFs" in r.getMessage()
+        ]
+        # step = max(1, 15 // 10) = 1, so progress is logged for every file.
+        assert len(progress) == 15
+        assert progress[0] == "Pre-checking PDFs: 0/15 (0%)"
+
+    def test_progress_cadence_scales_with_corpus_size(self, tmp_path, caplog):
+        """A larger corpus logs ~10 evenly-spaced progress lines, not one per file."""
+        for i in range(100):
+            _build_text_pdf(tmp_path / f"doc{i:03}.pdf", _LONG_TEXT)
+
+        with caplog.at_level(logging.INFO, logger="klea_utils.stores.precheck"):
+            classify_directory(tmp_path)
+
+        progress = [
+            r.getMessage()
+            for r in caplog.records
+            if getattr(r, "name", "") == "klea_utils.stores.precheck"
+            and "Pre-checking PDFs" in r.getMessage()
+        ]
+        # step = max(1, 100 // 10) = 10, so ~10 lines at 0%, 10%, ..., 90%.
+        assert len(progress) == 10
+        assert progress[0] == "Pre-checking PDFs: 0/100 (0%)"
+        assert progress[9] == "Pre-checking PDFs: 90/100 (90%)"
+
 
 class TestFormatReport:
     """Unit tests for format_precheck_report()."""

@@ -137,20 +137,35 @@ def classify_directory(source_dir: Path) -> dict[Path, PdfClassification]:
     ``ocr``/``no-ocr`` organise output directories (generated artifacts,
     not source documents -- see :data:`_SKIP_DIR_NAMES`).
 
+    Logs progress at ``INFO`` roughly every 10% of PDFs (every file for
+    small corpora) so a long pre-check does not sit silently before the
+    final report prints.
+
     :param source_dir: Directory to walk recursively
     :returns: Mapping of PDF path to its :class:`PdfClassification`
     """
     source_resolved = source_dir.resolve()
-    results: dict[Path, PdfClassification] = {}
-    for f in sorted(source_dir.rglob("*")):
-        if not f.is_file():
-            continue
-        if any(
+    pdfs = [
+        f
+        for f in sorted(source_dir.rglob("*"))
+        if f.is_file()
+        and f.suffix.lower() == ".pdf"
+        and not any(
             part in _SKIP_DIR_NAMES for part in f.relative_to(source_resolved).parts
-        ):
-            continue
-        if f.suffix.lower() == ".pdf":
-            results[f] = classify_pdf(f)
+        )
+    ]
+
+    # Report roughly every 10% of PDFs; for small corpora (<= 10 files)
+    # this collapses to reporting every file so the user still sees the
+    # first result promptly.
+    step = max(1, len(pdfs) // 10)
+
+    results: dict[Path, PdfClassification] = {}
+    for index, path in enumerate(pdfs):
+        if index % step == 0:
+            pct = 100 * index // len(pdfs) if pdfs else 100
+            logger.info(f"Pre-checking PDFs: {index}/{len(pdfs)} ({pct}%)")
+        results[path] = classify_pdf(path)
     return results
 
 
