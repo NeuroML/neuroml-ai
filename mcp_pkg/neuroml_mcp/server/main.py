@@ -65,15 +65,20 @@ async def create_server(port: int = 8542):
 
 
 @mcp_app.command()
-def mcp_cli(port: int = 8542, transport: str = "streamable-http"):
+def mcp_cli(
+    port: int = 8542,
+    transport: str = "streamable-http",
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+):
     """main runner method"""
     # Configure process-wide logging for this server.  Lazy: keeps the
     # fastmcp/starlette import chain out of --help.
-    from klea_utils.plogging import setup_root_logger
+    from klea_utils.plogging import resolve_log_level, setup_root_logger
     from platformdirs import PlatformDirs
 
     setup_root_logger(
         "nml-mcp",
+        stderr_level=resolve_log_level(debug),
         log_dir=PlatformDirs("nml_mcp").user_data_dir,
     )
     mcp = asyncio.run(create_server(port))
