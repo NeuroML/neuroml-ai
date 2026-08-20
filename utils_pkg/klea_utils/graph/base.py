@@ -115,13 +115,18 @@ class BaseLangGraph(ABC):
 
     def __init__(
         self,
-        logging_level: int = logging.DEBUG,
+        logging_level: int = logging.INFO,
         checkpoint: str = "inmemory",
         log_file: bool = True,
     ):
         """Initialise the base orchestrator.
 
-        :param logging_level: Logging level for the orchestrator
+        :param logging_level: Logging level for the orchestrator.  The
+            :data:`KLEA_LOG_LEVEL` environment variable (and the ``--debug``
+            flag that sets it) takes precedence over this constructor
+            argument: when it resolves to ``DEBUG``, full debug logging is
+            enabled regardless of *logging_level*; otherwise *logging_level*
+            is used (default ``INFO``).
         :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),
             ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
             or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
@@ -168,11 +173,19 @@ class BaseLangGraph(ABC):
 
         self.QueryDomainSchema: type[BaseModel] | None = None
 
-        from klea_utils.plogging import setup_root_logger
+        from klea_utils.plogging import resolve_log_level, setup_root_logger
+
+        # The KLEA_LOG_LEVEL env var (set by --debug) overrides the
+        # constructor's logging_level: when it resolves to DEBUG we show
+        # full debug output regardless of the passed level.
+        if resolve_log_level() == logging.DEBUG:
+            stderr_level = logging.DEBUG
+        else:
+            stderr_level = logging_level
 
         setup_root_logger(
             self.graph_name,
-            stderr_level=logging_level,
+            stderr_level=stderr_level,
             log_dir=self.paths.user_data_dir if log_file else None,
         )
         self.logger = logging.getLogger(self.graph_name)

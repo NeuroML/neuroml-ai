@@ -159,6 +159,88 @@ class TestCheckRequiredModels:
         assert "have not been set" not in caplog.text
 
 
+class TestGraphLoggingLevel:
+    """BaseLangGraph resolves its console logging level from env/flag > arg."""
+
+    def _make_bare_graph(self):
+        """A minimal BaseLangGraph subclass that skips heavy setup."""
+        from types import SimpleNamespace
+
+        class BareGraph(BaseLangGraph):
+            env_class: type[BaseModel] = BaseModel
+            config_class: type[BaseModel] = BaseModel
+            env_var: str = "BARE_ENV_FILE"
+            env_file_default: str = "bare.env"
+            graph_name: str = "BareGraph"
+            paths = SimpleNamespace(user_data_dir="/tmp/bare")
+
+            def _configure_resources(self):
+                pass
+
+            def _setup_models(self):
+                pass
+
+            async def _create_graph(self):
+                pass
+
+        return BareGraph(log_file=False, checkpoint="none")
+
+    def test_default_level_is_info(self, monkeypatch):
+        """Without KLEA_LOG_LEVEL the default constructor level is INFO."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.delenv("KLEA_LOG_LEVEL", raising=False)
+        self._make_bare_graph()
+        assert seen.get("level") == logging.INFO
+
+    def test_env_debug_overrides_constructor_level(self, monkeypatch):
+        """KLEA_LOG_LEVEL=debug forces DEBUG regardless of the passed level."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.setenv("KLEA_LOG_LEVEL", "debug")
+        self._make_bare_graph()
+        assert seen.get("level") == logging.DEBUG
+
+    def test_explicit_constructor_level_wins_when_env_unset(self, monkeypatch):
+        """Without KLEA_LOG_LEVEL, an explicit logging_level is honored."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.delenv("KLEA_LOG_LEVEL", raising=False)
+        from types import SimpleNamespace
+
+        class WarningGraph(BaseLangGraph):
+            env_class: type[BaseModel] = BaseModel
+            config_class: type[BaseModel] = BaseModel
+            env_var: str = "WARN_ENV_FILE"
+            env_file_default: str = "warn.env"
+            graph_name: str = "WarningGraph"
+            paths = SimpleNamespace(user_data_dir="/tmp/warn")
+
+            def _configure_resources(self):
+                pass
+
+            def _setup_models(self):
+                pass
+
+            async def _create_graph(self):
+                pass
+
+        WarningGraph(logging_level=logging.WARNING, log_file=False, checkpoint="none")
+        assert seen.get("level") == logging.WARNING
+
+
 class TestGraphBase:
     """Test all BaseLangGraph execution methods."""
 
