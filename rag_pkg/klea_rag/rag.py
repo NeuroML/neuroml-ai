@@ -55,7 +55,7 @@ class RAG(BaseLangGraph):
 
     def __init__(
         self,
-        logging_level: int = logging.DEBUG,
+        logging_level: int = logging.INFO,
         checkpoint: str = "inmemory",
     ):
         """Initialise"""
