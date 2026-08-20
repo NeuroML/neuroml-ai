@@ -9,6 +9,12 @@ be configured as a ``bm25_stores`` entry in the RAG config.  When
 ``--bm25-store`` is omitted, the corpus is written to
 ``<collection>.pkl`` in the current directory.
 
+The ``pre-check`` command classifies each PDF by whether it needs OCR
+(based on whether it carries an embedded text layer) and, with
+``--organise``, copies files into ``ocr/`` and ``no-ocr/`` subdirectories
+so you can chunk each with the right ``--ocr`` / ``--no-ocr`` flag.  See
+:doc:`../tutorials/create-and-use-rag` for the worked workflow.
+
 Three options deserve special attention:
 
 * ``--collection`` -- the collection name inside the store.  It must

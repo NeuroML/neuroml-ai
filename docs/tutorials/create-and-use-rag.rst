@@ -65,6 +65,50 @@ for the full list).
 For this tutorial we will refer to this directory as
 ``<folder-of-files>``.
 
+Deciding whether a PDF needs OCR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+OCR (see `Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_)
+recovers text from scanned/image-based PDFs, but it slows conversion of
+born-digital (text-layer) PDFs considerably.  The ``--ocr`` / ``--no-ocr``
+flag on ``build`` and ``chunk`` toggles it (default: on), but which
+setting a given PDF needs cannot be told from its publication year --
+older papers are often scans, yet many are born-digital, and some recent
+PDFs are scans of print originals.
+
+Instead, decide per file by whether the PDF has an embedded text layer.
+``klea-stores-create pre-check <folder-of-files>`` reads each PDF with
+pypdfium2 and reports which need OCR:
+
+.. code-block:: bash
+
+   klea-stores-create pre-check <folder-of-files>
+
+   Pre-check: 12 PDFs, 3 need OCR (image-based), 9 are text-based (no OCR needed)
+
+     OCR    scanned-paper.pdf         pages=8 image_pages=8 chars=120
+     no-OCR modern-paper.pdf          pages=15 image_pages=0 chars=48231
+
+With ``--organise`` it copies the files (never moves them -- your
+original directory is left untouched) into ``ocr/`` and ``no-ocr/``
+subdirectories, then prints the recommended workflow:
+
+.. code-block:: bash
+
+   klea-stores-create pre-check <folder-of-files> --organise
+
+   # relocate the copies to a scratch dir so the source folder stays clean
+   mv ocr/ no-ocr/ /tmp/biblio-build/
+   cd /tmp/biblio-build
+   klea-stores-create chunk no-ocr/ --no-ocr
+   klea-stores-create chunk ocr/
+   klea-stores-create store no-ocr/ --collection my-docs --store chroma:/path
+   klea-stores-create store ocr/   --collection my-docs --store chroma:/path
+
+The two ``store`` runs target the *same* collection, so they merge into
+one store; ``no-ocr/`` also picks up any non-PDF files (Markdown, DOCX,
+etc.) that never need OCR.
+
 Step 2: Create a vector store
 ------------------------------
 

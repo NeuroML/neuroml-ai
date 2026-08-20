@@ -231,9 +231,17 @@ These keys are internal: they guide the researcher reviewing the
 template, and are never shown to the answer LLM.
 
 When storing, each file's ``DEFAULT`` metadata is applied to every chunk,
-and per-heading entries are merged over it (heading-specific keys win,
-``DEFAULT`` fills the rest).  An empty ``{}`` placeholder simply falls
-through to ``DEFAULT``.  ``klea-stores-create map-lint <dir>`` runs
+and per-heading entries are merged over it.  For a chunk, the metadata
+map is matched from the most specific to the least specific entry: the
+full heading chain (e.g. ``"Chapter 1 > 2.1 Neurons"``) first, then
+progressively shorter suffixes (``"2.1 Neurons"``), then progressively
+shallower ancestor chains (``"Chapter 1"``).  The first non-empty
+matching entry wins and is merged over ``DEFAULT`` (heading-specific keys
+win, ``DEFAULT`` fills the rest).  This means a leaf section with no
+metadata of its own inherits its nearest ancestor's -- so a section with
+no ``url`` of its own is referred to the closest parent that has one.
+An empty ``{}`` placeholder simply falls through to the next candidate,
+and finally to ``DEFAULT``.  ``klea-stores-create map-lint <dir>`` runs
 deterministic, LLM-free checks over the map (missing fields, suspicious
 titles or DOIs, year/filename mismatches, stale ``venue`` keys, excess
 ``url*`` keys) and is printed automatically after ``chunk``; re-run it
@@ -245,7 +253,10 @@ entirely when no DOI is found in the document.  Optical character
 recognition (OCR), which slows the conversion of text-based PDFs
 considerably, can be disabled with ``klea-stores-create --no-ocr`` (see
 `Wikipedia <https://en.wikipedia.org/wiki/Optical_character_recognition>`_
-for details).
+for details).  Use ``klea-stores-create pre-check <dir>`` to classify
+which PDFs actually need OCR (based on whether they carry an embedded
+text layer) rather than guessing by publication year -- see
+:doc:`../tutorials/create-and-use-rag`.
 
 Docling selects the inference accelerator automatically (CUDA, MPS, or
 CPU), but GPUs with a CUDA capability below 7.0 (e.g. a Quadro P1000)
