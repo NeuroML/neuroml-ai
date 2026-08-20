@@ -16,7 +16,7 @@ Usage::
         args.title, args.url,
         subtitle=args.subtitle,
         disclaimer=args.disclaimer,
-        debug=args.debug,
+        reload=args.reload,
     )
 
 File: klea_utils/ui/web/nicegui/parser.py
@@ -62,7 +62,7 @@ def make_parser(
         help="NiceGUI storage secret for session persistence",
     )
     parser.add_argument(
-        "--debug",
+        "--reload",
         action="store_true",
         help="Enable auto-reload on file changes (supported by nicegui only)",
     )

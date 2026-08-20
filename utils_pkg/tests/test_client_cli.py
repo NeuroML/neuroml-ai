@@ -58,6 +58,7 @@ class TestMakeClientApp(unittest.TestCase):
                 single_query="hello",
                 tui_app_name="klea-rag-tui",
                 app_module="klea_rag.api.main:app",
+                debug=False,
                 profile=None,
                 config_env_var=None,
                 config_dir=None,
@@ -77,11 +78,18 @@ class TestMakeClientApp(unittest.TestCase):
                 single_query="q",
                 tui_app_name="klea-rag-tui",
                 app_module="klea_rag.api.main:app",
+                debug=False,
                 profile=None,
                 config_env_var=None,
                 config_dir=None,
                 template_writer=None,
             )
+
+    def test_cli_debug_routing(self):
+        with mock.patch("klea_utils.ui.cli._run_cli") as run_cli:
+            result = self.runner.invoke(self.app, ["cli", "--debug", "-q", "hi"])
+            self.assertEqual(result.exit_code, 0)
+            self.assertTrue(run_cli.call_args.kwargs["debug"])
 
     def test_web_routing(self):
         with mock.patch("klea_utils.ui.cli._run_web") as run_web:
@@ -94,6 +102,15 @@ class TestMakeClientApp(unittest.TestCase):
             self.assertEqual(kwargs["title"], "Y")
             self.assertEqual(kwargs["nicegui_url"], "0.0.0.0:9999")
             self.assertEqual(kwargs["web_app_name"], "klea-rag-web")
+            self.assertEqual(kwargs["reload"], False)
+            self.assertEqual(kwargs["debug"], False)
+
+    def test_web_reload_and_debug_routing(self):
+        with mock.patch("klea_utils.ui.cli._run_web") as run_web:
+            result = self.runner.invoke(self.app, ["web", "--reload", "--debug"])
+            self.assertEqual(result.exit_code, 0)
+            self.assertTrue(run_web.call_args.kwargs["reload"])
+            self.assertTrue(run_web.call_args.kwargs["debug"])
 
     def test_unknown_subcommand_fails(self):
         self.assertEqual(self.runner.invoke(self.app, ["bogus"]).exit_code, 2)
@@ -167,6 +184,7 @@ class TestRunWeb(unittest.TestCase):
                 footer_text="F",
                 nicegui_url="0.0.0.0:7860",
                 storage_secret="SECRET",
+                reload=False,
                 debug=False,
                 web_app_name="klea-rag-web",
                 app_module="klea_rag.api.main:app",
@@ -178,8 +196,40 @@ class TestRunWeb(unittest.TestCase):
         self.assertIn("app.py", command)
         self.assertIn("--app-name klea-rag-web", command)
         self.assertIn("http://127.0.0.1:8005", command)
-        self.assertNotIn("--debug", command)
+        self.assertNotIn("--reload", command)
         logger.debug("web client launched with command: %s", command)
+
+    def test_launches_nicegui_app_with_reload(self):
+        spec = mock.Mock()
+        spec.origin = "/opt/klea/nicegui/app.py"
+        with (
+            mock.patch("klea_utils.ui.cli.importlib.util.find_spec", return_value=spec),
+            mock.patch(
+                "klea_utils.ui.cli.chdir", return_value=contextlib.nullcontext()
+            ),
+            mock.patch("klea_utils.ui.cli.subprocess.run") as subprocess_run,
+            mock.patch(
+                "klea_utils.ui.cli._maybe_spawn_server",
+                return_value=contextlib.nullcontext(),
+            ),
+        ):
+            _run_web(
+                server_url="http://127.0.0.1:8005",
+                title="KLEA RAG",
+                subtitle="S",
+                disclaimer="D",
+                footer_text="F",
+                nicegui_url="0.0.0.0:7860",
+                storage_secret="SECRET",
+                reload=True,
+                debug=False,
+                web_app_name="klea-rag-web",
+                app_module="klea_rag.api.main:app",
+            )
+
+        subprocess_run.assert_called_once()
+        command = " ".join(subprocess_run.call_args.args[0])
+        self.assertIn("--reload", command)
 
 
 if __name__ == "__main__":

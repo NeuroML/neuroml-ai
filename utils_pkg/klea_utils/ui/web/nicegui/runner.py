@@ -1161,7 +1161,7 @@ def run_nicegui_app(
     subtitle: str = "",
     disclaimer: str = "",
     footer_text: str = 'Powered by <a href="https://github.com/neuroml/klea">Klea</a>',
-    debug: bool = False,
+    reload: bool = False,
     nicegui_url: str = "0.0.0.0:7860",
     storage_secret: str = "klea-nicegui-secret-change-me",
     app_name: str = "klea-web",
@@ -1180,7 +1180,7 @@ def run_nicegui_app(
         in the header.
     :param disclaimer: Optional text shown below the chat input.
     :param footer_text: HTML content for the footer bar.
-    :param debug: When ``True``, enable NiceGUI's file-watch hot
+    :param reload: When ``True``, enable NiceGUI's file-watch hot
         reload (``reload=True``).  Set to ``False`` in production.
     :param nicegui_url: ``host:port`` to bind the NiceGUI web server to
         (default: ``"0.0.0.0:7860"``).
@@ -1194,11 +1194,11 @@ def run_nicegui_app(
     # platformdirs / plogging imports are cheap and this is a CLI entry.
     from platformdirs import PlatformDirs
 
-    from klea_utils.plogging import setup_root_logger
+    from klea_utils.plogging import resolve_log_level, setup_root_logger
 
     setup_root_logger(
         app_name,
-        stderr_level=logging.INFO,
+        stderr_level=resolve_log_level(),
         log_dir=PlatformDirs(app_name).user_data_dir,
     )
 
@@ -1267,6 +1267,6 @@ def run_nicegui_app(
         host=host,
         title=title,
         show=False,
-        reload=debug,
+        reload=reload,
         storage_secret=storage_secret,
     )

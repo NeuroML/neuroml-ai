@@ -8,8 +8,6 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import logging
-
 
 async def run_repl(
     url: str,
@@ -38,11 +36,11 @@ async def run_repl(
     # deferred below so --help stays fast.
     from platformdirs import PlatformDirs
 
-    from klea_utils.plogging import setup_root_logger
+    from klea_utils.plogging import resolve_log_level, setup_root_logger
 
     setup_root_logger(
         app_name,
-        stderr_level=logging.INFO,
+        stderr_level=resolve_log_level(),
         log_dir=PlatformDirs(app_name).user_data_dir,
     )
 

@@ -122,9 +122,10 @@ def make_serve_app(
     def serve(
         host: str = "127.0.0.1",
         port: int = default_port,
-        dev: bool = typer.Option(
-            False, "--dev", help="Enable auto-reload (like fastapi dev)"
+        reload: bool = typer.Option(
+            False, "--reload", help="Enable auto-reload (like fastapi dev)"
         ),
+        debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
         profile: str = typer.Option(
             None,
             "--profile",
@@ -137,6 +138,15 @@ def make_serve_app(
         """Run the API server."""
         configure_profile(profile, config_env_var, config_dir, template_writer)
 
+        # --debug must be visible to the app process, whose logger level is
+        # resolved from KLEA_LOG_LEVEL (set here) before setup() loads the
+        # app env file.  Lazy: enable_debug_logging is stdlib-only, but
+        # kept inside for consistency with the other lazy imports here.
+        if debug:
+            from klea_utils.plogging import enable_debug_logging
+
+            enable_debug_logging()
+
         # Lazy: uvicorn pulls in starlette/httptools/websockets etc.
         import uvicorn
 
@@ -144,7 +154,7 @@ def make_serve_app(
             app_module,
             host=host,
             port=port,
-            reload=dev,
+            reload=reload,
         )
 
     return serve_app

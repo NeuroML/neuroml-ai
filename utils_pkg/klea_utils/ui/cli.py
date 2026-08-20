@@ -90,12 +90,18 @@ def _run_cli(
     single_query: str,
     tui_app_name: str,
     app_module: str,
+    debug: bool = False,
     profile: str | None = None,
     config_env_var: str | None = None,
     config_dir: str | Path | None = None,
     template_writer: Callable[[Path], Path] | None = None,
 ) -> None:
     """Run the interactive terminal (cli) client."""
+    if debug:
+        # Make debug visible to the spawned server subprocess.
+        from klea_utils.plogging import enable_debug_logging
+
+        enable_debug_logging()
     with _maybe_spawn_server(
         server_url,
         app_module,
@@ -128,6 +134,7 @@ def _run_web(
     footer_text: str,
     nicegui_url: str,
     storage_secret: str,
+    reload: bool,
     debug: bool,
     web_app_name: str,
     app_module: str,
@@ -137,6 +144,11 @@ def _run_web(
     template_writer: Callable[[Path], Path] | None = None,
 ) -> None:
     """Run the NiceGUI web client."""
+    if debug:
+        # Make debug visible to the spawned server and web app processes.
+        from klea_utils.plogging import enable_debug_logging
+
+        enable_debug_logging()
     with _maybe_spawn_server(
         server_url,
         app_module,
@@ -157,7 +169,7 @@ def _run_web(
                     + f" --nicegui-url '{nicegui_url}'"
                     + f" --storage-secret '{storage_secret}'"
                     + f" --app-name '{web_app_name}'"
-                    + (" --debug" if debug else "")
+                    + (" --reload" if reload else "")
                 ),
                 check=False,
             )
@@ -252,6 +264,7 @@ def make_client_app(
             "-q",
             help="Single query mode: answer a query and exit",
         ),
+        debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
         profile: str = profile_option,
     ):
         _run_cli(
@@ -260,6 +273,7 @@ def make_client_app(
             single_query=single_query or "",
             tui_app_name=tui_app_name,
             app_module=app_module,
+            debug=debug,
             profile=profile,
             config_env_var=config_env_var,
             config_dir=config_dir,
@@ -299,9 +313,10 @@ def make_client_app(
             "--storage-secret",
             help="NiceGUI storage secret for session persistence",
         ),
-        debug: bool = typer.Option(
-            False, "--debug", "-d", help="Enable auto-reload on file changes"
+        reload: bool = typer.Option(
+            False, "--reload", "-r", help="Enable auto-reload on file changes"
         ),
+        debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
         profile: str = profile_option,
     ):
         _run_web(
@@ -312,6 +327,7 @@ def make_client_app(
             footer_text=footer_text,
             nicegui_url=nicegui_url,
             storage_secret=storage_secret,
+            reload=reload,
             debug=debug,
             web_app_name=web_app_name,
             app_module=app_module,

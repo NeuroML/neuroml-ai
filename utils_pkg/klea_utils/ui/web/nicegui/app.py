@@ -8,7 +8,7 @@ and delegates to :func:`klea_utils.ui.web.nicegui.runner.run_nicegui_app`.
 
 Usage::
 
-    python app.py <title> <subtitle> <server_url> [--debug]
+    python app.py <title> <subtitle> <server_url> [--reload]
 
 File: klea_utils/ui/web/nicegui/app.py
 
@@ -30,7 +30,7 @@ if __name__ in {"__main__", "__mp_main__"}:
         subtitle=args.subtitle,
         disclaimer=args.disclaimer,
         footer_text=args.footer,
-        debug=args.debug,
+        reload=args.reload,
         nicegui_url=args.nicegui_url,
         storage_secret=args.storage_secret,
         app_name=args.app_name,
