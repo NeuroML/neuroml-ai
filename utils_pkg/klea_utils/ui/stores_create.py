@@ -489,5 +489,87 @@ def map_lint(
         raise typer.Exit(1) from None
 
 
+@app.command()
+def pre_check(
+    source_dir: str = typer.Argument(
+        help="Directory containing source documents (PDFs)"
+    ),
+    organise: bool = typer.Option(
+        False,
+        "--organise",
+        help="Copy classified files into 'ocr/' (scanned/image PDFs) and "
+        "'no-ocr/' (text PDFs plus all non-PDF files) subdirectories. "
+        "Copies, never moves -- your original bibliography directory is "
+        "left untouched. Recommended workflow: relocate the copies to a "
+        "scratch directory, then chunk and store each subdirectory into "
+        "the same collection",
+    ),
+):
+    """Decide which PDFs need OCR before chunking.
+
+    Reads each PDF's embedded text layer with pypdfium2 and reports
+    whether it is image-based (scanned, needs OCR) or text-based (no OCR
+    needed).  This lets you avoid the cost of OCR on born-digital PDFs
+    while keeping it for older scanned papers -- without guessing by
+    publication year.
+
+    Without ``--organise`` the command only reports.  With ``--organise``
+    it copies files into ``ocr/`` and ``no-ocr/`` subdirectories (the
+    originals are never modified), then prints the recommended chunk and
+    store commands to build both into the same collection.
+    """
+    setup_root_logger("klea-stores-create")
+    logger = logging.getLogger("klea-stores-create")
+
+    source_path = Path(source_dir).resolve()
+    if not source_path.is_dir():
+        logger.error(f"Source directory not found: {source_path}")
+        raise typer.Exit(1)
+
+    try:
+        # Lazy: importing the pre-check module pulls in pypdfium2 (native
+        # pdfium bindings) and ingestion (docling etc.).  Deferring keeps
+        # --help fast -- Python only needs the function signature.
+        from klea_utils.stores.precheck import (
+            classify_directory,
+            format_precheck_report,
+            organise_directory,
+        )
+
+        classifications = classify_directory(source_path)
+        print(format_precheck_report(classifications))
+
+        if not classifications:
+            logger.info("No PDFs found to classify")
+            raise typer.Exit(0)
+
+        if organise:
+            ocr_dir, no_ocr_dir = organise_directory(source_path, classifications)
+            print()
+            print(f"Organised copies into {ocr_dir.name}/ and {no_ocr_dir.name}/")
+            print("(originals untouched; output dirs are skipped on re-runs)")
+            print()
+            print("Recommended workflow -- relocate the copies to a scratch dir:")
+            print(f"  mv {ocr_dir.name}/ {no_ocr_dir.name}/ /tmp/biblio-build/")
+            print("  cd /tmp/biblio-build")
+            print(f"  klea-stores-create chunk {no_ocr_dir.name}/ --no-ocr")
+            print(f"  klea-stores-create chunk {ocr_dir.name}/")
+            print(
+                f"  klea-stores-create store {no_ocr_dir.name}/ "
+                "--collection <name> --store chroma:/path"
+            )
+            print(
+                f"  klea-stores-create store {ocr_dir.name}/ "
+                "--collection <name> --store chroma:/path"
+            )
+            print()
+            print("(both store runs target the SAME collection, so they merge)")
+    except typer.Exit:
+        raise
+    except Exception as e:
+        logger.error(f"Failed: {e}")
+        raise typer.Exit(1) from None
+
+
 if __name__ == "__main__":
     app()
