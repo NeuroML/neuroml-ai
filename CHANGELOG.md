@@ -55,6 +55,10 @@
   keys (most specific first), walking up to the nearest populated
   ancestor when a leaf section has no metadata, with full fall-through
   debug logging.
+- `klea-stores-create store-lint <corpus.pkl>`: LLM-free post-store
+  review of a BM25 corpus (summary, suspicious chunks, structural
+  checks) plus `--samples` evenly-spaced windows of contiguous chunks;
+  auto-printed at the end of `store`.
 - `klea_agent` is now the main application (general-purpose agent with
   coding capabilities); `klea_rag` is consumed by it.
 - Configurable model system (per-node `model_defaults`, dynamic provider

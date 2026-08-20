@@ -159,6 +159,15 @@ To create a BM25 store alongside a vector store, pass
 :doc:`../tutorials/create-and-use-rag`), then add a ``bm25_stores``
 entry to the domain config pointing at the written corpus file.
 
+After storing, ``klea-stores-create store-lint <corpus.pkl>`` reviews the
+corpus with deterministic, LLM-free checks: a summary (chunks, files,
+chunks-per-file, total characters), suspicious chunks (near-empty text
+from a conversion/OCR miss, or missing bibliographic metadata), and
+structural problems (chunks without a ``file_name``, invalid types).  It
+also prints ``--samples`` evenly-spaced windows of contiguous chunks so
+you can eyeball that chunking and metadata look right.  It is printed
+automatically at the end of ``store`` when a BM25 corpus is written.
+
 .. _reference-material:
 
 Reference material for the answer LLM
