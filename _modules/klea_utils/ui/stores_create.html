@@ -298,9 +298,15 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typer</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_log_level</span><span class="p">,</span> <span class="n">setup_root_logger</span>
 
 <span class="n">app</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Typer</span><span class="p">(</span><span class="n">help</span><span class="o">=</span><span class="s2">"Create stores from documents"</span><span class="p">)</span>
+
+<span class="c1">#: Shared ``--debug`` option attached to every command.  When given, the</span>
+<span class="c1">#: console shows full DEBUG logging; otherwise the console stays at INFO</span>
+<span class="c1">#: (progress on stdout, warnings/errors on stderr).  See</span>
+<span class="c1">#: :func:`klea_utils.plogging.resolve_log_level` for the flag/env precedence.</span>
+<span class="n">debug_option</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">"--debug"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Enable debug logging"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_store_dir</span><span class="p">(</span><span class="n">store_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
@@ -341,6 +347,7 @@
         <span class="s2">"scratch directory, then chunk and store each subdirectory into "</span>
         <span class="s2">"the same collection"</span><span class="p">,</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Decide which PDFs need OCR before chunking.</span>
 
@@ -355,7 +362,7 @@
 <span class="sd">    originals are never modified), then prints the recommended chunk and</span>
 <span class="sd">    store commands to build both into the same collection.</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
@@ -428,6 +435,7 @@
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Chunk and cache documents without writing to a vector store.</span>
 
@@ -438,7 +446,7 @@
 <span class="sd">    metadata values and pass the file to</span>
 <span class="sd">    ``klea-stores-create store --metadata-map``.</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Chunking documents in </span><span class="si">{</span><span class="n">source_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">  Max tokens: </span><span class="si">{</span><span class="n">max_tokens</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -520,6 +528,7 @@
         <span class="n">help</span><span class="o">=</span><span class="s2">"Explicit metadata-map JSON file to lint, instead of the "</span>
         <span class="s2">"template in SOURCE_DIR"</span><span class="p">,</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Report issues in a metadata map so it can be reviewed efficiently.</span>
 
@@ -533,7 +542,7 @@
 <span class="sd">    the full report is printed first and the command then exits non-zero</span>
 <span class="sd">    when any such file is found.</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
@@ -652,6 +661,7 @@
         <span class="s2">"files are updated in place.  Does not reconvert: files must "</span>
         <span class="s2">"already be cached by 'chunk'"</span><span class="p">,</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Write cached document chunks to a vector store.</span>
 
@@ -675,7 +685,7 @@
 <span class="sd">    Run ``klea-stores-create chunk`` first to populate the cache and</span>
 <span class="sd">    generate a ``metadata-map.template.json``.</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
@@ -793,6 +803,7 @@
         <span class="s2">"human review.  Pass 0 to suppress sampling"</span><span class="p">,</span>
         <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Report issues in a stored corpus so it can be reviewed efficiently.</span>
 
@@ -807,7 +818,7 @@
 <span class="sd">    printed automatically at the end of ``store`` when a BM25 corpus was</span>
 <span class="sd">    written.</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">corpus</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">corpus_path</span><span class="p">)</span>
@@ -914,6 +925,7 @@
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
         <span class="kc">False</span><span class="p">,</span> <span class="s2">"--force"</span><span class="p">,</span> <span class="s2">"-f"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Re-process all files even if unchanged"</span>
     <span class="p">),</span>
+    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">debug_option</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Full pipeline: chunk, embed, and write to a vector store.</span>
 
@@ -947,7 +959,7 @@
 <span class="sd">            }</span>
 <span class="sd">        }</span>
 <span class="sd">    """</span>
-    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
+    <span class="n">setup_root_logger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">,</span> <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">))</span>
     <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"klea-stores-create"</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>

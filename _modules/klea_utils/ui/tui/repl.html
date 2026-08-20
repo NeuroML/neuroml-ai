@@ -293,8 +293,6 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">"""</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-
 
 <div class="viewcode-block" id="run_repl">
 <a class="viewcode-back" href="../../../../api/utils/ui-tui.html#klea_utils.ui.tui.repl.run_repl">[docs]</a>
@@ -325,11 +323,11 @@
     <span class="c1"># deferred below so --help stays fast.</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
 
-    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_log_level</span><span class="p">,</span> <span class="n">setup_root_logger</span>
 
     <span class="n">setup_root_logger</span><span class="p">(</span>
         <span class="n">app_name</span><span class="p">,</span>
-        <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+        <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(),</span>
         <span class="n">log_dir</span><span class="o">=</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">,</span>
     <span class="p">)</span>
 

@@ -294,6 +294,7 @@
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">logging.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">RotatingFileHandler</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -311,6 +312,8 @@
     <span class="s2">"klea_agent"</span><span class="p">,</span>
     <span class="s2">"neuroml_mcp"</span><span class="p">,</span>
 <span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="LoggerNotInfoFilter">
@@ -339,6 +342,66 @@
 
 
 
+<span class="c1">#: Environment variable that selects the console logging level across all</span>
+<span class="c1">#: Klea CLIs (see :func:`resolve_log_level`).  Read from the process</span>
+<span class="c1">#: environment only -- the app env files (e.g. ``klea_agent.env``) are</span>
+<span class="c1">#: loaded after logging is configured, so this var cannot be set there.</span>
+<span class="n">KLEA_LOG_LEVEL_ENV</span> <span class="o">=</span> <span class="s2">"KLEA_LOG_LEVEL"</span>
+
+
+<div class="viewcode-block" id="resolve_log_level">
+<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.resolve_log_level">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_log_level</span><span class="p">(</span><span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the console logging level for the current process.</span>
+
+<span class="sd">    Precedence, highest first:</span>
+
+<span class="sd">    #. ``--debug`` (the *debug* flag) -- always ``DEBUG``</span>
+<span class="sd">    #. the :data:`KLEA_LOG_LEVEL_ENV` environment variable -- accepted as a</span>
+<span class="sd">       case-insensitive level name (``debug``/``info``/``warning``/``error``/</span>
+<span class="sd">       ``critical``) or a numeric level</span>
+<span class="sd">    #. ``INFO``</span>
+
+<span class="sd">    An unknown :data:`KLEA_LOG_LEVEL_ENV` value is logged as a warning and</span>
+<span class="sd">    falls back to ``INFO``.  Intended to be shared by every Klea CLI so the</span>
+<span class="sd">    ``--debug`` flag and env var behave consistently across them.</span>
+
+<span class="sd">    :param debug: ``True`` when the ``--debug`` flag was given</span>
+<span class="sd">    :returns: A :mod:`logging` level constant</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">KLEA_LOG_LEVEL_ENV</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">raw</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span>
+    <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLevelName</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">&lt;=</span> <span class="n">level</span> <span class="o">&lt;=</span> <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">level</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown </span><span class="si">{</span><span class="n">KLEA_LOG_LEVEL_ENV</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">raw</span><span class="si">!r}</span><span class="s2">; using INFO"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span></div>
+
+
+
+<div class="viewcode-block" id="enable_debug_logging">
+<a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.enable_debug_logging">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">enable_debug_logging</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Set :data:`KLEA_LOG_LEVEL_ENV` to ``debug`` in this process.</span>
+
+<span class="sd">    Called by a ``--debug`` flag on a CLI that spawns child processes (a</span>
+<span class="sd">    client starting a server, a serve command) so the child resolves</span>
+<span class="sd">    ``DEBUG`` via :func:`resolve_log_level` -- environment variables are</span>
+<span class="sd">    inherited across the subprocess boundary.</span>
+<span class="sd">    """</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">KLEA_LOG_LEVEL_ENV</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"debug"</span></div>
+
+
+
 <span class="c1">#: Console formatters colorize each line by level (whole-line color via the</span>
 <span class="c1">#: ``%(log_color)s`` prefix).  The file formatter stays plain so ANSI escape</span>
 <span class="c1">#: codes never end up in log files.</span>
@@ -357,7 +420,7 @@
 <a class="viewcode-back" href="../../api/utils/plogging.html#klea_utils.plogging.setup_root_logger">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">setup_root_logger</span><span class="p">(</span>
     <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">stderr_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+    <span class="n">stderr_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
     <span class="n">log_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Configure the root logger once per process.</span>
@@ -382,9 +445,17 @@
 <span class="sd">    Third-party libraries inherit the root's INFO level, so their DEBUG</span>
 <span class="sd">    output is filtered at the source without enumerating them.</span>
 
+<span class="sd">    The console default is ``INFO`` (progress on stdout, warnings and</span>
+<span class="sd">    errors on stderr) -- end users see no debug noise.  Pass</span>
+<span class="sd">    ``stderr_level=logging.DEBUG`` (e.g. from :func:`resolve_log_level`</span>
+<span class="sd">    when ``--debug`` / ``KLEA_LOG_LEVEL`` request it) to surface full</span>
+<span class="sd">    detail on the console.  The rotating log file always captures</span>
+<span class="sd">    ``DEBUG`` regardless, so verbose logs remain available for</span>
+<span class="sd">    diagnostics.</span>
+
 <span class="sd">    :param app_name: Application name, used as the log file name to keep</span>
 <span class="sd">        per-app logs separate (e.g. ``"klea-rag"``).</span>
-<span class="sd">    :param stderr_level: Level for the stderr handler (default ``DEBUG``)</span>
+<span class="sd">    :param stderr_level: Level for the stderr handler (default ``INFO``)</span>
 <span class="sd">    :param log_dir: Directory for the log file.  ``None`` disables file</span>
 <span class="sd">        logging.</span>
 <span class="sd">    :returns: The configured root logger</span>

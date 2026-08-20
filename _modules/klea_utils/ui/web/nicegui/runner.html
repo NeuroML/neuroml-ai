@@ -1451,7 +1451,7 @@
     <span class="n">subtitle</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">disclaimer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
     <span class="n">footer_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'Powered by &lt;a href="https://github.com/neuroml/klea"&gt;Klea&lt;/a&gt;'</span><span class="p">,</span>
-    <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">reload</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">nicegui_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"0.0.0.0:7860"</span><span class="p">,</span>
     <span class="n">storage_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"klea-nicegui-secret-change-me"</span><span class="p">,</span>
     <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"klea-web"</span><span class="p">,</span>
@@ -1470,7 +1470,7 @@
 <span class="sd">        in the header.</span>
 <span class="sd">    :param disclaimer: Optional text shown below the chat input.</span>
 <span class="sd">    :param footer_text: HTML content for the footer bar.</span>
-<span class="sd">    :param debug: When ``True``, enable NiceGUI's file-watch hot</span>
+<span class="sd">    :param reload: When ``True``, enable NiceGUI's file-watch hot</span>
 <span class="sd">        reload (``reload=True``).  Set to ``False`` in production.</span>
 <span class="sd">    :param nicegui_url: ``host:port`` to bind the NiceGUI web server to</span>
 <span class="sd">        (default: ``"0.0.0.0:7860"``).</span>
@@ -1484,11 +1484,11 @@
     <span class="c1"># platformdirs / plogging imports are cheap and this is a CLI entry.</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
 
-    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_log_level</span><span class="p">,</span> <span class="n">setup_root_logger</span>
 
     <span class="n">setup_root_logger</span><span class="p">(</span>
         <span class="n">app_name</span><span class="p">,</span>
-        <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+        <span class="n">stderr_level</span><span class="o">=</span><span class="n">resolve_log_level</span><span class="p">(),</span>
         <span class="n">log_dir</span><span class="o">=</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">,</span>
     <span class="p">)</span>
 
@@ -1557,7 +1557,7 @@
         <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
         <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
         <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">reload</span><span class="o">=</span><span class="n">debug</span><span class="p">,</span>
+        <span class="n">reload</span><span class="o">=</span><span class="n">reload</span><span class="p">,</span>
         <span class="n">storage_secret</span><span class="o">=</span><span class="n">storage_secret</span><span class="p">,</span>
     <span class="p">)</span></div>
 

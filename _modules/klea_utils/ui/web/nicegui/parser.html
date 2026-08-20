@@ -301,7 +301,7 @@
 <span class="sd">        args.title, args.url,</span>
 <span class="sd">        subtitle=args.subtitle,</span>
 <span class="sd">        disclaimer=args.disclaimer,</span>
-<span class="sd">        debug=args.debug,</span>
+<span class="sd">        reload=args.reload,</span>
 <span class="sd">    )</span>
 
 <span class="sd">File: klea_utils/ui/web/nicegui/parser.py</span>
@@ -349,7 +349,7 @@
         <span class="n">help</span><span class="o">=</span><span class="s2">"NiceGUI storage secret for session persistence"</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-        <span class="s2">"--debug"</span><span class="p">,</span>
+        <span class="s2">"--reload"</span><span class="p">,</span>
         <span class="n">action</span><span class="o">=</span><span class="s2">"store_true"</span><span class="p">,</span>
         <span class="n">help</span><span class="o">=</span><span class="s2">"Enable auto-reload on file changes (supported by nicegui only)"</span><span class="p">,</span>
     <span class="p">)</span>

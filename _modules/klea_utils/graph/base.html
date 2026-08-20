@@ -402,13 +402,18 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">logging_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+        <span class="n">logging_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
         <span class="n">checkpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"inmemory"</span><span class="p">,</span>
         <span class="n">log_file</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Initialise the base orchestrator.</span>
 
-<span class="sd">        :param logging_level: Logging level for the orchestrator</span>
+<span class="sd">        :param logging_level: Logging level for the orchestrator.  The</span>
+<span class="sd">            :data:`KLEA_LOG_LEVEL` environment variable (and the ``--debug``</span>
+<span class="sd">            flag that sets it) takes precedence over this constructor</span>
+<span class="sd">            argument: when it resolves to ``DEBUG``, full debug logging is</span>
+<span class="sd">            enabled regardless of *logging_level*; otherwise *logging_level*</span>
+<span class="sd">            is used (default ``INFO``).</span>
 <span class="sd">        :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),</span>
 <span class="sd">            ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),</span>
 <span class="sd">            or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes</span>
@@ -455,11 +460,19 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_root_logger</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_log_level</span><span class="p">,</span> <span class="n">setup_root_logger</span>
+
+        <span class="c1"># The KLEA_LOG_LEVEL env var (set by --debug) overrides the</span>
+        <span class="c1"># constructor's logging_level: when it resolves to DEBUG we show</span>
+        <span class="c1"># full debug output regardless of the passed level.</span>
+        <span class="k">if</span> <span class="n">resolve_log_level</span><span class="p">()</span> <span class="o">==</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">:</span>
+            <span class="n">stderr_level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stderr_level</span> <span class="o">=</span> <span class="n">logging_level</span>
 
         <span class="n">setup_root_logger</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">,</span>
-            <span class="n">stderr_level</span><span class="o">=</span><span class="n">logging_level</span><span class="p">,</span>
+            <span class="n">stderr_level</span><span class="o">=</span><span class="n">stderr_level</span><span class="p">,</span>
             <span class="n">log_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">user_data_dir</span> <span class="k">if</span> <span class="n">log_file</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="p">)</span>
