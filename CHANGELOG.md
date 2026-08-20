@@ -127,6 +127,14 @@
 
 ### Changed
 
+- `klea-stores-create map-lint <dir>` now verifies the map's top-level
+  keys are the actual source filenames: a source file with no entry is
+  fatal (the `store` step would fail), so the full report is printed
+  first and the command then exits non-zero; keys that are not source
+  files (heading-keyed or stale entries) are flagged, and old
+  heading-keyed flat maps are reported as a single structural issue
+  instead of per-heading missing-field noise.
+
 - Default models are now set per role through environment variables
   (`KLEA_<APP>_<ROLE>_MODEL`, e.g. `KLEA_AGENT_CHAT_MODEL`); the env file
   is optional, falling back to shell env vars.  The env schema is generated
