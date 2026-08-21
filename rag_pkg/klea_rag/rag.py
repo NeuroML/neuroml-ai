@@ -22,7 +22,7 @@ from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
 from klea_utils.nodes.tools_caller import ToolsCallerNode
 from klea_utils.nodes.tools_picker import ToolsPicker
-from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.config import FilterFieldInfo, RetrieverConfig
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
 
@@ -240,13 +240,14 @@ class RAG(BaseLangGraph):
         # Domains are configured (with their filter fields) in
         # ``_configure_resources`` before the graph is built.
         assert self.retriever_config
+        filter_fields_by_domain: dict[str, list[FilterFieldInfo]] = {
+            d: inf.filter_fields for d, inf in self.retriever_config.domains.items()
+        }
         self._generate_retrieval_query_node = GenerateRetrievalQuery(
             logger=self.logger,
             label="Generating search",
             llm_models=self.llm_models,
-            filter_fields_by_domain={
-                d: inf.filter_fields for d, inf in self.retriever_config.domains.items()
-            },
+            filter_fields_by_domain=filter_fields_by_domain,
         )
         self.workflow.add_node(
             self._generate_retrieval_query_node.label,
@@ -308,6 +309,7 @@ class RAG(BaseLangGraph):
             label="Retrieving information",
             retrievers=retrievers,
             max_refs_size=self.max_refs_size,
+            filter_fields_by_domain=filter_fields_by_domain,
         )
         self.workflow.add_node(
             self._retrieve_info_node.label, self._retrieve_info_node.execute

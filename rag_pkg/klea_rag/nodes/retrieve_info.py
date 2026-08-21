@@ -17,6 +17,8 @@ from klea_utils.nodes.abstract import (
     NodeStreamData,
     NodeStreamEvent,
 )
+from klea_utils.stores.config import FilterFieldInfo
+from klea_utils.stores.filters import restrict_metadata_filter
 from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from klea_utils.stores.utils import (
     normalize_text,
@@ -58,6 +60,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         label: str,
         retrievers: list[BaseKleaRetriever] | None = None,
         max_refs_size: int = 20000,
+        filter_fields_by_domain: dict[str, list[FilterFieldInfo]] | None = None,
     ):
         """Initialise the retrieval node.
 
@@ -67,10 +70,38 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         :param max_refs_size: Global character budget for the reference
             material fed to the answer LLM (see
             ``klea_utils.stores.utils.truncate_reference_material``)
+        :param filter_fields_by_domain: ``{domain: [FilterFieldInfo]}``
+            configured for each domain.  When set, the combined metadata
+            filter is restricted per domain to the clauses on that
+            domain's declared fields, so a cross-domain query never
+            applies one domain's filter fields to another domain's
+            retrievers.  When empty (not configured) the combined filter
+            is passed through unchanged.
         """
         super().__init__(logger, label)
         self.retrievers = retrievers or []
         self.max_refs_size = max_refs_size
+        self.filter_fields_by_domain: dict[str, list[FilterFieldInfo]] = (
+            filter_fields_by_domain or {}
+        )
+
+    def _filter_for_domain(
+        self, metadata_filter: dict[str, Any] | None, domain_name: str
+    ) -> dict[str, Any] | None:
+        """Restrict *metadata_filter* to the fields *domain_name* declares.
+
+        Without a per-domain configuration (the map is empty) the combined
+        filter is passed through unchanged.  Once configured, a domain not
+        present in the map is treated as declaring no filter fields, so
+        every clause is dropped rather than applied to a domain that never
+        declared it.
+        """
+        if not self.filter_fields_by_domain:
+            return metadata_filter
+        fields = self.filter_fields_by_domain.get(domain_name, [])
+        return restrict_metadata_filter(
+            metadata_filter, {field.name for field in fields}
+        )
 
     @override
     async def execute(self, state: RAGState) -> dict[str, Any]:
@@ -109,13 +140,20 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
             if domain_name == "undefined":
                 continue
 
+            # A cross-domain query shares one generated filter; each domain
+            # only receives the clauses on the fields it declares.
+            domain_filter = self._filter_for_domain(metadata_filter, domain_name)
+            self.logger.debug(
+                f"{domain_name = } got {domain_filter = } (from {metadata_filter = })"
+            )
+
             result_sets = [
                 (
                     retriever.source_label,
                     retriever.retrieve(
                         domain_name=domain_name,
                         query=cleaned_query,
-                        metadata_filter=metadata_filter,
+                        metadata_filter=domain_filter,
                     ),
                 )
                 for retriever in self.retrievers

@@ -13,6 +13,7 @@ from typing import Any
 
 from klea_rag.nodes.retrieve_info import RetrieveInfoNode
 from klea_rag.schemas import EvaluateAnswerSchema, RAGState, RetrievalQueryOutput
+from klea_utils.stores.config import FilterFieldInfo
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ def _make_node(retrievers) -> RetrieveInfoNode:
     node.label = "Retrieving information"
     node.retrievers = retrievers
     node.max_refs_size = 20000
+    node.filter_fields_by_domain = {}
     node.write_custom_stream = lambda event: None
     logger.info(
         f"configured retrievers: "
@@ -327,3 +329,95 @@ async def test_execute_skips_undefined_domain():
 
     assert "reference_material" in result
     assert result["reference_material"] == {}
+
+
+async def test_execute_restricts_filter_per_domain():
+    """A cross-domain query only applies each domain's declared fields."""
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    node = _make_node([r1])
+    node.filter_fields_by_domain = {
+        "papers": [
+            FilterFieldInfo(name="journal", description="venue", value_type="string")
+        ],
+        "repos": [
+            FilterFieldInfo(name="username", description="owner", value_type="string")
+        ],
+    }
+
+    state = RAGState(
+        query="q",
+        query_domains=["papers", "repos"],
+        retrieval_query=RetrievalQueryOutput(
+            search_query="q",
+            config_filters=[
+                {"journal": {"$eq": "nature"}},
+                {"username": {"$eq": "padraig"}},
+            ],
+        ),
+    )
+    await node.execute(state)
+
+    # One call per domain; each receives only its own declared fields.
+    assert r1.filters == [
+        {"journal": {"$eq": "nature"}},
+        {"username": {"$eq": "padraig"}},
+    ]
+
+
+async def test_execute_domain_without_declared_fields_gets_no_filter():
+    """A domain declaring no fields never receives a combined filter."""
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    node = _make_node([r1])
+    node.filter_fields_by_domain = {
+        "papers": [
+            FilterFieldInfo(name="journal", description="venue", value_type="string")
+        ],
+        "repos": [],
+    }
+
+    state = RAGState(
+        query="q",
+        query_domains=["papers", "repos"],
+        retrieval_query=RetrievalQueryOutput(
+            search_query="q",
+            config_filters=[
+                {"journal": {"$eq": "nature"}},
+                {"username": {"$eq": "padraig"}},
+            ],
+        ),
+    )
+    await node.execute(state)
+
+    assert r1.filters == [
+        {"journal": {"$eq": "nature"}},
+        None,
+    ]
+
+
+async def test_execute_single_domain_identity_with_configured_map():
+    """A single domain declaring both fields keeps the combined filter."""
+    r1 = FakeRetriever([(_doc("content"), 1.0)], name="vector store")
+    node = _make_node([r1])
+    node.filter_fields_by_domain = {
+        "papers": [
+            FilterFieldInfo(name="journal", description="venue", value_type="string"),
+            FilterFieldInfo(name="username", description="owner", value_type="string"),
+        ],
+    }
+
+    state = RAGState(
+        query="q",
+        query_domains=["papers"],
+        retrieval_query=RetrievalQueryOutput(
+            search_query="q",
+            config_filters=[
+                {"journal": {"$eq": "nature"}},
+                {"username": {"$eq": "padraig"}},
+            ],
+        ),
+    )
+    await node.execute(state)
+
+    assert r1.filters == [
+        {"$and": [{"journal": {"$eq": "nature"}}, {"username": {"$eq": "padraig"}}]}
+    ]

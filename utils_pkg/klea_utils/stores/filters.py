@@ -317,6 +317,57 @@ def normalize_config_filters(
     return clauses
 
 
+def restrict_metadata_filter(
+    metadata_filter: dict[str, Any] | None,
+    allowed_field_names: set[str],
+) -> dict[str, Any] | None:
+    """Restrict a metadata filter to clauses on the allowed fields.
+
+    ``metadata_filter`` is a combined DSL filter (as produced by
+    :meth:`RetrievalQueryOutput.to_metadata_filter`): a single field
+    clause, a top-level ``$and``/``$or`` of clauses, or ``None``.  This
+    keeps only the clauses whose referenced metadata field(s) are in
+    *allowed_field_names* and recombines the survivors (a single clause
+    returned as-is, several wrapped in ``$and``), so a domain that
+    declares only e.g. ``journal`` never has a ``username`` clause
+    applied to its retrievers.  A filter with nothing left returns
+    ``None``.
+
+    A top-level ``$or`` is kept whole only when every field it references
+    is allowed (partially splitting an ``$or`` would change its
+    semantics); a top-level ``$and`` is decomposed and its sub-clauses
+    filtered independently, so the multi-value ``$and`` clauses emitted by
+    :func:`normalize_config_filters` are kept or dropped as a unit.
+
+    Example::
+
+        restrict_metadata_filter(
+            {"$and": [{"journal": {"$eq": "nature"}},
+                      {"username": {"$eq": "padraig"}}]},
+            {"journal"},
+        )
+        -> {"journal": {"$eq": "nature"}}
+
+    :param metadata_filter: Combined metadata filter, or ``None``
+    :param allowed_field_names: Metadata field names the caller accepts
+    :returns: The restricted filter, or ``None``
+    """
+    if not metadata_filter:
+        return None
+
+    if set(metadata_filter) == {"$and"}:
+        items: list[dict[str, Any]] = metadata_filter["$and"]
+    else:
+        items = [{k: v} for k, v in metadata_filter.items()]
+
+    kept = [clause for clause in items if _clause_fields(clause) <= allowed_field_names]
+    if not kept:
+        return None
+    if len(kept) == 1:
+        return kept[0]
+    return {"$and": kept}
+
+
 def filter_docs_by_metadata(docs: list[Document], f: dict[str, Any]) -> list[Document]:
     """Return the subset of *docs* whose metadata matches the filter.
 
@@ -528,6 +579,28 @@ def _pgvector_clause(clause: dict[str, Any]) -> dict[str, Any]:
         # with a substring match over the serialized JSON array text.
         op, operand = "$like", f"%{operand}%"
     return {key: {op: operand}}
+
+
+def _clause_fields(clause: dict[str, Any]) -> set[str]:
+    """Return the metadata fields referenced by a single-clause DSL dict.
+
+    Walks a canonical single-clause filter (from :func:`validate_metadata_filter`)
+    and collects the field names it constrains: a leaf field clause yields
+    its field; a logical combinator yields the union of its sub-clauses'
+    fields.  Used by :func:`restrict_metadata_filter` to decide whether a
+    clause may be applied to a domain whose declared field set does not
+    include it.
+
+    :param clause: Canonical single-clause DSL dict
+    :returns: Set of metadata field names the clause references
+    """
+    key, value = next(iter(clause.items()))
+    if key in LOGICAL_OPERATORS:
+        fields: set[str] = set()
+        for sub in value:
+            fields |= _clause_fields(sub)
+        return fields
+    return {key}
 
 
 def _clause_matches(clause: dict[str, Any], doc: Document) -> bool:
