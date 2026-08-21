@@ -8,7 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -45,11 +45,37 @@ class BM25StoreInfo(StoreInfo):
     """
 
 
+class FilterFieldInfo(BaseModel):
+    """Configuration for a single retrievable metadata filter field.
+
+    A deployment declares, per domain, the metadata fields the retrieval
+    query generator may filter on.  Each entry describes one field: its
+    name (the metadata key stored on the documents), its semantics for
+    the LLM, and the operand type it accepts.
+
+    ``value_type`` controls how a bare operand from the LLM is mapped to
+    the filter DSL (see
+    :func:`klea_utils.stores.filters.normalize_config_filters`):
+
+    - ``"string"`` / ``"int"`` / ``"float"`` --- scalar fields.  A bare
+      value becomes ``$eq``; a list of values becomes ``$in``.
+    - ``"list"`` --- element-membership fields (e.g. ``tags``).  A bare
+      value becomes ``$contains``; several values combine with ``$and``
+      (every value must be present).
+    """
+
+    name: str
+    description: str
+    value_type: Literal["string", "int", "float", "list"] = "string"
+
+
 class PerDomainConfig(BaseModel):
     """Configuration for a single domain."""
 
     vector_stores: list[VectorStoreInfo] = []
     bm25_stores: list[BM25StoreInfo] = []
+    #: Retrieval filter fields the query generator may use for this domain.
+    filter_fields: list[FilterFieldInfo] = []
 
 
 class RetrieverConfig(BaseModel):
