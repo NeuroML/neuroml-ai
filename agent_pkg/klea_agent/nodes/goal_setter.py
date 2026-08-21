@@ -11,9 +11,10 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_agent.schemas import GoalSchema, KleaAgentState
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
+
+from klea_agent.schemas import GoalSchema, KleaAgentState
 
 
 class GoalSetter(BaseLLMNode[GoalSchema]):

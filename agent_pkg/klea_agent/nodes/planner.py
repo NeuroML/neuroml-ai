@@ -11,10 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_agent.schemas import KleaAgentState, PlanSchema
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
+
+from klea_agent.schemas import KleaAgentState, PlanSchema
 
 
 class Planner(BaseLLMNode[PlanSchema]):

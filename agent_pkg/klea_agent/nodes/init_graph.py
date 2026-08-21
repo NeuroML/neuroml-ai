@@ -11,8 +11,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_agent.schemas import GoalSchema, KleaAgentState, PlanSchema
 from klea_utils.nodes.abstract import AbstractLangGraphNode
+
+from klea_agent.schemas import GoalSchema, KleaAgentState, PlanSchema
 
 
 class InitGraphState(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):

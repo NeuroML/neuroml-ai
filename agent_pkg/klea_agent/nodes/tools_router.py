@@ -11,8 +11,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import override
 
-from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractRouterNode
+
+from klea_agent.schemas import KleaAgentState
 
 
 class ToolsRouter(AbstractRouterNode[KleaAgentState]):

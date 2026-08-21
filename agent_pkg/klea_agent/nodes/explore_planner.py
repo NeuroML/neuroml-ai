@@ -10,9 +10,10 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from typing import Any, override
 
+from pydantic import BaseModel
+
 from klea_agent.nodes.planner import Planner
 from klea_agent.schemas import KleaAgentState, PlanSchema
-from pydantic import BaseModel
 
 
 class ExplorePlanner(Planner):

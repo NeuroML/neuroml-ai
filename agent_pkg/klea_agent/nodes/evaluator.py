@@ -13,8 +13,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_agent.schemas import KleaAgentState
 from klea_utils.nodes.abstract import AbstractLangGraphNode
+
+from klea_agent.schemas import KleaAgentState
 
 
 class Evaluator(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
