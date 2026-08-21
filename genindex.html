@@ -470,9 +470,11 @@
 </li>
         <li><a href="api/utils/models_catalog.html#klea_utils.models_catalog.DISK_CACHE_TTL_SECONDS">DISK_CACHE_TTL_SECONDS (in module klea_utils.models_catalog)</a>
 </li>
+        <li><a href="api/utils/mcp.html#klea_utils.mcp.dispatch.dispatch_tool_calls">dispatch_tool_calls() (in module klea_utils.mcp.dispatch)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/mcp.html#klea_utils.mcp.dispatch.dispatch_tool_calls">dispatch_tool_calls() (in module klea_utils.mcp.dispatch)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.display_person_names">display_person_names() (in module klea_utils.stores.utils)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.langchain_bm25.BM25Retriever.docs">docs (klea_utils.stores.langchain_bm25.BM25Retriever attribute)</a>
 </li>
@@ -528,8 +530,6 @@
 </li>
         <li><a href="api/utils/mcp.html#klea_utils.mcp.server.config.BundledToolsConfig.exclude_tags">exclude_tags (klea_utils.mcp.server.config.BundledToolsConfig attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="api/utils/nodes.html#klea_utils.nodes.abstract.AbstractLangGraphNode.execute">execute() (klea_utils.nodes.abstract.AbstractLangGraphNode method)</a>
 
         <ul>
@@ -544,6 +544,10 @@
           <li><a href="api/utils/nodes.html#klea_utils.nodes.tools_caller.ToolsCallerNode.execute">(klea_utils.nodes.tools_caller.ToolsCallerNode method)</a>
 </li>
         </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/stores.html#klea_utils.stores.utils.expand_person_names">expand_person_names() (in module klea_utils.stores.utils)</a>
+</li>
         <li><a href="api/utils/biblio.html#klea_utils.biblio.docling.extract_docling_structured">extract_docling_structured() (in module klea_utils.biblio.docling)</a>
 </li>
         <li><a href="api/utils/biblio.html#klea_utils.biblio.docling.extract_layout_region">extract_layout_region() (in module klea_utils.biblio.docling)</a>
@@ -582,9 +586,13 @@
           <li><a href="api/utils/plogging.html#klea_utils.plogging.LoggerNotInfoFilter.filter">(klea_utils.plogging.LoggerNotInfoFilter method)</a>
 </li>
         </ul></li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.filters.filter_docs_by_metadata">filter_docs_by_metadata() (in module klea_utils.stores.filters)</a>
+</li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="api/utils/stores.html#klea_utils.stores.filters.filter_docs_by_metadata">filter_docs_by_metadata() (in module klea_utils.stores.filters)</a>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig.filter_fields">filter_fields (klea_utils.stores.config.PerDomainConfig attribute)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.config.FilterFieldInfo">FilterFieldInfo (class in klea_utils.stores.config)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.find_source_files">find_source_files() (in module klea_utils.stores.utils)</a>
 </li>
@@ -1238,6 +1246,8 @@
 </li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.BM25StoreInfo.model_config">(klea_utils.stores.config.BM25StoreInfo attribute)</a>
 </li>
+          <li><a href="api/utils/stores.html#klea_utils.stores.config.FilterFieldInfo.model_config">(klea_utils.stores.config.FilterFieldInfo attribute)</a>
+</li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig.model_config">(klea_utils.stores.config.PerDomainConfig attribute)</a>
 </li>
           <li><a href="api/utils/stores.html#klea_utils.stores.config.RetrieverConfig.model_config">(klea_utils.stores.config.RetrieverConfig attribute)</a>
@@ -1416,6 +1426,8 @@
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/utils/stores.html#klea_utils.stores.filters.normalize_config_filters">normalize_config_filters() (in module klea_utils.stores.filters)</a>
+</li>
         <li><a href="api/utils/biblio.html#klea_utils.biblio.doi.normalize_doi">normalize_doi() (in module klea_utils.biblio.doi)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.utils.normalize_text">normalize_text() (in module klea_utils.stores.utils)</a>
@@ -1453,6 +1465,8 @@
         <li><a href="api/utils/stores.html#klea_utils.stores.config.PerDomainConfig">PerDomainConfig (class in klea_utils.stores.config)</a>
 </li>
         <li><a href="api/utils/mcp.html#klea_utils.mcp.errors.PermissionDeniedError">PermissionDeniedError</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS">PERSON_NAME_FILTER_FIELDS (in module klea_utils.stores.metadata)</a>
 </li>
         <li><a href="api/utils/ui-stores-create.html#klea_utils.ui.stores_create.pre_check">pre_check() (in module klea_utils.ui.stores_create)</a>
 </li>
@@ -1521,6 +1535,8 @@
         <li><a href="api/utils/llm.html#klea_utils.llm.resolve_output_token_limit">resolve_output_token_limit() (in module klea_utils.llm)</a>
 </li>
         <li><a href="api/utils/biblio.html#klea_utils.biblio.extract.Resolver">Resolver (class in klea_utils.biblio.extract)</a>
+</li>
+        <li><a href="api/utils/stores.html#klea_utils.stores.filters.restrict_metadata_filter">restrict_metadata_filter() (in module klea_utils.stores.filters)</a>
 </li>
         <li><a href="api/utils/stores.html#klea_utils.stores.retrieval.base.BaseKleaRetriever.retrieve">retrieve() (klea_utils.stores.retrieval.base.BaseKleaRetriever method)</a>
 </li>

@@ -299,12 +299,15 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PERSON_NAME_FILTER_FIELDS</span><span class="p">,</span>
+    <span class="n">SHARED_DOC_METADATA_KEYS</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1">#: Name of the chunk-cache directory created inside a source directory by</span>
 <span class="c1">#: the ingestion pipeline (holds the per-file pickled chunks, the</span>
@@ -471,6 +474,98 @@
     <span class="n">text</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">"NFKC"</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="c1"># Collapse repeated horizontal whitespace and trim.</span>
     <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[ \t]{2,}"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="expand_person_names">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.expand_person_names">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">expand_person_names</span><span class="p">(</span><span class="n">names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return *names* with per-word variants appended, order-preserving.</span>
+
+<span class="sd">    Humans are referred to by parts of their full name ("find papers by</span>
+<span class="sd">    Sinha" for an author stored as "Ankur Sinha"), so person-name list</span>
+<span class="sd">    fields (:data:`klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS`)</span>
+<span class="sd">    are expanded at store time: each full name is kept, every whitespace</span>
+<span class="sd">    token plus its lowercase form is added, and the lowercased full name</span>
+<span class="sd">    is added too.  This makes an exact-membership retrieval filter</span>
+<span class="sd">    (``$contains``) match the partial name in any form and case,</span>
+<span class="sd">    uniformly on every store backend.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        expand_person_names(["Ankur Sinha"])</span>
+<span class="sd">        -&gt; ["Ankur Sinha", "ankur sinha", "Ankur", "Sinha",</span>
+<span class="sd">            "ankur", "sinha"]</span>
+
+<span class="sd">    The expansion is idempotent (expanding an already-expanded list is a</span>
+<span class="sd">    no-op), so re-applying the store metadata policy is safe.</span>
+
+<span class="sd">    :param names: List of author display names</span>
+<span class="sd">    :returns: Names plus per-word and lowercase variants, deduplicated in</span>
+<span class="sd">        order of first appearance.  Non-string elements are skipped.</span>
+<span class="sd">    """</span>
+    <span class="n">expanded</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">variant</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">variant</span><span class="p">)</span>
+            <span class="n">expanded</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">variant</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
+            <span class="n">add</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
+            <span class="n">add</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">expanded</span></div>
+
+
+
+<div class="viewcode-block" id="display_person_names">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.utils.display_person_names">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_person_names</span><span class="p">(</span><span class="n">names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the display-safe subset of an expanded person-name list.</span>
+
+<span class="sd">    :func:`expand_person_names` appends per-word and lowercase variants to</span>
+<span class="sd">    a person-name field for filtering, but those variants must not appear</span>
+<span class="sd">    in the reference material shown to the answer LLM (citations would</span>
+<span class="sd">    otherwise read ``Ankur Sinha; Sinha; ankur; sinha``).  This keeps only</span>
+<span class="sd">    the real names: whole-lowercase entries and single-word entries that</span>
+<span class="sd">    make up a longer entry are dropped, so a genuine single-name author</span>
+<span class="sd">    (not a token of another entry) still displays.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        display_person_names(</span>
+<span class="sd">            ["Ankur Sinha", "Padraig Gleeson", "Sinha", "gleeson"]</span>
+<span class="sd">        )</span>
+<span class="sd">        -&gt; ["Ankur Sinha", "Padraig Gleeson"]</span>
+
+<span class="sd">    :param names: Person-name list, possibly expanded</span>
+<span class="sd">    :returns: The original full names, order-preserving</span>
+<span class="sd">    """</span>
+    <span class="n">multi_word</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span>
+    <span class="p">]</span>
+    <span class="n">tokens_of_others</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">multi_word</span><span class="p">:</span>
+        <span class="n">tokens_of_others</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+
+    <span class="n">shown</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">islower</span><span class="p">():</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">tokens_of_others</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">shown</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">shown</span></div>
 
 
 
@@ -701,11 +796,15 @@
             <span class="c1"># are emitted once.  A url* key is promoted to the file level</span>
             <span class="c1"># too when every chunk carries the identical value (the common</span>
             <span class="c1"># case); otherwise it stays per-chunk below.</span>
-            <span class="n">file_meta</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">k</span><span class="p">:</span> <span class="n">v</span>
-                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">SHARED_DOC_METADATA_KEYS</span>
-            <span class="p">}</span>
+            <span class="n">file_meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">first_doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SHARED_DOC_METADATA_KEYS</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">PERSON_NAME_FILTER_FIELDS</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="c1"># Person-name fields carry expanded per-word variants</span>
+                    <span class="c1"># for filtering; show only the real names.</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">display_person_names</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="n">file_meta</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
             <span class="n">url_keys</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="n">k</span> <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">file_docs</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)</span>
             <span class="p">}</span>

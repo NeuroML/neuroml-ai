@@ -305,12 +305,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">..biblio.extract</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resolver</span><span class="p">,</span> <span class="n">extract_metadata</span><span class="p">,</span> <span class="n">extract_metadata_from_text</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_embedding</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PERSON_NAME_FILTER_FIELDS</span><span class="p">,</span>
     <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CACHE_DIR_NAME</span><span class="p">,</span>
     <span class="n">TEMPLATE_FILE_NAME</span><span class="p">,</span>
     <span class="n">drop_collection</span><span class="p">,</span>
+    <span class="n">expand_person_names</span><span class="p">,</span>
     <span class="n">find_source_files</span><span class="p">,</span>
     <span class="n">instantiate_vector_store</span><span class="p">,</span>
     <span class="n">normalize_text</span><span class="p">,</span>
@@ -1591,14 +1593,25 @@
 <span class="sd">    metadata map is folded into chunks (:meth:`StoresBuilder.chunk_all`) and</span>
 <span class="sd">    as a final gate in :func:`_sanitize_store_metadata`.</span>
 
+<span class="sd">    Person-name list fields (:data:`PERSON_NAME_FILTER_FIELDS`) are</span>
+<span class="sd">    additionally expanded with per-word variants (see</span>
+<span class="sd">    :func:`klea_utils.stores.utils.expand_person_names`), so an exact</span>
+<span class="sd">    ``$contains`` filter matches a partial name.  The expansion is</span>
+<span class="sd">    idempotent, so re-applying the policy is safe.</span>
+
 <span class="sd">    :param metadata: Document metadata dict</span>
 <span class="sd">    :returns: Copy of *metadata* without internal/provenance keys</span>
 <span class="sd">    """</span>
-    <span class="k">return</span> <span class="p">{</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">STORE_DROPPED_METADATA_KEYS</span><span class="p">)</span>
     <span class="p">}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">PERSON_NAME_FILTER_FIELDS</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">filtered</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_person_names</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">filtered</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_store_metadata</span><span class="p">(</span><span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>

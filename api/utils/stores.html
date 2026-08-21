@@ -313,10 +313,43 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="klea_utils.stores.config.FilterFieldInfo">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.config.</span></span><span class="sig-name descname"><span class="pre">FilterFieldInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.14)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'string'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'int'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'float'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'list'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'string'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/config.html#FilterFieldInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.config.FilterFieldInfo" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Configuration for a single retrievable metadata filter field.</p>
+<p>A deployment declares, per domain, the metadata fields the retrieval
+query generator may filter on.  Each entry describes one field: its
+name (the metadata key stored on the documents), its semantics for
+the LLM, and the operand type it accepts.</p>
+<p><code class="docutils literal notranslate"><span class="pre">value_type</span></code> controls how a bare operand from the LLM is mapped to
+the filter DSL (see
+<a class="reference internal" href="#klea_utils.stores.filters.normalize_config_filters" title="klea_utils.stores.filters.normalize_config_filters"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.filters.normalize_config_filters()</span></code></a>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;string&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;int&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;float&quot;</span></code> — scalar fields.  A bare
+value becomes <code class="docutils literal notranslate"><span class="pre">$eq</span></code>; a list of values becomes <code class="docutils literal notranslate"><span class="pre">$in</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;list&quot;</span></code> — element-membership fields (e.g. <code class="docutils literal notranslate"><span class="pre">tags</span></code>).  A bare
+value becomes <code class="docutils literal notranslate"><span class="pre">$contains</span></code>; several values combine with <code class="docutils literal notranslate"><span class="pre">$and</span></code>
+(every value must be present).</p></li>
+</ul>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.config.FilterFieldInfo.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#klea_utils.stores.config.FilterFieldInfo.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="klea_utils.stores.config.PerDomainConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.config.</span></span><span class="sig-name descname"><span class="pre">PerDomainConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">vector_stores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.VectorStoreInfo" title="klea_utils.stores.config.VectorStoreInfo"><span class="pre">VectorStoreInfo</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bm25_stores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.BM25StoreInfo" title="klea_utils.stores.config.BM25StoreInfo"><span class="pre">BM25StoreInfo</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/config.html#PerDomainConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.config.PerDomainConfig" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">klea_utils.stores.config.</span></span><span class="sig-name descname"><span class="pre">PerDomainConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">vector_stores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.VectorStoreInfo" title="klea_utils.stores.config.VectorStoreInfo"><span class="pre">VectorStoreInfo</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bm25_stores</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.BM25StoreInfo" title="klea_utils.stores.config.BM25StoreInfo"><span class="pre">BM25StoreInfo</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.FilterFieldInfo" title="klea_utils.stores.config.FilterFieldInfo"><span class="pre">FilterFieldInfo</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/klea_utils/stores/config.html#PerDomainConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.config.PerDomainConfig" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
 <p>Configuration for a single domain.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="klea_utils.stores.config.PerDomainConfig.filter_fields">
+<span class="sig-name descname"><span class="pre">filter_fields</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.FilterFieldInfo" title="klea_utils.stores.config.FilterFieldInfo"><span class="pre">FilterFieldInfo</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#klea_utils.stores.config.PerDomainConfig.filter_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieval filter fields the query generator may use for this domain.</p>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.stores.config.PerDomainConfig.model_config">
 <span class="sig-name descname"><span class="pre">model_config</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></span><a class="headerlink" href="#klea_utils.stores.config.PerDomainConfig.model_config" title="Link to this definition">¶</a></dt>
@@ -397,6 +430,23 @@ researcher-curated keys pass through unmodified).  See
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">MACHINE_SET_METADATA_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'file_hash',</span> <span class="pre">'file_name',</span> <span class="pre">'headings'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.MACHINE_SET_METADATA_KEYS" title="Link to this definition">¶</a></dt>
 <dd><p>Metadata keys set on every chunk by the ingestion pipeline itself,
 rather than supplied by the metadata map.  They are always stored.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.metadata.</span></span><span class="sig-name descname"><span class="pre">PERSON_NAME_FILTER_FIELDS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({'authors'})</span></span><a class="headerlink" href="#klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata fields whose values are lists of human full names.  At store
+time such fields are expanded with per-word variants (surname, every
+whitespace token, and lowercase forms) so an exact-membership retrieval
+filter matches the partial name a user is likely to use – e.g. “find
+papers by Sinha” matches an author stored as “Ankur Sinha”.  This is a
+deliberate, internally-fixed set (no user-facing configuration): the
+<code class="docutils literal notranslate"><span class="pre">authors</span></code> bibliographic field is the canonical person-name list today.
+Other name-bearing fields (titles, venues, repository names, usernames)
+are not expanded – users refer to those by exact value, or by partial
+text that the content retrievers (vector/BM25) already match.  See
+<a class="reference internal" href="#klea_utils.stores.utils.expand_person_names" title="klea_utils.stores.utils.expand_person_names"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.utils.expand_person_names()</span></code></a> and
+<a class="reference internal" href="#klea_utils.stores.utils.display_person_names" title="klea_utils.stores.utils.display_person_names"><code class="xref py py-func docutils literal notranslate"><span class="pre">klea_utils.stores.utils.display_person_names()</span></code></a>.</p>
 </dd></dl>
 
 <dl class="py data">
@@ -917,6 +967,108 @@ never match.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.normalize_config_filters">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">normalize_config_filters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allowed_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#klea_utils.stores.config.FilterFieldInfo" title="klea_utils.stores.config.FilterFieldInfo"><span class="pre">FilterFieldInfo</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#normalize_config_filters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.normalize_config_filters" title="Link to this definition">¶</a></dt>
+<dd><p>Validate configured-domain filters into canonical DSL clauses.</p>
+<p><code class="docutils literal notranslate"><span class="pre">filters</span></code> maps a metadata field name (from a deployment’s
+<code class="docutils literal notranslate"><span class="pre">filter_fields</span></code> configuration) to an operand produced by the
+retrieval query generator: a bare scalar, a list of scalars, or an
+operator expression dict (<code class="docutils literal notranslate"><span class="pre">{op:</span> <span class="pre">value}</span></code>).  Each configured field’s
+<code class="docutils literal notranslate"><span class="pre">value_type</span></code> decides how a bare operand is interpreted:</p>
+<ul class="simple">
+<li><p>scalar fields (<code class="docutils literal notranslate"><span class="pre">string</span></code>/<code class="docutils literal notranslate"><span class="pre">int</span></code>/<code class="docutils literal notranslate"><span class="pre">float</span></code>): a bare value is
+<code class="docutils literal notranslate"><span class="pre">$eq</span></code>; a list of values is <code class="docutils literal notranslate"><span class="pre">$in</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">list</span></code> fields (e.g. <code class="docutils literal notranslate"><span class="pre">tags</span></code>): a bare value requires element
+membership (<code class="docutils literal notranslate"><span class="pre">$contains</span></code>); several values combine with <code class="docutils literal notranslate"><span class="pre">$and</span></code>
+(every value must be present), mirroring the bibliographic
+<code class="docutils literal notranslate"><span class="pre">authors</span></code>/<code class="docutils literal notranslate"><span class="pre">keywords</span></code> handling in
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">RetrievalQueryOutput.to_metadata_filter()</span></code>.</p></li>
+</ul>
+<p>An operator expression dict is validated and normalized through
+<a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a>; an unsupported operator or
+malformed operand raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+<p>Field names not declared in <em>allowed_fields</em> are ignored with a
+warning and never reach a backend (the generator must not be able to
+emit a key the deployment did not configure).  An empty operand list
+is likewise ignored.</p>
+<p>The result is a list of single-clause DSL dicts, each directly
+consumable by <a class="reference internal" href="#klea_utils.stores.filters.validate_metadata_filter" title="klea_utils.stores.filters.validate_metadata_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">validate_metadata_filter()</span></code></a> (and hence by every
+backend translator and the in-memory matcher).  An empty input
+returns <code class="docutils literal notranslate"><span class="pre">[]</span></code>.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">FilterFieldInfo</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"repository_type"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span>
+                    <span class="n">value_type</span><span class="o">=</span><span class="s2">"string"</span><span class="p">),</span>
+    <span class="n">FilterFieldInfo</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"tags"</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="s2">"list"</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">normalize_config_filters</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">"repository_type"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"github"</span><span class="p">,</span> <span class="s2">"dandi"</span><span class="p">],</span> <span class="s2">"tags"</span><span class="p">:</span> <span class="s2">"moose"</span><span class="p">},</span>
+    <span class="n">fields</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="o">-&gt;</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">"repository_type"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$in"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"github"</span><span class="p">,</span> <span class="s2">"dandi"</span><span class="p">]}},</span>
+    <span class="p">{</span><span class="s2">"tags"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="s2">"moose"</span><span class="p">}},</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filters</strong> – Field-name -&gt; operand mapping from the query generator</p></li>
+<li><p><strong>allowed_fields</strong> – Configured filter fields for the domain</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Canonical DSL single-clause dicts</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When an operator expression uses an unsupported
+operator or malformed operand</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.filters.restrict_metadata_filter">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">restrict_metadata_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metadata_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">allowed_field_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#set" title="(in Python v3.14)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#restrict_metadata_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.restrict_metadata_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Restrict a metadata filter to clauses on the allowed fields.</p>
+<p><code class="docutils literal notranslate"><span class="pre">metadata_filter</span></code> is a combined DSL filter (as produced by
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">RetrievalQueryOutput.to_metadata_filter()</span></code>): a single field
+clause, a top-level <code class="docutils literal notranslate"><span class="pre">$and</span></code>/<code class="docutils literal notranslate"><span class="pre">$or</span></code> of clauses, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.  This
+keeps only the clauses whose referenced metadata field(s) are in
+<em>allowed_field_names</em> and recombines the survivors (a single clause
+returned as-is, several wrapped in <code class="docutils literal notranslate"><span class="pre">$and</span></code>), so a domain that
+declares only e.g. <code class="docutils literal notranslate"><span class="pre">journal</span></code> never has a <code class="docutils literal notranslate"><span class="pre">username</span></code> clause
+applied to its retrievers.  A filter with nothing left returns
+<code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>A top-level <code class="docutils literal notranslate"><span class="pre">$or</span></code> is kept whole only when every field it references
+is allowed (partially splitting an <code class="docutils literal notranslate"><span class="pre">$or</span></code> would change its
+semantics); a top-level <code class="docutils literal notranslate"><span class="pre">$and</span></code> is decomposed and its sub-clauses
+filtered independently, so the multi-value <code class="docutils literal notranslate"><span class="pre">$and</span></code> clauses emitted by
+<a class="reference internal" href="#klea_utils.stores.filters.normalize_config_filters" title="klea_utils.stores.filters.normalize_config_filters"><code class="xref py py-func docutils literal notranslate"><span class="pre">normalize_config_filters()</span></code></a> are kept or dropped as a unit.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">restrict_metadata_filter</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">"$and"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"journal"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$eq"</span><span class="p">:</span> <span class="s2">"nature"</span><span class="p">}},</span>
+              <span class="p">{</span><span class="s2">"username"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$eq"</span><span class="p">:</span> <span class="s2">"padraig"</span><span class="p">}}]},</span>
+    <span class="p">{</span><span class="s2">"journal"</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="o">-&gt;</span> <span class="p">{</span><span class="s2">"journal"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$eq"</span><span class="p">:</span> <span class="s2">"nature"</span><span class="p">}}</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>metadata_filter</strong> – Combined metadata filter, or <code class="docutils literal notranslate"><span class="pre">None</span></code></p></li>
+<li><p><strong>allowed_field_names</strong> – Metadata field names the caller accepts</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The restricted filter, or <code class="docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.filters.to_chroma_filter">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.filters.</span></span><span class="sig-name descname"><span class="pre">to_chroma_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/filters.html#to_chroma_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.filters.to_chroma_filter" title="Link to this definition">¶</a></dt>
 <dd><p>Translate a filter to a Chroma <code class="docutils literal notranslate"><span class="pre">where</span></code> dict.</p>
@@ -1247,6 +1399,34 @@ directory, organised per source file.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.display_person_names">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">display_person_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#display_person_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.display_person_names" title="Link to this definition">¶</a></dt>
+<dd><p>Return the display-safe subset of an expanded person-name list.</p>
+<p><a class="reference internal" href="#klea_utils.stores.utils.expand_person_names" title="klea_utils.stores.utils.expand_person_names"><code class="xref py py-func docutils literal notranslate"><span class="pre">expand_person_names()</span></code></a> appends per-word and lowercase variants to
+a person-name field for filtering, but those variants must not appear
+in the reference material shown to the answer LLM (citations would
+otherwise read <code class="docutils literal notranslate"><span class="pre">Ankur</span> <span class="pre">Sinha;</span> <span class="pre">Sinha;</span> <span class="pre">ankur;</span> <span class="pre">sinha</span></code>).  This keeps only
+the real names: whole-lowercase entries and single-word entries that
+make up a longer entry are dropped, so a genuine single-name author
+(not a token of another entry) still displays.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">display_person_names</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">"Ankur Sinha"</span><span class="p">,</span> <span class="s2">"Padraig Gleeson"</span><span class="p">,</span> <span class="s2">"Sinha"</span><span class="p">,</span> <span class="s2">"gleeson"</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="o">-&gt;</span> <span class="p">[</span><span class="s2">"Ankur Sinha"</span><span class="p">,</span> <span class="s2">"Padraig Gleeson"</span><span class="p">]</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>names</strong> – Person-name list, possibly expanded</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The original full names, order-preserving</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="klea_utils.stores.utils.drop_collection">
 <span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">drop_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">store</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#drop_collection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.drop_collection" title="Link to this definition">¶</a></dt>
 <dd><p>Drop a vector store collection (portable across backends).</p>
@@ -1265,6 +1445,37 @@ instead.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – When the scheme is missing or unknown</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="klea_utils.stores.utils.expand_person_names">
+<span class="sig-prename descclassname"><span class="pre">klea_utils.stores.utils.</span></span><span class="sig-name descname"><span class="pre">expand_person_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/stores/utils.html#expand_person_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.stores.utils.expand_person_names" title="Link to this definition">¶</a></dt>
+<dd><p>Return <em>names</em> with per-word variants appended, order-preserving.</p>
+<p>Humans are referred to by parts of their full name (“find papers by
+Sinha” for an author stored as “Ankur Sinha”), so person-name list
+fields (<a class="reference internal" href="#klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS" title="klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS"><code class="xref py py-data docutils literal notranslate"><span class="pre">klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS</span></code></a>)
+are expanded at store time: each full name is kept, every whitespace
+token plus its lowercase form is added, and the lowercased full name
+is added too.  This makes an exact-membership retrieval filter
+(<code class="docutils literal notranslate"><span class="pre">$contains</span></code>) match the partial name in any form and case,
+uniformly on every store backend.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">expand_person_names</span><span class="p">([</span><span class="s2">"Ankur Sinha"</span><span class="p">])</span>
+<span class="o">-&gt;</span> <span class="p">[</span><span class="s2">"Ankur Sinha"</span><span class="p">,</span> <span class="s2">"ankur sinha"</span><span class="p">,</span> <span class="s2">"Ankur"</span><span class="p">,</span> <span class="s2">"Sinha"</span><span class="p">,</span>
+    <span class="s2">"ankur"</span><span class="p">,</span> <span class="s2">"sinha"</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The expansion is idempotent (expanding an already-expanded list is a
+no-op), so re-applying the store metadata policy is safe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>names</strong> – List of author display names</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Names plus per-word and lowercase variants, deduplicated in
+order of first appearance.  Non-string elements are skipped.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1558,7 +1769,12 @@ budget</p>
 <li><a class="reference internal" href="#klea_utils.stores.config.BM25StoreInfo.model_config"><code class="docutils literal notranslate"><span class="pre">BM25StoreInfo.model_config</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#klea_utils.stores.config.FilterFieldInfo"><code class="docutils literal notranslate"><span class="pre">FilterFieldInfo</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.config.FilterFieldInfo.model_config"><code class="docutils literal notranslate"><span class="pre">FilterFieldInfo.model_config</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#klea_utils.stores.config.PerDomainConfig"><code class="docutils literal notranslate"><span class="pre">PerDomainConfig</span></code></a><ul>
+<li><a class="reference internal" href="#klea_utils.stores.config.PerDomainConfig.filter_fields"><code class="docutils literal notranslate"><span class="pre">PerDomainConfig.filter_fields</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.config.PerDomainConfig.model_config"><code class="docutils literal notranslate"><span class="pre">PerDomainConfig.model_config</span></code></a></li>
 </ul>
 </li>
@@ -1579,6 +1795,7 @@ budget</p>
 <li><a class="reference internal" href="#module-klea_utils.stores.metadata">Stored metadata schema</a><ul>
 <li><a class="reference internal" href="#klea_utils.stores.metadata.ALWAYS_STORED_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">ALWAYS_STORED_METADATA_KEYS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.metadata.MACHINE_SET_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">MACHINE_SET_METADATA_KEYS</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS"><code class="docutils literal notranslate"><span class="pre">PERSON_NAME_FILTER_FIELDS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.metadata.SHARED_DOC_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">SHARED_DOC_METADATA_KEYS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.metadata.STORE_DROPPED_METADATA_KEYS"><code class="docutils literal notranslate"><span class="pre">STORE_DROPPED_METADATA_KEYS</span></code></a></li>
 </ul>
@@ -1633,6 +1850,8 @@ budget</p>
 <li><a class="reference internal" href="#klea_utils.stores.filters.FIELD_OPERATORS"><code class="docutils literal notranslate"><span class="pre">FIELD_OPERATORS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.filters.LOGICAL_OPERATORS"><code class="docutils literal notranslate"><span class="pre">LOGICAL_OPERATORS</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.filters.filter_docs_by_metadata"><code class="docutils literal notranslate"><span class="pre">filter_docs_by_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.normalize_config_filters"><code class="docutils literal notranslate"><span class="pre">normalize_config_filters()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.filters.restrict_metadata_filter"><code class="docutils literal notranslate"><span class="pre">restrict_metadata_filter()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.filters.to_chroma_filter"><code class="docutils literal notranslate"><span class="pre">to_chroma_filter()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.filters.to_pgvector_filter"><code class="docutils literal notranslate"><span class="pre">to_pgvector_filter()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.filters.to_qdrant_filter"><code class="docutils literal notranslate"><span class="pre">to_qdrant_filter()</span></code></a></li>
@@ -1662,7 +1881,9 @@ budget</p>
 <li><a class="reference internal" href="#klea_utils.stores.utils.RRF_K"><code class="docutils literal notranslate"><span class="pre">RRF_K</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.SOURCE_SCORES_KEY"><code class="docutils literal notranslate"><span class="pre">SOURCE_SCORES_KEY</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.TEMPLATE_FILE_NAME"><code class="docutils literal notranslate"><span class="pre">TEMPLATE_FILE_NAME</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.display_person_names"><code class="docutils literal notranslate"><span class="pre">display_person_names()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.drop_collection"><code class="docutils literal notranslate"><span class="pre">drop_collection()</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.stores.utils.expand_person_names"><code class="docutils literal notranslate"><span class="pre">expand_person_names()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.find_source_files"><code class="docutils literal notranslate"><span class="pre">find_source_files()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.instantiate_vector_store"><code class="docutils literal notranslate"><span class="pre">instantiate_vector_store()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.stores.utils.normalize_text"><code class="docutils literal notranslate"><span class="pre">normalize_text()</span></code></a></li>

@@ -395,6 +395,58 @@ relevance score is a cosine similarity (and the retrieval
 different knowledge areas – the classifier routes queries to the
 right domain automatically.</p>
 </section>
+<section id="domain-filter-fields">
+<span id="filter-fields"></span><h2>Domain filter fields<a class="headerlink" href="#domain-filter-fields" title="Link to this heading">¶</a></h2>
+<p>Domains can declare <strong>retrieval filter fields</strong> with <code class="docutils literal notranslate"><span class="pre">filter_fields</span></code>:
+a list of <code class="docutils literal notranslate"><span class="pre">{name,</span> <span class="pre">description,</span> <span class="pre">value_type}</span></code> entries.  These are the
+only metadata fields the retrieval query generator may constrain on –
+the generator’s prompt lists exactly the fields the domain declares, so
+it never proposes a filter on a metadata key that does not exist.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"repository_type"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hosting type: github, dandi, biomodels or figshare"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span>
+<span class="p">},</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tags"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"repository tags"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"value_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">value_type</span></code> controls how a bare constraint is matched:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">string</span></code> / <code class="docutils literal notranslate"><span class="pre">int</span></code> / <code class="docutils literal notranslate"><span class="pre">float</span></code> – exact equality; a list of values
+becomes <code class="docutils literal notranslate"><span class="pre">$in</span></code> (any-of), and numeric fields also accept a range
+written as an operator expression (e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;$gte&quot;:</span> <span class="pre">2020,</span>
+<span class="pre">&quot;$lte&quot;:</span> <span class="pre">2025}</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">list</span></code> – element membership (<code class="docutils literal notranslate"><span class="pre">$contains</span></code>): the metadata list must
+contain the stated value, and several values require <em>every</em> one to be
+present.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">description</span></code> is shown to the retrieval query generator so it
+knows when and how to populate each field.</p>
+<p>Filters are <strong>domain-scoped</strong>: the whole domain (all of its stores)
+shares one declared set.  This matches the expectation that the stores
+of a domain are built from the same corpus – and therefore carry the
+same metadata keys.  When a query is routed to several domains, each
+domain only receives the filter clauses on the fields it declares, so a
+papers domain never has a repository filter applied to it (and vice
+versa).</p>
+<p>Some practical notes:</p>
+<ul class="simple">
+<li><p><strong>Person-name fields</strong> (e.g. <code class="docutils literal notranslate"><span class="pre">authors</span></code> on a papers domain) match
+partial names: stored author names are expanded with per-word variants
+at store time, so “Sinha” matches an author stored as “Ankur Sinha”
+(see <a class="reference internal" href="#metadata-extraction"><span class="std std-ref">Bibliographic metadata extraction</span></a>).</p></li>
+<li><p>A domain that declares no <code class="docutils literal notranslate"><span class="pre">filter_fields</span></code> gets unfiltered retrieval
+– queries are matched purely by semantic and lexical search.  This is
+the right default for general documentation.</p></li>
+<li><p>A declared field only <em>works</em> on stores that actually store that
+metadata key; retrieval on a store missing the key yields nothing from
+that store for that constraint.</p></li>
+</ul>
+</section>
 <section id="hybrid-retrieval-vector-bm25">
 <span id="hybrid-retrieval"></span><h2>Hybrid retrieval (vector + BM25)<a class="headerlink" href="#hybrid-retrieval-vector-bm25" title="Link to this heading">¶</a></h2>
 <p>Each domain can configure <code class="docutils literal notranslate"><span class="pre">vector_stores</span></code>, <code class="docutils literal notranslate"><span class="pre">bm25_stores</span></code>, both, or
@@ -613,6 +665,7 @@ RAG system end to end</p></li>
 <li><a class="reference internal" href="#why-rag-over-fine-tuning">Why RAG over fine-tuning?</a></li>
 <li><a class="reference internal" href="#klea-s-architecture">Klea’s architecture</a></li>
 <li><a class="reference internal" href="#domains-and-stores">Domains and stores</a></li>
+<li><a class="reference internal" href="#domain-filter-fields">Domain filter fields</a></li>
 <li><a class="reference internal" href="#hybrid-retrieval-vector-bm25">Hybrid retrieval (vector + BM25)</a></li>
 <li><a class="reference internal" href="#reference-material-for-the-answer-llm">Reference material for the answer LLM</a></li>
 <li><a class="reference internal" href="#bibliographic-metadata-extraction">Bibliographic metadata extraction</a></li>

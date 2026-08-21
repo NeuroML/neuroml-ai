@@ -300,6 +300,8 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">FilterFieldInfo</span>
+
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="c1">#: Operators valid inside a single field clause of the normalized filter DSL.</span>
@@ -519,6 +521,159 @@
 
 
 
+<div class="viewcode-block" id="normalize_config_filters">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.filters.normalize_config_filters">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_config_filters</span><span class="p">(</span>
+    <span class="n">filters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">allowed_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">FilterFieldInfo</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Validate configured-domain filters into canonical DSL clauses.</span>
+
+<span class="sd">    ``filters`` maps a metadata field name (from a deployment's</span>
+<span class="sd">    ``filter_fields`` configuration) to an operand produced by the</span>
+<span class="sd">    retrieval query generator: a bare scalar, a list of scalars, or an</span>
+<span class="sd">    operator expression dict (``{op: value}``).  Each configured field's</span>
+<span class="sd">    ``value_type`` decides how a bare operand is interpreted:</span>
+
+<span class="sd">    - scalar fields (``string``/``int``/``float``): a bare value is</span>
+<span class="sd">      ``$eq``; a list of values is ``$in``.</span>
+<span class="sd">    - ``list`` fields (e.g. ``tags``): a bare value requires element</span>
+<span class="sd">      membership (``$contains``); several values combine with ``$and``</span>
+<span class="sd">      (every value must be present), mirroring the bibliographic</span>
+<span class="sd">      ``authors``/``keywords`` handling in</span>
+<span class="sd">      :meth:`RetrievalQueryOutput.to_metadata_filter`.</span>
+
+<span class="sd">    An operator expression dict is validated and normalized through</span>
+<span class="sd">    :func:`validate_metadata_filter`; an unsupported operator or</span>
+<span class="sd">    malformed operand raises ``ValueError``.</span>
+
+<span class="sd">    Field names not declared in *allowed_fields* are ignored with a</span>
+<span class="sd">    warning and never reach a backend (the generator must not be able to</span>
+<span class="sd">    emit a key the deployment did not configure).  An empty operand list</span>
+<span class="sd">    is likewise ignored.</span>
+
+<span class="sd">    The result is a list of single-clause DSL dicts, each directly</span>
+<span class="sd">    consumable by :func:`validate_metadata_filter` (and hence by every</span>
+<span class="sd">    backend translator and the in-memory matcher).  An empty input</span>
+<span class="sd">    returns ``[]``.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        fields = [</span>
+<span class="sd">            FilterFieldInfo(name="repository_type", description="...",</span>
+<span class="sd">                            value_type="string"),</span>
+<span class="sd">            FilterFieldInfo(name="tags", description="...", value_type="list"),</span>
+<span class="sd">        ]</span>
+<span class="sd">        normalize_config_filters(</span>
+<span class="sd">            {"repository_type": ["github", "dandi"], "tags": "moose"},</span>
+<span class="sd">            fields,</span>
+<span class="sd">        )</span>
+<span class="sd">        -&gt; [</span>
+<span class="sd">            {"repository_type": {"$in": ["github", "dandi"]}},</span>
+<span class="sd">            {"tags": {"$contains": "moose"}},</span>
+<span class="sd">        ]</span>
+
+<span class="sd">    :param filters: Field-name -&gt; operand mapping from the query generator</span>
+<span class="sd">    :param allowed_fields: Configured filter fields for the domain</span>
+<span class="sd">    :returns: Canonical DSL single-clause dicts</span>
+<span class="sd">    :raises ValueError: When an operator expression uses an unsupported</span>
+<span class="sd">        operator or malformed operand</span>
+<span class="sd">    """</span>
+    <span class="n">allowed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FilterFieldInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">allowed_fields</span><span class="p">}</span>
+    <span class="n">clauses</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">operand</span> <span class="ow">in</span> <span class="n">filters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">allowed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Ignoring filter field </span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">: not declared in the "</span>
+                <span class="sa">f</span><span class="s2">"domain's filter_fields configuration"</span>
+            <span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">operand</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="c1"># Operator expression: validate and normalize to the canonical</span>
+            <span class="c1"># form (e.g. a ``{$gte, $lte}`` pair becomes an ``$and``).</span>
+            <span class="n">clause</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="n">operand</span><span class="p">}</span>
+            <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">validate_metadata_filter</span><span class="p">(</span><span class="n">clause</span><span class="p">))</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">operand</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">operand</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Ignoring empty filter list for field </span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">value_type</span> <span class="o">==</span> <span class="s2">"list"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">operand</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="n">operand</span><span class="p">}})</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">operand</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="n">operand</span><span class="p">[</span><span class="mi">0</span><span class="p">]}})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">{</span><span class="s2">"$and"</span><span class="p">:</span> <span class="p">[{</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$contains"</span><span class="p">:</span> <span class="n">value</span><span class="p">}}</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">operand</span><span class="p">]}</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">operand</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$in"</span><span class="p">:</span> <span class="n">operand</span><span class="p">}})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">clauses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">"$eq"</span><span class="p">:</span> <span class="n">operand</span><span class="p">}})</span>
+
+    <span class="k">return</span> <span class="n">clauses</span></div>
+
+
+
+<div class="viewcode-block" id="restrict_metadata_filter">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.filters.restrict_metadata_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">restrict_metadata_filter</span><span class="p">(</span>
+    <span class="n">metadata_filter</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">allowed_field_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Restrict a metadata filter to clauses on the allowed fields.</span>
+
+<span class="sd">    ``metadata_filter`` is a combined DSL filter (as produced by</span>
+<span class="sd">    :meth:`RetrievalQueryOutput.to_metadata_filter`): a single field</span>
+<span class="sd">    clause, a top-level ``$and``/``$or`` of clauses, or ``None``.  This</span>
+<span class="sd">    keeps only the clauses whose referenced metadata field(s) are in</span>
+<span class="sd">    *allowed_field_names* and recombines the survivors (a single clause</span>
+<span class="sd">    returned as-is, several wrapped in ``$and``), so a domain that</span>
+<span class="sd">    declares only e.g. ``journal`` never has a ``username`` clause</span>
+<span class="sd">    applied to its retrievers.  A filter with nothing left returns</span>
+<span class="sd">    ``None``.</span>
+
+<span class="sd">    A top-level ``$or`` is kept whole only when every field it references</span>
+<span class="sd">    is allowed (partially splitting an ``$or`` would change its</span>
+<span class="sd">    semantics); a top-level ``$and`` is decomposed and its sub-clauses</span>
+<span class="sd">    filtered independently, so the multi-value ``$and`` clauses emitted by</span>
+<span class="sd">    :func:`normalize_config_filters` are kept or dropped as a unit.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        restrict_metadata_filter(</span>
+<span class="sd">            {"$and": [{"journal": {"$eq": "nature"}},</span>
+<span class="sd">                      {"username": {"$eq": "padraig"}}]},</span>
+<span class="sd">            {"journal"},</span>
+<span class="sd">        )</span>
+<span class="sd">        -&gt; {"journal": {"$eq": "nature"}}</span>
+
+<span class="sd">    :param metadata_filter: Combined metadata filter, or ``None``</span>
+<span class="sd">    :param allowed_field_names: Metadata field names the caller accepts</span>
+<span class="sd">    :returns: The restricted filter, or ``None``</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">metadata_filter</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">metadata_filter</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"$and"</span><span class="p">}:</span>
+        <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">metadata_filter</span><span class="p">[</span><span class="s2">"$and"</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="p">[{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metadata_filter</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+
+    <span class="n">kept</span> <span class="o">=</span> <span class="p">[</span><span class="n">clause</span> <span class="k">for</span> <span class="n">clause</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="n">_clause_fields</span><span class="p">(</span><span class="n">clause</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">allowed_field_names</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">kept</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kept</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">kept</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"$and"</span><span class="p">:</span> <span class="n">kept</span><span class="p">}</span></div>
+
+
+
 <div class="viewcode-block" id="filter_docs_by_metadata">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.filters.filter_docs_by_metadata">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">filter_docs_by_metadata</span><span class="p">(</span><span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">f</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]:</span>
@@ -733,6 +888,28 @@
         <span class="c1"># with a substring match over the serialized JSON array text.</span>
         <span class="n">op</span><span class="p">,</span> <span class="n">operand</span> <span class="o">=</span> <span class="s2">"$like"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"%</span><span class="si">{</span><span class="n">operand</span><span class="si">}</span><span class="s2">%"</span>
     <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="p">{</span><span class="n">op</span><span class="p">:</span> <span class="n">operand</span><span class="p">}}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_clause_fields</span><span class="p">(</span><span class="n">clause</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the metadata fields referenced by a single-clause DSL dict.</span>
+
+<span class="sd">    Walks a canonical single-clause filter (from :func:`validate_metadata_filter`)</span>
+<span class="sd">    and collects the field names it constrains: a leaf field clause yields</span>
+<span class="sd">    its field; a logical combinator yields the union of its sub-clauses'</span>
+<span class="sd">    fields.  Used by :func:`restrict_metadata_filter` to decide whether a</span>
+<span class="sd">    clause may be applied to a domain whose declared field set does not</span>
+<span class="sd">    include it.</span>
+
+<span class="sd">    :param clause: Canonical single-clause DSL dict</span>
+<span class="sd">    :returns: Set of metadata field names the clause references</span>
+<span class="sd">    """</span>
+    <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">clause</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">LOGICAL_OPERATORS</span><span class="p">:</span>
+        <span class="n">fields</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">fields</span> <span class="o">|=</span> <span class="n">_clause_fields</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fields</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">}</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_clause_matches</span><span class="p">(</span><span class="n">clause</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">doc</span><span class="p">:</span> <span class="n">Document</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

@@ -293,7 +293,7 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">"""</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
 
@@ -339,13 +339,42 @@
 
 
 
+<div class="viewcode-block" id="FilterFieldInfo">
+<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.config.FilterFieldInfo">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FilterFieldInfo</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Configuration for a single retrievable metadata filter field.</span>
+
+<span class="sd">    A deployment declares, per domain, the metadata fields the retrieval</span>
+<span class="sd">    query generator may filter on.  Each entry describes one field: its</span>
+<span class="sd">    name (the metadata key stored on the documents), its semantics for</span>
+<span class="sd">    the LLM, and the operand type it accepts.</span>
+
+<span class="sd">    ``value_type`` controls how a bare operand from the LLM is mapped to</span>
+<span class="sd">    the filter DSL (see</span>
+<span class="sd">    :func:`klea_utils.stores.filters.normalize_config_filters`):</span>
+
+<span class="sd">    - ``"string"`` / ``"int"`` / ``"float"`` --- scalar fields.  A bare</span>
+<span class="sd">      value becomes ``$eq``; a list of values becomes ``$in``.</span>
+<span class="sd">    - ``"list"`` --- element-membership fields (e.g. ``tags``).  A bare</span>
+<span class="sd">      value becomes ``$contains``; several values combine with ``$and``</span>
+<span class="sd">      (every value must be present).</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">value_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"string"</span><span class="p">,</span> <span class="s2">"int"</span><span class="p">,</span> <span class="s2">"float"</span><span class="p">,</span> <span class="s2">"list"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"string"</span></div>
+
+
+
 <div class="viewcode-block" id="PerDomainConfig">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.config.PerDomainConfig">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PerDomainConfig</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Configuration for a single domain."""</span>
 
     <span class="n">vector_stores</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">VectorStoreInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">bm25_stores</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BM25StoreInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></div>
+    <span class="n">bm25_stores</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BM25StoreInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1">#: Retrieval filter fields the query generator may use for this domain.</span>
+    <span class="n">filter_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">FilterFieldInfo</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></div>
 
 
 
