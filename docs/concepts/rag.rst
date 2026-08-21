@@ -113,6 +113,64 @@ This means one RAG server can simultaneously serve completely
 different knowledge areas -- the classifier routes queries to the
 right domain automatically.
 
+.. _filter-fields:
+
+Domain filter fields
+--------------------
+
+Domains can declare **retrieval filter fields** with ``filter_fields``:
+a list of ``{name, description, value_type}`` entries.  These are the
+only metadata fields the retrieval query generator may constrain on --
+the generator's prompt lists exactly the fields the domain declares, so
+it never proposes a filter on a metadata key that does not exist.
+
+.. code-block:: json
+
+   {
+     "name": "repository_type",
+     "description": "hosting type: github, dandi, biomodels or figshare",
+     "value_type": "string"
+   },
+   {
+     "name": "tags",
+     "description": "repository tags",
+     "value_type": "list"
+   }
+
+``value_type`` controls how a bare constraint is matched:
+
+* ``string`` / ``int`` / ``float`` -- exact equality; a list of values
+  becomes ``$in`` (any-of), and numeric fields also accept a range
+  written as an operator expression (e.g. ``{"$gte": 2020,
+  "$lte": 2025}``).
+* ``list`` -- element membership (``$contains``): the metadata list must
+  contain the stated value, and several values require *every* one to be
+  present.
+
+The ``description`` is shown to the retrieval query generator so it
+knows when and how to populate each field.
+
+Filters are **domain-scoped**: the whole domain (all of its stores)
+shares one declared set.  This matches the expectation that the stores
+of a domain are built from the same corpus -- and therefore carry the
+same metadata keys.  When a query is routed to several domains, each
+domain only receives the filter clauses on the fields it declares, so a
+papers domain never has a repository filter applied to it (and vice
+versa).
+
+Some practical notes:
+
+* **Person-name fields** (e.g. ``authors`` on a papers domain) match
+  partial names: stored author names are expanded with per-word variants
+  at store time, so "Sinha" matches an author stored as "Ankur Sinha"
+  (see :ref:`metadata-extraction`).
+* A domain that declares no ``filter_fields`` gets unfiltered retrieval
+  -- queries are matched purely by semantic and lexical search.  This is
+  the right default for general documentation.
+* A declared field only *works* on stores that actually store that
+  metadata key; retrieval on a store missing the key yields nothing from
+  that store for that constraint.
+
 .. _hybrid-retrieval:
 
 Hybrid retrieval (vector + BM25)

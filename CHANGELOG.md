@@ -10,6 +10,11 @@
   `"Ankur"` or `"ankur sinha"`).  Existing stores predate this and are
   stale -- regenerate them (`klea-stores-create store --force`,
   re-running `chunk` first).
+- The built-in bibliographic retrieval filter fields (`journal`,
+  `authors`, `keywords`, `year_from`/`year_to`) are removed.  Filter
+  fields are now declared per domain under `filter_fields`; deployments
+  that relied on automatic bibliographic filtering must declare the
+  fields they want (e.g. `journal`, `authors`, `year`) explicitly.
 - Package `klea_code` renamed to `klea_agent`; CLIs `klea-code` ->
   `klea`, `klea-code-serve` -> `klea-serve`; log ids `klea-code-tui`/
   `klea-code-web` -> `klea-tui`/`klea-web`; env prefix `KLEA_CODE_` ->
@@ -46,6 +51,11 @@
 
 ### Added
 
+- Configurable per-domain retrieval filter fields (`filter_fields` in the
+  domain config): the query generator only proposes the declared metadata
+  fields, and each domain only receives the filter clauses on its own
+  fields at retrieval (per-domain filter routing), so cross-domain
+  queries never apply one domain's fields to another's stores.
 - Automatic bibliographic metadata extraction (`klea_utils.biblio`;
   DOI services, PDF Info, Docling, regex tiers) pre-fills the `DEFAULT`
   entries of `metadata-map.template.json`; `KLEA_INGEST_MAILTO` opts

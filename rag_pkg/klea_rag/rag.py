@@ -132,10 +132,10 @@ class RAG(BaseLangGraph):
         """Configure resources"""
         assert self.app_config
         domains = self.app_config.domains
-        domain_vs = {}
+        domain_stores = {}
         domain_ms = {}
         for d, inf in domains.items():
-            domain_vs[d] = inf.model_dump(
+            domain_stores[d] = inf.model_dump(
                 include={
                     "vector_stores",
                     "bm25_stores",
@@ -147,11 +147,11 @@ class RAG(BaseLangGraph):
             # flat config for mcp client initialization
             domain_ms.update(inf.model_dump(include={"mcp_servers"})["mcp_servers"])
 
-        self.logger.debug(f"{domain_vs = }")
+        self.logger.debug(f"{domain_stores = }")
         self.logger.debug(f"{domain_ms = }")
 
         # set up configs
-        self.retriever_config = RetrieverConfig(domains=domain_vs)
+        self.retriever_config = RetrieverConfig(domains=domain_stores)
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
         self.k_inc = self.app_config.general.k_inc

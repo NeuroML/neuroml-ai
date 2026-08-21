@@ -42,6 +42,23 @@
                     "path": "../../deployments/huggingface/vector-stores/nml-schema-docs/bm25.pkl"
                 }
             ],
+            "filter_fields": [
+                {
+                    "name": "journal",
+                    "description": "the journal a paper was published in; use the full journal name",
+                    "value_type": "string"
+                },
+                {
+                    "name": "authors",
+                    "description": "an author of the paper; surname or full name (partial names match)",
+                    "value_type": "list"
+                },
+                {
+                    "name": "year",
+                    "description": "the publication year; a single year or a range",
+                    "value_type": "int"
+                }
+            ],
             "mcp_servers": {
                 "NeuroML":
                 {

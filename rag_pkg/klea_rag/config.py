@@ -92,6 +92,24 @@ def write_config_template(output_dir: str | Path) -> Path:
                 bm25_stores=[
                     {"name": "my-docs-bm25", "path": "/path/to/my-bm25-corpus.pkl"}
                 ],
+                # Filter fields are declared per domain: the retrieval query
+                # generator may only propose constraints on metadata fields
+                # listed here (a store in the domain must store them).
+                filter_fields=[
+                    {
+                        "name": "topic",
+                        "description": (
+                            "the section or topic a document belongs to; "
+                            "use the exact topic name"
+                        ),
+                        "value_type": "string",
+                    },
+                    {
+                        "name": "tags",
+                        "description": "topic tags applied to a document",
+                        "value_type": "list",
+                    },
+                ],
             )
         },
     )
