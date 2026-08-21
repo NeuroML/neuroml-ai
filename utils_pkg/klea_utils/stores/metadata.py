@@ -44,3 +44,17 @@ SHARED_DOC_METADATA_KEYS = ALWAYS_STORED_METADATA_KEYS - MACHINE_SET_METADATA_KE
 #: meaning in a store.  See
 #: :func:`klea_utils.stores.ingestion._apply_store_metadata_policy`.
 STORE_DROPPED_METADATA_KEYS = frozenset({"source_path", "source_type", "source_url"})
+
+#: Metadata fields whose values are lists of human full names.  At store
+#: time such fields are expanded with per-word variants (surname, every
+#: whitespace token, and lowercase forms) so an exact-membership retrieval
+#: filter matches the partial name a user is likely to use -- e.g. "find
+#: papers by Sinha" matches an author stored as "Ankur Sinha".  This is a
+#: deliberate, internally-fixed set (no user-facing configuration): the
+#: ``authors`` bibliographic field is the canonical person-name list today.
+#: Other name-bearing fields (titles, venues, repository names, usernames)
+#: are not expanded -- users refer to those by exact value, or by partial
+#: text that the content retrievers (vector/BM25) already match.  See
+#: :func:`klea_utils.stores.utils.expand_person_names` and
+#: :func:`klea_utils.stores.utils.display_person_names`.
+PERSON_NAME_FILTER_FIELDS = frozenset({"authors"})

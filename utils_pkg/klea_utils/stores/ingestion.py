@@ -20,12 +20,14 @@ from langchain_core.documents import Document
 from ..biblio.extract import Resolver, extract_metadata, extract_metadata_from_text
 from ..llm import setup_embedding
 from .metadata import (
+    PERSON_NAME_FILTER_FIELDS,
     STORE_DROPPED_METADATA_KEYS,
 )
 from .utils import (
     CACHE_DIR_NAME,
     TEMPLATE_FILE_NAME,
     drop_collection,
+    expand_person_names,
     find_source_files,
     instantiate_vector_store,
     normalize_text,
@@ -1288,14 +1290,25 @@ def _apply_store_metadata_policy(metadata: dict[str, Any]) -> dict[str, Any]:
     metadata map is folded into chunks (:meth:`StoresBuilder.chunk_all`) and
     as a final gate in :func:`_sanitize_store_metadata`.
 
+    Person-name list fields (:data:`PERSON_NAME_FILTER_FIELDS`) are
+    additionally expanded with per-word variants (see
+    :func:`klea_utils.stores.utils.expand_person_names`), so an exact
+    ``$contains`` filter matches a partial name.  The expansion is
+    idempotent, so re-applying the policy is safe.
+
     :param metadata: Document metadata dict
     :returns: Copy of *metadata* without internal/provenance keys
     """
-    return {
+    filtered = {
         key: value
         for key, value in metadata.items()
         if not (key.startswith("_") or key in STORE_DROPPED_METADATA_KEYS)
     }
+    for key in PERSON_NAME_FILTER_FIELDS:
+        value = filtered.get(key)
+        if isinstance(value, list):
+            filtered[key] = expand_person_names(value)
+    return filtered
 
 
 def _sanitize_store_metadata(metadata: dict[str, Any]) -> dict[str, Any]:

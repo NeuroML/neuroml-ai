@@ -4,6 +4,12 @@
 
 ### Breaking changes
 
+- Person-name metadata fields (currently `authors`) are now expanded at
+  store time with per-word and lowercase variants (e.g. an author stored
+  as `"Ankur Sinha"` also matches filters for `"Sinha"`, `"sinha"`,
+  `"Ankur"` or `"ankur sinha"`).  Existing stores predate this and are
+  stale -- regenerate them (`klea-stores-create store --force`,
+  re-running `chunk` first).
 - Package `klea_code` renamed to `klea_agent`; CLIs `klea-code` ->
   `klea`, `klea-code-serve` -> `klea-serve`; log ids `klea-code-tui`/
   `klea-code-web` -> `klea-tui`/`klea-web`; env prefix `KLEA_CODE_` ->

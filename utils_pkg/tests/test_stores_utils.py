@@ -9,12 +9,15 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from typing import cast
 
 import pytest
 from klea_utils.stores.utils import (
     CACHE_DIR_NAME,
     REF_DOC_OVERHEAD,
+    display_person_names,
     drop_collection,
+    expand_person_names,
     find_source_files,
     instantiate_vector_store,
     rerank_by_recency,
@@ -648,3 +651,57 @@ def test_find_source_files_sorted_and_files_only(tmp_path):
     a.write_text("# A\n")
     (sub / "c.md").write_text("# C\n")
     assert find_source_files(tmp_path) == [a, b, sub / "c.md"]
+
+
+def test_expand_person_names_adds_word_and_lowercase_variants():
+    """Each full name keeps its word tokens, lowercase forms, and lowered full name."""
+    assert expand_person_names(["Ankur Sinha"]) == [
+        "Ankur Sinha",
+        "ankur sinha",
+        "Ankur",
+        "Sinha",
+        "ankur",
+        "sinha",
+    ]
+
+
+def test_expand_person_names_is_idempotent():
+    """Re-expanding an expanded list is a no-op (store policy re-applies)."""
+    once = expand_person_names(["Ankur Sinha", "Padraig Gleeson"])
+    assert expand_person_names(once) == once
+
+
+def test_expand_person_names_dedupes_and_skips_non_strings():
+    assert expand_person_names(cast(list[str], ["Alice", "alice", 42, None])) == [
+        "Alice",
+        "alice",
+    ]
+
+
+def test_display_person_names_keeps_full_names_drops_variants():
+    """Only the real names show; word/lowercase variants are hidden."""
+    expanded = expand_person_names(["Ankur Sinha", "Padraig Gleeson"])
+    assert display_person_names(expanded) == ["Ankur Sinha", "Padraig Gleeson"]
+
+
+def test_display_person_names_keeps_genuine_single_name_author():
+    """A single-word name is kept unless it makes up a longer entry."""
+    assert display_person_names(["Plato"]) == ["Plato"]
+    assert display_person_names(["Sinha", "Ankur Sinha"]) == ["Ankur Sinha"]
+
+
+def test_serialize_reference_material_hides_person_name_variants():
+    """Expanded author variants do not leak into the answer LLM's references."""
+    d1 = Document(
+        page_content="one",
+        metadata={
+            "file_name": "paper.pdf",
+            "headings": ["Intro"],
+            "authors": expand_person_names(["Ankur Sinha", "Padraig Gleeson"]),
+            "year": 2020,
+        },
+    )
+    text = serialize_reference_material({"Docs": [(d1, 0.9)]})
+    assert "authors=['Ankur Sinha', 'Padraig Gleeson']" in text
+    assert "sinha" not in text
+    assert "ankur" not in text

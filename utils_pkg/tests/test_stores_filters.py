@@ -18,6 +18,7 @@ from klea_utils.stores.filters import (
     to_qdrant_filter,
     validate_metadata_filter,
 )
+from klea_utils.stores.utils import expand_person_names
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
@@ -268,3 +269,18 @@ def test_filter_docs_by_metadata_missing_metadata_never_matches():
         {"journal": "Nature"},
     )
     assert got == []
+
+
+def test_filter_docs_by_metadata_matches_expanded_person_name_variants():
+    """A partial-name operand matches an author list expanded at store time."""
+    docs = [
+        Document(
+            page_content="p",
+            metadata={"authors": expand_person_names(["Ankur Sinha"])},
+        )
+    ]
+    assert filter_docs_by_metadata(docs, {"authors": {"$contains": "Sinha"}})
+    assert filter_docs_by_metadata(docs, {"authors": {"$contains": "sinha"}})
+    assert filter_docs_by_metadata(docs, {"authors": {"$contains": "Ankur Sinha"}})
+    assert filter_docs_by_metadata(docs, {"authors": {"$contains": "ankur sinha"}})
+    assert not filter_docs_by_metadata(docs, {"authors": {"$contains": "Magee"}})

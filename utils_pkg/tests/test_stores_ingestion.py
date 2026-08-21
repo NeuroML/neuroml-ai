@@ -26,7 +26,11 @@ from klea_utils.stores.ingestion import (
     _sanitize_store_metadata,
     _split_url_list,
 )
-from klea_utils.stores.utils import instantiate_vector_store, normalize_text
+from klea_utils.stores.utils import (
+    expand_person_names,
+    instantiate_vector_store,
+    normalize_text,
+)
 from langchain_core.documents import Document
 from ollama import ResponseError
 
@@ -226,8 +230,9 @@ class TestNormalizeText:
             "url_doi": "https://doi.org/x",
         }
         out = _sanitize_store_metadata(meta)
+        # "authors" is a person-name field, so it is expanded per name.
         assert out == {
-            "authors": ["X", "Y"],
+            "authors": ["X", "x", "Y", "y"],
             "file_name": "a.md",
             "url_doi": "https://doi.org/x",
         }
@@ -235,8 +240,12 @@ class TestNormalizeText:
         assert meta["headings"] == []
 
     def test_sanitize_store_metadata_keeps_non_empty_lists(self):
-        """Non-empty list values (e.g. authors) survive sanitization."""
-        assert _sanitize_store_metadata({"authors": ["X"]}) == {"authors": ["X"]}
+        """Non-empty list values (e.g. authors) survive sanitization.
+
+        Person-name fields are also expanded, so "X" gains its lowercase
+        variant here.
+        """
+        assert _sanitize_store_metadata({"authors": ["X"]}) == {"authors": ["X", "x"]}
 
     def test_sanitize_store_metadata_drops_policy_keys(self):
         """Internal/provenance keys are dropped alongside empty values."""
@@ -283,7 +292,41 @@ class TestNormalizeText:
             "url_orcid": "https://orcid.org/1",
             "custom_key": "researcher-value",
         }
-        assert _apply_store_metadata_policy(meta) == meta
+        # "authors" is a person-name field, so it is expanded (see the
+        # dedicated expansion test below); everything else passes through.
+        out = _apply_store_metadata_policy(meta)
+        assert out == {**meta, "authors": ["X", "x"]}
+
+    def test_apply_store_metadata_policy_expands_person_names(self):
+        """Person-name list fields gain word/lowercase variants; others don't."""
+        meta = {
+            "authors": ["Ankur Sinha", "Padraig Gleeson"],
+            "keywords": ["cortex", "spikes"],
+            "tags": ["experimental"],
+        }
+        out = _apply_store_metadata_policy(meta)
+        expected_authors = expand_person_names(["Ankur Sinha", "Padraig Gleeson"])
+        assert out["authors"] == expected_authors
+        assert "Sinha" in out["authors"]
+        assert "sinha" in out["authors"]
+        assert "ankur" in out["authors"]
+        # Non-person-name list fields are untouched.
+        assert out["keywords"] == ["cortex", "spikes"]
+        assert out["tags"] == ["experimental"]
+
+    def test_sanitize_store_metadata_expands_person_names(self):
+        """The final store gate applies the expansion to the stored metadata."""
+        meta = {"title": "T", "authors": ["Ankur Sinha"], "headings": []}
+        out = _sanitize_store_metadata(meta)
+        assert out["authors"] == [
+            "Ankur Sinha",
+            "ankur sinha",
+            "Ankur",
+            "Sinha",
+            "ankur",
+            "sinha",
+        ]
+        assert "headings" not in out
 
 
 class _FakeMeta:
@@ -1602,7 +1645,7 @@ class TestIngestion:
         meta = fake.added[0].metadata
         assert "headings" not in meta
         assert "extra" not in meta
-        assert meta["authors"] == ["X"]
+        assert meta["authors"] == ["X", "x"]
         assert meta["file_name"] == "a.md"
         assert doc.metadata["headings"] == []
 

@@ -14,12 +14,15 @@ import logging
 import re
 import unicodedata
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document
 
-from klea_utils.stores.metadata import SHARED_DOC_METADATA_KEYS
+from klea_utils.stores.metadata import (
+    PERSON_NAME_FILTER_FIELDS,
+    SHARED_DOC_METADATA_KEYS,
+)
 
 #: Name of the chunk-cache directory created inside a source directory by
 #: the ingestion pipeline (holds the per-file pickled chunks, the
@@ -181,6 +184,92 @@ def normalize_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
     # Collapse repeated horizontal whitespace and trim.
     return re.sub(r"[ \t]{2,}", " ", text).strip()
+
+
+def expand_person_names(names: list[str]) -> list[str]:
+    """Return *names* with per-word variants appended, order-preserving.
+
+    Humans are referred to by parts of their full name ("find papers by
+    Sinha" for an author stored as "Ankur Sinha"), so person-name list
+    fields (:data:`klea_utils.stores.metadata.PERSON_NAME_FILTER_FIELDS`)
+    are expanded at store time: each full name is kept, every whitespace
+    token plus its lowercase form is added, and the lowercased full name
+    is added too.  This makes an exact-membership retrieval filter
+    (``$contains``) match the partial name in any form and case,
+    uniformly on every store backend.
+
+    Example::
+
+        expand_person_names(["Ankur Sinha"])
+        -> ["Ankur Sinha", "ankur sinha", "Ankur", "Sinha",
+            "ankur", "sinha"]
+
+    The expansion is idempotent (expanding an already-expanded list is a
+    no-op), so re-applying the store metadata policy is safe.
+
+    :param names: List of author display names
+    :returns: Names plus per-word and lowercase variants, deduplicated in
+        order of first appearance.  Non-string elements are skipped.
+    """
+    expanded: list[str] = []
+    seen: set[str] = set()
+
+    def add(variant: str) -> None:
+        if variant not in seen:
+            seen.add(variant)
+            expanded.append(variant)
+
+    for name in names:
+        if not isinstance(name, str):
+            continue
+        add(name)
+        add(name.lower())
+        for token in name.split():
+            add(token)
+        for token in name.split():
+            add(token.lower())
+
+    return expanded
+
+
+def display_person_names(names: list[str]) -> list[str]:
+    """Return the display-safe subset of an expanded person-name list.
+
+    :func:`expand_person_names` appends per-word and lowercase variants to
+    a person-name field for filtering, but those variants must not appear
+    in the reference material shown to the answer LLM (citations would
+    otherwise read ``Ankur Sinha; Sinha; ankur; sinha``).  This keeps only
+    the real names: whole-lowercase entries and single-word entries that
+    make up a longer entry are dropped, so a genuine single-name author
+    (not a token of another entry) still displays.
+
+    Example::
+
+        display_person_names(
+            ["Ankur Sinha", "Padraig Gleeson", "Sinha", "gleeson"]
+        )
+        -> ["Ankur Sinha", "Padraig Gleeson"]
+
+    :param names: Person-name list, possibly expanded
+    :returns: The original full names, order-preserving
+    """
+    multi_word: list[str] = [
+        n for n in names if isinstance(n, str) and len(n.split()) > 1
+    ]
+    tokens_of_others: set[str] = set()
+    for n in multi_word:
+        tokens_of_others.update(n.split())
+
+    shown: list[str] = []
+    for n in names:
+        if not isinstance(n, str):
+            continue
+        if n.islower():
+            continue
+        if len(n.split()) == 1 and n in tokens_of_others:
+            continue
+        shown.append(n)
+    return shown
 
 
 def rrf_merge(
@@ -399,11 +488,15 @@ def serialize_reference_material(
             # are emitted once.  A url* key is promoted to the file level
             # too when every chunk carries the identical value (the common
             # case); otherwise it stays per-chunk below.
-            file_meta = {
-                k: v
-                for k, v in first_doc.metadata.items()
-                if k in SHARED_DOC_METADATA_KEYS
-            }
+            file_meta: dict[str, Any] = {}
+            for k, v in first_doc.metadata.items():
+                if k not in SHARED_DOC_METADATA_KEYS:
+                    continue
+                if k in PERSON_NAME_FILTER_FIELDS and isinstance(v, list):
+                    # Person-name fields carry expanded per-word variants
+                    # for filtering; show only the real names.
+                    v = display_person_names(v)
+                file_meta[k] = v
             url_keys = {
                 k for doc, _ in file_docs for k in doc.metadata if k.startswith("url")
             }
