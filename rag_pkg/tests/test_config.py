@@ -46,6 +46,57 @@ class TestWriteConfigTemplate:
         with pytest.raises(FileExistsError):
             write_config_template(tmp_path)
 
+    def test_domain_filter_fields_parse_from_json(self):
+        data = {
+            "general": {"bundled_tools": {"enabled": False}},
+            "domains": {
+                "Open Source Brain": {
+                    "description": "OSB repos",
+                    "filter_fields": [
+                        {
+                            "name": "repository_type",
+                            "description": "hosting type: github, dandi, biomodels, figshare",
+                            "value_type": "string",
+                        },
+                        {
+                            "name": "tags",
+                            "description": "repository tags",
+                            "value_type": "list",
+                        },
+                    ],
+                }
+            },
+        }
+        config = AppConfig.model_validate(data)
+        fields = config.domains["Open Source Brain"].filter_fields
+        assert [f.name for f in fields] == ["repository_type", "tags"]
+        assert fields[1].value_type == "list"
+
+    def test_filter_fields_survive_model_dump_include(self):
+        """The rag ``_configure_resources`` include carries filter_fields."""
+        data = {
+            "general": {"bundled_tools": {"enabled": False}},
+            "domains": {
+                "Docs": {
+                    "description": "papers",
+                    "filter_fields": [
+                        {
+                            "name": "journal",
+                            "description": "venue",
+                            "value_type": "string",
+                        }
+                    ],
+                }
+            },
+        }
+        config = AppConfig.model_validate(data)
+        dumped = config.domains["Docs"].model_dump(
+            include={"vector_stores", "bm25_stores", "description", "filter_fields"}
+        )
+        assert dumped["filter_fields"] == [
+            {"name": "journal", "description": "venue", "value_type": "string"}
+        ]
+
 
 class TestProfileTemplateCli:
     """``--profile template`` scaffolds a config through the CLI."""

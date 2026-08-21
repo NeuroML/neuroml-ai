@@ -136,7 +136,12 @@ class RAG(BaseLangGraph):
         domain_ms = {}
         for d, inf in domains.items():
             domain_vs[d] = inf.model_dump(
-                include={"vector_stores", "bm25_stores", "description"}
+                include={
+                    "vector_stores",
+                    "bm25_stores",
+                    "description",
+                    "filter_fields",
+                }
             )
 
             # flat config for mcp client initialization
@@ -232,10 +237,16 @@ class RAG(BaseLangGraph):
             non_domain_chat=self.app_config.general.non_domain_chat,
         )
 
+        # Domains are configured (with their filter fields) in
+        # ``_configure_resources`` before the graph is built.
+        assert self.retriever_config
         self._generate_retrieval_query_node = GenerateRetrievalQuery(
             logger=self.logger,
             label="Generating search",
             llm_models=self.llm_models,
+            filter_fields_by_domain={
+                d: inf.filter_fields for d, inf in self.retriever_config.domains.items()
+            },
         )
         self.workflow.add_node(
             self._generate_retrieval_query_node.label,
