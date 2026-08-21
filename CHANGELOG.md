@@ -51,6 +51,13 @@
 
 ### Added
 
+- Read-only sqlite query tools in `klea_utils` (`sqlite_query`,
+  `sqlite_schema`): single `SELECT` statements only (statement separators
+  inside quoted strings or comments are ignored), database opened in
+  read-only mode, a row-return limit and a configurable VM-instruction
+  work budget (`max_ops`) to bound pathological queries, permission-gated
+  database path, and helpful unknown-table/column errors.  Usable directly
+  by agents and wrapped by deployments into MCP tools.
 - Configurable per-domain retrieval filter fields (`filter_fields` in the
   domain config): the query generator only proposes the declared metadata
   fields, and each domain only receives the filter clauses on its own
