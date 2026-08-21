@@ -18,6 +18,8 @@ from klea_utils.llm import (
 )
 from klea_utils.nodes.abstract import NodeStreamData
 from klea_utils.nodes.base import BaseLLMNode
+from klea_utils.stores.config import FilterFieldInfo
+from klea_utils.stores.filters import normalize_config_filters
 from langchain_core.messages import AIMessage
 
 from klea_rag.schemas import RAGState, RetrievalQueryOutput
@@ -27,8 +29,12 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
     """Node that generates a concise retrieval query from the user's question.
 
     Uses structured output (:class:`RetrievalQueryOutput`) so the search
-    query and any retrieval constraints (year range, journal, authors,
-    keywords) are produced together from the user's question.
+    query and any retrieval constraints are produced together from the
+    user's question.  Filter fields are deployment-configured per domain:
+    the system prompt lists the configured ``filter_fields`` for the
+    query's domains (so the model only ever proposes existing metadata
+    keys), and :meth:`_update_state` validates and normalizes the raw
+    ``filters`` operands into canonical DSL clauses.
     """
 
     model_type = "chat"
@@ -39,12 +45,17 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
         logger: logging.Logger,
         label: str,
         llm_models: dict[str, Any],
+        filter_fields_by_domain: dict[str, list[FilterFieldInfo]] | None = None,
     ):
         """Initialise the node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
+        :param filter_fields_by_domain: ``{domain: [FilterFieldInfo]}``
+            configured for each domain; used to list the allowed filter
+            fields in the prompt and to validate the model's ``filters``
+            operands
         """
         super().__init__(
             logger=logger,
@@ -53,6 +64,44 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
             output_schema=RetrievalQueryOutput,
             memory=True,
         )
+        self.filter_fields_by_domain: dict[str, list[FilterFieldInfo]] = (
+            filter_fields_by_domain or {}
+        )
+
+    def _configured_filter_fields(self, state: RAGState) -> list[FilterFieldInfo]:
+        """Return the filter fields allowed for the query's domains.
+
+        The union of the configured fields across ``state.query_domains``,
+        keeping the first definition of a name when domains disagree.  When
+        no domain resolves a field set (e.g. the ``undefined`` domain), the
+        union of all configured domains is used so a single-domain
+        deployment still surfaces its fields.
+        """
+        allowed: dict[str, FilterFieldInfo] = {}
+        for domain in state.query_domains:
+            for field in self.filter_fields_by_domain.get(domain, []):
+                allowed.setdefault(field.name, field)
+        if not allowed:
+            for fields in self.filter_fields_by_domain.values():
+                for field in fields:
+                    allowed.setdefault(field.name, field)
+        return list(allowed.values())
+
+    @staticmethod
+    def _format_allowed_filter_fields(fields: list[FilterFieldInfo]) -> str:
+        """Render the allowed filter fields as bullet lines for the prompt.
+
+        Descriptions are inserted verbatim: values substituted into the chat
+        template are not rescanned for ``{}`` placeholders, so a
+        description containing braces (e.g. an operator expression like
+        ``{'$gte': x}``) renders unchanged.
+        """
+        if not fields:
+            return "(none configured)"
+        lines = []
+        for field in fields:
+            lines.append(f"- {field.name} ({field.value_type}): {field.description}")
+        return "\n".join(lines)
 
     @override
     def _get_system_prompt(self, state: RAGState) -> str | list[Any]:
@@ -90,11 +139,14 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
 
     @override
     def _get_prompt_variables(self, state: RAGState) -> dict:
-        """Format prompt with user query."""
+        """Format prompt with user query and the domain's allowed filter fields."""
         return {
             "query": state.query,
             "feedback": state.text_response_eval.summary,
             "previous": state.retrieval_query.search_query,
+            "allowed_filter_fields": self._format_allowed_filter_fields(
+                self._configured_filter_fields(state)
+            ),
         }
 
     @override
@@ -105,8 +157,15 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
 
         Always writes a fresh :class:`RetrievalQueryOutput` instance from
         the current LLM output, so nothing from a prior turn is carried
-        over.
+        over.  The raw ``filters`` operands (keyed by the domain's
+        configured filter-field names) are validated and normalized into
+        canonical DSL clauses on ``config_filters``; operands for undeclared
+        fields are dropped with a warning (see
+        :func:`klea_utils.stores.filters.normalize_config_filters`).
         """
+        allowed = self._configured_filter_fields(state)
+        result.config_filters = normalize_config_filters(result.filters, allowed)
+
         messages = state.messages
         output = AIMessage(content=result.search_query)
         messages.append(output)

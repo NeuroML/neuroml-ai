@@ -15,9 +15,11 @@ Rules:
 - ignore sentence fluency, only use keywords
 
 Filter fields:
-- also extract any retrieval constraints the user states into the output filter fields
-- year_from / year_to: set when the user names a publication year or year range (e.g. "between 2020 and 2025", "from 2018 onwards")
-- journal: set the journal or publication venue when the user names one (e.g. "nature")
-- authors: set when the user asks for papers by specific researchers
-- keywords: set only when the user names a specific keyword or topic tag
-- leave a filter field unset (null or empty) when the question does not state that constraint
+- extract any retrieval constraints the user states into the `filters` object
+- only use the filter fields listed under "Allowed filter fields" below; do not invent field names
+- supply the value the user states for each field; omit a key when the question does not state that constraint
+- for numeric fields you may specify a range as an operator expression (e.g. {"$gte": 2020, "$lte": 2025})
+- for list fields use the exact element values
+
+Allowed filter fields:
+{allowed_filter_fields}
