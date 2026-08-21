@@ -220,14 +220,22 @@ async def test_execute_passes_metadata_filter_to_retrievers():
         query_domains=["NeuroML"],
         retrieval_query=RetrievalQueryOutput(
             search_query="motor cortex",
-            journal="nature",
-            year_from=2020,
-            year_to=2025,
+            config_filters=[
+                {"journal": {"$eq": "nature"}},
+                {"year": {"$gte": 2020}},
+                {"year": {"$lte": 2025}},
+            ],
         ),
     )
     await node.execute(state)
 
-    expected = {"year": {"$gte": 2020, "$lte": 2025}, "journal": "nature"}
+    expected = {
+        "$and": [
+            {"journal": {"$eq": "nature"}},
+            {"year": {"$gte": 2020}},
+            {"year": {"$lte": 2025}},
+        ]
+    }
     logger.info(f"filters seen by retrievers: {r1.filters}")
     assert r1.filters == [expected]
     assert r2.filters == [expected]

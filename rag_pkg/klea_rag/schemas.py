@@ -36,54 +36,47 @@ class EvaluateAnswerSchema(BaseModel):
 class RetrievalQueryOutput(BaseModel):
     """Structured output of the retrieval-query generator.
 
-    Holds the search query alongside any retrieval constraints derived
-    from the user's question (publication year range, journal, authors,
-    keywords).  The typed filter fields are the LLM-facing surface; the
-    normalized backend-agnostic filter dict is produced by
-    :meth:`to_metadata_filter` and consumed by the retrievers.
+    Holds the search query and the retrieval constraints the generator
+    derives from the user's question.  All filter fields are
+    deployment-configured: the generator emits an operand mapping,
+    ``filters`` (keyed by the domain's ``filter_fields`` names), which the
+    ``GenerateRetrievalQuery`` node validates and normalizes via
+    ``klea_utils.stores.filters.normalize_config_filters`` into the
+    canonical single-clause DSL dicts carried by ``config_filters``.  The
+    backend-agnostic metadata filter is produced by
+    :meth:`to_metadata_filter` from ``config_filters`` and consumed by
+    the retrievers.
     """
 
     search_query: str = ""
-    year_from: int | None = None
-    year_to: int | None = None
-    journal: str | None = None
-    authors: list[str] = Field(default_factory=list)
-    keywords: list[str] = Field(default_factory=list)
+    #: Filter operands exactly as the query generator produced them, keyed
+    #: by the deployment's configured filter-field names.  This is the
+    #: LLM-facing surface; it is not executed directly (the node
+    #: normalizes it into ``config_filters``).
+    filters: dict[str, Any] = Field(default_factory=dict)
+    #: Canonical DSL clauses from the domain's ``filter_fields``
+    #: configuration (see ``normalize_config_filters``).  Each entry is a
+    #: single-clause dict (e.g. ``{"repository_type": {"$eq": "github"}}``
+    #: or a top-level ``{"$and": [...]}``); merged into the metadata
+    #: filter by :meth:`to_metadata_filter`.
+    config_filters: list[dict[str, Any]] = Field(default_factory=list)
 
     def to_metadata_filter(self) -> dict[str, Any] | None:
         """Return the normalized metadata filter, or ``None``.
 
-        Maps the typed filter fields to a backend-agnostic filter dict
-        (``{field: {op: value}}``): ``year`` becomes a range clause,
-        scalar fields (``journal``) use implicit equality, and list
-        fields (``authors``/``keywords``) use ``$contains``
-        element-membership, combined with ``$and`` when several are set.
-        Year bounds below 1 are treated as unset (models sometimes echo
-        the example placeholder ``0``).  Returns ``None`` when no
+        Combines the validated configured-domain clauses
+        (``config_filters``) into a single filter, wrapping several
+        constraints in ``$and``.  ``filters`` is ignored here: the raw
+        operands are only meaningful once normalized (which happens once,
+        in the query-generation node).  Returns ``None`` when no
         constraint is set.
         """
-        clauses: dict[str, Any] = {}
-
-        if self.year_from is not None and self.year_from > 0:
-            clauses.setdefault("year", {})["$gte"] = self.year_from
-        if self.year_to is not None and self.year_to > 0:
-            clauses.setdefault("year", {})["$lte"] = self.year_to
-
-        if self.journal:
-            clauses["journal"] = self.journal
-
-        and_terms: list[dict[str, Any]] = []
-        for field in ("authors", "keywords"):
-            for value in getattr(self, field):
-                and_terms.append({field: {"$contains": value}})
-
-        if and_terms:
-            if len(and_terms) == 1:
-                clauses.update(and_terms[0])
-            else:
-                clauses["$and"] = and_terms
-
-        return clauses if clauses else None
+        clauses: list[dict[str, Any]] = list(self.config_filters)
+        if not clauses:
+            return None
+        if len(clauses) == 1:
+            return clauses[0]
+        return {"$and": clauses}
 
 
 class RAGState(BaseModel):
