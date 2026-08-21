@@ -15,6 +15,8 @@ from typing import Any, Protocol, cast
 
 from langchain_core.documents import Document
 
+from .config import FilterFieldInfo
+
 logger = logging.getLogger(__name__)
 
 #: Operators valid inside a single field clause of the normalized filter DSL.
@@ -217,6 +219,102 @@ def translate_metadata_filter(path: str, f: dict[str, Any]) -> Any:
                 f"Unsupported vector store scheme '{scheme}' for filter "
                 f"translation. Supported: chroma, qdrant, pgvector"
             )
+
+
+def normalize_config_filters(
+    filters: dict[str, Any],
+    allowed_fields: list[FilterFieldInfo],
+) -> list[dict[str, Any]]:
+    """Validate configured-domain filters into canonical DSL clauses.
+
+    ``filters`` maps a metadata field name (from a deployment's
+    ``filter_fields`` configuration) to an operand produced by the
+    retrieval query generator: a bare scalar, a list of scalars, or an
+    operator expression dict (``{op: value}``).  Each configured field's
+    ``value_type`` decides how a bare operand is interpreted:
+
+    - scalar fields (``string``/``int``/``float``): a bare value is
+      ``$eq``; a list of values is ``$in``.
+    - ``list`` fields (e.g. ``tags``): a bare value requires element
+      membership (``$contains``); several values combine with ``$and``
+      (every value must be present), mirroring the bibliographic
+      ``authors``/``keywords`` handling in
+      :meth:`RetrievalQueryOutput.to_metadata_filter`.
+
+    An operator expression dict is validated and normalized through
+    :func:`validate_metadata_filter`; an unsupported operator or
+    malformed operand raises ``ValueError``.
+
+    Field names not declared in *allowed_fields* are ignored with a
+    warning and never reach a backend (the generator must not be able to
+    emit a key the deployment did not configure).  An empty operand list
+    is likewise ignored.
+
+    The result is a list of single-clause DSL dicts, each directly
+    consumable by :func:`validate_metadata_filter` (and hence by every
+    backend translator and the in-memory matcher).  An empty input
+    returns ``[]``.
+
+    Example::
+
+        fields = [
+            FilterFieldInfo(name="repository_type", description="...",
+                            value_type="string"),
+            FilterFieldInfo(name="tags", description="...", value_type="list"),
+        ]
+        normalize_config_filters(
+            {"repository_type": ["github", "dandi"], "tags": "moose"},
+            fields,
+        )
+        -> [
+            {"repository_type": {"$in": ["github", "dandi"]}},
+            {"tags": {"$contains": "moose"}},
+        ]
+
+    :param filters: Field-name -> operand mapping from the query generator
+    :param allowed_fields: Configured filter fields for the domain
+    :returns: Canonical DSL single-clause dicts
+    :raises ValueError: When an operator expression uses an unsupported
+        operator or malformed operand
+    """
+    allowed: dict[str, FilterFieldInfo] = {f.name: f for f in allowed_fields}
+    clauses: list[dict[str, Any]] = []
+
+    for field, operand in filters.items():
+        info = allowed.get(field)
+        if info is None:
+            logger.warning(
+                f"Ignoring filter field {field!r}: not declared in the "
+                f"domain's filter_fields configuration"
+            )
+            continue
+
+        if isinstance(operand, dict):
+            # Operator expression: validate and normalize to the canonical
+            # form (e.g. a ``{$gte, $lte}`` pair becomes an ``$and``).
+            clause = {field: operand}
+            clauses.append(validate_metadata_filter(clause))
+            continue
+
+        if isinstance(operand, list) and not operand:
+            logger.warning(f"Ignoring empty filter list for field {field!r}")
+            continue
+
+        if info.value_type == "list":
+            if not isinstance(operand, list):
+                clauses.append({field: {"$contains": operand}})
+            elif len(operand) == 1:
+                clauses.append({field: {"$contains": operand[0]}})
+            else:
+                clauses.append(
+                    {"$and": [{field: {"$contains": value}} for value in operand]}
+                )
+        elif isinstance(operand, list):
+            clauses.append({field: {"$in": operand}})
+        else:
+            clauses.append({field: {"$eq": operand}})
+
+    return clauses
 
 
 def filter_docs_by_metadata(docs: list[Document], f: dict[str, Any]) -> list[Document]:
