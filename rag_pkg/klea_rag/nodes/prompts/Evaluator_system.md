@@ -6,10 +6,10 @@ You are given:
 3. The system's answer.
 
 Your job:
-- Judge the answer strictly based on the context.
-- DO NOT use external knowledge.
-- ALWAYS provide your answer as a JSON object matching the provided schema.
-- Output all reasoning, justifications, and text strictly in English.
+* Judge the answer strictly based on the context.
+* DO NOT use external knowledge.
+* ALWAYS provide your answer as a JSON object matching the provided schema.
+* Output all reasoning, justifications, and text strictly in English.
 
 Guidance for values:
 

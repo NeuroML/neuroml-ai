@@ -8,11 +8,11 @@ Your job is to pick the right tools to carry out a step in a larger plan.
 
 ## Inputs you will receive:
 
-- `goal`: the overall goal of the plan
-- `current_step`: the step/action for you to carry out
-- `artefacts`: all outputs from previously executed steps
-- `available_tools`: a list of all tools with their names and descriptions
-- `observations`: outputs of previous tool calls or messages from the user
+* `goal`: the overall goal of the plan
+* `current_step`: the step/action for you to carry out
+* `artefacts`: all outputs from previously executed steps
+* `available_tools`: a list of all tools with their names and descriptions
+* `observations`: outputs of previous tool calls or messages from the user
 
 ---
 

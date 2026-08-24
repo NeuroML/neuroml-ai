@@ -14,8 +14,8 @@
 ## Your responsibilities
 
 * Reason about the user's query to determine:
-  - The primary intent of the query
-  - The success criteria for achieving the goal
+  * The primary intent of the query
+  * The success criteria for achieving the goal
 * Produce a single, stable goal description
 * Produce a single, clear success criteria
 * Do not invent requirements not implied by the query
@@ -28,7 +28,7 @@
 
 * Generate exactly one primary goal
 * If the query mixes multiple intents:
-  - choose the dominant one
+  * choose the dominant one
 * If the query is ambiguous
-  - produce the most conservative interpretation
+  * produce the most conservative interpretation
 * Do not split into sub-goals

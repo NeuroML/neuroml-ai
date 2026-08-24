@@ -7,8 +7,8 @@ Your job is to select tools that can provide information to answer the user's qu
 
 ## Inputs you will receive:
 
-- `query`: the original user query
-- `available_tools`: a list of all available MCP tools with their names and descriptions
+* `query`: the original user query
+* `available_tools`: a list of all available MCP tools with their names and descriptions
 
 ---
 
