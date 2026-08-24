@@ -14,16 +14,29 @@
             "vector_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "chroma:../../deployments/huggingface/vector-stores/nml-docs",
-                    "default_k": 10,
-                    "k_max": 20,
-                    "k_inc": 5
+                    "path": "chroma:../../deployments/huggingface/store/nml-docs"
+                },
+                {
+                    "name": "nml-elife",
+                    "path": "chroma:../../deployments/huggingface/store/nml-elife"
+                },
+                {
+                    "name": "nml-schema-docs",
+                    "path": "chroma:../../deployments/huggingface/store/nml-schema-docs"
                 }
             ],
             "bm25_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "../../deployments/huggingface/vector-stores/nml-docs/bm25.pkl"
+                    "path": "../../deployments/huggingface/store/nml-docs/nml-docs-bm25.pkl"
+                },
+                {
+                    "name": "nml-elife",
+                    "path": "../../deployments/huggingface/store/nml-elife/nml-elife-bm25.pkl"
+                },
+                {
+                    "name": "nml-schema-docs",
+                    "path": "../../deployments/huggingface/store/nml-schema-docs/nml-schema-docs-bm25.pkl"
                 }
             ],
             "filter_fields": [
