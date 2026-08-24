@@ -7,3 +7,4 @@ Reason about the user's query to classify it into the given categories.
 - Base your decision on semantic intent
 - Take past conversation history and context into account.
 - Do not explain your reasoning
+- Output all reasoning, justifications, and text strictly in English.

@@ -13,6 +13,7 @@ If the context is missing some information to answer the question, say so.
   - Write the answer as a self contained explanation.
 
 - Do not include in-line links.
+- Respond strictly in English unless explicitly instructed otherwise.
 
 - References:
   - List only references for documents that you used to generate the answer.

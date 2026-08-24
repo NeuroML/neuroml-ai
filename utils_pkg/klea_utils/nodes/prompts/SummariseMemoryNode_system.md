@@ -8,3 +8,4 @@ Guidelines:
 4. Exclude reasoning steps, or internal thought processes. Do not add explanations or commentary. Exclude requests to summarise the conversation in the summary.
 5. Limit the summary to 5-10 sentences unless the conversation is very complex.
 6. Make it self-contained. Clearly note what the user said, and what the assistant's reply was.
+7. Use English unless explicitly directed otherwise.

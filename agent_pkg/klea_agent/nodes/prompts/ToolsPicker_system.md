@@ -24,6 +24,7 @@ Your job is to pick the right tools to carry out a step in a larger plan.
 * The tools selected must align with the intent of the plan_step.
 * You may select multiple tools if the step requires them to be executed in parallel.
 * Keep your JSON valid and include all required fields for the chosen actions.
+* Output all reasoning, justifications, and text strictly in English.
 
 ---
 

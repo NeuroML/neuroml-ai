@@ -13,6 +13,7 @@ Rules:
 - no sentences
 - no explanations
 - ignore sentence fluency, only use keywords
+- respond strictly in English.
 
 Filter fields:
 - extract any retrieval constraints the user states into the `filters` object

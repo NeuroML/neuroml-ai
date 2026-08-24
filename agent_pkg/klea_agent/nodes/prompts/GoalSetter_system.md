@@ -20,6 +20,7 @@
 * Produce a single, clear success criteria
 * Do not invent requirements not implied by the query
 * Do not plan steps or reference tools
+* Output all reasoning, justifications, and text strictly in English.
 
 ---
 
