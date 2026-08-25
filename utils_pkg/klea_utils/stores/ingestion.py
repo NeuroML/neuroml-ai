@@ -13,6 +13,7 @@ import logging
 import os
 import pickle
 import tempfile
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -444,7 +445,7 @@ class StoresBuilder:
         self,
         source_path: Path,
         metadata_map: dict[str, dict[str, Any]] | None,
-    ) -> list[tuple[str, list[Document], Path]]:
+    ) -> Iterator[tuple[str, list[Document], Path]]:
         """Load cached chunks and fold the metadata map into them.
 
         Cache-only: every source file must already have a cache entry
@@ -454,16 +455,21 @@ class StoresBuilder:
         ``store`` command; ``chunk`` and ``build`` convert on the fly
         via :meth:`chunk_all` instead.
 
+        This is a generator: it yields ``(file_hash, docs, file_path)``
+        per file, so the caller (:meth:`store_all`) consumes and releases
+        each file's chunks before the next file is loaded.  Memory stays
+        bounded per file instead of holding the whole corpus, which is
+        what lets the ``store`` command scale to large corpora.
+
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment
-        :returns: List of ``(file_hash, docs, file_path)`` tuples ready
-            for :meth:`store_all`
+        :returns: An iterator of ``(file_hash, docs, file_path)`` tuples
+            ready for :meth:`store_all`
         :raises ValueError: When a source file has no cache entry
         """
         files = self._find_files(source_path)
         self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
 
-        results: list[tuple[str, list[Document], Path]] = []
         for ctr, file_path in enumerate(files, 1):
             file_hash = _hash_file(file_path)
             cached = self._load_from_cache(source_path, file_hash)
@@ -497,13 +503,11 @@ class StoresBuilder:
             if metadata_map:
                 self._fold_metadata_map(file_path, docs, metadata_map)
 
-            results.append((file_hash, docs, file_path))
-
-        return results
+            yield file_hash, docs, file_path
 
     def store_all(
         self,
-        results: list[tuple[str, list[Document], Path]],
+        results: Iterable[tuple[str, list[Document], Path]],
         store_uri: str,
         collection_name: str,
         source_dir: Path,
@@ -529,8 +533,14 @@ class StoresBuilder:
         Chunk IDs are deterministic (``<file_name>:<chunk_index>``) so
         deletion by ID works on every backend.
 
-        :param results: List of ``(file_hash, docs, file_path)`` tuples
-            from :meth:`chunk_all`
+        *results* may be any iterable, including the lazy generator from
+        :meth:`_load_and_fold_results`; each file's chunks are released
+        once they are stored, keeping memory bounded per file.  When a
+        BM25 corpus is requested it is written from the same chunks
+        after the store loop, so the results are materialised then.
+
+        :param results: Iterable of ``(file_hash, docs, file_path)``
+            tuples from :meth:`chunk_all` or :meth:`_load_and_fold_results`
         :param store_uri: Vector store URI
         :param collection_name: Collection name for the store
         :param source_dir: Resolved source directory (for the manifest)
@@ -541,6 +551,14 @@ class StoresBuilder:
             self.logger.info(f"Initialising embedding model ({self.embedding_model})")
             self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert store_uri and collection_name
+
+        # The BM25 corpus is written from the same chunks after the store
+        # loop, so when one is requested the results must be re-iterable
+        # and are materialised here.  Without BM25 the results stay lazy:
+        # each file's chunks are released as soon as they are stored.
+        if bm25_path is not None:
+            results = list(results)
+        total = len(self._find_files(source_dir))
 
         manifest_path = self._manifest_path(source_dir, collection_name)
         if not force and not manifest_path.is_file():
@@ -580,7 +598,6 @@ class StoresBuilder:
             raw_files = {}
             manifest["files"] = raw_files
         manifest_files: dict[str, Any] = raw_files
-        total = len(results)
         for ctr, (file_hash, docs, file_path) in enumerate(results, 1):
             file_name = file_path.name
             known: dict[str, Any] | None = manifest_files.get(file_name)
@@ -645,7 +662,7 @@ class StoresBuilder:
 
     def write_bm25_store(
         self,
-        results: list[tuple[str, list[Document], Path]],
+        results: Iterable[tuple[str, list[Document], Path]],
         bm25_path: str,
     ) -> None:
         """Write the combined chunked documents to a BM25 corpus.
@@ -661,8 +678,8 @@ class StoresBuilder:
         stored in the vector store, so BM25 and vector retrieval return
         consistent results.
 
-        :param results: List of ``(file_hash, docs, file_path)`` tuples
-            from :meth:`chunk_all`
+        :param results: Iterable of ``(file_hash, docs, file_path)``
+            tuples from :meth:`chunk_all`
         :param bm25_path: Path to write the combined corpus pickle to
         """
         all_docs = [doc for _, docs, _ in results for doc in docs]

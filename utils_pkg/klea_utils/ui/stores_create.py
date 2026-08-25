@@ -439,7 +439,9 @@ def store(
             )
 
         results = builder._load_and_fold_results(source_path, metadata_map)
-        if not results:
+        # results is a lazy generator (store_all consumes it per file), so
+        # emptiness is checked on the source directory rather than len().
+        if not builder._find_files(source_path):
             logger.error(
                 f"No files were successfully chunked from "
                 f"{source_path} -- see errors above"

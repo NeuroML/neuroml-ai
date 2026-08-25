@@ -1351,7 +1351,8 @@ class TestIngestion:
 
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         with pytest.raises(ValueError, match="test.md.*cache"):
-            builder._load_and_fold_results(self.tmpdir_path, None)
+            # The generator raises only once iterated (store_all does this).
+            list(builder._load_and_fold_results(self.tmpdir_path, None))
 
     def test_load_and_fold_results_succeeds_when_all_cached(self):
         """_load_and_fold_results passes when every file is already cached."""
@@ -1362,7 +1363,7 @@ class TestIngestion:
         # Populate the cache first (chunk_all converts on the fly).
         builder.chunk_all(self.tmpdir_path)
 
-        results = builder._load_and_fold_results(self.tmpdir_path, None)
+        results = list(builder._load_and_fold_results(self.tmpdir_path, None))
         assert len(results) == 1
         assert results[0][2].name == "test.md"
 
@@ -1375,7 +1376,7 @@ class TestIngestion:
         builder.chunk_all(self.tmpdir_path)
 
         metadata_map = {"test.md": {"DEFAULT": {"year": 2020, "journal": "J"}}}
-        results = builder._load_and_fold_results(self.tmpdir_path, metadata_map)
+        results = list(builder._load_and_fold_results(self.tmpdir_path, metadata_map))
         assert len(results) == 1
         for doc in results[0][1]:
             assert doc.metadata["year"] == 2020
@@ -1540,7 +1541,8 @@ class TestIngestion:
         builder._save_to_cache([], {}, self.tmpdir_path, _hash_file(md_file))
 
         with caplog.at_level(logging.WARNING):
-            builder._load_and_fold_results(self.tmpdir_path, None)
+            # Iterate the generator so the per-file warnings are emitted.
+            list(builder._load_and_fold_results(self.tmpdir_path, None))
 
         assert "No cached chunks for test.md" in caplog.text
 
@@ -1782,6 +1784,12 @@ class TestIngestion:
         )
         builder.embeddings = object()
 
+        # a.md must exist in the source dir: store_all reports progress
+        # against the source-directory file count (a lazy results iterable
+        # has no length), matching production where results come from
+        # _find_files of the same directory.
+        (self.tmpdir_path / "a.md").write_text(TEST_MD_CONTENT)
+
         docs = [
             Document(
                 page_content=f"content {i}",
@@ -1803,6 +1811,56 @@ class TestIngestion:
         assert "Stored 4/10 chunks (40%) from a.md" in caplog.text
         assert "Stored 8/10 chunks (80%) from a.md" in caplog.text
         assert "Added 10 chunks from a.md (1/1)" in caplog.text
+
+    def test_store_all_consumes_lazy_load_and_fold_results(self, monkeypatch, caplog):
+        """store_all consumes _load_and_fold_results as a lazy generator.
+
+        The store command feeds the generator straight into store_all so
+        each file's chunks are released after storing (memory bounded per
+        file) instead of accumulating a full results list.  Progress is
+        reported against the source-directory file count, since a
+        generator has no length.
+        """
+
+        class FakeStore:
+            def __init__(self):
+                self.added_ids: list[str] = []
+
+            def add_documents(self, docs):
+                self.added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                pass
+
+        fake = FakeStore()
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: fake,
+        )
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        builder.chunk_all(self.tmpdir_path)  # populate the cache
+        builder.embeddings = object()
+
+        results = builder._load_and_fold_results(self.tmpdir_path, None)
+        assert iter(results) is results  # lazy generator, not a materialised list
+        with caplog.at_level(logging.INFO):
+            builder.store_all(
+                results,
+                "chroma:/tmp/x",
+                "col",
+                self.tmpdir_path,
+                force=True,
+            )
+
+        assert fake.added_ids
+        assert all(doc_id.startswith("test.md:") for doc_id in fake.added_ids)
+        assert "Added " in caplog.text and "from test.md (1/1)" in caplog.text
 
     def test_manifest_round_trip(self):
         """The store manifest is written and reloaded."""

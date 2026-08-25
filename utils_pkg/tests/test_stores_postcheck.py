@@ -296,6 +296,40 @@ class TestStoreLintCli:
         assert "1 chunks across 1 files" in result.output
         assert "Sample windows" in result.output
 
+    def test_store_command_errors_on_empty_source(self, tmp_path, monkeypatch):
+        """store reports "No files" when the source directory is empty.
+
+        _load_and_fold_results is a lazy generator (store_all consumes it
+        per file), so the CLI checks emptiness on the source directory
+        instead of len() on the results.
+        """
+        from klea_utils.stores.ingestion import StoresBuilder
+        from klea_utils.ui.stores_create import app
+
+        source = tmp_path / "src"
+        source.mkdir()
+
+        def fake_resolve(self, source_path, metadata_map_path):
+            return {"paper.pdf": {"DEFAULT": {"title": "T"}}}
+
+        monkeypatch.setattr(StoresBuilder, "_resolve_metadata_map", fake_resolve)
+
+        result = CliRunner().invoke(
+            app,
+            [
+                "store",
+                str(source),
+                "--collection",
+                "col",
+                "--store",
+                f"chroma:{tmp_path / 'store'}",
+            ],
+        )
+        # The guard aborts with a non-zero exit before store_all runs; the
+        # message goes through logging (not result.output), so only the
+        # exit code is asserted here.
+        assert result.exit_code == 1
+
 
 if __name__ == "__main__":
     pytest.main()
