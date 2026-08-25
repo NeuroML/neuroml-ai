@@ -117,6 +117,16 @@
   with an honest-client fallback) and a Cloudflare-challenge retry.
 - `download_file` / `download_file_to_cache` shared implementations for
   downloading URLs to disk with transient-error retries.
+- `download_files` shared helper: downloads a list of files (as returned
+  by the repository source functions below) into a chosen destination
+  directory with bounded concurrency and per-file results.
+- Repository file/version listing in `klea_utils`
+  (`github_list_files`/`github_list_versions`, `figshare_list_files`/
+  `figshare_list_versions`, `dandi_list_files`/`dandi_list_versions`,
+  `biomodels_list_files`/`biomodels_list_versions`): framework-agnostic
+  functions that list the versions and files of archival repositories
+  (GitHub, FigShare, DANDI Archive, BioModels) with direct download URLs,
+  ready to be wrapped into MCP tools.
 - `read_file` shared MCP tool implementation: converts documents
   (PDF/Office/EPUB/CSV via anydoc, HTML via BeautifulSoup) and plain text
   files to text with paged, line-numbered output (`offset`/`limit`,
@@ -257,6 +267,12 @@
 - `metadata-map.template.json` is now generated into
   `<source_dir>/.klea-cache/` instead of the source directory; copy it
   out to review and pass the reviewed copy via `--metadata-map`.
+- A corrupt or truncated `.klea-cache` entry (e.g. left by a crash or
+  an interrupted run) no longer aborts the whole `chunk`/`build` run:
+  it is moved aside as `<hash>.pkl.corrupt`, the source is re-converted
+  on the fly, and the artifact is pruned once the entry is regenerated.
+  Cache writes are now atomic, so an interrupted run can no longer
+  leave a truncated entry behind.
 
 ---
 
