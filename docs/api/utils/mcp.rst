@@ -74,6 +74,40 @@ their httpx session via the lifespan context.
    :members:
    :show-inheritance:
 
+Repository sources
+------------------
+
+Framework-agnostic functions that list the versions and files of archival
+repositories (GitHub, FigShare, DANDI Archive, BioModels).  The returned
+file lists carry direct ``download_url`` values that can be fed to
+:func:`klea_utils.mcp.tool_impls.download_file.download_files` (or the
+single-file ``download_file`` implementation), e.g. by wrapping them into
+MCP tools.
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.sources
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.errors
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.github
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.figshare
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.dandi
+   :members:
+   :show-inheritance:
+
+.. automodule:: klea_utils.mcp.tool_impls.repositories.biomodels
+   :members:
+   :show-inheritance:
+
 Bundled tools server
 --------------------
 
