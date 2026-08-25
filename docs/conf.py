@@ -40,6 +40,15 @@ html_css_files = ["custom.css"]
 html_title = "Klea"
 html_show_sphinx = False
 
+# Per-page "Edit this page" / "View this page" links pointing at the GitHub
+# source. These work on GitHub Pages (not just ReadTheDocs) because Furo's
+# basic-ng source-link macro reads source_repository/source_branch directly.
+html_theme_options = {
+    "source_repository": "https://github.com/NeuroML/neuroklea",
+    "source_branch": "development",
+    "source_directory": "docs",
+}
+
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
