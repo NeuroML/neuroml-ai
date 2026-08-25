@@ -766,3 +766,159 @@ async def test_dandi_live_dandiset_listing():
     assert DANDI_TEST_FILE in names
     assert all(f["path"] for f in result["files"])
     assert all(f["download_url"] for f in result["files"])
+
+
+BIOMODELS_API = "https://www.biomodels.org"
+BIOMODELS_MODEL_ID = "BIOMD0000000001"
+BIOMODELS_TEST_URL = f"https://www.ebi.ac.uk/biomodels/{BIOMODELS_MODEL_ID}"
+BIOMODELS_INFO_URL = f"{BIOMODELS_API}/{BIOMODELS_MODEL_ID}"
+BIOMODELS_TEST_FILE = "BIOMD0000000001.pdf"
+
+
+def _biomodels_routes(version="1"):
+    info = {
+        "name": "Guyton1972_CapillaryDynamics",
+        "format": {"name": "SBML"},
+        "history": {"revisions": [{"version": int(version)}]},
+    }
+    files = {
+        "additional": [
+            {
+                "name": "extra.txt",
+                "fileSize": "55",
+            }
+        ],
+        "main": [
+            {
+                "name": BIOMODELS_TEST_FILE,
+                "fileSize": "17247",
+            }
+        ],
+    }
+    return {
+        BIOMODELS_INFO_URL: _FakeResponse(info),
+        f"{BIOMODELS_API}/model/files/{BIOMODELS_MODEL_ID}.{version}": (
+            _FakeResponse(files)
+        ),
+    }
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("https://www.ebi.ac.uk/biomodels/BIOMD0000000001", "BIOMD0000000001"),
+        ("https://www.biomodels.org/BIOMD0000000001", "BIOMD0000000001"),
+        ("https://biomodels.org/MODEL123", "MODEL123"),
+        ("https://www.ebi.ac.uk/biomodels/BIOMD0000000001/", "BIOMD0000000001"),
+    ],
+)
+def test_parse_biomodels_url_valid(url, expected):
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    assert biomodels_module._parse_biomodels_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "not-a-url",
+        "https://github.com/owner/repo",
+        "https://www.ebi.ac.uk/other/MODEL123",
+        "https://www.biomodels.org/notamodel",
+        "ftp://www.biomodels.org/MODEL123",
+    ],
+)
+def test_parse_biomodels_url_invalid(url):
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+    from klea_utils.mcp.tool_impls.repositories.errors import RepositorySourceError
+
+    with pytest.raises(RepositorySourceError):
+        biomodels_module._parse_biomodels_url(url)
+
+
+async def test_biomodels_list_versions():
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    session = _FakeSession(_biomodels_routes())
+    result = await biomodels_module.biomodels_list_versions(session, BIOMODELS_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["source"] == "biomodels"
+    assert result["versions"] == ["1"]
+
+
+async def test_biomodels_list_files_merges_main_and_additional():
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    session = _FakeSession(_biomodels_routes())
+    result = await biomodels_module.biomodels_list_files(
+        session, BIOMODELS_TEST_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["version"] == "1"
+    by_path = {f["path"]: f for f in result["files"]}
+    assert set(by_path) == {BIOMODELS_TEST_FILE, "extra.txt"}
+    main = by_path[BIOMODELS_TEST_FILE]
+    assert main["name"] == BIOMODELS_TEST_FILE
+    assert main["size"] == 17247
+    assert main["download_url"] == (
+        f"{BIOMODELS_API}/model/download/{BIOMODELS_MODEL_ID}.1"
+        f"?filename={BIOMODELS_TEST_FILE}"
+    )
+    assert by_path["extra.txt"]["size"] == 55
+
+
+async def test_biomodels_list_files_latest_revision():
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    session = _FakeSession(_biomodels_routes(version="3"))
+    result = await biomodels_module.biomodels_list_files(session, BIOMODELS_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["version"] == "3"
+    assert len(result["files"]) == 2
+
+
+async def test_biomodels_list_files_http_error():
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    session = _FakeSession(
+        {
+            f"{BIOMODELS_API}/model/files/{BIOMODELS_MODEL_ID}.1": _FakeResponse(
+                {}, status=500
+            )
+        }
+    )
+    result = await biomodels_module.biomodels_list_files(
+        session, BIOMODELS_TEST_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["files"] == []
+    assert "HTTP 500" in result["error"]
+
+
+async def test_biomodels_live_model_listing():
+    """List the files of a real BioModels model.
+
+    Uses ``MODEL0912160000`` by default; override with the
+    ``KLEA_BIOMODELS_TEST_URL`` environment variable to use another model.
+    Skips when the API is unreachable.
+    """
+    from klea_utils.mcp.tool_impls.repositories import biomodels as biomodels_module
+
+    url = os.environ.get("KLEA_BIOMODELS_TEST_URL", BIOMODELS_TEST_URL)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            result = await biomodels_module.biomodels_list_files(client, url)
+    except httpx.HTTPError as exc:
+        pytest.skip(f"BioModels API unavailable: {exc}")
+
+    if result["error"]:
+        pytest.skip(f"BioModels API error: {result['error']}")
+
+    names = {f["name"] for f in result["files"]}
+    assert BIOMODELS_TEST_FILE in names
+    assert all(f["path"] for f in result["files"])
+    assert all(f["download_url"] for f in result["files"])
+    assert result["version"].isdigit()
