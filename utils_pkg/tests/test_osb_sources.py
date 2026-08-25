@@ -63,8 +63,10 @@ class _FakeResponse:
 class _FakeSession:
     """Serves canned responses per URL and records the calls made.
 
-    ``routes`` maps a URL (without query string) to a :class:`_FakeResponse`
-    or to an exception instance that is raised on access.
+    ``routes`` maps a URL (without query string) to a :class:`_FakeResponse`,
+    to an exception instance that is raised on access, or to a callable
+    ``(params) -> _FakeResponse`` for responses that depend on query
+    parameters.
     """
 
     def __init__(self, routes: dict):
@@ -78,6 +80,8 @@ class _FakeSession:
             raise AssertionError(f"no route registered for {url}")
         if isinstance(route, Exception):
             raise route
+        if callable(route):
+            return route(kwargs.get("params"))
         return route
 
     def stream(self, method, url, **kwargs):
@@ -355,3 +359,213 @@ async def test_github_live_klea_repo_stable_files_match():
     missing_local = sorted(remote_stable - local_stable)
     logger.debug(f"{missing_remote = }\n{missing_local = }")
     assert local_stable == remote_stable
+
+
+FIGSHARE_API = "https://api.figshare.com/v2/articles/14976822"
+RDR_ARTICLE_URL = "https://rdr.ucl.ac.uk/articles/dataset/Fibre_Direction_Data/14976822"
+RDR_FIRST_FILE = "FL_S_170905_10_40_52_fibre_direction.mat"
+
+
+def _figshare_routes(version="1"):
+    article_info = {"version": int(version)}
+    versions = [{"version": int(version)}]
+    files = [
+        {
+            "name": "f1.mat",
+            "size": 10,
+            "download_url": "https://ndownloader.figshare.com/files/1",
+        },
+        {
+            "name": "f2.mat",
+            "size": 20,
+            "download_url": "https://ndownloader.figshare.com/files/2",
+        },
+    ]
+    return {
+        FIGSHARE_API: _FakeResponse(article_info),
+        f"{FIGSHARE_API}/versions": _FakeResponse(versions),
+        f"{FIGSHARE_API}/files": _FakeResponse(files),
+    }
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        (
+            "https://figshare.com/articles/dataset/Title/14976822",
+            "14976822",
+        ),
+        (RDR_ARTICLE_URL, "14976822"),
+        ("https://www.figshare.com/articles/x/42", "42"),
+        # Institutional instances sit on arbitrary domains with arbitrary
+        # path prefixes; only the trailing numeric article ID is reliable.
+        ("https://rdr.myuniv.eu/lots/of/data/articles/14976822", "14976822"),
+        ("https://data.someuni.edu/14976822/", "14976822"),
+        ("https://figshare.com/articles/x/14976822?foo=bar", "14976822"),
+    ],
+)
+def test_parse_figshare_url_valid(url, expected):
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    assert figshare_module._parse_figshare_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "not-a-url",
+        "https://github.com/owner/repo",
+        "https://rdr.ucl.ac.uk/articles/x",
+        "https://figshare.com/articles/dataset/Title/abc",
+        "ftp://figshare.com/articles/x/1",
+    ],
+)
+def test_parse_figshare_url_invalid(url):
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+    from klea_utils.mcp.tool_impls.repositories.errors import RepositorySourceError
+
+    with pytest.raises(RepositorySourceError):
+        figshare_module._parse_figshare_url(url)
+
+
+async def test_figshare_list_versions():
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    session = _FakeSession(_figshare_routes())
+    result = await figshare_module.figshare_list_versions(session, RDR_ARTICLE_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["source"] == "figshare"
+    assert result["versions"] == ["1"]
+
+
+async def test_figshare_list_files_flat_mapping():
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    session = _FakeSession(_figshare_routes())
+    result = await figshare_module.figshare_list_files(
+        session, RDR_ARTICLE_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["version"] == "1"
+    assert [f["path"] for f in result["files"]] == ["f1.mat", "f2.mat"]
+    by_path = {f["path"]: f for f in result["files"]}
+    assert (
+        by_path["f1.mat"]["download_url"] == "https://ndownloader.figshare.com/files/1"
+    )
+    assert by_path["f1.mat"]["size"] == 10
+
+
+async def test_figshare_list_files_resolves_default_version():
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    session = _FakeSession(_figshare_routes(version="3"))
+    result = await figshare_module.figshare_list_files(session, RDR_ARTICLE_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["version"] == "3"
+    assert len(result["files"]) == 2
+
+
+async def test_figshare_list_files_paginates(monkeypatch):
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    # Small page size so the two pages are exercised without huge fixtures.
+    monkeypatch.setattr(figshare_module, "PAGE_SIZE", 2)
+
+    def _files_route(params):
+        page = int((params or {}).get("page", 1))
+        if page == 1:
+            payload = [
+                {"name": "p1a.mat", "size": 1, "download_url": "https://x/1"},
+                {"name": "p1b.mat", "size": 2, "download_url": "https://x/2"},
+            ]
+        else:
+            payload = [
+                {"name": "p2a.mat", "size": 3, "download_url": "https://x/3"},
+            ]
+        return _FakeResponse(payload)
+
+    session = _FakeSession(
+        {
+            FIGSHARE_API: _FakeResponse({"version": 1}),
+            f"{FIGSHARE_API}/files": _files_route,
+        }
+    )
+    result = await figshare_module.figshare_list_files(
+        session, RDR_ARTICLE_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert [f["path"] for f in result["files"]] == [
+        "p1a.mat",
+        "p1b.mat",
+        "p2a.mat",
+    ]
+
+
+async def test_figshare_list_files_skips_entries_missing_fields():
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    files = [
+        {"name": "ok.mat", "size": 1, "download_url": "https://x/ok"},
+        {"name": "no-url.mat", "size": 2},
+        {"download_url": "https://x/anon"},
+        {},
+    ]
+    session = _FakeSession(
+        {
+            FIGSHARE_API: _FakeResponse({"version": 1}),
+            f"{FIGSHARE_API}/files": _FakeResponse(files),
+        }
+    )
+    result = await figshare_module.figshare_list_files(
+        session, RDR_ARTICLE_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert [f["path"] for f in result["files"]] == ["ok.mat"]
+
+
+async def test_figshare_list_files_http_error():
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    session = _FakeSession(
+        {
+            f"{FIGSHARE_API}/files": _FakeResponse({}, status=500),
+        }
+    )
+    result = await figshare_module.figshare_list_files(
+        session, RDR_ARTICLE_URL, version="1"
+    )
+    logger.debug(f"{result = }")
+    assert result["files"] == []
+    assert "HTTP 500" in result["error"]
+
+
+async def test_figshare_live_article_listing():
+    """List the files of a real FigShare article (UCL RDR instance).
+
+    Validates the full pipeline against the live API; skips when the API is
+    unreachable.  Asserts a well-formed non-empty listing including a file
+    name that is known to be present.
+    """
+    from klea_utils.mcp.tool_impls.repositories import figshare as figshare_module
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            result = await figshare_module.figshare_list_files(client, RDR_ARTICLE_URL)
+    except httpx.HTTPError as exc:
+        pytest.skip(f"FigShare API unavailable: {exc}")
+
+    if result["error"]:
+        pytest.skip(f"FigShare API error: {result['error']}")
+
+    assert len(result["files"]) >= 1
+    names = {f["name"] for f in result["files"]}
+    assert RDR_FIRST_FILE in names
+    assert all(f["path"] for f in result["files"])
+    assert all(f["download_url"] for f in result["files"])
+    # The default version is resolved from the article metadata.
+    assert result["version"].isdigit()
