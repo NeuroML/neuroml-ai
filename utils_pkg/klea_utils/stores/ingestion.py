@@ -10,7 +10,9 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import json
 import logging
+import os
 import pickle
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -793,8 +795,16 @@ class StoresBuilder:
         :meth:`chunk_all` run so the cache always mirrors the source
         directory and users never need to clean it by hand.
 
-        Only ``*.pkl`` chunk-cache files are touched; other cache files
-        (e.g. ``doi-cache.json``) are left alone.
+        ``.corrupt`` artifacts (cache entries moved aside by
+        :meth:`_load_from_cache` because they were unreadable) are pruned
+        once their failure is resolved: the source file is gone, or a
+        valid cache entry was regenerated this run.  An artifact whose
+        source is current but still has no valid cache entry is kept, as
+        it is the only evidence of a failure that has not healed.
+
+        Only ``*.pkl`` chunk-cache files and ``*.pkl.corrupt`` artifacts
+        are touched; other cache files (e.g. ``doi-cache.json``) are left
+        alone.
 
         :param source_dir: Resolved source directory path
         :param current_hashes: xxhash digests of all source files found
@@ -803,12 +813,12 @@ class StoresBuilder:
         cache_dir = self._cache_dir(source_dir)
         if not cache_dir.is_dir():
             return
+        valid_names = {
+            self._cache_path(source_dir, file_hash).name for file_hash in current_hashes
+        }
         pruned: list[Path] = []
         for path in cache_dir.glob("*.pkl"):
-            if path.name not in {
-                self._cache_path(source_dir, file_hash).name
-                for file_hash in current_hashes
-            }:
+            if path.name not in valid_names:
                 try:
                     path.unlink()
                     pruned.append(path)
@@ -816,6 +826,20 @@ class StoresBuilder:
                     self.logger.warning(
                         f"Could not remove stale cache entry {path}: {exc}"
                     )
+        for path in cache_dir.glob("*.pkl.corrupt"):
+            stem = path.name[: -len(".corrupt")]
+            # Keep artifacts whose source is current but still lacks a
+            # valid cache entry (the failure has not healed); prune the
+            # rest -- the source file is gone or was regenerated this run.
+            if stem in valid_names and not (cache_dir / stem).is_file():
+                continue
+            try:
+                path.unlink()
+                pruned.append(path)
+            except OSError as exc:
+                self.logger.warning(
+                    f"Could not remove stale corrupt artifact {path}: {exc}"
+                )
         if pruned:
             self.logger.info(
                 f"Pruned {len(pruned)} stale cache entr{'y' if len(pruned) == 1 else 'ies'} "
@@ -838,6 +862,11 @@ class StoresBuilder:
         degrading to a weaker regex-only pass.  (Legacy cache entries
         hold a plain list of docs; :meth:`_load_from_cache` handles both.)
 
+        The write is atomic: the pickle is dumped to a temp file in the
+        cache directory and then ``os.replace``d onto the final ``.pkl``
+        path, so a crash or kill mid-write can never leave a truncated
+        or empty cache entry that would poison future runs.
+
         :param docs: List of chunked documents to cache
         :param extracted: Bibliographic metadata extracted for the file
         :param source_dir: Resolved source directory path
@@ -846,8 +875,26 @@ class StoresBuilder:
         cache_dir = self._cache_dir(source_dir)
         cache_dir.mkdir(parents=True, exist_ok=True)
         path = self._cache_path(source_dir, file_hash)
-        with open(path, "wb") as f:
-            pickle.dump((docs, extracted), f)
+        tmp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=cache_dir,
+                prefix=f"{path.stem}.",
+                suffix=".tmp",
+                delete=False,
+            ) as f:
+                tmp_path = Path(f.name)
+                pickle.dump((docs, extracted), f)
+            os.replace(tmp_path, path)
+        finally:
+            # A failed dump/replace must not leave a stray temp file; after
+            # a successful os.replace the temp path no longer exists.
+            if tmp_path is not None and tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
         self.logger.info(f"Cached {len(docs)} chunks to {path}")
 
     def _load_from_cache(
@@ -867,17 +914,51 @@ class StoresBuilder:
         Handles legacy cache entries (a plain list of documents) by
         returning an empty extracted dict for them.
 
+        A corrupt or unreadable entry (empty/truncated file, malformed
+        pickle, or a pickle whose class definitions changed between
+        versions) is treated as a cache miss: the file is moved aside as
+        ``<hash>.pkl.corrupt`` (preserving the bytes for debugging) with
+        a warning so the source document is re-converted on the next
+        pass, rather than aborting the run.  :meth:`_prune_cache` removes
+        the artifact once a valid entry is regenerated.
+
         :param source_dir: Resolved source directory path
         :param file_hash: xxhash digest of the source file
         :returns: ``(docs, extracted)``, or ``None`` if the cache file
-            does not exist
+            does not exist or is corrupt
         """
         path = self._cache_path(source_dir, file_hash)
         if not path.is_file():
             return None
         self.logger.debug(f"Cache hit: {path.name}")
-        with open(path, "rb") as f:
-            data = pickle.load(f)
+        try:
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+        except (
+            EOFError,
+            pickle.UnpicklingError,
+            AttributeError,
+            ImportError,
+            ValueError,
+        ) as exc:
+            # A torn write (e.g. from a crash mid-pickle.dump) or a stale
+            # entry from an older pipeline can leave an unreadable cache
+            # file.  Move it aside (preserving the bytes for debugging)
+            # and treat it as a cache miss so the source is re-converted;
+            # :meth:`_prune_cache` removes the artifact once the entry is
+            # regenerated.
+            corrupt_path = path.with_name(path.name + ".corrupt")
+            try:
+                path.replace(corrupt_path)
+                self.logger.warning(
+                    f"Discarding corrupt cache entry {path.name} "
+                    f"(moved to {corrupt_path.name}): {exc}"
+                )
+            except OSError as exc:
+                self.logger.warning(
+                    f"Could not move corrupt cache entry {path} aside: {exc}"
+                )
+            return None
         if isinstance(data, tuple):
             docs, extracted = data
             return docs, extracted or {}

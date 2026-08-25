@@ -871,6 +871,76 @@ class TestIngestion:
         loaded = builder._load_from_cache(self.tmpdir_path, "xxh64:legacy")
         assert loaded == ([doc], {})
 
+    def test_cache_load_moves_corrupt_empty_entry_aside(self):
+        """A 0-byte cache entry (torn write) loads as None and is moved aside."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        (cache_dir / "xxh64_empty.pkl").write_bytes(b"")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._load_from_cache(self.tmpdir_path, "xxh64:empty") is None
+        assert not (cache_dir / "xxh64_empty.pkl").exists()
+        assert (cache_dir / "xxh64_empty.pkl.corrupt").read_bytes() == b""
+
+    def test_cache_load_moves_corrupt_truncated_entry_aside(self):
+        """A non-empty but corrupt cache entry loads as None and is moved aside."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        payload = b"\x80\x04\x95garbage"
+        (cache_dir / "xxh64_trunc.pkl").write_bytes(payload)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        assert builder._load_from_cache(self.tmpdir_path, "xxh64:trunc") is None
+        assert not (cache_dir / "xxh64_trunc.pkl").exists()
+        assert (cache_dir / "xxh64_trunc.pkl.corrupt").read_bytes() == payload
+
+    def test_cache_save_is_atomic_and_valid(self):
+        """Save writes atomically: a valid entry and no stray temp files."""
+        doc = Document(page_content="Atomic.", metadata={"headings": ["A"]})
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._save_to_cache([doc], {"title": "T"}, self.tmpdir_path, "xxh64:atom")
+
+        loaded = builder._load_from_cache(self.tmpdir_path, "xxh64:atom")
+        assert loaded is not None
+        docs, extracted = loaded
+        assert docs[0].page_content == "Atomic."
+        assert extracted == {"title": "T"}
+
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        assert [p.name for p in cache_dir.glob("*.tmp")] == []
+
+    def test_prune_cache_cleans_healed_corrupt_artifacts(self):
+        """A .corrupt artifact is pruned once a valid entry is regenerated."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        (cache_dir / "xxh64_healed.pkl").write_bytes(b"valid")
+        (cache_dir / "xxh64_healed.pkl.corrupt").write_bytes(b"")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._prune_cache(self.tmpdir_path, {"xxh64:healed"})
+        assert (cache_dir / "xxh64_healed.pkl").exists()
+        assert not (cache_dir / "xxh64_healed.pkl.corrupt").exists()
+
+    def test_prune_cache_keeps_corrupt_artifact_without_regenerated_entry(self):
+        """A .corrupt artifact is kept while its source lacks a cache entry."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        (cache_dir / "xxh64_broken.pkl.corrupt").write_bytes(b"")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._prune_cache(self.tmpdir_path, {"xxh64:broken"})
+        assert (cache_dir / "xxh64_broken.pkl.corrupt").exists()
+
+    def test_prune_cache_removes_orphaned_corrupt_artifacts(self):
+        """A .corrupt artifact whose source file is gone is pruned."""
+        cache_dir = self.tmpdir_path / CACHE_DIR_NAME
+        cache_dir.mkdir()
+        (cache_dir / "xxh64_orphan.pkl.corrupt").write_bytes(b"")
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        builder._prune_cache(self.tmpdir_path, {"xxh64:somethingelse"})
+        assert not (cache_dir / "xxh64_orphan.pkl.corrupt").exists()
+
     @pytest.mark.localonly
     def test_chunk_all_prefills_metadata_template(self):
         """chunk_all pre-fills the per-file DEFAULT template entry.
