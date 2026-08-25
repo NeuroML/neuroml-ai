@@ -1391,6 +1391,34 @@ class TestIngestion:
         assert len(results) == 1
         assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
 
+    def test_chunk_all_collect_results_false_releases_docs(self, caplog):
+        """collect_results=False returns no results but caches and headings.
+
+        The ``chunk`` CLI passes this so a chunk-only run stays bounded in
+        memory on large corpora: each file's chunks are released after
+        caching instead of accumulating in the returned results list.  The
+        cache and per-file heading chains must be identical to a collecting
+        run -- the flag only changes what is held in memory.
+        """
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        with caplog.at_level(logging.DEBUG):
+            results, file_headings = builder.chunk_all(
+                self.tmpdir_path, collect_results=False
+            )
+        assert results == []
+        assert "test.md" in file_headings
+        assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
+        assert "Released in-memory chunks for test.md" in caplog.text
+
+        # A later collecting run hits the cache: same headings, plus the
+        # chunks, confirming the flag only affects in-memory retention.
+        results2, file_headings2 = builder.chunk_all(self.tmpdir_path)
+        assert len(results2) == 1
+        assert file_headings2 == file_headings
+
     @pytest.mark.localonly
     def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
         """chunk_all warns when a map entry exists but resolves no metadata.

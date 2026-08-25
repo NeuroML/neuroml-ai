@@ -232,6 +232,7 @@ class StoresBuilder:
         source_path: Path,
         metadata_map: dict[str, dict[str, Any]] | None = None,
         force: bool = False,
+        collect_results: bool = True,
     ) -> tuple[list[tuple[str, list[Document], Path]], dict[str, dict[str, Any]]]:
         """Convert, chunk, cache, and enrich metadata for all files.
 
@@ -247,14 +248,27 @@ class StoresBuilder:
         does not call this -- it uses :meth:`_load_and_fold_results`,
         which loads cached chunks without converting.
 
+        With ``collect_results`` false the per-file chunks are *not*
+        retained in the returned ``results`` list: they are released as
+        soon as each file is cached to disk, so a ``chunk``-only run
+        stays bounded in memory regardless of corpus size (the cache is
+        the source of truth, not the returned list).  Callers that need
+        the chunks to hand on (e.g. ``build``, which feeds them to
+        :meth:`store_all`) keep the default ``True``.
+
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment,
             or ``None``
         :param force: Re-process all files even if cached
+        :param collect_results: When ``True`` (default), accumulate the
+            chunked docs into the returned ``results`` list; when
+            ``False``, drop them after caching so memory stays bounded
+            (``results`` is returned empty)
         :returns: ``(results, file_headings)`` where *results* is a
-            list of ``(file_hash, docs, file_path)`` tuples and
-            *file_headings* is a ``{file_name: {"DEFAULT": {extracted
-            metadata}, "heading > heading": {}, ...}}`` dict
+            list of ``(file_hash, docs, file_path)`` tuples (empty when
+            ``collect_results`` is false) and *file_headings* is a
+            ``{file_name: {"DEFAULT": {extracted metadata}, "heading >
+            heading": {}, ...}}`` dict
         """
         self._ensure_tokenizer()
 
@@ -365,7 +379,17 @@ class StoresBuilder:
                         file_entry[key] = {}
             file_headings[file_path.name] = file_entry
 
-            results.append((file_hash, docs, file_path))
+            # Holding every file's docs in ``results`` scales with the
+            # corpus.  The ``chunk`` CLI only needs the headings for the
+            # metadata-map template, so it opts out and the docs are
+            # freed as soon as this iteration's cache write is done.
+            if collect_results:
+                results.append((file_hash, docs, file_path))
+            else:
+                self.logger.debug(
+                    f"Released in-memory chunks for {file_path.name} "
+                    f"(collect_results=False)"
+                )
 
         self._prune_cache(source_path, current_hashes)
 

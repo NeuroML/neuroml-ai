@@ -184,7 +184,13 @@ def chunk(
         if not source_path.is_dir():
             raise FileNotFoundError(f"Source directory not found: {source_path}")
 
-        _, file_headings = builder.chunk_all(source_path, force=force)
+        # ``chunk`` is cache-only and the docs are discarded after this
+        # call, so collect_results=False releases each file's chunks as
+        # soon as they are cached, keeping the run's memory bounded for
+        # large corpora (only file_headings is needed for the template).
+        _, file_headings = builder.chunk_all(
+            source_path, force=force, collect_results=False
+        )
         builder.write_heading_template(file_headings, source_path)
     except Exception as e:
         logger.error(f"Failed: {e}")
