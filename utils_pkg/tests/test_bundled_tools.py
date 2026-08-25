@@ -22,6 +22,7 @@ from klea_utils.mcp.tool_impls import web_fetch as web_fetch_module
 from klea_utils.mcp.tool_impls.download_file import (
     download_file,
     download_file_to_cache,
+    download_files,
 )
 from klea_utils.mcp.tool_impls.list_files import list_files
 from klea_utils.mcp.tool_impls.read_file import read_file
@@ -928,3 +929,149 @@ class TestResolveUserAgents:
         agents = await web_fetch_module._resolve_user_agents()
         # Stale cache is preferred over the hardcoded fallback.
         assert agents == stale
+
+
+class _PerUrlSession:
+    """Serves a distinct response per URL."""
+
+    def __init__(self, responses: dict):
+        self._responses = responses
+        self.calls: list[tuple[str, dict]] = []
+
+    async def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return self._responses[url]
+
+    def stream(self, method, url, **kwargs):
+        raise AssertionError("stream is not exercised in these tests")
+
+
+class _TrackingSession:
+    """Serves responses per URL while holding requests open, tracking the
+    maximum number of concurrent in-flight requests."""
+
+    def __init__(self, responses: dict, hold):
+        self._responses = responses
+        self._hold = hold
+        self.in_flight = 0
+        self.max_in_flight = 0
+        self.calls: list[tuple[str, dict]] = []
+
+    async def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        try:
+            await self._hold.wait()
+            return self._responses[url]
+        finally:
+            self.in_flight -= 1
+
+    def stream(self, method, url, **kwargs):
+        raise AssertionError("stream is not exercised in these tests")
+
+
+class TestDownloadFiles:
+    """Tests of the multi-file download helper."""
+
+    async def test_download_files_writes_multiple_files(self, tmp_path):
+        fake = _FakeResponse("file body", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "dl"
+        files = [
+            {"path": "a.txt", "download_url": "https://example.com/a.txt"},
+            {"path": "sub/b.txt", "download_url": "https://example.com/b.txt"},
+        ]
+        result = await download_files(session, files, target)
+        logger.debug(f"{result = }")
+        assert result["error"] == ""
+        assert (target / "a.txt").read_text() == "file body"
+        assert (target / "sub" / "b.txt").read_text() == "file body"
+        by_path = {r["path"]: r for r in result["results"]}
+        assert by_path["a.txt"]["saved_to"] == str(target / "a.txt")
+        assert by_path["sub/b.txt"]["saved_to"] == str(target / "sub" / "b.txt")
+
+    async def test_download_files_continue_on_error(self, tmp_path):
+        responses = {
+            "https://example.com/ok.txt": _FakeResponse(
+                "ok", status=200, content_type="text/plain"
+            ),
+            "https://example.com/bad.txt": _FakeResponse(
+                "missing", status=404, content_type="text/plain"
+            ),
+        }
+        session = _PerUrlSession(responses)
+        target = tmp_path / "dl"
+        files = [
+            {"path": "ok.txt", "download_url": "https://example.com/ok.txt"},
+            {"path": "bad.txt", "download_url": "https://example.com/bad.txt"},
+        ]
+        result = await download_files(session, files, target)
+        logger.debug(f"{result = }")
+        assert result["error"] == ""
+        by_path = {r["path"]: r for r in result["results"]}
+        assert "saved_to" in by_path["ok.txt"]
+        assert "error" in by_path["bad.txt"]
+        assert (target / "ok.txt").exists()
+        assert not (target / "bad.txt").exists()
+
+    async def test_download_files_skips_entries_missing_fields(self, tmp_path):
+        fake = _FakeResponse("x", status=200, content_type="text/plain")
+        session = _FakeSession(response=fake)
+        target = tmp_path / "dl"
+        files = [
+            {"path": "ok.txt", "download_url": "https://example.com/ok.txt"},
+            {"path": "no-url.txt"},
+            {"download_url": "https://example.com/no-name.txt"},
+        ]
+        result = await download_files(session, files, target)
+        logger.debug(f"{result = }")
+        by_path = {r["path"]: r for r in result["results"]}
+        assert by_path["ok.txt"]["saved_to"] == str(target / "ok.txt")
+        assert by_path["no-url.txt"]["error"] == "missing path or download_url"
+        assert by_path[""]["error"] == "missing path or download_url"
+
+    async def test_download_files_empty_list(self, tmp_path):
+        session = _FakeSession(response=_FakeResponse("x"))
+        result = await download_files(session, [], tmp_path / "dl")
+        logger.debug(f"{result = }")
+        assert result == {"results": [], "error": ""}
+
+    async def test_download_files_missing_session(self, tmp_path):
+        files = [{"path": "a.txt", "download_url": "https://example.com/a.txt"}]
+        result = await download_files(None, files, tmp_path / "dl")
+        logger.debug(f"{result = }")
+        assert result["error"] == ""
+        assert result["results"][0]["path"] == "a.txt"
+        assert result["results"][0]["error"] == "download failed"
+
+    async def test_download_files_bounded_concurrency(self, tmp_path):
+        import asyncio
+
+        hold = asyncio.Event()
+        urls = [f"https://example.com/f{i}.txt" for i in range(6)]
+        files = [
+            {"path": f"f{i}.txt", "download_url": url} for i, url in enumerate(urls)
+        ]
+        responses = {
+            url: _FakeResponse(f"body {i}", status=200, content_type="text/plain")
+            for i, url in enumerate(urls)
+        }
+        session = _TrackingSession(responses, hold)
+        target = tmp_path / "dl"
+
+        task = asyncio.create_task(
+            download_files(session, files, target, max_concurrency=2)
+        )
+        # Let the first two downloads open and stall on the hold event.
+        for _ in range(100):
+            if session.max_in_flight >= 2:
+                break
+            await asyncio.sleep(0.01)
+        assert session.max_in_flight == 2
+        assert session.max_in_flight <= 2
+        hold.set()
+        result = await task
+        assert result["error"] == ""
+        assert all("saved_to" in r for r in result["results"])
+        assert all((target / f"f{i}.txt").exists() for i in range(6))

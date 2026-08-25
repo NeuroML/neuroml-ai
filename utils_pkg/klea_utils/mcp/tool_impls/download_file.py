@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -161,3 +162,99 @@ async def download_file_to_cache(
         project_root=str(cache_dir),
         allow_internal_hosts=allow_internal_hosts,
     )
+
+
+async def download_files(
+    session: SessionLike | None,
+    files: list[dict[str, Any]],
+    target_dir: str | Path,
+    max_concurrency: int = 3,
+    timeout: float | httpx.Timeout = 30.0,
+    retries: int = 3,
+) -> dict[str, Any]:
+    """Download a list of files into *target_dir*, bounded in concurrency.
+
+    Framework-agnostic helper that drives :func:`download_file` for each
+    entry in *files*, as returned by the repository source list functions
+    (entries carry ``path`` and ``download_url``).  Relative ``path`` values
+    are preserved under *target_dir* (parent directories are created as
+    needed), and writes stay confined to *target_dir*.
+
+    *target_dir* is an explicit destination directory -- it may be the
+    current project, a working subfolder, or a cache directory -- so the
+    downloaded files are immediately usable where the caller asked for
+    them.
+
+    Downloads run with bounded concurrency (an ``asyncio.Semaphore``) so a
+    large dataset does not hammer the source server.  Individual failures
+    are recorded per file and do not abort the rest of the batch, so a
+    caller (e.g. an LLM) can retry the failed paths.
+
+    :param session: HTTP session to use for the requests.  ``None`` when no
+        session is available.
+    :param files: File entries to download; each needs ``path`` (relative
+        target path) and ``download_url``.
+    :param target_dir: Destination directory under which the files are
+        written.
+    :param max_concurrency: Maximum number of downloads in flight.
+    :param timeout: Request timeout in seconds per download.
+    :param retries: Number of attempts for transient failures per download.
+    :returns: dict with ``results`` (one entry per file: ``path`` plus
+        ``saved_to`` on success or ``error`` on failure) and a top-level
+        ``error`` (only set when the whole batch fails unexpectedly).
+    """
+    logger.debug(
+        f"Downloading {len(files)} files into {target_dir}\n"
+        f"{max_concurrency = }\n{timeout = }\n{retries = }"
+    )
+
+    sem = asyncio.Semaphore(max(1, max_concurrency))
+
+    async def _download_one(file_entry: dict[str, Any]) -> dict[str, Any]:
+        path = file_entry.get("path", "")
+        url = file_entry.get("download_url", "")
+        if not path or not url:
+            logger.warning(
+                f"Skipping file entry without path/download_url: {file_entry}"
+            )
+            return {"path": path, "error": "missing path or download_url"}
+        try:
+            target = await download_file(
+                session=session,
+                url=url,
+                file_path=Path(target_dir) / path,
+                timeout=timeout,
+                retries=retries,
+                # The batch boundary is its destination directory: files
+                # may be written inside it, and nowhere else.
+                project_root=str(target_dir),
+            )
+        except (OSError, TimeoutError, httpx.HTTPError) as exc:
+            logger.warning(f"Unexpected error downloading {url}: {exc}")
+            return {"path": path, "error": str(exc)}
+        if target is None:
+            logger.warning(f"Download failed for {url}")
+            return {"path": path, "error": "download failed"}
+        return {"path": path, "saved_to": str(target)}
+
+    async def _bounded(file_entry: dict[str, Any]) -> dict[str, Any]:
+        async with sem:
+            return await _download_one(file_entry)
+
+    results = await asyncio.gather(
+        *(_bounded(f) for f in files), return_exceptions=True
+    )
+    normalized: list[dict[str, Any]] = []
+    for entry in results:
+        if isinstance(entry, BaseException):
+            # Only reachable for unexpected errors outside _download_one.
+            logger.error(f"Unexpected download_files error: {entry}")
+            normalized.append({"path": "", "error": str(entry)})
+        else:
+            normalized.append(entry)
+
+    logger.info(
+        f"Downloaded {sum('saved_to' in r for r in normalized)}/"
+        f"{len(normalized)} files into {target_dir}"
+    )
+    return {"results": normalized, "error": ""}
