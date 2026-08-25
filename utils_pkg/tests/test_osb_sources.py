@@ -9,6 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+import os
 import subprocess
 
 import httpx
@@ -569,3 +570,199 @@ async def test_figshare_live_article_listing():
     assert all(f["download_url"] for f in result["files"])
     # The default version is resolved from the article metadata.
     assert result["version"].isdigit()
+
+
+DANDI_API = "https://api.dandiarchive.org/api"
+DANDI_TEST_URL = "https://dandiarchive.org/dandiset/000025"
+DANDI_VERSIONS_URL = f"{DANDI_API}/dandisets/000025/versions/"
+DANDI_PATHS_URL = f"{DANDI_API}/dandisets/000025/versions/draft/assets/paths/"
+DANDI_TEST_FILE = "001_140709EXP_A1.nwb"
+
+
+def _dandi_paths_route(tree_by_prefix: dict):
+    """Return a route callable serving the assets/paths endpoint by prefix.
+
+    ``tree_by_prefix`` maps a ``path_prefix`` to a list of result items;
+    each item is ``{"path": ..., "asset": {...} | None}``.  Files beyond
+    ``PAGE_SIZE`` are served on subsequent pages.
+    """
+
+    def _route(params):
+        prefix = (params or {}).get("path_prefix", "")
+        items = tree_by_prefix.get(prefix, [])
+        page = int((params or {}).get("page", 1))
+        page_size = int((params or {}).get("page_size", 100))
+        start = (page - 1) * page_size
+        page_items = items[start : start + page_size]
+        return _FakeResponse(
+            {
+                "count": len(items),
+                "next": None,
+                "previous": None,
+                "results": page_items,
+            }
+        )
+
+    return _route
+
+
+def _asset(path: str, asset_id: str) -> dict:
+    return {"path": path, "asset": {"asset_id": asset_id}}
+
+
+def _folder(path: str) -> dict:
+    return {"path": path, "asset": None}
+
+
+def _dandi_routes():
+    versions = {
+        "count": 2,
+        "next": None,
+        "previous": None,
+        "results": [{"version": "draft"}, {"version": "0.210812.1448"}],
+    }
+    tree = {
+        "": [_folder("sub-a/"), _asset("root.nwb", "root-asset")],
+        "sub-a/": [_asset("sub-a/deep.nwb", "deep-asset")],
+    }
+    return {
+        DANDI_VERSIONS_URL: _FakeResponse(versions),
+        DANDI_PATHS_URL: _dandi_paths_route(tree),
+    }
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("https://dandiarchive.org/dandiset/000025", "000025"),
+        ("https://dandiarchive.org/dandiset/000025/versions/draft", "000025"),
+        ("http://www.dandiarchive.org/dandiset/000025", "000025"),
+    ],
+)
+def test_parse_dandi_url_valid(url, expected):
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    assert dandi_module._parse_dandi_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "not-a-url",
+        "https://github.com/owner/repo",
+        "https://dandiarchive.org/",
+        "https://dandiarchive.org/somewhere/000025",
+        "ftp://dandiarchive.org/dandiset/000025",
+    ],
+)
+def test_parse_dandi_url_invalid(url):
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+    from klea_utils.mcp.tool_impls.repositories.errors import RepositorySourceError
+
+    with pytest.raises(RepositorySourceError):
+        dandi_module._parse_dandi_url(url)
+
+
+async def test_dandi_list_versions():
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    session = _FakeSession(_dandi_routes())
+    result = await dandi_module.dandi_list_versions(session, DANDI_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["source"] == "dandi"
+    assert result["versions"] == ["draft", "0.210812.1448"]
+
+
+async def test_dandi_list_files_recursive_walk():
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    session = _FakeSession(_dandi_routes())
+    result = await dandi_module.dandi_list_files(session, DANDI_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert result["version"] == "draft"
+    by_path = {f["path"]: f for f in result["files"]}
+    assert set(by_path) == {"root.nwb", "sub-a/deep.nwb"}
+    assert by_path["root.nwb"]["name"] == "root.nwb"
+    assert by_path["root.nwb"]["size"] is None
+    assert by_path["root.nwb"]["download_url"] == (
+        f"{DANDI_API}/assets/root-asset/download/"
+    )
+    assert by_path["sub-a/deep.nwb"]["download_url"] == (
+        f"{DANDI_API}/assets/deep-asset/download/"
+    )
+
+
+async def test_dandi_list_files_default_version_is_draft():
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    session = _FakeSession(_dandi_routes())
+    result = await dandi_module.dandi_list_files(session, DANDI_TEST_URL)
+    # The default "draft" is used and resolved without error.
+    assert result["error"] == ""
+    assert result["version"] == "draft"
+
+
+async def test_dandi_list_files_paginates(monkeypatch):
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    monkeypatch.setattr(dandi_module, "PAGE_SIZE", 2)
+    tree = {
+        "": [_asset(f"f{i}.nwb", f"asset-{i}") for i in range(3)],
+    }
+    session = _FakeSession({DANDI_PATHS_URL: _dandi_paths_route(tree)})
+    result = await dandi_module.dandi_list_files(session, DANDI_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert [f["path"] for f in result["files"]] == ["f0.nwb", "f1.nwb", "f2.nwb"]
+
+
+async def test_dandi_list_files_caps_total_files(monkeypatch):
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    monkeypatch.setattr(dandi_module, "MAX_FILES", 2)
+    tree = {
+        "": [_asset(f"f{i}.nwb", f"asset-{i}") for i in range(5)],
+    }
+    session = _FakeSession({DANDI_PATHS_URL: _dandi_paths_route(tree)})
+    result = await dandi_module.dandi_list_files(session, DANDI_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["error"] == ""
+    assert len(result["files"]) == 2
+
+
+async def test_dandi_list_files_http_error():
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    session = _FakeSession({DANDI_PATHS_URL: _FakeResponse({}, status=500)})
+    result = await dandi_module.dandi_list_files(session, DANDI_TEST_URL)
+    logger.debug(f"{result = }")
+    assert result["files"] == []
+    assert "HTTP 500" in result["error"]
+
+
+async def test_dandi_live_dandiset_listing():
+    """List the files of a real DANDI dandiset.
+
+    Uses the small dandiset 000025 by default; override with the
+    ``KLEA_DANDI_TEST_URL`` environment variable to use another dandiset.
+    Skips when the API is unreachable.
+    """
+    from klea_utils.mcp.tool_impls.repositories import dandi as dandi_module
+
+    url = os.environ.get("KLEA_DANDI_TEST_URL", DANDI_TEST_URL)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            result = await dandi_module.dandi_list_files(client, url)
+    except httpx.HTTPError as exc:
+        pytest.skip(f"DANDI API unavailable: {exc}")
+
+    if result["error"]:
+        pytest.skip(f"DANDI API error: {result['error']}")
+
+    assert result["version"] == "draft"
+    names = {f["name"] for f in result["files"]}
+    assert DANDI_TEST_FILE in names
+    assert all(f["path"] for f in result["files"])
+    assert all(f["download_url"] for f in result["files"])
