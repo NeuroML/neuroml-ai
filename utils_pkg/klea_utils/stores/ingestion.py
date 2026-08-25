@@ -536,8 +536,10 @@ class StoresBuilder:
         *results* may be any iterable, including the lazy generator from
         :meth:`_load_and_fold_results`; each file's chunks are released
         once they are stored, keeping memory bounded per file.  When a
-        BM25 corpus is requested it is written from the same chunks
-        after the store loop, so the results are materialised then.
+        BM25 corpus is requested it is written inline from the same
+        chunks during the store loop, one pickled batch per
+        :attr:`embed_batch_size` chunk (read back by looping
+        ``pickle.load`` until ``EOFError``).
 
         :param results: Iterable of ``(file_hash, docs, file_path)``
             tuples from :meth:`chunk_all` or :meth:`_load_and_fold_results`
@@ -552,12 +554,16 @@ class StoresBuilder:
             self.embeddings = setup_embedding(self.embedding_model, self.logger)
         assert store_uri and collection_name
 
-        # The BM25 corpus is written from the same chunks after the store
-        # loop, so when one is requested the results must be re-iterable
-        # and are materialised here.  Without BM25 the results stay lazy:
-        # each file's chunks are released as soon as they are stored.
-        if bm25_path is not None:
-            results = list(results)
+        # BM25 is written inline from the same chunks during the store
+        # loop (one pickled list per embed_batch_size), so the results
+        # stay lazy either way and memory stays bounded per file.  The
+        # file is only opened once a first batch is ready, so an empty
+        # corpus leaves no file behind.
+        bm25_path_obj = Path(bm25_path) if bm25_path else None
+        bm25_file = None
+        bm25_batch: list[Document] = []
+        if bm25_path_obj is not None:
+            bm25_path_obj.parent.mkdir(parents=True, exist_ok=True)
         total = len(self._find_files(source_dir))
 
         manifest_path = self._manifest_path(source_dir, collection_name)
@@ -601,6 +607,20 @@ class StoresBuilder:
         for ctr, (file_hash, docs, file_path) in enumerate(results, 1):
             file_name = file_path.name
             known: dict[str, Any] | None = manifest_files.get(file_name)
+
+            # The BM25 corpus holds every file's chunks, including ones
+            # skipped as unchanged below, so accumulate before the skip.
+            if bm25_path_obj is not None:
+                bm25_batch.extend(docs)
+                if len(bm25_batch) >= self.embed_batch_size:
+                    if bm25_file is None:
+                        # Deliberately not a context manager: the file is
+                        # opened only when the first batch is ready (an
+                        # empty corpus leaves no file) and closed after the
+                        # loop, across many batches.
+                        bm25_file = open(bm25_path_obj, "wb")  # noqa: SIM115
+                    pickle.dump(bm25_batch, bm25_file)
+                    bm25_batch = []
 
             if not force and known and known.get("file_hash") == file_hash:
                 self.logger.debug(
@@ -657,41 +677,14 @@ class StoresBuilder:
 
         self._save_manifest(source_dir, collection_name, manifest)
 
-        if bm25_path:
-            self.write_bm25_store(results, bm25_path)
-
-    def write_bm25_store(
-        self,
-        results: Iterable[tuple[str, list[Document], Path]],
-        bm25_path: str,
-    ) -> None:
-        """Write the combined chunked documents to a BM25 corpus.
-
-        Flattens the per-file chunked documents from :meth:`chunk_all`
-        into a single list and pickles it to *bm25_path*.  This file is
-        the BM25 store: a :class:`BM25RetrieverManager` loads it at
-        runtime to build its keyword index.  It is independent of the
-        per-file ``.klea-cache``, so the cache can be removed once the
-        corpus has been written.
-
-        The corpus holds the same chunk units (and metadata) that are
-        stored in the vector store, so BM25 and vector retrieval return
-        consistent results.
-
-        :param results: Iterable of ``(file_hash, docs, file_path)``
-            tuples from :meth:`chunk_all`
-        :param bm25_path: Path to write the combined corpus pickle to
-        """
-        all_docs = [doc for _, docs, _ in results for doc in docs]
-        if not all_docs:
-            self.logger.warning("No documents to write to BM25 store, skipping")
-            return
-
-        path = Path(bm25_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as f:
-            pickle.dump(all_docs, f)
-        self.logger.info(f"Wrote BM25 store with {len(all_docs)} chunks to {path}")
+        if bm25_path_obj is not None:
+            if bm25_file is None:
+                self.logger.warning("No documents to write to BM25 store, skipping")
+            else:
+                if bm25_batch:
+                    pickle.dump(bm25_batch, bm25_file)
+                bm25_file.close()
+                self.logger.info(f"Wrote BM25 store to {bm25_path}")
 
     def write_heading_template(
         self, file_headings: dict[str, dict[str, Any]], source_dir: Path

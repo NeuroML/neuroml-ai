@@ -298,6 +298,20 @@ class TestBM25Retriever(unittest.TestCase):
 
         self.assertEqual(res, [])
 
+    def test_batched_corpus_loads(self):
+        """A batched corpus (one pickled list per batch) loads like a flat one."""
+        self.logger.info("Rewriting corpus as a batched pickle (2 batches)")
+        with open(self.corpus_path, "wb") as f:
+            pickle.dump(self.CORPUS[:2], f)
+            pickle.dump(self.CORPUS[2:], f)
+
+        manager = self._make_manager()
+        res = manager.retrieve("NeuroML", "Hodgkin Huxley action potential")
+        self.logger.info(f"batched-corpus query returned {len(res)} documents")
+
+        self.assertTrue(res)
+        self.assertEqual(res[0][0].metadata["file_name"], "b.md")
+
     def test_inc_k_and_reset_k(self):
         """inc_k()/reset_k() adjust the retrieval depth of loaded stores."""
         manager = self._make_manager()

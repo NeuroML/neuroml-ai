@@ -232,6 +232,18 @@ class TestStoreLintCli:
         result = CliRunner().invoke(app, ["store-lint", str(path)])
         assert result.exit_code != 0
 
+    def test_batched_corpus_lints(self, tmp_path):
+        """store-lint reads a batched corpus (one pickled list per batch)."""
+        from klea_utils.ui.stores_create import app
+
+        path = tmp_path / "batched.pkl"
+        with open(path, "wb") as f:
+            pickle.dump([_doc("x" * 100, "a.pdf")], f)
+            pickle.dump([_doc("tiny", "b.pdf")], f)
+        result = CliRunner().invoke(app, ["store-lint", str(path)])
+        assert result.exit_code == 0, result.output
+        assert "2 chunks across 2 files" in result.output
+
     def test_store_command_auto_prints_report(self, tmp_path, monkeypatch):
         """store auto-prints a store-lint report when it writes a BM25 corpus."""
         from klea_utils.stores.ingestion import StoresBuilder
@@ -269,9 +281,12 @@ class TestStoreLintCli:
             docs = [d for _, docs, _ in results for d in docs]
             if bm25_path is None:
                 return
+            # Write in the batched format (one pickled list per chunk) so
+            # the auto-lint exercises the batched-corpus reader.
             Path(bm25_path).parent.mkdir(parents=True, exist_ok=True)
             with open(bm25_path, "wb") as f:
-                pickle.dump(docs, f)
+                for d in docs:
+                    pickle.dump([d], f)
 
         monkeypatch.setattr(StoresBuilder, "_resolve_metadata_map", fake_resolve)
         monkeypatch.setattr(StoresBuilder, "_load_and_fold_results", fake_load)

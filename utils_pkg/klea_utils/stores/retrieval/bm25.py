@@ -30,8 +30,11 @@ BM25_FILTER_MARGIN = 3
 class BM25RetrieverManager(BaseKleaRetriever):
     """Manages domain-specific BM25 keyword stores.
 
-    Each BM25 store is a pickled corpus of chunked documents written by
-    :class:`~klea_utils.stores.ingestion.StoresBuilder.write_bm25_store`.
+    Each BM25 store is a pickled corpus of chunked documents written
+    alongside the vector store by
+    :meth:`~klea_utils.stores.ingestion.StoresBuilder.store_all` (one
+    pickled list per batch; read back by looping ``pickle.load`` until
+    ``EOFError``).
     Stores are loaded lazily per domain: the corpus is unpickled and used
     to build a :class:`klea_utils.stores.langchain_bm25`, which
     is queried with BM25 keyword scoring.
@@ -98,8 +101,16 @@ class BM25RetrieverManager(BaseKleaRetriever):
             )
             return None
 
+        docs: list[Document] = []
         with open(corpus_path, "rb") as f:
-            docs = pickle.load(f)
+            # Batched corpora hold one pickled list per batch; legacy
+            # corpora hold a single flat list.  Reading until EOF handles
+            # both transparently.
+            while True:
+                try:
+                    docs.extend(pickle.load(f))
+                except EOFError:
+                    break
         self.logger.debug(f"Loaded {len(docs)} chunks for BM25 store '{name}'")
         return BM25Retriever.from_documents(docs)
 

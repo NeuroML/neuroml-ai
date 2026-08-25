@@ -84,6 +84,18 @@ def _build_pdf(path: Path, metadata: dict[str, str]) -> None:
     path.write_bytes(bytes(out))
 
 
+def _read_bm25_corpus(path: Path) -> list[Document]:
+    """Read a BM25 corpus pickle, handling both batched and legacy formats."""
+    docs: list[Document] = []
+    with open(path, "rb") as f:
+        while True:
+            try:
+                docs.extend(pickle.load(f))
+            except EOFError:
+                break
+    return docs
+
+
 class TestNormalizeText:
     """Unit tests for normalize_text()."""
 
@@ -1546,34 +1558,6 @@ class TestIngestion:
 
         assert "No cached chunks for test.md" in caplog.text
 
-    def test_write_bm25_store(self):
-        """write_bm25_store pickles the combined chunked documents."""
-        doc = Document(
-            page_content="Some content for the BM25 corpus.",
-            metadata={"file_name": "test.md", "headings": ["Section 1"]},
-        )
-        results = [("xxh64:abc", [doc], Path("test.md"))]
-        out_path = self.tmpdir_path / "bm25_corpus.pkl"
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger)
-        builder.write_bm25_store(results, str(out_path))
-
-        assert out_path.is_file()
-        with open(out_path, "rb") as f:
-            loaded = pickle.load(f)
-        assert len(loaded) == 1
-        assert loaded[0].page_content == doc.page_content
-        assert loaded[0].metadata == doc.metadata
-
-    def test_write_bm25_store_empty(self):
-        """write_bm25_store skips without creating a file for empty results."""
-        out_path = self.tmpdir_path / "empty_bm25_corpus.pkl"
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger)
-        builder.write_bm25_store([], str(out_path))
-
-        assert not out_path.exists()
-
     def test_write_heading_template_preserves_existing_when_empty(self):
         """An empty chunk run must not clobber an existing template."""
         existing = {"paper.pdf": {"DEFAULT": {"title": "T"}}}
@@ -1861,6 +1845,59 @@ class TestIngestion:
         assert fake.added_ids
         assert all(doc_id.startswith("test.md:") for doc_id in fake.added_ids)
         assert "Added " in caplog.text and "from test.md (1/1)" in caplog.text
+
+    def test_store_all_writes_bm25_inline_from_generator(self, monkeypatch):
+        """store_all writes the BM25 corpus inline while storing lazily.
+
+        With a lazy generator as results, the BM25 corpus is still written
+        (from the same chunks, in place, during the store loop) and no
+        materialised results list is needed -- memory stays bounded per
+        file even when a BM25 corpus is requested.
+        """
+
+        class FakeStore:
+            def __init__(self):
+                self.added_ids: list[str] = []
+
+            def add_documents(self, docs):
+                self.added_ids.extend(d.id for d in docs)
+
+            def delete_collection(self):
+                pass
+
+            def delete(self, ids=None, **kwargs):
+                pass
+
+        fake = FakeStore()
+        monkeypatch.setattr(
+            "klea_utils.stores.ingestion.instantiate_vector_store",
+            lambda *a, **k: fake,
+        )
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(
+            embedding_model="", logger=self.logger, do_ocr=False, embed_batch_size=2
+        )
+        builder.chunk_all(self.tmpdir_path)  # populate the cache
+        builder.embeddings = object()
+
+        bm25_path = self.tmpdir_path / "corpus.pkl"
+        results = builder._load_and_fold_results(self.tmpdir_path, None)
+        assert iter(results) is results
+        builder.store_all(
+            results,
+            "chroma:/tmp/x",
+            "col",
+            self.tmpdir_path,
+            force=True,
+            bm25_path=str(bm25_path),
+        )
+
+        assert bm25_path.is_file()
+        loaded = _read_bm25_corpus(bm25_path)
+        assert loaded
+        assert all(doc.metadata["file_name"] == "test.md" for doc in loaded)
 
     def test_manifest_round_trip(self):
         """The store manifest is written and reloaded."""

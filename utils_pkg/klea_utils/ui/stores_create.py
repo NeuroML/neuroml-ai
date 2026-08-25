@@ -471,8 +471,15 @@ def store(
                 )
 
                 with open(bm25_file, "rb") as f:
-                    docs = pickle.load(f)
-                if isinstance(docs, list):
+                    docs: list = []
+                    # Batched corpora hold one pickled list per batch;
+                    # legacy corpora a single flat list.  Read until EOF.
+                    while True:
+                        try:
+                            docs.extend(pickle.load(f))
+                        except EOFError:
+                            break
+                if docs:
                     print()
                     print(
                         format_store_lint_report(
@@ -547,14 +554,22 @@ def store_lint(
             select_sample_windows,
         )
 
+        docs: list = []
         with open(corpus, "rb") as f:
-            docs = pickle.load(f)
-        if not isinstance(docs, list):
-            logger.error(
-                f"Corpus {corpus} is not a pickled list of documents; "
-                f"got {type(docs).__name__}"
-            )
-            raise typer.Exit(1)
+            # Batched corpora hold one pickled list per batch; legacy
+            # corpora a single flat list.  Read until EOF handles both.
+            while True:
+                try:
+                    loaded = pickle.load(f)
+                except EOFError:
+                    break
+                if not isinstance(loaded, list):
+                    logger.error(
+                        f"Corpus {corpus} is not a pickled list of documents; "
+                        f"got {type(loaded).__name__}"
+                    )
+                    raise typer.Exit(1)
+                docs.extend(loaded)
 
         report = lint_store(docs)
         sample_windows = select_sample_windows(docs, anchors=max(samples, 0))
