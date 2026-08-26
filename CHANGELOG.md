@@ -231,10 +231,18 @@
 - `klea-stores-create chunk` no longer accumulates every file's chunks
   in memory: each file's chunks are released once cached, so chunk runs
   stay bounded in memory regardless of corpus size.
+- `klea-stores-create chunk` and `build` now convert uncached files in
+  short-lived subprocess workers bounded by `--worker-mem-limit`
+  (default 4 GiB, includes the models) and `--worker-batch-size`
+  (default 200, whichever comes first); `build` now composes the two
+  bounded paths (worker chunk + streaming store) instead of holding the
+  whole corpus.
 - `klea-stores-create store` streams cached chunks per file instead of
   holding the whole corpus in memory.  BM25 corpora are written inline
   in bounded per-batch pickles and read back with a looping unpickle;
   existing single-list corpora remain loadable.
+- `DoiResolver` cache writes are now atomic and batched (every 25
+  resolutions plus on close), so a crash can no longer tear the cache.
 
 ### Fixed
 
