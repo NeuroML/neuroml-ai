@@ -15,7 +15,7 @@ import pickle
 import tempfile
 from collections.abc import Iterable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import xxhash
 from langchain_core.documents import Document
@@ -35,6 +35,9 @@ from .utils import (
     instantiate_vector_store,
     normalize_text,
 )
+
+if TYPE_CHECKING:
+    from .chunk_worker import ChunkItemResult, ChunkWorkerConfig
 
 #: Heading texts that are never a real document title.  When the title
 #: extraction falls back to the filename stem, the first chunk heading is
@@ -234,6 +237,8 @@ class StoresBuilder:
         metadata_map: dict[str, dict[str, Any]] | None = None,
         force: bool = False,
         collect_results: bool = True,
+        worker_mem_limit: int | None = None,
+        worker_batch_size: int = 200,
     ) -> tuple[list[tuple[str, list[Document], Path]], dict[str, dict[str, Any]]]:
         """Convert, chunk, cache, and enrich metadata for all files.
 
@@ -257,6 +262,13 @@ class StoresBuilder:
         the chunks to hand on (e.g. ``build``, which feeds them to
         :meth:`store_all`) keep the default ``True``.
 
+        When *worker_mem_limit* is set (and *collect_results* is false
+        and no *metadata_map* is given), uncached files are converted in
+        short-lived subprocess workers (:meth:`_chunk_all_worker_branch`)
+        so Docling's per-conversion memory leak is reclaimed on worker
+        exit; cache hits are handled in-process.  This is what keeps
+        ``klea-stores-create chunk`` memory-bounded on large corpora.
+
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment,
             or ``None``
@@ -265,16 +277,42 @@ class StoresBuilder:
             chunked docs into the returned ``results`` list; when
             ``False``, drop them after caching so memory stays bounded
             (``results`` is returned empty)
+        :param worker_mem_limit: Maximum RSS per conversion worker in
+            bytes; when set, uncached files are converted in subprocess
+            workers that exit (and release their memory) at or before
+            this limit.  The limit includes the ~1-1.5 GiB Docling's
+            models occupy at worker startup, so headroom for its
+            per-conversion growth is roughly the limit minus that.
+            ``None`` (default) keeps conversion in-process.
+        :param worker_batch_size: Maximum files handed to any single
+            conversion worker before it is restarted.  A worker stops at
+            whichever comes first: its memory cap or this batch size.
         :returns: ``(results, file_headings)`` where *results* is a
             list of ``(file_hash, docs, file_path)`` tuples (empty when
             ``collect_results`` is false) and *file_headings* is a
             ``{file_name: {"DEFAULT": {extracted metadata}, "heading >
             heading": {}, ...}}`` dict
         """
-        self._ensure_tokenizer()
-
         files = self._find_files(source_path)
         self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
+
+        use_workers = (
+            worker_mem_limit is not None
+            and not collect_results
+            and metadata_map is None
+        )
+        if use_workers:
+            # Worker mode: the parent stays lean (it never imports
+            # Docling's models); conversion happens in subprocesses.
+            return self._chunk_all_worker_branch(
+                source_path,
+                files,
+                force,
+                worker_mem_limit,
+                worker_batch_size,
+            )
+
+        self._ensure_tokenizer()
 
         resolver = self._make_resolver(source_path)
 
@@ -325,28 +363,8 @@ class StoresBuilder:
                     # written before the biblio cascade existed), so run
                     # the text-only extraction over the cached chunks:
                     # regex + pdf-info (for PDFs) + DOI resolution.
-                    cached_text = "\n".join(
-                        doc.page_content for doc in docs if doc.page_content
-                    )
-                    extracted = (
-                        extract_metadata_from_text(
-                            cached_text,
-                            str(file_path),
-                            pdf_path=(
-                                str(file_path)
-                                if file_path.suffix.lower() == ".pdf"
-                                else None
-                            ),
-                            resolver=resolver,
-                        )
-                        if cached_text
-                        else {}
-                    )
-                    self.logger.warning(
-                        f"No cached metadata extraction for {file_path.name}, "
-                        f"falling back to text-only extraction "
-                        f"({len(extracted)} fields); re-run with --force to "
-                        f"regenerate the full extraction"
+                    extracted = self._extract_metadata_fallback(
+                        file_path, docs, resolver
                     )
 
             for doc in docs:
@@ -360,25 +378,9 @@ class StoresBuilder:
             if metadata_map:
                 self._fold_metadata_map(file_path, docs, metadata_map)
 
-            normalized_default = _normalize_extracted_metadata(extracted)
-            if normalized_default != extracted:
-                self.logger.debug(f"Normalised extracted metadata for {file_path.name}")
-            split_default = _split_url_list(normalized_default)
-            if split_default != normalized_default:
-                self.logger.debug(
-                    f"Split url list into per-url keys for {file_path.name}"
-                )
-            default_metadata = _ensure_doi_url(split_default)
-            if default_metadata != split_default:
-                self.logger.debug(f"Derived url_doi for {file_path.name}")
-            file_entry: dict[str, Any] = {"DEFAULT": default_metadata}
-            for doc in docs:
-                headings = doc.metadata.get("headings", [])
-                if headings:
-                    key = " > ".join(headings)
-                    if key not in file_entry:
-                        file_entry[key] = {}
-            file_headings[file_path.name] = file_entry
+            file_headings[file_path.name] = self._build_file_headings_entry(
+                file_path.name, extracted, docs
+            )
 
             # Holding every file's docs in ``results`` scales with the
             # corpus.  The ``chunk`` CLI only needs the headings for the
@@ -397,6 +399,188 @@ class StoresBuilder:
         # The resolver's HTTP client is left for the process to clean up;
         # ingestion is a one-shot CLI run.
         return results, file_headings
+
+    def _extract_metadata_fallback(
+        self,
+        file_path: Path,
+        docs: list[Document],
+        resolver: Resolver | None,
+    ) -> dict[str, Any]:
+        """Run the text-only biblio extraction over cached chunks.
+
+        Cache-hit only: never used for freshly converted files (those
+        get the full biblio cascade from :meth:`_convert_and_chunk`).
+        Used when a cache entry predates the full cascade and holds no
+        persisted extraction: regex + pdf-info (for PDFs) + DOI
+        resolution over the chunk text.  Shared by the in-process and
+        worker :meth:`chunk_all` paths.
+
+        :param file_path: Source file the chunks came from
+        :param docs: Cached chunked documents
+        :param resolver: DOI resolver for the extraction, or ``None``
+        :returns: Flat bibliographic metadata dict
+        """
+        cached_text = "\n".join(doc.page_content for doc in docs if doc.page_content)
+        extracted = (
+            extract_metadata_from_text(
+                cached_text,
+                str(file_path),
+                pdf_path=(
+                    str(file_path) if file_path.suffix.lower() == ".pdf" else None
+                ),
+                resolver=resolver,
+            )
+            if cached_text
+            else {}
+        )
+        self.logger.warning(
+            f"No cached metadata extraction for {file_path.name}, "
+            f"falling back to text-only extraction "
+            f"({len(extracted)} fields); re-run with --force to "
+            f"regenerate the full extraction"
+        )
+        return extracted
+
+    def _chunk_all_worker_branch(
+        self,
+        source_path: Path,
+        files: list[Path],
+        force: bool,
+        worker_mem_limit: int,
+        worker_batch_size: int,
+    ) -> tuple[list[tuple[str, list[Document], Path]], dict[str, dict[str, Any]]]:
+        """Convert uncached files in subprocess workers (the ``chunk`` path).
+
+        Docling leaks memory per conversion that cannot be freed
+        in-process (see docling-project/docling#2788), so a long in-run
+        conversion of thousands of files grows RSS unboundedly.  This
+        branch hands the conversion to short-lived subprocess workers
+        (see :mod:`klea_utils.stores.chunk_worker`) that write each
+        file's cache entry and exit, returning the OS the memory they
+        leaked.  Cache hits are handled here in the parent, which stays
+        lean -- it never loads Docling's models.
+
+        Only used by :meth:`chunk_all` when *worker_mem_limit* is set,
+        *collect_results* is false, and no *metadata_map* is given (the
+        ``chunk`` CLI case).  No ``results`` are collected.
+
+        :param source_path: Resolved source directory path
+        :param files: Ingestible files (already discovered)
+        :param force: Re-process all files even if cached
+        :param worker_mem_limit: Max RSS per worker in bytes
+        :param worker_batch_size: Max files handed to a single worker
+        :returns: ``([], file_headings)``
+        """
+        total = len(files)
+        resolver = self._make_resolver(source_path)
+        file_headings: dict[str, dict[str, Any]] = {}
+        current_hashes: set[str] = set()
+        pending: list[tuple[str, str]] = []
+
+        # Phase A (in-process): hash every file, build entries for cache
+        # hits (with the legacy fallback extraction), and collect the
+        # uncached files for the workers.
+        for ctr, file_path in enumerate(files, 1):
+            file_hash = _hash_file(file_path)
+            current_hashes.add(file_hash)
+            if force:
+                pending.append((str(file_path), file_hash))
+                continue
+            cached = self._load_from_cache(source_path, file_hash)
+            if cached is None:
+                pending.append((str(file_path), file_hash))
+                continue
+            docs, extracted = cached
+            self.logger.debug(
+                f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
+            )
+            if not extracted:
+                extracted = self._extract_metadata_fallback(file_path, docs, resolver)
+            file_headings[file_path.name] = self._build_file_headings_entry(
+                file_path.name, extracted, docs
+            )
+
+        # Phase B (subprocess workers): convert+cache the uncached files.
+        if pending:
+            from .chunk_worker import ChunkWorkerConfig
+
+            config = ChunkWorkerConfig(
+                source_path=str(source_path),
+                max_tokens=self.max_tokens,
+                tokenizer_model=self.tokenizer_model,
+                do_ocr=self.do_ocr,
+                mem_limit_bytes=worker_mem_limit,
+                log_level=self.logger.getEffectiveLevel(),
+            )
+            for item in self._dispatch_conversion_batches(
+                pending, config, worker_batch_size
+            ):
+                if item.status == "ok" and item.file_headings_entry is not None:
+                    file_headings[item.file_name] = item.file_headings_entry
+
+        self._prune_cache(source_path, current_hashes)
+        return [], file_headings
+
+    def _dispatch_conversion_batches(
+        self,
+        pending: list[tuple[str, str]],
+        config: "ChunkWorkerConfig",
+        batch_size: int,
+    ) -> "list[ChunkItemResult]":
+        """Convert *pending* files in subprocess workers (test seam).
+
+        The default implementation delegates to
+        :func:`klea_utils.stores.chunk_worker.dispatch_conversion_batches`,
+        which spawns a fresh worker process per batch so each worker's
+        Docling memory leak is reclaimed on exit.  Tests override this
+        method to run the worker function in-process.
+
+        :param pending: ``(absolute_file_path, file_hash)`` pairs
+        :param config: Worker configuration
+        :param batch_size: Max files handed to a single worker
+        :returns: One :class:`ChunkItemResult` per item
+        """
+        from .chunk_worker import dispatch_conversion_batches
+
+        return dispatch_conversion_batches(self.logger, config, pending, batch_size)
+
+    def _build_file_headings_entry(
+        self,
+        file_name: str,
+        extracted: dict[str, Any],
+        docs: list[Document],
+    ) -> dict[str, dict[str, Any]]:
+        """Build a file's metadata-map template entry from its extraction.
+
+        The ``DEFAULT`` entry carries the normalised, url-split,
+        doi-ensured extracted metadata; one empty entry per unique heading
+        chain found in the chunks is added so the template lists every
+        section for the user to fill in.  Shared by :meth:`chunk_all`
+        (both its in-process and subprocess-worker paths) so every file's
+        entry is built identically.
+
+        :param file_name: Source file name (template key)
+        :param extracted: Flat bibliographic metadata dict for the file
+        :param docs: Chunked documents for the file
+        :returns: ``{"DEFAULT": {...}, "heading > heading": {}, ...}``
+        """
+        normalized_default = _normalize_extracted_metadata(extracted)
+        if normalized_default != extracted:
+            self.logger.debug(f"Normalised extracted metadata for {file_name}")
+        split_default = _split_url_list(normalized_default)
+        if split_default != normalized_default:
+            self.logger.debug(f"Split url list into per-url keys for {file_name}")
+        default_metadata = _ensure_doi_url(split_default)
+        if default_metadata != split_default:
+            self.logger.debug(f"Derived url_doi for {file_name}")
+        file_entry: dict[str, dict[str, Any]] = {"DEFAULT": default_metadata}
+        for doc in docs:
+            headings = doc.metadata.get("headings", [])
+            if headings:
+                key = " > ".join(headings)
+                if key not in file_entry:
+                    file_entry[key] = {}
+        return file_entry
 
     def _fold_metadata_map(
         self,

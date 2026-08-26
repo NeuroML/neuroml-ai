@@ -145,6 +145,25 @@ def chunk(
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
+    worker_mem_limit: float = typer.Option(
+        4.0,
+        "--worker-mem-limit",
+        help="Maximum memory (in GiB) a conversion worker process may "
+        "use before it is restarted.  This includes the ~1-1.5 GiB "
+        "Docling's models occupy at worker startup, so the headroom for "
+        "Docling's per-conversion memory growth is roughly the limit "
+        "minus that.  Uncached files are converted in short-lived "
+        "subprocesses so that growth is released when a worker exits; "
+        "raise this on machines with more RAM to restart workers less "
+        "often",
+    ),
+    worker_batch_size: int = typer.Option(
+        200,
+        "--worker-batch-size",
+        help="Maximum files handed to any single conversion worker "
+        "before it is restarted.  A worker stops at whichever comes "
+        "first: its memory cap or this batch size",
+    ),
     debug: bool = debug_option,
 ):
     """Chunk and cache documents without writing to a vector store.
@@ -155,11 +174,22 @@ def chunk(
     empty ``{}`` placeholders for each heading chain.  Fill in the
     metadata values and pass the file to
     ``klea-stores-create store --metadata-map``.
+
+    Uncached files are converted in short-lived worker subprocesses
+    (bounded by ``--worker-mem-limit``), so a run over a very large
+    corpus stays memory-bounded instead of being killed by the kernel
+    when Docling's per-conversion memory growth is never released.
+    Already-cached files are handled in-process and never spawn workers.
     """
     setup_root_logger("klea-stores-create", stderr_level=resolve_log_level(debug))
     logger = logging.getLogger("klea-stores-create")
 
-    logger.info(f"Chunking documents in {source_dir}\n  Max tokens: {max_tokens}")
+    logger.info(
+        f"Chunking documents in {source_dir}"
+        f"\n  Max tokens: {max_tokens}"
+        f"\n  Worker mem limit: {worker_mem_limit} GiB"
+        f"\n  Worker batch size: {worker_batch_size}"
+    )
 
     try:
         # Lazy: importing StoresBuilder pulls in ingestion.py -> llm.py ->
@@ -186,10 +216,15 @@ def chunk(
 
         # ``chunk`` is cache-only and the docs are discarded after this
         # call, so collect_results=False releases each file's chunks as
-        # soon as they are cached, keeping the run's memory bounded for
-        # large corpora (only file_headings is needed for the template).
+        # soon as they are cached; worker_mem_limit additionally runs the
+        # uncached-file conversion in subprocesses so the run stays
+        # memory-bounded on very large corpora.
         _, file_headings = builder.chunk_all(
-            source_path, force=force, collect_results=False
+            source_path,
+            force=force,
+            collect_results=False,
+            worker_mem_limit=int(worker_mem_limit * 1024**3),
+            worker_batch_size=worker_batch_size,
         )
         builder.write_heading_template(file_headings, source_path)
     except Exception as e:

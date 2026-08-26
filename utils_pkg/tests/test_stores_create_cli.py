@@ -69,3 +69,42 @@ def test_map_lint_with_debug_uses_debug_level(monkeypatch, tmp_path):
     result = runner.invoke(app, ["map-lint", str(tmp_path), "--debug"])
     assert result.exit_code == 0
     assert seen.get("level") == logging.DEBUG
+
+
+def test_chunk_worker_options_produce_cache_and_template(tmp_path, monkeypatch):
+    """chunk runs cache-only via the worker path and writes the template.
+
+    The conversion dispatcher is replaced with an in-process run so no
+    subprocess is spawned; this verifies the CLI wires the worker options
+    through and that the cache + metadata-map template are written.
+    """
+    from klea_utils.stores.ingestion import StoresBuilder
+
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "test.md").write_text(
+        "# Test\n\nEnough content here to produce at least one chunk.\n"
+    )
+
+    def fake_dispatch(self, pending, config, batch_size):
+        from klea_utils.stores.chunk_worker import convert_batch_worker
+
+        return convert_batch_worker(config, pending)
+
+    monkeypatch.setattr(StoresBuilder, "_dispatch_conversion_batches", fake_dispatch)
+
+    result = runner.invoke(
+        app,
+        [
+            "chunk",
+            str(src),
+            "--no-ocr",
+            "--worker-mem-limit",
+            "64",
+            "--worker-batch-size",
+            "50",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (src / ".klea-cache" / "metadata-map.template.json").is_file()
+    assert (src / ".klea-cache").is_dir()

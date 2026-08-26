@@ -1432,6 +1432,88 @@ class TestIngestion:
         assert len(results2) == 1
         assert file_headings2 == file_headings
 
+    def test_chunk_all_worker_mode_cached_in_parent_dispatches_uncached(
+        self, monkeypatch
+    ):
+        """Worker mode builds cached entries in-parent, dispatches the rest.
+
+        The worker path (``worker_mem_limit`` set, ``collect_results``
+        false, no metadata map) must handle cache hits in the parent --
+        never spawning a worker for them -- and hand only the uncached
+        files to the conversion dispatcher.  The dispatch seam is replaced
+        with an in-process run so no subprocess is spawned.  The mem limit
+        is huge so the in-process worker never defers (the cap itself is
+        tested separately with a mocked RSS probe).
+        """
+        md1 = self.tmpdir_path / "one.md"
+        md1.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Cache one.md via the plain in-process path first.
+        builder.chunk_all(self.tmpdir_path)
+
+        # Distinct content so two.md gets its own hash/cache entry.
+        md2 = self.tmpdir_path / "two.md"
+        md2.write_text(TEST_MD_TWO)
+
+        dispatched: dict[str, list[tuple[str, str]]] = {}
+
+        def fake_dispatch(self, pending, config, batch_size):
+            from klea_utils.stores.chunk_worker import convert_batch_worker
+
+            dispatched["items"] = list(pending)
+            return convert_batch_worker(config, pending)
+
+        monkeypatch.setattr(
+            StoresBuilder, "_dispatch_conversion_batches", fake_dispatch
+        )
+        results, file_headings = builder.chunk_all(
+            self.tmpdir_path,
+            collect_results=False,
+            worker_mem_limit=10**15,
+            worker_batch_size=10,
+        )
+
+        assert results == []
+        assert set(file_headings) == {"one.md", "two.md"}
+        # Only the uncached file reached the dispatcher.
+        assert [Path(p).name for p, _ in dispatched["items"]] == ["two.md"]
+
+    def test_chunk_all_worker_mode_force_dispatches_all(self, monkeypatch):
+        """--force sends every file to the workers, none handled in-parent."""
+        md1 = self.tmpdir_path / "one.md"
+        md1.write_text(TEST_MD_CONTENT)
+        md2 = self.tmpdir_path / "two.md"
+        md2.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Cache both first so the test proves force ignores the cache.
+        builder.chunk_all(self.tmpdir_path)
+
+        dispatched: dict[str, list[tuple[str, str]]] = {}
+
+        def fake_dispatch(self, pending, config, batch_size):
+            from klea_utils.stores.chunk_worker import convert_batch_worker
+
+            dispatched["items"] = list(pending)
+            return convert_batch_worker(config, pending)
+
+        monkeypatch.setattr(
+            StoresBuilder, "_dispatch_conversion_batches", fake_dispatch
+        )
+        _, file_headings = builder.chunk_all(
+            self.tmpdir_path,
+            collect_results=False,
+            force=True,
+            worker_mem_limit=10**15,
+        )
+
+        assert set(file_headings) == {"one.md", "two.md"}
+        assert sorted(Path(p).name for p, _ in dispatched["items"]) == [
+            "one.md",
+            "two.md",
+        ]
+
     @pytest.mark.localonly
     def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
         """chunk_all warns when a map entry exists but resolves no metadata.
