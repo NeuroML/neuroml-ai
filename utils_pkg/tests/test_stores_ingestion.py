@@ -627,6 +627,24 @@ class TestIngestion:
     def teardown_method(self):
         self.tmpdir.cleanup()
 
+    def _use_in_process_workers(self, monkeypatch):
+        """Replace the worker-spawn seam with an in-process worker run.
+
+        Conversion always happens in subprocess workers now; tests swap
+        the spawn seam for a direct :func:`convert_batch_worker` call so
+        they stay fast and hermetic while still exercising the real
+        conversion + caching code.
+        """
+
+        def fake_dispatch(builder, pending, config, batch_size):
+            from klea_utils.stores.chunk_worker import convert_batch_worker
+
+            return convert_batch_worker(config, pending)
+
+        monkeypatch.setattr(
+            StoresBuilder, "_dispatch_conversion_batches", fake_dispatch
+        )
+
     def test_prune_cache_removes_orphans_keeps_current(self):
         """Prune removes entries whose hash matches no current file."""
         cache_dir = self.tmpdir_path / CACHE_DIR_NAME
@@ -954,7 +972,7 @@ class TestIngestion:
         assert not (cache_dir / "xxh64_orphan.pkl.corrupt").exists()
 
     @pytest.mark.localonly
-    def test_chunk_all_prefills_metadata_template(self):
+    def test_chunk_all_prefills_metadata_template(self, monkeypatch):
         """chunk_all pre-fills the per-file DEFAULT template entry.
 
         Runs the biblio extraction cascade on a real PDF conversion: the
@@ -972,8 +990,9 @@ class TestIngestion:
             },
         )
 
+        self._use_in_process_workers(monkeypatch)
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        _, file_headings = builder.chunk_all(self.tmpdir_path)
+        file_headings = builder.chunk_all(self.tmpdir_path)
 
         default = file_headings["paper.pdf"]["DEFAULT"]
         self.logger.info(f"pre-filled DEFAULT: {default}")
@@ -984,7 +1003,7 @@ class TestIngestion:
         assert "pdf-info" in default["_sources"]
 
         # Cache hit: the persisted full extraction is restored unchanged.
-        _, file_headings2 = builder.chunk_all(self.tmpdir_path)
+        file_headings2 = builder.chunk_all(self.tmpdir_path)
         assert file_headings2["paper.pdf"]["DEFAULT"] == default
 
     def test_load_metadata_map_normalizes_heading_keys(self):
@@ -1077,15 +1096,26 @@ class TestIngestion:
         md_file.write_text(TEST_MD_CONTENT)
 
         builder = StoresBuilder(embedding_model="", logger=self.logger)
-        passed_maps: list = []
-        captured_store = False
+        captured: dict = {}
 
-        def _fake_chunk_all(source_path, metadata_map=None, force=False):
-            passed_maps.append(metadata_map)
-            doc = Document(page_content="x", metadata={"headings": []})
-            return [("xxh64:x", [doc], Path("test.md"))], {
-                "test.md": {"DEFAULT": {"journal": "Journal of X"}}
+        def _fake_chunk_all(
+            source_path,
+            force=False,
+            worker_mem_limit=None,
+            worker_batch_size=200,
+        ):
+            captured["chunk_kwargs"] = {
+                "force": force,
+                "worker_mem_limit": worker_mem_limit,
             }
+            # Cache-only worker shape: only the headings come back.
+            return {"test.md": {"DEFAULT": {"journal": "Journal of X"}}}
+
+        def _fake_load_and_fold(source_path, metadata_map, strict=True):
+            captured["store_map"] = metadata_map
+            captured["fold_strict"] = strict
+            doc = Document(page_content="x", metadata={"headings": []})
+            yield ("xxh64:x", [doc], Path("test.md"))
 
         def _fake_store_all(
             results,
@@ -1095,10 +1125,10 @@ class TestIngestion:
             force=False,
             bm25_path=None,
         ):
-            nonlocal captured_store
-            captured_store = True
+            captured["stored"] = list(results)
 
         monkeypatch.setattr(builder, "chunk_all", _fake_chunk_all)
+        monkeypatch.setattr(builder, "_load_and_fold_results", _fake_load_and_fold)
         monkeypatch.setattr(builder, "store_all", _fake_store_all)
         builder.build(
             source_dir=str(self.tmpdir_path),
@@ -1106,16 +1136,52 @@ class TestIngestion:
             collection_name="c",
         )
 
-        # chunk_all ran twice: once with no map, then once with the generated
-        # template as the map.
-        assert len(passed_maps) == 2
-        assert passed_maps[0] is None
-        assert passed_maps[1] is not None
-        assert passed_maps[1]["test.md"]["DEFAULT"]["journal"] == "Journal of X"
-        assert captured_store is True
+        # The chunk phase ran once, cache-only, with the default worker limit.
+        assert captured["chunk_kwargs"]["worker_mem_limit"] == 4 * 1024**3
+        # The generated template was consumed by the store phase.
+        assert captured["store_map"] is not None
+        assert captured["store_map"]["test.md"]["DEFAULT"]["journal"] == "Journal of X"
+        assert captured["fold_strict"] is False
+        assert len(captured["stored"]) == 1
         # The template was written to the cache folder so it can be reviewed
         # for a later store.
         assert (self.tmpdir_path / CACHE_DIR_NAME / TEMPLATE_FILE_NAME).is_file()
+
+    def test_build_uses_tolerant_fold_phase(self, tmp_path, monkeypatch):
+        """build's store phase skips uncached files instead of aborting.
+
+        A file whose conversion failed has no cache entry; ``build`` logs
+        and stores the rest rather than raising like the strict ``store``
+        command does.
+        """
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        seen: dict = {}
+
+        def _fake_chunk_all(*args, **kwargs):
+            return {"test.md": {"DEFAULT": {}}}
+
+        def _fake_load_and_fold(source_path, metadata_map, strict=True):
+            seen["strict"] = strict
+            return iter([])
+
+        def _fake_store_all(results, *args, **kwargs):
+            seen["stored"] = list(results)
+
+        monkeypatch.setattr(builder, "chunk_all", _fake_chunk_all)
+        monkeypatch.setattr(builder, "_load_and_fold_results", _fake_load_and_fold)
+        monkeypatch.setattr(builder, "store_all", _fake_store_all)
+
+        # An explicit map keeps the test focused on fold-phase tolerance
+        # (otherwise build would generate and load the template first).
+        map_path = tmp_path / "map.json"
+        map_path.write_text(json.dumps({"test.md": {"DEFAULT": {}}}))
+        builder.build(
+            source_dir=str(tmp_path),
+            store_uri="chroma:/tmp/x",
+            collection_name="c",
+            metadata_map_path=str(map_path),
+        )
+        assert seen["strict"] is False
 
     def test_resolve_metadata_matches_normalized_headings(self):
         """_resolve_metadata matches normalized chunk headings to map keys."""
@@ -1335,26 +1401,89 @@ class TestIngestion:
         )
         assert meta == {"url": "https://e.com/subsection"}
 
-    @pytest.mark.localonly
-    def test_chunk_all_errors_when_file_missing_from_map(self):
-        """chunk_all raises when a source file has no metadata map entry.
+    def test_fold_metadata_map_raises_when_file_missing(self):
+        """The map must contain every ingested file (keyed by filename).
 
-        The map must contain every ingested file (keyed by filename).  A map
-        not keyed by the source filename (e.g. the flat heading-keyed url-map
-        format from the single-page doc generator) must abort ingestion so
-        the misconfiguration is impossible to miss.
+        A map not keyed by the source filename (e.g. the flat heading-keyed
+        url-map format from the single-page doc generator) must abort
+        ingestion so the misconfiguration is impossible to miss.
         """
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        docs = [
+            Document(page_content="chunk", metadata={"headings": ["Intro"]}),
+        ]
 
         # Deliberately keyed by a filename that does not exist in the source
         # directory, mirroring the flat url-map format that has no per-file
         # wrapper at all.
         metadata_map = {"other.md": {"DEFAULT": {"url": "https://example.com"}}}
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         with pytest.raises(ValueError, match="test.md"):
-            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
+            builder._fold_metadata_map(Path("test.md"), docs, metadata_map)
+
+    def test_fold_metadata_map_strips_internal_keys(self):
+        """Internal/provenance keys from the map are not folded into chunks.
+
+        The template's pre-filled DEFAULT carries ``_metadata_complete`` and
+        ``_sources`` (extraction provenance) plus ``source_type``; folding
+        must strip them so neither the vector store nor the BM25 corpus
+        (which shares these chunk objects) leaks them.
+        """
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        docs = [
+            Document(page_content="chunk one", metadata={"headings": ["Intro"]}),
+            Document(page_content="chunk two", metadata={"headings": ["Intro"]}),
+        ]
+
+        metadata_map = {
+            "test.md": {
+                "DEFAULT": {
+                    "title": "T",
+                    "journal": "Journal of X",
+                    "_metadata_complete": True,
+                    "_sources": ["docling"],
+                    "source_type": "text/markdown",
+                }
+            }
+        }
+        builder._fold_metadata_map(Path("test.md"), docs, metadata_map)
+        for doc in docs:
+            assert doc.metadata["title"] == "T"
+            assert doc.metadata["journal"] == "Journal of X"
+            assert "_metadata_complete" not in doc.metadata
+            assert "_sources" not in doc.metadata
+            assert "source_type" not in doc.metadata
+
+    def test_fold_metadata_map_warns_when_nothing_resolves(self, caplog):
+        """A map entry that resolves no metadata is worth a warning.
+
+        A file present in the map whose DEFAULT is empty (and whose headings
+        match no entry) contributes no metadata -- that is a legitimate
+        researcher choice, but worth a warning so an accidentally-empty entry
+        is easy to spot.
+        """
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        docs = [
+            Document(page_content="chunk", metadata={"headings": ["Intro"]}),
+        ]
+
+        metadata_map = {"test.md": {"DEFAULT": {}}}
+        with caplog.at_level(logging.WARNING):
+            builder._fold_metadata_map(Path("test.md"), docs, metadata_map)
+
+        assert "No metadata resolved for test.md" in caplog.text
+
+    def test_fold_metadata_map_no_warning_when_resolves(self, caplog):
+        """Folding stays quiet when the metadata map resolves for a file."""
+        builder = StoresBuilder(embedding_model="", logger=self.logger)
+        docs = [
+            Document(page_content="chunk", metadata={"headings": ["Intro"]}),
+        ]
+
+        metadata_map = {"test.md": {"DEFAULT": {"url": "https://example.com"}}}
+        with caplog.at_level(logging.WARNING):
+            builder._fold_metadata_map(Path("test.md"), docs, metadata_map)
+
+        assert "No metadata resolved" not in caplog.text
 
     def test_load_and_fold_results_raises_on_uncached_file(self):
         """_load_and_fold_results refuses to load a file with no cache entry."""
@@ -1366,14 +1495,36 @@ class TestIngestion:
             # The generator raises only once iterated (store_all does this).
             list(builder._load_and_fold_results(self.tmpdir_path, None))
 
-    def test_load_and_fold_results_succeeds_when_all_cached(self):
-        """_load_and_fold_results passes when every file is already cached."""
+    def test_load_and_fold_skips_uncached_when_not_strict(self, caplog):
+        """strict=False skips a missing cache entry instead of raising.
+
+        :meth:`StoresBuilder.build` uses this: a file whose conversion
+        failed is logged and skipped so the rest of the corpus is stored.
+        """
         md_file = self.tmpdir_path / "test.md"
         md_file.write_text(TEST_MD_CONTENT)
 
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        # Populate the cache first (chunk_all converts on the fly).
-        builder.chunk_all(self.tmpdir_path)
+        with caplog.at_level(logging.ERROR):
+            results = list(
+                builder._load_and_fold_results(self.tmpdir_path, None, strict=False)
+            )
+
+        assert results == []
+        assert "No cache entry for test.md" in caplog.text
+
+    def test_load_and_fold_results_succeeds_when_all_cached(self):
+        """_load_and_fold_results passes when every file is already cached."""
+        from klea_utils.stores.ingestion import _hash_file
+
+        md_file = self.tmpdir_path / "test.md"
+        md_file.write_text(TEST_MD_CONTENT)
+
+        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
+        # Populate the cache directly (a converted chunk as the worker
+        # would write it).
+        doc = Document(page_content="cached", metadata={"headings": ["S"]})
+        builder._save_to_cache([doc], {}, self.tmpdir_path, _hash_file(md_file))
 
         results = list(builder._load_and_fold_results(self.tmpdir_path, None))
         assert len(results) == 1
@@ -1381,11 +1532,14 @@ class TestIngestion:
 
     def test_load_and_fold_results_applies_metadata_map(self):
         """_load_and_fold_results folds the metadata map into cached chunks."""
+        from klea_utils.stores.ingestion import _hash_file
+
         md_file = self.tmpdir_path / "test.md"
         md_file.write_text(TEST_MD_CONTENT)
 
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        builder.chunk_all(self.tmpdir_path)
+        doc = Document(page_content="cached", metadata={"headings": ["S"]})
+        builder._save_to_cache([doc], {}, self.tmpdir_path, _hash_file(md_file))
 
         metadata_map = {"test.md": {"DEFAULT": {"year": 2020, "journal": "J"}}}
         results = list(builder._load_and_fold_results(self.tmpdir_path, metadata_map))
@@ -1394,60 +1548,34 @@ class TestIngestion:
             assert doc.metadata["year"] == 2020
             assert doc.metadata["journal"] == "J"
 
-    def test_chunk_all_still_converts_on_the_fly(self):
-        """chunk_all converts on the fly when no cache entry exists."""
+    def test_chunk_all_converts_uncached_files(self, monkeypatch):
+        """Uncached files are converted in workers and cached."""
         md_file = self.tmpdir_path / "test.md"
         md_file.write_text(TEST_MD_CONTENT)
 
+        self._use_in_process_workers(monkeypatch)
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        results, _ = builder.chunk_all(self.tmpdir_path)
-        assert len(results) == 1
+        file_headings = builder.chunk_all(self.tmpdir_path)
+        assert set(file_headings) == {"test.md"}
         assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
-
-    def test_chunk_all_collect_results_false_releases_docs(self, caplog):
-        """collect_results=False returns no results but caches and headings.
-
-        The ``chunk`` CLI passes this so a chunk-only run stays bounded in
-        memory on large corpora: each file's chunks are released after
-        caching instead of accumulating in the returned results list.  The
-        cache and per-file heading chains must be identical to a collecting
-        run -- the flag only changes what is held in memory.
-        """
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        with caplog.at_level(logging.DEBUG):
-            results, file_headings = builder.chunk_all(
-                self.tmpdir_path, collect_results=False
-            )
-        assert results == []
-        assert "test.md" in file_headings
-        assert (self.tmpdir_path / CACHE_DIR_NAME).is_dir()
-        assert "Released in-memory chunks for test.md" in caplog.text
-
-        # A later collecting run hits the cache: same headings, plus the
-        # chunks, confirming the flag only affects in-memory retention.
-        results2, file_headings2 = builder.chunk_all(self.tmpdir_path)
-        assert len(results2) == 1
-        assert file_headings2 == file_headings
 
     def test_chunk_all_worker_mode_cached_in_parent_dispatches_uncached(
         self, monkeypatch
     ):
         """Worker mode builds cached entries in-parent, dispatches the rest.
 
-        The worker path (``worker_mem_limit`` set, ``collect_results``
-        false, no metadata map) must handle cache hits in the parent --
-        never spawning a worker for them -- and hand only the uncached
-        files to the conversion dispatcher.  The dispatch seam is replaced
-        with an in-process run so no subprocess is spawned.  The mem limit
-        is huge so the in-process worker never defers (the cap itself is
-        tested separately with a mocked RSS probe).
+        The worker path (``worker_mem_limit`` set, no metadata map) must
+        handle cache hits in the parent -- never spawning a worker for
+        them -- and hand only the uncached files to the conversion
+        dispatcher.  The dispatch seam is replaced with an in-process run
+        so no subprocess is spawned.  The mem limit is huge so the
+        in-process worker never defers (the cap itself is tested
+        separately with a mocked RSS probe).
         """
         md1 = self.tmpdir_path / "one.md"
         md1.write_text(TEST_MD_CONTENT)
 
+        self._use_in_process_workers(monkeypatch)
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         # Cache one.md via the plain in-process path first.
         builder.chunk_all(self.tmpdir_path)
@@ -1467,14 +1595,12 @@ class TestIngestion:
         monkeypatch.setattr(
             StoresBuilder, "_dispatch_conversion_batches", fake_dispatch
         )
-        results, file_headings = builder.chunk_all(
+        file_headings = builder.chunk_all(
             self.tmpdir_path,
-            collect_results=False,
             worker_mem_limit=10**15,
             worker_batch_size=10,
         )
 
-        assert results == []
         assert set(file_headings) == {"one.md", "two.md"}
         # Only the uncached file reached the dispatcher.
         assert [Path(p).name for p, _ in dispatched["items"]] == ["two.md"]
@@ -1486,6 +1612,7 @@ class TestIngestion:
         md2 = self.tmpdir_path / "two.md"
         md2.write_text(TEST_MD_CONTENT)
 
+        self._use_in_process_workers(monkeypatch)
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         # Cache both first so the test proves force ignores the cache.
         builder.chunk_all(self.tmpdir_path)
@@ -1501,9 +1628,8 @@ class TestIngestion:
         monkeypatch.setattr(
             StoresBuilder, "_dispatch_conversion_batches", fake_dispatch
         )
-        _, file_headings = builder.chunk_all(
+        file_headings = builder.chunk_all(
             self.tmpdir_path,
-            collect_results=False,
             force=True,
             worker_mem_limit=10**15,
         )
@@ -1513,114 +1639,6 @@ class TestIngestion:
             "one.md",
             "two.md",
         ]
-
-    @pytest.mark.localonly
-    def test_chunk_all_warns_when_map_entry_resolves_nothing(self, caplog):
-        """chunk_all warns when a map entry exists but resolves no metadata.
-
-        A file present in the map whose DEFAULT is empty (and whose headings
-        match no entry) contributes no metadata -- that is a legitimate
-        researcher choice, but worth a warning so an accidentally-empty entry
-        is easy to spot.
-        """
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        metadata_map = {"test.md": {"DEFAULT": {}}}
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        with caplog.at_level(logging.WARNING):
-            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
-
-        assert "No metadata resolved for test.md" in caplog.text
-
-    @pytest.mark.localonly
-    def test_chunk_all_strips_internal_keys_when_folding(self):
-        """Internal/provenance keys from the map are not folded into chunks.
-
-        The template's pre-filled DEFAULT carries ``_metadata_complete`` and
-        ``_sources`` (extraction provenance) plus ``source_type``; folding
-        must strip them so neither the vector store nor the BM25 corpus
-        (which shares these chunk objects) leaks them.
-        """
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        metadata_map = {
-            "test.md": {
-                "DEFAULT": {
-                    "title": "T",
-                    "journal": "Journal of X",
-                    "_metadata_complete": True,
-                    "_sources": ["docling"],
-                    "source_type": "text/markdown",
-                }
-            }
-        }
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        results, _ = builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
-        docs = results[0][1]
-        assert docs
-        for doc in docs:
-            assert doc.metadata["title"] == "T"
-            assert doc.metadata["journal"] == "Journal of X"
-            assert "_metadata_complete" not in doc.metadata
-            assert "_sources" not in doc.metadata
-            assert "source_type" not in doc.metadata
-
-    @pytest.mark.localonly
-    def test_chunk_all_no_warning_when_metadata_map_resolves(self, caplog):
-        """chunk_all stays quiet when the metadata map resolves for a file."""
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        metadata_map = {"test.md": {"DEFAULT": {"url": "https://example.com"}}}
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        with caplog.at_level(logging.WARNING):
-            builder.chunk_all(self.tmpdir_path, metadata_map=metadata_map)
-
-        assert "No metadata resolved" not in caplog.text
-
-    def test_chunk_all_warns_on_zero_chunks(self, caplog, monkeypatch):
-        """chunk_all warns when conversion yields zero chunks (scanned PDF)."""
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        # Keep the test fast and deterministic: no tokenizer, no resolver,
-        # and a converter that produces no chunks (the empty-chunk signal a
-        # scanned PDF gives with OCR disabled).
-        monkeypatch.setattr(builder, "_ensure_tokenizer", lambda: None)
-        monkeypatch.setattr(builder, "_make_resolver", lambda source_path: None)
-        monkeypatch.setattr(
-            builder, "_convert_and_chunk", lambda file_path, resolver: ([], {})
-        )
-
-        with caplog.at_level(logging.WARNING):
-            builder.chunk_all(self.tmpdir_path)
-
-        assert "No chunks produced for test.md" in caplog.text
-        assert "OCR" in caplog.text
-
-    def test_chunk_all_no_warning_when_chunks_produced(self, caplog, monkeypatch):
-        """chunk_all stays quiet when conversion produces chunks."""
-        md_file = self.tmpdir_path / "test.md"
-        md_file.write_text(TEST_MD_CONTENT)
-
-        builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        monkeypatch.setattr(builder, "_ensure_tokenizer", lambda: None)
-        monkeypatch.setattr(builder, "_make_resolver", lambda source_path: None)
-        doc = Document(page_content="content", metadata={"headings": ["Intro"]})
-        monkeypatch.setattr(
-            builder, "_convert_and_chunk", lambda file_path, resolver: ([doc], {})
-        )
-
-        with caplog.at_level(logging.WARNING):
-            builder.chunk_all(self.tmpdir_path)
-
-        assert "No chunks produced" not in caplog.text
 
     def test_load_and_fold_results_warns_on_empty_cached_chunks(self, caplog):
         """_load_and_fold_results warns for a cache entry with zero chunks."""
@@ -1688,7 +1706,7 @@ class TestIngestion:
     def test_build_raises_when_nothing_chunked(self, monkeypatch):
         """build() fails loudly instead of storing nothing and reporting done."""
         builder = StoresBuilder(embedding_model="", logger=self.logger)
-        monkeypatch.setattr(builder, "chunk_all", lambda *a, **k: ([], {}))
+        monkeypatch.setattr(builder, "chunk_all", lambda *a, **k: {})
 
         with pytest.raises(RuntimeError, match="No files were successfully chunked"):
             builder.build(str(self.tmpdir_path), "chroma:/tmp/x", "c")
@@ -1909,8 +1927,13 @@ class TestIngestion:
         md_file = self.tmpdir_path / "test.md"
         md_file.write_text(TEST_MD_CONTENT)
 
+        from klea_utils.stores.ingestion import _hash_file
+
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
-        builder.chunk_all(self.tmpdir_path)  # populate the cache
+        # Populate the cache directly (as the worker would have written it)
+        # so the lazy fold path has something to stream.
+        cached = Document(page_content="cached", metadata={"headings": ["S"]})
+        builder._save_to_cache([cached], {}, self.tmpdir_path, _hash_file(md_file))
         builder.embeddings = object()
 
         results = builder._load_and_fold_results(self.tmpdir_path, None)
@@ -1961,7 +1984,12 @@ class TestIngestion:
         builder = StoresBuilder(
             embedding_model="", logger=self.logger, do_ocr=False, embed_batch_size=2
         )
-        builder.chunk_all(self.tmpdir_path)  # populate the cache
+        # Populate the cache directly (as the worker would have written it)
+        # so the lazy fold path has something to stream.
+        from klea_utils.stores.ingestion import _hash_file
+
+        cached = Document(page_content="cached", metadata={"headings": ["S"]})
+        builder._save_to_cache([cached], {}, self.tmpdir_path, _hash_file(md_file))
         builder.embeddings = object()
 
         bm25_path = self.tmpdir_path / "corpus.pkl"

@@ -39,6 +39,13 @@ from .utils import (
 if TYPE_CHECKING:
     from .chunk_worker import ChunkItemResult, ChunkWorkerConfig
 
+#: Default per-worker RSS cap for subprocess conversion.  Includes the
+#: ~1-1.5 GiB Docling's models occupy at worker startup.
+DEFAULT_WORKER_MEM_LIMIT = 4 * 1024**3
+
+#: Default maximum files handed to a single conversion worker.
+DEFAULT_WORKER_BATCH_SIZE = 200
+
 #: Heading texts that are never a real document title.  When the title
 #: extraction falls back to the filename stem, the first chunk heading is
 #: used as a title fallback instead -- but journal banners and section
@@ -168,17 +175,28 @@ class StoresBuilder:
         force: bool = False,
         metadata_map_path: str | None = None,
         bm25_path: str | None = None,
+        worker_mem_limit: int | None = DEFAULT_WORKER_MEM_LIMIT,
+        worker_batch_size: int = DEFAULT_WORKER_BATCH_SIZE,
     ) -> None:
         """Full pipeline: chunk documents and write them to a vector store.
 
-        One-shot quick start around :meth:`chunk_all` + :meth:`store_all`.
+        Composes the two memory-bounded paths: :meth:`chunk_all` runs in
+        worker-isolated, cache-only mode (uncached files are converted in
+        short-lived subprocesses), then :meth:`_load_and_fold_results`
+        streams the cached chunks into :meth:`store_all`.  No phase holds
+        the whole corpus in memory, so very large corpora stay bounded.
+
         When no *metadata_map_path* is given, the map is generated in the
-        chunk phase from the extracted bibliographic metadata (and written to
-        ``metadata-map.template.json``, exactly as :meth:`write_heading_template`
-        does) and consumed in the store phase -- so ``build`` works without a
-        prior ``chunk``, at the cost of no review step.  For the review-driven
-        flow (``chunk``, edit the template, ``store``), pass the map
-        explicitly or let ``store`` auto-fall back to the template.
+        chunk phase from the extracted bibliographic metadata (and written
+        to ``metadata-map.template.json``, exactly as
+        :meth:`write_heading_template` does) and consumed in the store
+        phase -- so ``build`` works without a prior ``chunk``, at the cost
+        of no review step.  For the review-driven flow (``chunk``, edit
+        the template, ``store``), pass the map explicitly or let ``store``
+        auto-fall back to the template.
+
+        Files whose conversion failed have no cache entry and are skipped
+        with an error; everything else is stored.
 
         :param source_dir: Path to a directory containing source documents
         :param store_uri: Vector store URI (e.g. ``chroma:/path``)
@@ -186,6 +204,9 @@ class StoresBuilder:
         :param force: Re-process all files even if unchanged
         :param metadata_map_path: Optional path to a metadata map JSON file
         :param bm25_path: Optional path to write the combined BM25 corpus to
+        :param worker_mem_limit: Maximum RSS per conversion worker in
+            bytes; ``None`` (default) keeps the chunk phase in-process
+        :param worker_batch_size: Maximum files handed to a single worker
         """
         source_path = Path(source_dir).resolve()
         if not source_path.is_dir():
@@ -196,15 +217,23 @@ class StoresBuilder:
             f"collection '{collection_name}' at {store_uri}"
         )
 
-        metadata_map = None
-        if metadata_map_path:
-            metadata_map = self._resolve_metadata_map(source_path, metadata_map_path)
-
-        results, file_headings = self.chunk_all(source_path, metadata_map, force)
-        if not results:
+        # Chunk phase (cache-only): uncached files are converted -- in
+        # subprocess workers when *worker_mem_limit* is set -- and cached.
+        # Nothing beyond the per-file heading chains is held in memory.
+        # The metadata map is deliberately not passed here: folding
+        # happens against the cached chunks in the store phase.
+        file_headings = self.chunk_all(
+            source_path,
+            force=force,
+            worker_mem_limit=worker_mem_limit,
+            worker_batch_size=worker_batch_size,
+        )
+        if not file_headings:
             raise RuntimeError(f"No files were successfully chunked from {source_path}")
 
-        if metadata_map is None:
+        if metadata_map_path:
+            metadata_map = self._resolve_metadata_map(source_path, metadata_map_path)
+        else:
             # One-shot quick start: no --metadata-map was given, so generate
             # the template from what was just chunked (exactly as the chunk
             # command would) and consume it -- the same fold and missing-file
@@ -212,15 +241,14 @@ class StoresBuilder:
             # step in between.  The template file is written too, so it can
             # be reviewed and re-stored later.
             self.write_heading_template(file_headings, source_path)
-            template_map = self._load_metadata_map(
+            metadata_map = self._load_metadata_map(
                 str(self._cache_dir(source_path) / TEMPLATE_FILE_NAME)
             )
-            results, _ = self.chunk_all(source_path, template_map, force=False)
-            if not results:
-                raise RuntimeError(
-                    f"No files were successfully chunked from {source_path}"
-                )
 
+        # Store phase (streaming): cached chunks are loaded, folded with
+        # the map, and stored one file at a time.  Files that failed the
+        # chunk phase have no cache entry and are skipped here.
+        results = self._load_and_fold_results(source_path, metadata_map, strict=False)
         self.store_all(
             results,
             store_uri,
@@ -234,171 +262,97 @@ class StoresBuilder:
     def chunk_all(
         self,
         source_path: Path,
-        metadata_map: dict[str, dict[str, Any]] | None = None,
         force: bool = False,
-        collect_results: bool = True,
-        worker_mem_limit: int | None = None,
-        worker_batch_size: int = 200,
-    ) -> tuple[list[tuple[str, list[Document], Path]], dict[str, dict[str, Any]]]:
-        """Convert, chunk, cache, and enrich metadata for all files.
+        worker_mem_limit: int | None = DEFAULT_WORKER_MEM_LIMIT,
+        worker_batch_size: int = DEFAULT_WORKER_BATCH_SIZE,
+    ) -> dict[str, dict[str, Any]]:
+        """Convert, chunk, and cache all files in memory-bounded workers.
 
-        Skips converting files whose cache entry exists (unless
-        ``force`` is ``True``).  Always caches newly-converted chunks.
-        Heading chains are collected per file for template generation.
-        The per-file ``DEFAULT`` template entry is pre-filled with the
-        automatically-extracted bibliographic metadata (see
-        :func:`~klea_utils.biblio.extract.extract_metadata`).
+        Uncached files are converted in short-lived subprocess workers
+        (:mod:`klea_utils.stores.chunk_worker`) so Docling's
+        per-conversion memory leak is reclaimed on worker exit; cache
+        hits are handled in-process.  The chunks live in the on-disk
+        cache -- they are never accumulated in this process -- so the run
+        stays memory-bounded on corpora of any size.  Cache entries whose
+        source file no longer exists are pruned at the end.
 
-        The metadata map is folded into the chunks via
-        :meth:`_fold_metadata_map`.  The cache-only ``store`` command
-        does not call this -- it uses :meth:`_load_and_fold_results`,
-        which loads cached chunks without converting.
-
-        With ``collect_results`` false the per-file chunks are *not*
-        retained in the returned ``results`` list: they are released as
-        soon as each file is cached to disk, so a ``chunk``-only run
-        stays bounded in memory regardless of corpus size (the cache is
-        the source of truth, not the returned list).  Callers that need
-        the chunks to hand on (e.g. ``build``, which feeds them to
-        :meth:`store_all`) keep the default ``True``.
-
-        When *worker_mem_limit* is set (and *collect_results* is false
-        and no *metadata_map* is given), uncached files are converted in
-        short-lived subprocess workers (:meth:`_chunk_all_worker_branch`)
-        so Docling's per-conversion memory leak is reclaimed on worker
-        exit; cache hits are handled in-process.  This is what keeps
-        ``klea-stores-create chunk`` memory-bounded on large corpora.
+        Callers that need the chunked documents read them back from the
+        cache with :meth:`_load_and_fold_results` (the ``store`` command
+        and :meth:`build`), which streams them one file at a time.
 
         :param source_path: Resolved source directory path
-        :param metadata_map: Metadata map for heading-based enrichment,
-            or ``None``
         :param force: Re-process all files even if cached
-        :param collect_results: When ``True`` (default), accumulate the
-            chunked docs into the returned ``results`` list; when
-            ``False``, drop them after caching so memory stays bounded
-            (``results`` is returned empty)
         :param worker_mem_limit: Maximum RSS per conversion worker in
-            bytes; when set, uncached files are converted in subprocess
-            workers that exit (and release their memory) at or before
-            this limit.  The limit includes the ~1-1.5 GiB Docling's
-            models occupy at worker startup, so headroom for its
-            per-conversion growth is roughly the limit minus that.
-            ``None`` (default) keeps conversion in-process.
+            bytes; the limit includes the ~1-1.5 GiB Docling's models
+            occupy at worker startup, so headroom for its per-conversion
+            growth is roughly the limit minus that.  ``None`` disables
+            the cap (workers are then bounded only by
+            *worker_batch_size*).
         :param worker_batch_size: Maximum files handed to any single
             conversion worker before it is restarted.  A worker stops at
             whichever comes first: its memory cap or this batch size.
-        :returns: ``(results, file_headings)`` where *results* is a
-            list of ``(file_hash, docs, file_path)`` tuples (empty when
-            ``collect_results`` is false) and *file_headings* is a
-            ``{file_name: {"DEFAULT": {extracted metadata}, "heading >
-            heading": {}, ...}}`` dict
+        :returns: ``file_headings`` -- a ``{file_name: {"DEFAULT":
+            {extracted metadata}, "heading > heading": {}, ...}}`` dict
+            for template generation, pre-filled with the
+            automatically-extracted bibliographic metadata (see
+            :func:`~klea_utils.biblio.extract.extract_metadata`)
         """
         files = self._find_files(source_path)
         self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
-
-        use_workers = (
-            worker_mem_limit is not None
-            and not collect_results
-            and metadata_map is None
-        )
-        if use_workers:
-            # Worker mode: the parent stays lean (it never imports
-            # Docling's models); conversion happens in subprocesses.
-            return self._chunk_all_worker_branch(
-                source_path,
-                files,
-                force,
-                worker_mem_limit,
-                worker_batch_size,
-            )
-
-        self._ensure_tokenizer()
-
+        total = len(files)
         resolver = self._make_resolver(source_path)
 
-        results: list[tuple[str, list[Document], Path]] = []
         file_headings: dict[str, dict[str, Any]] = {}
-        total = len(files)
-
-        # Hashes of every source file found (whether or not it converts
-        # successfully below).  Used to prune cache entries whose hash no
-        # longer matches a source file (e.g. renamed/removed files or
-        # legacy entries from a previous pipeline), so the cache always
-        # mirrors the source directory.
         current_hashes: set[str] = set()
+        pending: list[tuple[str, str]] = []
 
+        # Phase A (in-process): hash every file, build entries for cache
+        # hits (with the legacy fallback extraction), and collect the
+        # uncached files for the workers.  The parent stays lean -- it
+        # never loads Docling's models.
         for ctr, file_path in enumerate(files, 1):
             file_hash = _hash_file(file_path)
             current_hashes.add(file_hash)
-
-            docs = None
-            extracted: dict[str, Any] = {}
-            if not force:
-                cached = self._load_from_cache(source_path, file_hash)
-                if cached is not None:
-                    docs, extracted = cached
-
-            if docs is None:
-                self.logger.info(f"Processing: {file_path.name} ({ctr}/{total})")
-                try:
-                    docs, extracted = self._convert_and_chunk(file_path, resolver)
-                    self._save_to_cache(docs, extracted, source_path, file_hash)
-                except Exception as e:
-                    self.logger.error(f"Failed to process {file_path.name}: {e}")
-                    continue
-                if not docs:
-                    self.logger.warning(
-                        f"No chunks produced for {file_path.name}. This usually "
-                        f"means the PDF is scanned/image-based and its text "
-                        f"could not be extracted with OCR disabled. Re-run "
-                        f"with OCR enabled (drop --no-ocr) or run "
-                        f"'klea-stores-create pre-check' to classify it."
-                    )
-            else:
-                self.logger.debug(
-                    f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
-                )
-                if not extracted:
-                    # No persisted extraction (e.g. a legacy cache entry
-                    # written before the biblio cascade existed), so run
-                    # the text-only extraction over the cached chunks:
-                    # regex + pdf-info (for PDFs) + DOI resolution.
-                    extracted = self._extract_metadata_fallback(
-                        file_path, docs, resolver
-                    )
-
-            for doc in docs:
-                doc.metadata.update(
-                    {
-                        "file_hash": file_hash,
-                        "file_name": file_path.name,
-                    }
-                )
-
-            if metadata_map:
-                self._fold_metadata_map(file_path, docs, metadata_map)
-
+            if force:
+                pending.append((str(file_path), file_hash))
+                continue
+            cached = self._load_from_cache(source_path, file_hash)
+            if cached is None:
+                pending.append((str(file_path), file_hash))
+                continue
+            docs, extracted = cached
+            self.logger.debug(
+                f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
+            )
+            if not extracted:
+                # No persisted extraction (e.g. a legacy cache entry
+                # written before the biblio cascade existed), so run the
+                # text-only extraction over the cached chunks.
+                extracted = self._extract_metadata_fallback(file_path, docs, resolver)
             file_headings[file_path.name] = self._build_file_headings_entry(
                 file_path.name, extracted, docs
             )
 
-            # Holding every file's docs in ``results`` scales with the
-            # corpus.  The ``chunk`` CLI only needs the headings for the
-            # metadata-map template, so it opts out and the docs are
-            # freed as soon as this iteration's cache write is done.
-            if collect_results:
-                results.append((file_hash, docs, file_path))
-            else:
-                self.logger.debug(
-                    f"Released in-memory chunks for {file_path.name} "
-                    f"(collect_results=False)"
-                )
+        # Phase B (subprocess workers): convert+cache the uncached files.
+        if pending:
+            from .chunk_worker import ChunkWorkerConfig
+
+            config = ChunkWorkerConfig(
+                source_path=str(source_path),
+                max_tokens=self.max_tokens,
+                tokenizer_model=self.tokenizer_model,
+                do_ocr=self.do_ocr,
+                mem_limit_bytes=worker_mem_limit,
+                log_level=self.logger.getEffectiveLevel(),
+            )
+            for item in self._dispatch_conversion_batches(
+                pending, config, worker_batch_size
+            ):
+                if item.status == "ok" and item.file_headings_entry is not None:
+                    file_headings[item.file_name] = item.file_headings_entry
 
         self._prune_cache(source_path, current_hashes)
-
-        # The resolver's HTTP client is left for the process to clean up;
-        # ingestion is a one-shot CLI run.
-        return results, file_headings
+        return file_headings
 
     def _extract_metadata_fallback(
         self,
@@ -440,86 +394,6 @@ class StoresBuilder:
             f"regenerate the full extraction"
         )
         return extracted
-
-    def _chunk_all_worker_branch(
-        self,
-        source_path: Path,
-        files: list[Path],
-        force: bool,
-        worker_mem_limit: int,
-        worker_batch_size: int,
-    ) -> tuple[list[tuple[str, list[Document], Path]], dict[str, dict[str, Any]]]:
-        """Convert uncached files in subprocess workers (the ``chunk`` path).
-
-        Docling leaks memory per conversion that cannot be freed
-        in-process (see docling-project/docling#2788), so a long in-run
-        conversion of thousands of files grows RSS unboundedly.  This
-        branch hands the conversion to short-lived subprocess workers
-        (see :mod:`klea_utils.stores.chunk_worker`) that write each
-        file's cache entry and exit, returning the OS the memory they
-        leaked.  Cache hits are handled here in the parent, which stays
-        lean -- it never loads Docling's models.
-
-        Only used by :meth:`chunk_all` when *worker_mem_limit* is set,
-        *collect_results* is false, and no *metadata_map* is given (the
-        ``chunk`` CLI case).  No ``results`` are collected.
-
-        :param source_path: Resolved source directory path
-        :param files: Ingestible files (already discovered)
-        :param force: Re-process all files even if cached
-        :param worker_mem_limit: Max RSS per worker in bytes
-        :param worker_batch_size: Max files handed to a single worker
-        :returns: ``([], file_headings)``
-        """
-        total = len(files)
-        resolver = self._make_resolver(source_path)
-        file_headings: dict[str, dict[str, Any]] = {}
-        current_hashes: set[str] = set()
-        pending: list[tuple[str, str]] = []
-
-        # Phase A (in-process): hash every file, build entries for cache
-        # hits (with the legacy fallback extraction), and collect the
-        # uncached files for the workers.
-        for ctr, file_path in enumerate(files, 1):
-            file_hash = _hash_file(file_path)
-            current_hashes.add(file_hash)
-            if force:
-                pending.append((str(file_path), file_hash))
-                continue
-            cached = self._load_from_cache(source_path, file_hash)
-            if cached is None:
-                pending.append((str(file_path), file_hash))
-                continue
-            docs, extracted = cached
-            self.logger.debug(
-                f"Using cached chunks for: {file_path.name} ({ctr}/{total})"
-            )
-            if not extracted:
-                extracted = self._extract_metadata_fallback(file_path, docs, resolver)
-            file_headings[file_path.name] = self._build_file_headings_entry(
-                file_path.name, extracted, docs
-            )
-
-        # Phase B (subprocess workers): convert+cache the uncached files.
-        if pending:
-            from .chunk_worker import ChunkWorkerConfig
-
-            config = ChunkWorkerConfig(
-                source_path=str(source_path),
-                max_tokens=self.max_tokens,
-                tokenizer_model=self.tokenizer_model,
-                do_ocr=self.do_ocr,
-                mem_limit_bytes=worker_mem_limit,
-                log_level=self.logger.getEffectiveLevel(),
-            )
-            for item in self._dispatch_conversion_batches(
-                pending, config, worker_batch_size
-            ):
-                if item.status == "ok" and item.file_headings_entry is not None:
-                    file_headings[item.file_name] = item.file_headings_entry
-
-        self._prune_cache(source_path, current_hashes)
-        return [], file_headings
 
     def _dispatch_conversion_batches(
         self,
@@ -629,15 +503,18 @@ class StoresBuilder:
         self,
         source_path: Path,
         metadata_map: dict[str, dict[str, Any]] | None,
+        strict: bool = True,
     ) -> Iterator[tuple[str, list[Document], Path]]:
         """Load cached chunks and fold the metadata map into them.
 
         Cache-only: every source file must already have a cache entry
-        (run ``klea-stores-create chunk`` or ``build`` first).  A file
-        with no cache entry raises ``ValueError`` instead of being
-        converted on the fly.  This is the cache-only path used by the
-        ``store`` command; ``chunk`` and ``build`` convert on the fly
-        via :meth:`chunk_all` instead.
+        (run ``klea-stores-create chunk`` or ``build`` first).  In the
+        default strict mode a file with no cache entry raises
+        ``ValueError`` instead of being converted on the fly -- this is
+        the ``store`` command's contract.  With *strict* false (used by
+        :meth:`build`, whose chunk phase just logged the conversion
+        failure) such files are skipped with an error so the rest of the
+        corpus is still stored.
 
         This is a generator: it yields ``(file_hash, docs, file_path)``
         per file, so the caller (:meth:`store_all`) consumes and releases
@@ -647,9 +524,12 @@ class StoresBuilder:
 
         :param source_path: Resolved source directory path
         :param metadata_map: Metadata map for heading-based enrichment
+        :param strict: Raise on files with no cache entry (default);
+            when false, skip them with an error instead
         :returns: An iterator of ``(file_hash, docs, file_path)`` tuples
             ready for :meth:`store_all`
-        :raises ValueError: When a source file has no cache entry
+        :raises ValueError: When *strict* is true and a source file has
+            no cache entry
         """
         files = self._find_files(source_path)
         self.logger.info(f"Found {len(files)} ingestible files in {source_path}")
@@ -658,12 +538,19 @@ class StoresBuilder:
             file_hash = _hash_file(file_path)
             cached = self._load_from_cache(source_path, file_hash)
             if cached is None:
-                raise ValueError(
-                    f"No cache entry for {file_path.name}. The cache-only "
-                    f"store command requires every file to be converted "
-                    f"first; run 'klea-stores-create chunk' (or 'build') "
-                    f"to convert it."
+                if strict:
+                    raise ValueError(
+                        f"No cache entry for {file_path.name}. The cache-only "
+                        f"store command requires every file to be converted "
+                        f"first; run 'klea-stores-create chunk' (or 'build') "
+                        f"to convert it."
+                    )
+                self.logger.error(
+                    f"No cache entry for {file_path.name} (its conversion "
+                    f"failed); skipping it -- fix the file and re-run to "
+                    f"store it"
                 )
+                continue
             docs, _ = cached
             self.logger.debug(
                 f"Using cached chunks for: {file_path.name} ({ctr}/{len(files)})"
@@ -862,9 +749,14 @@ class StoresBuilder:
         self._save_manifest(source_dir, collection_name, manifest)
 
         if bm25_path_obj is not None:
-            if bm25_file is None:
+            if bm25_file is None and not bm25_batch:
+                # Nothing converted: no corpus to write.
                 self.logger.warning("No documents to write to BM25 store, skipping")
             else:
+                # Flush the final partial batch (a corpus smaller than one
+                # batch never opened the file mid-loop).
+                if bm25_file is None:
+                    bm25_file = open(bm25_path_obj, "wb")
                 if bm25_batch:
                     pickle.dump(bm25_batch, bm25_file)
                 bm25_file.close()

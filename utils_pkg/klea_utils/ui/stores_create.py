@@ -214,15 +214,12 @@ def chunk(
         if not source_path.is_dir():
             raise FileNotFoundError(f"Source directory not found: {source_path}")
 
-        # ``chunk`` is cache-only and the docs are discarded after this
-        # call, so collect_results=False releases each file's chunks as
-        # soon as they are cached; worker_mem_limit additionally runs the
-        # uncached-file conversion in subprocesses so the run stays
-        # memory-bounded on very large corpora.
-        _, file_headings = builder.chunk_all(
+        # Cache-only: the conversion runs in subprocess workers
+        # (worker_mem_limit) and only the per-file heading chains come
+        # back, keeping this run's memory bounded on very large corpora.
+        file_headings = builder.chunk_all(
             source_path,
             force=force,
-            collect_results=False,
             worker_mem_limit=int(worker_mem_limit * 1024**3),
             worker_batch_size=worker_batch_size,
         )
@@ -681,12 +678,31 @@ def build(
     force: bool = typer.Option(
         False, "--force", "-f", help="Re-process all files even if unchanged"
     ),
+    worker_mem_limit: float = typer.Option(
+        4.0,
+        "--worker-mem-limit",
+        help="Maximum memory (in GiB) a conversion worker process may "
+        "use before it is restarted.  This includes the ~1-1.5 GiB "
+        "Docling's models occupy at worker startup, so the headroom for "
+        "Docling's per-conversion memory growth is roughly the limit "
+        "minus that",
+    ),
+    worker_batch_size: int = typer.Option(
+        200,
+        "--worker-batch-size",
+        help="Maximum files handed to any single conversion worker "
+        "before it is restarted.  A worker stops at whichever comes "
+        "first: its memory cap or this batch size",
+    ),
     debug: bool = debug_option,
 ):
     """Full pipeline: chunk, embed, and write to a vector store.
 
     Processes all files in SOURCE_DIR: converts them with Docling,
-    chunks them, embeds them, and writes to the vector store.
+    chunks them, embeds them, and writes to the vector store.  This is
+    memory-bounded end-to-end: conversion runs in short-lived worker
+    subprocesses (bounded by ``--worker-mem-limit``) and cached chunks
+    are streamed into the store one file at a time.
     Processed chunks are cached in ``<source_dir>/.klea-cache/`` so
     subsequent runs (e.g. with ``--metadata-map``) skip conversion.
 
@@ -724,6 +740,8 @@ def build(
         f"\n  Model: {embedding_model}"
         f"\n  Max tokens: {max_tokens}"
         f"\n  Metadata map: {metadata_map_path or '(none)'}"
+        f"\n  Worker mem limit: {worker_mem_limit} GiB"
+        f"\n  Worker batch size: {worker_batch_size}"
     )
 
     # Typer cannot compute a default that depends on another argument, so
@@ -754,6 +772,8 @@ def build(
             force=force,
             metadata_map_path=metadata_map_path,
             bm25_path=bm25_store,
+            worker_mem_limit=int(worker_mem_limit * 1024**3),
+            worker_batch_size=worker_batch_size,
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
     except Exception as e:
