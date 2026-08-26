@@ -334,6 +334,14 @@ def _run_one_worker(
                 # Sentinel: worker finished its puts.
                 break
             batch_results.append(item)
+            # Per-file progress while the worker is still running; this
+            # is the incremental counterpart to the batch range log in
+            # dispatch_conversion_batches and restores the (X/Y) feel
+            # that was lost when conversion moved to subprocesses.
+            logger.info(
+                f"Completed {item.file_name} "
+                f"({len(batch_results)}/{len(batch)} in batch) - {item.status}"
+            )
         except Empty:
             if not process.is_alive():
                 # Worker died mid-batch.  Attribute the failure to the
@@ -404,6 +412,7 @@ def dispatch_conversion_batches(
     ctx = multiprocessing.get_context("spawn")
     results: list[ChunkItemResult] = []
     pending: list[tuple[str, str]] = list(items)
+    total = len(items)
     batch_no = 0
 
     while pending:
@@ -411,8 +420,14 @@ def dispatch_conversion_batches(
         batch = pending[:batch_size]
         pending = pending[batch_size:]
 
+        # Overall progress (X/Y) so the user sees where the run is,
+        # even though conversion happens in subprocesses.
+        batch_start = total - len(pending) - len(batch) + 1
+        batch_end = total - len(pending)
         parent_logger.info(
-            f"Spawning conversion worker #{batch_no} for {len(batch)} files"
+            f"Processing files {batch_start}-{batch_end}/{total} "
+            f"(batch #{batch_no}, {len(batch)} files) -- "
+            f"spawning conversion worker"
         )
         batch_results = _run_one_worker(ctx, config, batch)
 
