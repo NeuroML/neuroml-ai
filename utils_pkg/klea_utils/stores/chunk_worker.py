@@ -28,12 +28,6 @@ logger = logging.getLogger(__name__)
 _WORKER_POLL_INTERVAL = 1.0
 _WORKER_TIMEOUT_SECONDS = 4 * 3600
 
-#: Console format for the worker's own stderr, matching the application's
-#: ``setup_root_logger`` style so interleaved output stays consistent.
-_WORKER_LOG_FORMAT = (
-    "%(asctime)s %(name)s (%(levelname)s) in '%(funcName)s' >>> %(message)s"
-)
-
 
 @dataclass
 class ChunkWorkerConfig:
@@ -123,11 +117,15 @@ def convert_batch_worker(
     :param items: ``(absolute_file_path, file_hash)`` tuples to process
     :returns: One :class:`ChunkItemResult` per item, in input order
     """
-    logging.basicConfig(
-        level=config.log_level,
-        format=_WORKER_LOG_FORMAT,
-        force=False,
-    )
+    # Configure console logging exactly as the parent CLI does: root at
+    # INFO (so third-party DEBUG from httpcore/httpx/transformers stays
+    # off) with only the Klea namespaces raised to the requested level.
+    # The worker is a separate process, so it must configure its own
+    # loggers; reusing the shared helper keeps output format and level
+    # behaviour consistent with the parent.
+    from klea_utils.plogging import setup_root_logger
+
+    setup_root_logger("klea-stores-create", stderr_level=config.log_level)
     worker_logger = logging.getLogger("klea-stores-create.ChunkWorker")
     builder = StoresBuilder(
         embedding_model="",
