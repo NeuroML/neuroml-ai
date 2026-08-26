@@ -228,6 +228,13 @@
   to the answer/evaluator LLM (the ranked order conveys priority); they
   remain visible in the UI/reference display and the per-source scores
   stay in document metadata for debugging.
+- `klea-stores-create chunk` no longer accumulates every file's chunks
+  in memory: each file's chunks are released once cached, so chunk runs
+  stay bounded in memory regardless of corpus size.
+- `klea-stores-create store` streams cached chunks per file instead of
+  holding the whole corpus in memory.  BM25 corpora are written inline
+  in bounded per-batch pickles and read back with a looping unpickle;
+  existing single-list corpora remain loadable.
 
 ### Fixed
 
