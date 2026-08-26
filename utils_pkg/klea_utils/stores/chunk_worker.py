@@ -413,6 +413,10 @@ def dispatch_conversion_batches(
     results: list[ChunkItemResult] = []
     pending: list[tuple[str, str]] = list(items)
     total = len(items)
+    # Files that have already been retried once after a worker death;
+    # a second death for the same file means it is poison and should be
+    # marked failed instead of re-queued again.
+    retried: set[str] = set()
     batch_no = 0
 
     while pending:
@@ -432,20 +436,60 @@ def dispatch_conversion_batches(
         batch_results = _run_one_worker(ctx, config, batch)
 
         if batch_results is None:
-            parent_logger.error(
-                f"Conversion worker #{batch_no} produced no results; "
-                f"marking its {len(batch)} files as failed"
-            )
+            # Worker died before putting anything (e.g. OOM-killed at
+            # startup).  Re-queue once for a transient failure; on a
+            # second death for the same files they are poison.
+            to_retry: list[tuple[str, str]] = []
             for file_path_str, file_hash in batch:
-                results.append(
-                    ChunkItemResult(
-                        file_name=Path(file_path_str).name,
-                        file_hash=file_hash,
-                        status="failed",
-                        error="worker produced no results",
+                if file_hash in retried:
+                    results.append(
+                        ChunkItemResult(
+                            file_name=Path(file_path_str).name,
+                            file_hash=file_hash,
+                            status="failed",
+                            error="worker died repeatedly (possible poison file)",
+                        )
                     )
+                else:
+                    to_retry.append((file_path_str, file_hash))
+                    retried.add(file_hash)
+            if to_retry:
+                parent_logger.warning(
+                    f"Conversion worker #{batch_no} produced no results; "
+                    f"re-queuing {len(to_retry)} files for retry"
                 )
+                # Isolate the suspected file (first in batch) to the front
+                # so a second crash confirms it.
+                pending[:0] = to_retry
             continue
+
+        # Worker died mid-batch: it put a prefix incrementally before
+        # dying.  The missing tail was not put; re-queue it.
+        if len(batch_results) < len(batch):
+            missing = batch[len(batch_results) :]
+            to_retry: list[tuple[str, str]] = []
+            for file_path_str, file_hash in missing:
+                if file_hash in retried:
+                    results.append(
+                        ChunkItemResult(
+                            file_name=Path(file_path_str).name,
+                            file_hash=file_hash,
+                            status="failed",
+                            error="worker died repeatedly mid-batch",
+                        )
+                    )
+                else:
+                    to_retry.append((file_path_str, file_hash))
+                    retried.add(file_hash)
+            if to_retry:
+                parent_logger.warning(
+                    f"Worker #{batch_no} died after {len(batch_results)}/"
+                    f"{len(batch)} files; re-queuing {len(to_retry)} "
+                    f"remaining files"
+                )
+                pending[:0] = to_retry
+            # Fall through to handle the prefix that was completed;
+            # deferred handling below will still apply if any.
 
         # Re-dispatch the deferred tail to a fresh worker (clean memory);
         # the deferred results themselves are not reported -- those files

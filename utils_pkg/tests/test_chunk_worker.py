@@ -185,19 +185,52 @@ def test_dispatch_redispatch_deferred_tail(tmp_path, monkeypatch):
 
 
 def test_dispatch_marks_dead_worker_batch_failed(tmp_path, monkeypatch):
-    """A worker that returns nothing marks its batch failed and continues."""
+    """A dead worker batch is retried once, then marked failed (poison)."""
+    calls: list[list[tuple[str, str]]] = []
+
+    def fake_run_one_worker(ctx, config, batch):
+        calls.append(list(batch))
+        return None
+
     monkeypatch.setattr(
         "klea_utils.stores.chunk_worker._run_one_worker",
-        lambda ctx, config, batch: None,
+        fake_run_one_worker,
     )
     items = [(str(tmp_path / "a.md"), "xxh64:a")]
     results = dispatch_conversion_batches(
         logger, _config(tmp_path), items, batch_size=10
     )
 
+    assert len(calls) == 2  # original + one retry
     assert results[0].status == "failed"
     assert results[0].error is not None
-    assert "worker produced no results" in results[0].error
+    assert "worker died repeatedly" in results[0].error
+
+
+def test_dispatch_retries_dead_worker_batch_once(tmp_path, monkeypatch):
+    """A transient worker death is retried and then succeeds."""
+    calls: list[list[tuple[str, str]]] = []
+
+    def fake_run_one_worker(ctx, config, batch):
+        calls.append(list(batch))
+        if len(calls) == 1:
+            return None
+        return [
+            ChunkItemResult(file_name=Path(p).name, file_hash=h, status="ok")
+            for p, h in batch
+        ]
+
+    monkeypatch.setattr(
+        "klea_utils.stores.chunk_worker._run_one_worker",
+        fake_run_one_worker,
+    )
+    items = [(str(tmp_path / "a.md"), "xxh64:a")]
+    results = dispatch_conversion_batches(
+        logger, _config(tmp_path), items, batch_size=10
+    )
+
+    assert len(calls) == 2
+    assert results[0].status == "ok"
 
 
 @pytest.mark.localonly
