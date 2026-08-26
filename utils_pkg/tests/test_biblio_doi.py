@@ -266,6 +266,48 @@ def test_cache_written_as_literal_utf8(tmp_path):
     assert cache["10.7554/elife.95135"]["authors"] == ["B\u00f3ris Marin"]
 
 
+def test_cache_save_is_atomic_no_tmp_left(tmp_path):
+    """A successful resolution leaves a valid cache and no temp files."""
+
+    def route(service, request):
+        return httpx.Response(200, json=CROSSREF_JSON)
+
+    resolver = _make_resolver(tmp_path, _handler_for(route))
+    try:
+        resolver.resolve("10.1234/abc.5678")
+    finally:
+        resolver.close()
+
+    cache_file = tmp_path / "doi-cache.json"
+    assert cache_file.is_file()
+    assert list(tmp_path.glob("*.json.tmp")) == []
+    cache = json.loads(cache_file.read_text())
+    assert cache["10.1234/abc.5678"]["title"] == "A Crossref Sample Paper"
+
+
+def test_cache_save_batches_and_flushes_on_close(tmp_path, monkeypatch):
+    """Writes happen every _SAVE_BATCH_SIZE resolutions and on close()."""
+    monkeypatch.setattr("klea_utils.biblio.doi._SAVE_BATCH_SIZE", 2)
+
+    def route(service, request):
+        return httpx.Response(200, json=CROSSREF_JSON)
+
+    resolver = _make_resolver(tmp_path, _handler_for(route))
+    cache_file = tmp_path / "doi-cache.json"
+
+    try:
+        # First resolution is buffered (threshold of 2 not reached).
+        resolver.resolve("10.1234/abc.5678")
+        assert not cache_file.exists()
+        # Second resolution reaches the threshold: mid-run write.
+        resolver.resolve("10.2345/def.6789")
+        assert cache_file.is_file()
+        cache = json.loads(cache_file.read_text())
+        assert set(cache) == {"10.1234/abc.5678", "10.2345/def.6789"}
+    finally:
+        resolver.close()
+
+
 def test_resolve_invalid_doi_skips_network(tmp_path):
     """Invalid DOI strings never trigger a network request."""
 

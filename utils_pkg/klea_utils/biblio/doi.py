@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Self
 
@@ -25,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 #: JATS/XML tags found in Crossref abstracts.
 _JATS_TAG_RE = re.compile(r"<[^>]+>")
+
+#: Persist the DOI cache at most once per this many newly-resolved DOIs.
+#: :meth:`DoiResolver.close` always flushes whatever is left, so a crash
+#: between saves loses at most this many fresh resolutions (they are
+#: simply re-queried on the next run).
+_SAVE_BATCH_SIZE = 25
 
 
 class BiblioRecord(BaseModel):
@@ -193,6 +200,10 @@ class DoiResolver:
         self._cycle = itertools.cycle(self.SERVICE_ORDER)
         self._cache_path = self.cache_dir / "doi-cache.json"
         self._cache = self._load_cache()
+        # Count of newly-resolved DOIs not yet written to disk; the cache
+        # is persisted every ``_SAVE_BATCH_SIZE`` of them and on close(),
+        # so a long run does not rewrite the whole file per resolution.
+        self._pending_saves = 0
         self._client = httpx.Client(timeout=self.timeout, transport=transport)
 
     def __enter__(self) -> Self:
@@ -202,7 +213,9 @@ class DoiResolver:
         self.close()
 
     def close(self) -> None:
-        """Close the underlying HTTP client."""
+        """Flush any pending DOI resolutions, then close the HTTP client."""
+        if self._pending_saves:
+            self._save_cache()
         self._client.close()
 
     def resolve(self, doi: str) -> BiblioRecord | None:
@@ -232,7 +245,9 @@ class DoiResolver:
             record = self._query(service, normalized)
             if record:
                 self._cache[normalized] = record.model_dump()
-                self._save_cache()
+                self._pending_saves += 1
+                if self._pending_saves >= _SAVE_BATCH_SIZE:
+                    self._save_cache()
                 self.logger.info(f"Resolved DOI {normalized} via {service}")
                 return record
 
@@ -327,13 +342,48 @@ class DoiResolver:
             return {}
 
     def _save_cache(self) -> None:
-        """Write the DOI cache to disk, tolerating failures."""
+        """Write the DOI cache to disk, tolerating failures.
+
+        The write is atomic: the cache is dumped to a temp file in the
+        cache directory and then ``os.replace``d onto the final
+        ``doi-cache.json`` path, so a crash or kill mid-write can never
+        leave a torn cache that would wipe every previously-resolved DOI
+        (the reader degrades to an empty cache on a corrupt file, forcing
+        re-queries).  Called every :data:`_SAVE_BATCH_SIZE` new
+        resolutions and once more from :meth:`close` to flush the tail;
+        the pending counter is only reset on a successful write.
+        """
         try:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-            with open(self._cache_path, "w") as f:
-                # ensure_ascii=False keeps accented author/title characters
-                # as literal UTF-8 (the cache may hold names like "B\u00f3ris").
-                json.dump(self._cache, f, indent=2, ensure_ascii=False)
-                f.write("\n")
+            tmp_path: Path | None = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    mode="w",
+                    dir=self.cache_dir,
+                    prefix="doi-cache.",
+                    suffix=".json.tmp",
+                    delete=False,
+                    encoding="utf-8",
+                ) as f:
+                    tmp_path = Path(f.name)
+                    # ensure_ascii=False keeps accented author/title characters
+                    # as literal UTF-8 (the cache may hold names like "B\u00f3ris").
+                    json.dump(self._cache, f, indent=2, ensure_ascii=False)
+                    f.write("\n")
+                os.replace(tmp_path, self._cache_path)
+                self.logger.debug(
+                    f"Wrote DOI cache with {len(self._cache)} entries to "
+                    f"{self._cache_path}"
+                )
+            finally:
+                # A failed dump/replace must not leave a stray temp file;
+                # after a successful os.replace it no longer exists.
+                if tmp_path is not None and tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except OSError:
+                        pass
         except OSError as e:
             self.logger.warning(f"Could not write DOI cache {self._cache_path}: {e}")
+            return
+        self._pending_saves = 0
