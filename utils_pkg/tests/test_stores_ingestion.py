@@ -990,6 +990,10 @@ class TestIngestion:
             },
         )
 
+        # Force Docling onto the CPU: the layout model has no kernel for
+        # this machine's GPU (Quadro P1000, CC 6.1) and would otherwise
+        # raise CUDA error: no kernel image is available.
+        monkeypatch.setenv("DOCLING_DEVICE", "cpu")
         self._use_in_process_workers(monkeypatch)
         builder = StoresBuilder(embedding_model="", logger=self.logger, do_ocr=False)
         file_headings = builder.chunk_all(self.tmpdir_path)

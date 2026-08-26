@@ -348,7 +348,7 @@ class StoresBuilder:
             for item in self._dispatch_conversion_batches(
                 pending, config, worker_batch_size
             ):
-                if item.status == "ok" and item.file_headings_entry is not None:
+                if item.file_headings_entry is not None:
                     file_headings[item.file_name] = item.file_headings_entry
 
         self._prune_cache(source_path, current_hashes)
