@@ -141,10 +141,14 @@ setup -> MCP client -> vector stores -> compile graph template method.
 Vector stores use URI-style paths: `chroma:/path/to/dir`, `qdrant:http://...`,
 `pgvector:postgresql://...`.
 
-Internal development notes (design research, decisions, TODO context) live in
-`devdocs/` (see `devdocs/README.md`).  Keep work-in-progress notes out of the
-public `docs/` site; update `docs/` and `CHANGELOG.md` only when the work is
-implemented.
+Internal development notes live in `devdocs/` (see `devdocs/README.md`):
+architecture and component contracts in `devdocs/system/` (Mermaid diagrams
+and data-flow notes, e.g. `system/store-create.md`), Architecture Decision
+Records in `devdocs/adr/` in MADR format numbered as `NNNN-<slug>.md`
+(e.g. `adr/0001-chunk-workers.md` -- see `devdocs/adr-template.md`),
+plus design research and TODO context.  Keep work-in-progress notes out of
+the public `docs/` site; update `docs/` and `CHANGELOG.md` only when the
+work is implemented.
 
 ## Session continuity
 
@@ -223,7 +227,7 @@ Git log has the step-by-step edits. Omit routine work.
   own containment (e.g. `download_file_to_cache`) use that as the
   boundary.
 - The in-tool check is author-side: it does not protect against third-party
-  MCP servers.  Full discussion and options: `devdocs/mcp-permissions.md`.
+  MCP servers.  Full discussion and options: `devdocs/system/mcp-permissions.md`.
 
 ## CLI conventions
 

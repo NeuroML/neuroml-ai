@@ -1,7 +1,11 @@
 # MCP tool permissions: current state, limits, and options
 
-Status: research/design note.  Updates to this note should be reflected in
-the permission layer as it evolves.
+Status: design note.  In-tool path checks and the client-side per-path gate
+are implemented; the allow/deny/ask ruleset and interactive approval loop
+are deferred.  Updates to this note should be reflected in the permission
+layer as it evolves.
+
+Last updated: 2026-08-26 (moved to `devdocs/system/`; see `devdocs/README.md`).
 
 ## Current state
 
@@ -41,6 +45,18 @@ Both agents/RAG are expected to run from the directory the user is working
 in, so the client-side gate uses `project_root=None` (the current working
 directory) by default -- the same boundary the in-tool checks default to,
 so the two layers agree.
+
+```mermaid
+flowchart TD
+    LLM[LLM selects tool call] --> Picker[ToolsPicker]
+    Picker --> Caller[ToolsCallerNode]
+    Caller --> PreCheck{check_tool_arguments_permissions\n(checkpaths?)}
+    PreCheck -- allowed / no declaration --> Server[MCP server]
+    PreCheck -- denied --> Synth1[Synthetic error\nnever reaches server]
+    Server --> InTool[Tool impl\ncheck_path_access]
+    InTool -- allowed --> Exec[Execute]
+    InTool -- denied --> Synth2[Error result]
+```
 
 ## Declaring which arguments are paths
 
@@ -96,8 +112,7 @@ enforce path-level permissions from inside the tool.
 ## What opencode does (external MCP tools)
 
 Reference: the opencode repository
-(`/home/asinha/Documents/02_Code/01_others/opencode`, checked out around
-2026-08).
+(https://github.com/anomalyco/opencode, checked out around 2026-08).
 
 opencode does *not* inspect tool arguments.  Instead it applies a
 client-side, per-tool-call permission policy that works for any server:

@@ -100,3 +100,12 @@ Pull requests
   checklist covers the branch target, tests, CI, commit message
   guidelines (https://chris.beams.io/git-commit) and conventional commits
   (https://www.conventionalcommits.org/en/v1.0.0/).
+
+Internal docs
+-------------
+
+Architecture and component contracts (Mermaid diagrams, data-flow notes)
+live in ``devdocs/system/`` and Architecture Decision Records in
+``devdocs/adr/`` (MADR format) -- see ``devdocs/README.md``.  These are
+internal notes for contributors and are intentionally separate from the
+public ``docs/`` site.
