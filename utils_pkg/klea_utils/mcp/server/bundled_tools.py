@@ -8,9 +8,10 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastmcp import Context
+from fastmcp.tools import ToolResult
 from pydantic import Field
 
 from klea_utils.mcp.registry import tool_meta
@@ -19,6 +20,7 @@ from klea_utils.mcp.tool_impls.download_file import download_file as download_fi
 from klea_utils.mcp.tool_impls.list_files import list_files as list_files_impl
 from klea_utils.mcp.tool_impls.read_file import read_file as read_file_impl
 from klea_utils.mcp.tool_impls.web_fetch import web_fetch as web_fetch_impl
+from klea_utils.mcp.tool_result import to_result
 
 #: Common tags carried by every bundled tool, so "enable the common set"
 #: is a single `include_tags: ["bundled"]` in the app config.
@@ -31,7 +33,7 @@ async def web_fetch(
     url: Annotated[str, Field(min_length=1)],
     timeout: Annotated[float, Field(ge=1.0, le=120.0)] = 30.0,
     max_chars: Annotated[int, Field(ge=1, le=1_000_000)] = 100_000,
-) -> dict[str, Any]:
+) -> ToolResult:
     """Fetch a URL and return its text content.
 
     Use this tool to read web pages, docs, or other HTTP resources.
@@ -54,12 +56,13 @@ async def web_fetch(
         Dictionary with url, status_code, content_type, content, truncated, error.
     """
     session = ctx.lifespan_context.get("http_session")
-    return await web_fetch_impl(
+    result = await web_fetch_impl(
         session=session,
         url=url,
         timeout=timeout,
         max_chars=max_chars,
     )
+    return to_result(result)
 
 
 @tool_meta(
@@ -105,7 +108,7 @@ async def list_files(
     max_results: Annotated[
         int, Field(description="Maximum number of entries to return", ge=1, le=10000)
     ] = 100,
-) -> dict[str, Any]:
+) -> ToolResult:
     """List files and directories with filtering and metadata.
 
     Use this tool to explore the local file system structure and find
@@ -133,7 +136,7 @@ async def list_files(
     Returns:
         Dictionary with list of files, truncated flag, and error.
     """
-    return list_files_impl(
+    result = list_files_impl(
         path=path,
         max_depth=max_depth,
         pattern=pattern,
@@ -142,6 +145,7 @@ async def list_files(
         recursive=recursive,
         max_results=max_results,
     )
+    return to_result(result)
 
 
 @tool_meta(
@@ -170,7 +174,7 @@ async def read_file(
         int,
         Field(description="Hard cap on characters of content to return", ge=1),
     ] = 100_000,
-) -> dict[str, Any]:
+) -> ToolResult:
     """Read a file and return a slice of its text content.
 
     Use this tool to inspect source files, logs, or documents as plain text.
@@ -196,12 +200,13 @@ async def read_file(
     Returns:
         Dictionary with content, line range, total_lines, truncated, error.
     """
-    return read_file_impl(
+    result = read_file_impl(
         path=path,
         offset=offset,
         limit=limit,
         max_chars=max_chars,
     )
+    return to_result(result)
 
 
 @tool_meta(
@@ -216,7 +221,7 @@ async def download_file(
     ctx: Context,
     url: Annotated[str, Field(min_length=1)],
     file_path: Annotated[str, Field(min_length=1)],
-) -> dict[str, Any]:
+) -> ToolResult:
     """Download a URL to a local file.
 
     Use this tool to fetch binary or text resources from the web and save
@@ -246,7 +251,9 @@ async def download_file(
         file_path=file_path,
     )
     if target is None:
-        return {
-            "error": "Download failed (check the URL, network, or file path permissions)."
-        }
-    return {"saved_to": str(target)}
+        return to_result(
+            {
+                "error": "Download failed (check the URL, network, or file path permissions)."
+            }
+        )
+    return to_result({"saved_to": str(target), "error": ""})

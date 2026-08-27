@@ -17,9 +17,11 @@ from typing import Any
 import httpx
 from cachetools import TTLCache
 from fastmcp import Context
+from fastmcp.tools import ToolResult
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.mcp.tool_impls.download_file import download_file_to_cache
+from klea_utils.mcp.tool_result import to_result
 from klea_utils.paths import get_cache_dir
 from tenacity import (
     retry,
@@ -175,7 +177,7 @@ def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
         destructive=True,
     )
 )
-async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
+async def run_lems_simulation(lems_file: str) -> ToolResult:
     """Execute a LEMS simulation using pynml and the jLEMS simulator.
 
     Use this tool to run NeuroML simulation files and generate results. This
@@ -205,7 +207,17 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
     request = RunCommand(command=command_args)
     async with sbox(".") as f:
         result = await f.run(request)
-    return asdict(result)
+    data = asdict(result)
+    # Map non-zero returncode to is_error for MCP compliance
+    if data.get("returncode") not in (0, None):
+        data = {
+            **data,
+            "error": data.get("stderr")
+            or f"LEMS simulation failed with returncode {data.get('returncode')}",
+        }
+    else:
+        data = {**data, "error": ""}
+    return to_result(data)
 
 
 @tool_meta(
@@ -218,7 +230,7 @@ async def run_lems_simulation(lems_file: str) -> dict[str, Any]:
 )
 async def get_models_from_neuromldb(
     ctx: Context, search_query: str, num: int = 3, download: bool = False
-) -> dict[str, Any]:
+) -> ToolResult:
     """Search and optionally download cell and ion channel models from NeuroML-DB.
 
     Use this tool when you need example cell or ion channel models, or want
@@ -243,7 +255,7 @@ async def get_models_from_neuromldb(
         Dictionary of model information with metadata and model content.
     """
     if not search_query or not search_query.strip():
-        return {"Error": "search_query must be a non-empty string"}
+        return to_result({"Error": "search_query must be a non-empty string"})
 
     num = max(1, min(num, MAX_RESULTS))
 
@@ -266,7 +278,7 @@ async def get_models_from_neuromldb(
         except Exception as e:
             error_text = f"Error searching NeuroML-DB: {e.__class__.__name__}: {e}"
             logger.error(error_text)
-            return {"Error": error_text}
+            return to_result({"Error": error_text})
 
     # Process up to num results
     for i, m in enumerate(res[:num]):
@@ -305,7 +317,8 @@ async def get_models_from_neuromldb(
             mcopy["resource"] = None
         models[model_id] = mcopy
 
-    return models
+    # Success case has no top-level error field; helper treats missing/empty as is_error=False
+    return to_result(models)
 
 
 @tool_meta(
@@ -322,7 +335,7 @@ async def get_repositories_from_open_source_brain(
     search_data: bool = True,
     search_models: bool = True,
     num: int = 5,
-) -> dict[str, Any]:
+) -> ToolResult:
     """Search the Open Source Brain (v2) platform for model and data repositories.
 
     Use this tool to find neuroscience projects and repositories indexed from
@@ -354,14 +367,14 @@ async def get_repositories_from_open_source_brain(
     """
     search_query = search_query.strip()
     if not search_query:
-        return {"Error": "search_query must be a non-empty string"}
+        return to_result({"Error": "search_query must be a non-empty string"})
     logger.debug(f"{search_query = }")
 
     num = max(1, min(num, MAX_RESULTS))
 
     session: httpx.AsyncClient = ctx.lifespan_context["http_session"]
     if session is None:
-        return {"Error": "OSB session not initialized"}
+        return to_result({"Error": "OSB session not initialized"})
 
     # swagger-dev: https://workspaces.v2dev.opensourcebrain.org/api/ui/
     # swagger: https://workspaces.v2.opensourcebrain.org/api/ui/
@@ -403,7 +416,7 @@ async def get_repositories_from_open_source_brain(
         except Exception as e:
             error_text = f"Error searching OSBv2: {e.__class__.__name__}: {e}"
             logger.error(error_text)
-            return {"Error": error_text}
+            return to_result({"Error": error_text})
 
     # Process up to num results
     logger.debug(f"{res =}")
@@ -417,4 +430,4 @@ async def get_repositories_from_open_source_brain(
 
         repositories[m.get("id", f"unknown_{i}")] = mcopy
 
-    return repositories
+    return to_result(repositories)

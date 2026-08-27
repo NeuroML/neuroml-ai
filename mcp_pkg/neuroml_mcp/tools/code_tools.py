@@ -11,11 +11,13 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from dataclasses import asdict
-from typing import Annotated, Any
+from typing import Annotated
 
+from fastmcp.tools import ToolResult
 from klea_utils.mcp.registry import tool_meta
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.mcp.tool_impls.list_files import list_files as list_files_impl
+from klea_utils.mcp.tool_result import to_result
 from pydantic import Field
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
@@ -67,7 +69,7 @@ async def list_files(
     include_directories: bool = True,
     recursive: bool = False,
     max_results: Annotated[int, Field(ge=1, le=10000)] = 100,
-) -> dict[str, Any]:
+) -> ToolResult:
     """List files and directories with filtering and metadata.
 
     Use this tool to explore the file system structure and find specific
@@ -98,7 +100,7 @@ async def list_files(
         Dict with the matching files, an error message (if any), and a
         truncated flag.
     """
-    return list_files_impl(
+    result = list_files_impl(
         path=path,
         max_depth=max_depth,
         pattern=pattern,
@@ -107,6 +109,7 @@ async def list_files(
         recursive=recursive,
         max_results=max_results,
     )
+    return to_result(result)
 
 
 @tool_meta(
@@ -118,7 +121,7 @@ async def list_files(
 )
 async def run_python_code(
     code: Annotated[str, Field(min_length=1)],
-) -> dict[str, Any]:
+) -> ToolResult:
     """Execute Python code in a sandboxed environment.
 
     Use this tool to test code snippets, generate models, and perform
@@ -144,4 +147,13 @@ async def run_python_code(
     request = RunPythonCode(code=code)
     async with sbox(".") as f:
         result = await f.run(request)
-    return asdict(result)
+    data = asdict(result)
+    if data.get("returncode") not in (0, None):
+        data = {
+            **data,
+            "error": data.get("stderr")
+            or f"Python code failed with returncode {data.get('returncode')}",
+        }
+    else:
+        data = {**data, "error": ""}
+    return to_result(data)

@@ -62,7 +62,7 @@ def list_files(
     )
 
     the_path = Path(path)
-    truncated = "False"
+    truncated = False
     error = ""
     files: list[dict[str, Any]] = []
     paths: list[Path] = []
@@ -71,7 +71,7 @@ def list_files(
         logger.warning(f"Rejecting path containing '..': {path}")
         return {
             "files": [],
-            "truncated": "False",
+            "truncated": False,
             "error": "Path contains '..', exiting.",
         }
 
@@ -81,7 +81,7 @@ def list_files(
         logger.warning(f"Permission denied for {path}")
         return {
             "files": [],
-            "truncated": "False",
+            "truncated": False,
             "error": str(exc),
         }
 
@@ -129,7 +129,7 @@ def list_files(
                         stack.append((p, depth + 1))
 
         if len(paths) > max_results:
-            truncated = "True"
+            truncated = True
 
         for f in paths[:max_results]:
             ftype = "file"

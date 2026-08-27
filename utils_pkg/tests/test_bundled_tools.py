@@ -577,7 +577,7 @@ def test_list_files_basic(tmp_path):
     assert "b.md" in names
     assert "sub" in names
     assert result["error"] == ""
-    assert result["truncated"] == "False"
+    assert result["truncated"] is False
 
 
 def test_list_files_recursive(tmp_path):
@@ -611,7 +611,7 @@ def test_list_files_truncates(tmp_path):
     logger.debug(f"{result['truncated'] = }")
 
     assert len(result["files"]) == 2
-    assert result["truncated"] == "True"
+    assert result["truncated"] is True
 
 
 def test_list_files_max_depth(tmp_path):

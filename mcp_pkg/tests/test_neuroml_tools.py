@@ -41,18 +41,26 @@ async def http_ctx():
 
 @pytest.mark.asyncio
 async def test_get_models_from_neuromldb_download(http_ctx):
+    from pathlib import Path
+
     model = "NMLCL000595"
     res = await get_models_from_neuromldb(
         ctx=http_ctx, search_query=model, num=1, download=True
     )
     logger.debug(f"{res = }")
-    assert len(res) == 1
+    # Wrapper now returns ToolResult per MCP spec (isError handling)
+    assert not res.is_error
+    data = res.structured_content
+    assert len(data) == 1
 
     # Should download model
-    assert model in list(res.keys())
+    assert model in list(data.keys())
 
-    m = res[model]
-    assert m["resource"].exists()
+    m = data[model]
+    resource = m["resource"]
+    # ToolResult serialises Path to string via FastMCP; handle both
+    path = Path(resource) if isinstance(resource, str) else resource
+    assert path.exists()
     assert m["Type"] == "Cell"
     assert m["Publication_Year"] == 2015
 
@@ -64,11 +72,13 @@ async def test_get_models_from_neuromldb_nodownload(http_ctx):
         ctx=http_ctx, search_query=model, num=1, download=False
     )
     logger.debug(f"{res = }")
-    assert len(res) == 1
+    assert not res.is_error
+    data = res.structured_content
+    assert len(data) == 1
 
-    assert model in list(res.keys())
+    assert model in list(data.keys())
 
-    m = res[model]
+    m = data[model]
     assert m["resource"] is None
     assert m["Type"] == "Cell"
     assert m["Publication_Year"] == 2015
@@ -87,12 +97,14 @@ async def test_get_repositories_from_open_source_brain(http_ctx):
     )
     logger.debug(f"{res = }")
 
-    # Should return a dictionary
-    assert isinstance(res, dict)
+    # Wrapper now returns ToolResult per MCP spec
+    assert not res.is_error
+    data = res.structured_content
+    assert isinstance(data, dict)
 
     # Should have some results (may be empty depending on search)
     # Just checking it doesn't crash and returns proper structure
-    assert "Error" not in res or isinstance(res["Error"], str)
+    assert "Error" not in data or isinstance(data["Error"], str)
 
 
 @pytest.mark.asyncio
@@ -108,8 +120,10 @@ async def test_get_repositories_from_open_source_brain_no_results(http_ctx):
     )
     logger.debug(f"{res = }")
 
-    # Should return a dictionary
-    assert isinstance(res, dict)
+    # Wrapper now returns ToolResult per MCP spec
+    assert not res.is_error
+    data = res.structured_content
+    assert isinstance(data, dict)
 
     # Should not crash, even if no results are found
-    assert "Error" not in res or isinstance(res["Error"], str)
+    assert "Error" not in data or isinstance(data["Error"], str)

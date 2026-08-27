@@ -190,7 +190,6 @@ def test_dispatch_marks_dead_worker_batch_failed(tmp_path, monkeypatch):
 
     def fake_run_one_worker(ctx, config, batch):
         calls.append(list(batch))
-        return None
 
     monkeypatch.setattr(
         "klea_utils.stores.chunk_worker._run_one_worker",
