@@ -14,7 +14,7 @@ software systems, not technologies, protocols, or low-level detail.  It is the
 sort of diagram that is meaningful to both technical and non-technical readers.
 
 **System in scope:** the whole Klea product (the entire monorepo: `utils_pkg`,
-`agent_pkg`, `rag_pkg`, `mcp_pkg`, `code_pkg`).  The individual packages are
+`agent_pkg`, `rag_pkg`, `mcp_pkg`).  The individual packages are
 *containers* and are decomposed in the Level 2 container diagram, not here.
 
 ### Domain note (important)
@@ -39,6 +39,11 @@ agentic assistant and is not tied to any single domain.
 ## System Context diagram
 
 ```mermaid
+---
+config:
+  c4:
+    wrap: true
+---
 C4Context
     title System Context diagram for Klea
 
@@ -68,7 +73,7 @@ C4Context
     Rel(klea, sandbox, "Executes generated code / simulations (via nml-mcp)")
     Rel(klea, hf, "Pulls models; deploys as Space")
 
-    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
 ```
 
 ## System in scope
@@ -124,7 +129,7 @@ and the relationship is drawn at Level 2.
 ## Out of scope (Level 2+)
 
 The internal packages -- `klea_agent`, `klea_rag`, `neuroml_mcp` (`nml-mcp`),
-`klea_code`, and `klea_utils` (shared library: `BaseLangGraph`, API factory,
+`klea_utils` (shared library: `BaseLangGraph`, API factory,
 stores, bundled MCP server) -- plus the FastAPI serving layer, the TUI / Web
 UIs, the bundled `klea-mcp` stdio server, and the SQLite session / checkpoint
 stores are all *inside* the Klea boundary.  They are containers and are shown
