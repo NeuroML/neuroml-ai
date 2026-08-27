@@ -220,6 +220,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -344,6 +345,14 @@ Web interfaces are available via NiceGUI (primary) and Streamlit.</p>
 also code.  <code class="docutils literal notranslate"><span class="pre">klea_rag</span></code> is an additional component, primarily consumed by
 <code class="docutils literal notranslate"><span class="pre">klea_agent</span></code> as a retrieval/RAG service.</p>
 </section>
+<section id="c4-architecture-model">
+<h2>C4 architecture model<a class="headerlink" href="#c4-architecture-model" title="Link to this heading">¶</a></h2>
+<p>Although Klea is being validated in the neuroscience domain (via the
+<code class="docutils literal notranslate"><span class="pre">nml-mcp</span></code> server and the curated NeuroML vector stores), it is developed as a
+general-purpose RAG + agentic assistant and is not tied to any single domain.
+The full C4 model (system context, containers, components, deployment) is
+maintained as developer documentation: see <a class="reference internal" href="architecture.html"><span class="doc">Architecture (C4 model)</span></a>.</p>
+</section>
 <section id="prototype-deployments">
 <h2>Prototype Deployments<a class="headerlink" href="#prototype-deployments" title="Link to this heading">¶</a></h2>
 <p>These prototype Klea RAG deployments are available on HuggingFace that use the web interface.</p>
@@ -419,6 +428,7 @@ London</a>.</p>
             <ul>
 <li><a class="reference internal" href="#">Welcome to Klea</a><ul>
 <li><a class="reference internal" href="#architecture">Architecture</a></li>
+<li><a class="reference internal" href="#c4-architecture-model">C4 architecture model</a></li>
 <li><a class="reference internal" href="#prototype-deployments">Prototype Deployments</a></li>
 <li><a class="reference internal" href="#funding">Funding</a><ul>
 </ul>

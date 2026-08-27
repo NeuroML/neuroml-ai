@@ -220,6 +220,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -404,26 +405,73 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  metadata values and pass the file to                                 
  ``klea-stores-create store --metadata-map``.                         
                                                                       
+ Uncached files are converted in short-lived worker subprocesses      
+ (bounded by ``--worker-mem-limit``), so a run over a very large      
+ corpus stays memory-bounded instead of being killed by the kernel    
+ when Docling's per-conversion memory growth is never released.       
+ Already-cached files are handled in-process and never spawn workers. 
+                                                                      
 ╭─ Arguments ────────────────────────────────────────────────────────╮
 │ *    source_dir      TEXT  Directory containing source documents   │
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ --max-tokens                  INTEGER  Maximum tokens per chunk    │
-│                                        [default: 450]              │
-│ --ocr             --no-ocr             Whether to perform optical  │
-│                                        character recognition (OCR) │
-│                                        during PDF conversion       │
-│                                        (default: on). Keep for     │
-│                                        scanned/image PDFs; disable │
-│                                        for text-based PDFs to      │
-│                                        speed up conversion         │
-│                                        significantly               │
-│                                        [default: ocr]              │
-│ --force       -f                       Re-process all files even   │
-│                                        if unchanged                │
-│ --debug                                Enable debug logging        │
-│ --help                                 Show this message and exit. │
+│ --max-tokens                         INTEGER  Maximum tokens per   │
+│                                               chunk                │
+│                                               [default: 450]       │
+│ --ocr                    --no-ocr             Whether to perform   │
+│                                               optical character    │
+│                                               recognition (OCR)    │
+│                                               during PDF           │
+│                                               conversion (default: │
+│                                               on). Keep for        │
+│                                               scanned/image PDFs;  │
+│                                               disable for          │
+│                                               text-based PDFs to   │
+│                                               speed up conversion  │
+│                                               significantly        │
+│                                               [default: ocr]       │
+│ --force              -f                       Re-process all files │
+│                                               even if unchanged    │
+│ --worker-mem-limit                   FLOAT    Maximum memory (in   │
+│                                               GiB) a conversion    │
+│                                               worker process may   │
+│                                               use before it is     │
+│                                               restarted.  This     │
+│                                               includes the ~1-1.5  │
+│                                               GiB Docling's models │
+│                                               occupy at worker     │
+│                                               startup, so the      │
+│                                               headroom for         │
+│                                               Docling's            │
+│                                               per-conversion       │
+│                                               memory growth is     │
+│                                               roughly the limit    │
+│                                               minus that.          │
+│                                               Uncached files are   │
+│                                               converted in         │
+│                                               short-lived          │
+│                                               subprocesses so that │
+│                                               growth is released   │
+│                                               when a worker exits; │
+│                                               raise this on        │
+│                                               machines with more   │
+│                                               RAM to restart       │
+│                                               workers less often   │
+│                                               [default: 4.0]       │
+│ --worker-batch-size                  INTEGER  Maximum files handed │
+│                                               to any single        │
+│                                               conversion worker    │
+│                                               before it is         │
+│                                               restarted.  A worker │
+│                                               stops at whichever   │
+│                                               comes first: its     │
+│                                               memory cap or this   │
+│                                               batch size           │
+│                                               [default: 200]       │
+│ --debug                                       Enable debug logging │
+│ --help                                        Show this message    │
+│                                               and exit.            │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>
@@ -610,7 +658,10 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
  Full pipeline: chunk, embed, and write to a vector store.            
                                                                       
  Processes all files in SOURCE_DIR: converts them with Docling,       
- chunks them, embeds them, and writes to the vector store.            
+ chunks them, embeds them, and writes to the vector store.  This is   
+ memory-bounded end-to-end: conversion runs in short-lived worker     
+ subprocesses (bounded by ``--worker-mem-limit``) and cached chunks   
+ are streamed into the store one file at a time.                      
  Processed chunks are cached in ``&lt;source_dir&gt;/.klea-cache/`` so      
  subsequent runs (e.g. with ``--metadata-map``) skip conversion.      
                                                                       
@@ -644,100 +695,122 @@ so <code class="docutils literal notranslate"><span class="pre">--collection</sp
 │                            [required]                              │
 ╰────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────╮
-│ *  --collection        -n              TEXT     Collection name    │
-│                                                 for the vector     │
-│                                                 store. Must match  │
-│                                                 the 'name' of the  │
-│                                                 corresponding      │
-│                                                 vector_stores/bm2… │
-│                                                 entry in the RAG   │
-│                                                 config file (e.g.  │
-│                                                 klea.json); a      │
-│                                                 different name on  │
-│                                                 an existing store  │
-│                                                 file creates a new │
-│                                                 collection         │
-│                                                 [required]         │
-│ *  --store             -s              TEXT     Vector store URI   │
-│                                                 (e.g.              │
-│                                                 chroma:/path/to/s… │
-│                                                 For local Chroma   │
-│                                                 stores, point at   │
-│                                                 the store folder:  │
-│                                                 the database file  │
-│                                                 inside it is       │
-│                                                 always named       │
-│                                                 chroma.sqlite3     │
-│                                                 [required]         │
-│    --model             -m              TEXT     Embedding model    │
-│                                                 identifier         │
-│                                                 [default:          │
-│                                                 ollama:bge-m3:lat… │
-│    --max-tokens                        INTEGER  Maximum tokens per │
-│                                                 chunk              │
-│                                                 [default: 450]     │
-│    --ocr                   --no-ocr             Whether to perform │
-│                                                 optical character  │
-│                                                 recognition (OCR)  │
-│                                                 during PDF         │
-│                                                 conversion         │
-│                                                 (default: on).     │
-│                                                 Keep for           │
-│                                                 scanned/image      │
-│                                                 PDFs; disable for  │
-│                                                 text-based PDFs to │
-│                                                 speed up           │
-│                                                 conversion         │
-│                                                 significantly      │
-│                                                 [default: ocr]     │
-│    --metadata-map      -M              TEXT     JSON file keyed by │
-│                                                 source filename;   │
-│                                                 each file entry    │
-│                                                 maps heading       │
-│                                                 chains to metadata │
-│                                                 dicts (with        │
-│                                                 per-file DEFAULT   │
-│                                                 fallback). If not  │
-│                                                 given, build       │
-│                                                 generates          │
-│                                                 metadata-map.temp… │
-│                                                 from the           │
-│                                                 extraction and     │
-│                                                 uses it without a  │
-│                                                 review step        │
-│    --bm25-store                        TEXT     Write the combined │
-│                                                 document corpus to │
-│                                                 this path for BM25 │
-│                                                 retrieval (a       │
-│                                                 pickle of all      │
-│                                                 chunked            │
-│                                                 documents).        │
-│                                                 Defaults to        │
-│                                                 &lt;collection&gt;.pkl   │
-│                                                 in the current     │
-│                                                 directory; the     │
-│                                                 file can be moved  │
-│                                                 after creation     │
-│                                                 [default:          │
-│                                                 (&lt;collection&gt;.pkl… │
-│    --embed-batch-size                  INTEGER  Number of chunks   │
-│                                                 embedded per store │
-│                                                 write call.        │
-│                                                 Smaller values     │
-│                                                 report progress    │
-│                                                 more frequently;   │
-│                                                 larger values      │
-│                                                 reduce per-request │
-│                                                 overhead on very   │
-│                                                 large corpora      │
-│                                                 [default: 256]     │
-│    --force             -f                       Re-process all     │
-│                                                 files even if      │
-│                                                 unchanged          │
-│    --debug                                      Enable debug       │
-│                                                 logging            │
-│    --help                                       Show this message  │
-│                                                 and exit.          │
+│ *  --collection       -n              TEXT     Collection name for │
+│                                                the vector store.   │
+│                                                Must match the      │
+│                                                'name' of the       │
+│                                                corresponding       │
+│                                                vector_stores/bm25… │
+│                                                entry in the RAG    │
+│                                                config file (e.g.   │
+│                                                klea.json); a       │
+│                                                different name on   │
+│                                                an existing store   │
+│                                                file creates a new  │
+│                                                collection          │
+│                                                [required]          │
+│ *  --store            -s              TEXT     Vector store URI    │
+│                                                (e.g.               │
+│                                                chroma:/path/to/st… │
+│                                                For local Chroma    │
+│                                                stores, point at    │
+│                                                the store folder:   │
+│                                                the database file   │
+│                                                inside it is always │
+│                                                named               │
+│                                                chroma.sqlite3      │
+│                                                [required]          │
+│    --model            -m              TEXT     Embedding model     │
+│                                                identifier          │
+│                                                [default:           │
+│                                                ollama:bge-m3:late… │
+│    --max-tokens                       INTEGER  Maximum tokens per  │
+│                                                chunk               │
+│                                                [default: 450]      │
+│    --ocr                  --no-ocr             Whether to perform  │
+│                                                optical character   │
+│                                                recognition (OCR)   │
+│                                                during PDF          │
+│                                                conversion          │
+│                                                (default: on). Keep │
+│                                                for scanned/image   │
+│                                                PDFs; disable for   │
+│                                                text-based PDFs to  │
+│                                                speed up conversion │
+│                                                significantly       │
+│                                                [default: ocr]      │
+│    --metadata-map     -M              TEXT     JSON file keyed by  │
+│                                                source filename;    │
+│                                                each file entry     │
+│                                                maps heading chains │
+│                                                to metadata dicts   │
+│                                                (with per-file      │
+│                                                DEFAULT fallback).  │
+│                                                If not given, build │
+│                                                generates           │
+│                                                metadata-map.templ… │
+│                                                from the extraction │
+│                                                and uses it without │
+│                                                a review step       │
+│    --bm25-store                       TEXT     Write the combined  │
+│                                                document corpus to  │
+│                                                this path for BM25  │
+│                                                retrieval (a pickle │
+│                                                of all chunked      │
+│                                                documents).         │
+│                                                Defaults to         │
+│                                                &lt;collection&gt;.pkl in │
+│                                                the current         │
+│                                                directory; the file │
+│                                                can be moved after  │
+│                                                creation            │
+│                                                [default:           │
+│                                                (&lt;collection&gt;.pkl)] │
+│    --embed-batch-si…                  INTEGER  Number of chunks    │
+│                                                embedded per store  │
+│                                                write call. Smaller │
+│                                                values report       │
+│                                                progress more       │
+│                                                frequently; larger  │
+│                                                values reduce       │
+│                                                per-request         │
+│                                                overhead on very    │
+│                                                large corpora       │
+│                                                [default: 256]      │
+│    --force            -f                       Re-process all      │
+│                                                files even if       │
+│                                                unchanged           │
+│    --worker-mem-lim…                  FLOAT    Maximum memory (in  │
+│                                                GiB) a conversion   │
+│                                                worker process may  │
+│                                                use before it is    │
+│                                                restarted.  This    │
+│                                                includes the ~1-1.5 │
+│                                                GiB Docling's       │
+│                                                models occupy at    │
+│                                                worker startup, so  │
+│                                                the headroom for    │
+│                                                Docling's           │
+│                                                per-conversion      │
+│                                                memory growth is    │
+│                                                roughly the limit   │
+│                                                minus that          │
+│                                                [default: 4.0]      │
+│    --worker-batch-s…                  INTEGER  Maximum files       │
+│                                                handed to any       │
+│                                                single conversion   │
+│                                                worker before it is │
+│                                                restarted.  A       │
+│                                                worker stops at     │
+│                                                whichever comes     │
+│                                                first: its memory   │
+│                                                cap or this batch   │
+│                                                size                │
+│                                                [default: 200]      │
+│    --debug                                     Enable debug        │
+│                                                logging             │
+│    --help                                      Show this message   │
+│                                                and exit.           │
 ╰────────────────────────────────────────────────────────────────────╯
 </pre></div>
 </div>

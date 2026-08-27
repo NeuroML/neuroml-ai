@@ -219,6 +219,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -295,9 +296,12 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Iterator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">xxhash</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span>
@@ -317,6 +321,16 @@
     <span class="n">instantiate_vector_store</span><span class="p">,</span>
     <span class="n">normalize_text</span><span class="p">,</span>
 <span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.chunk_worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChunkItemResult</span><span class="p">,</span> <span class="n">ChunkWorkerConfig</span>
+
+<span class="c1">#: Default per-worker RSS cap for subprocess conversion.  Includes the</span>
+<span class="c1">#: ~1-1.5 GiB Docling's models occupy at worker startup.</span>
+<span class="n">DEFAULT_WORKER_MEM_LIMIT</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">3</span>
+
+<span class="c1">#: Default maximum files handed to a single conversion worker.</span>
+<span class="n">DEFAULT_WORKER_BATCH_SIZE</span> <span class="o">=</span> <span class="mi">200</span>
 
 <span class="c1">#: Heading texts that are never a real document title.  When the title</span>
 <span class="c1">#: extraction falls back to the filename stem, the first chunk heading is</span>
@@ -451,17 +465,28 @@
         <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">metadata_map_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">bm25_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">worker_mem_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_WORKER_MEM_LIMIT</span><span class="p">,</span>
+        <span class="n">worker_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_WORKER_BATCH_SIZE</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Full pipeline: chunk documents and write them to a vector store.</span>
 
-<span class="sd">        One-shot quick start around :meth:`chunk_all` + :meth:`store_all`.</span>
+<span class="sd">        Composes the two memory-bounded paths: :meth:`chunk_all` runs in</span>
+<span class="sd">        worker-isolated, cache-only mode (uncached files are converted in</span>
+<span class="sd">        short-lived subprocesses), then :meth:`_load_and_fold_results`</span>
+<span class="sd">        streams the cached chunks into :meth:`store_all`.  No phase holds</span>
+<span class="sd">        the whole corpus in memory, so very large corpora stay bounded.</span>
+
 <span class="sd">        When no *metadata_map_path* is given, the map is generated in the</span>
-<span class="sd">        chunk phase from the extracted bibliographic metadata (and written to</span>
-<span class="sd">        ``metadata-map.template.json``, exactly as :meth:`write_heading_template`</span>
-<span class="sd">        does) and consumed in the store phase -- so ``build`` works without a</span>
-<span class="sd">        prior ``chunk``, at the cost of no review step.  For the review-driven</span>
-<span class="sd">        flow (``chunk``, edit the template, ``store``), pass the map</span>
-<span class="sd">        explicitly or let ``store`` auto-fall back to the template.</span>
+<span class="sd">        chunk phase from the extracted bibliographic metadata (and written</span>
+<span class="sd">        to ``metadata-map.template.json``, exactly as</span>
+<span class="sd">        :meth:`write_heading_template` does) and consumed in the store</span>
+<span class="sd">        phase -- so ``build`` works without a prior ``chunk``, at the cost</span>
+<span class="sd">        of no review step.  For the review-driven flow (``chunk``, edit</span>
+<span class="sd">        the template, ``store``), pass the map explicitly or let ``store``</span>
+<span class="sd">        auto-fall back to the template.</span>
+
+<span class="sd">        Files whose conversion failed have no cache entry and are skipped</span>
+<span class="sd">        with an error; everything else is stored.</span>
 
 <span class="sd">        :param source_dir: Path to a directory containing source documents</span>
 <span class="sd">        :param store_uri: Vector store URI (e.g. ``chroma:/path``)</span>
@@ -469,6 +494,9 @@
 <span class="sd">        :param force: Re-process all files even if unchanged</span>
 <span class="sd">        :param metadata_map_path: Optional path to a metadata map JSON file</span>
 <span class="sd">        :param bm25_path: Optional path to write the combined BM25 corpus to</span>
+<span class="sd">        :param worker_mem_limit: Maximum RSS per conversion worker in</span>
+<span class="sd">            bytes; ``None`` (default) keeps the chunk phase in-process</span>
+<span class="sd">        :param worker_batch_size: Maximum files handed to a single worker</span>
 <span class="sd">        """</span>
         <span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">source_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
@@ -479,15 +507,23 @@
             <span class="sa">f</span><span class="s2">"collection '</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">' at </span><span class="si">{</span><span class="n">store_uri</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
 
-        <span class="n">metadata_map</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
-            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata_map</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map_path</span><span class="p">)</span>
-
-        <span class="n">results</span><span class="p">,</span> <span class="n">file_headings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">,</span> <span class="n">force</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
+        <span class="c1"># Chunk phase (cache-only): uncached files are converted -- in</span>
+        <span class="c1"># subprocess workers when *worker_mem_limit* is set -- and cached.</span>
+        <span class="c1"># Nothing beyond the per-file heading chains is held in memory.</span>
+        <span class="c1"># The metadata map is deliberately not passed here: folding</span>
+        <span class="c1"># happens against the cached chunks in the store phase.</span>
+        <span class="n">file_headings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span>
+            <span class="n">source_path</span><span class="p">,</span>
+            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
+            <span class="n">worker_mem_limit</span><span class="o">=</span><span class="n">worker_mem_limit</span><span class="p">,</span>
+            <span class="n">worker_batch_size</span><span class="o">=</span><span class="n">worker_batch_size</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_headings</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">metadata_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">metadata_map_path</span><span class="p">:</span>
+            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_metadata_map</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
             <span class="c1"># One-shot quick start: no --metadata-map was given, so generate</span>
             <span class="c1"># the template from what was just chunked (exactly as the chunk</span>
             <span class="c1"># command would) and consume it -- the same fold and missing-file</span>
@@ -495,15 +531,14 @@
             <span class="c1"># step in between.  The template file is written too, so it can</span>
             <span class="c1"># be reviewed and re-stored later.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">write_heading_template</span><span class="p">(</span><span class="n">file_headings</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
-            <span class="n">template_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span>
+            <span class="n">metadata_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_metadata_map</span><span class="p">(</span>
                 <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span> <span class="o">/</span> <span class="n">TEMPLATE_FILE_NAME</span><span class="p">)</span>
             <span class="p">)</span>
-            <span class="n">results</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk_all</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">template_map</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">results</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"No files were successfully chunked from </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span>
-                <span class="p">)</span>
 
+        <span class="c1"># Store phase (streaming): cached chunks are loaded, folded with</span>
+        <span class="c1"># the map, and stored one file at a time.  Files that failed the</span>
+        <span class="c1"># chunk phase have no cache entry and are skipped here.</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_and_fold_results</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">store_all</span><span class="p">(</span>
             <span class="n">results</span><span class="p">,</span>
             <span class="n">store_uri</span><span class="p">,</span>
@@ -520,149 +555,200 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">chunk_all</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-        <span class="n">metadata_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]:</span>
-<span class="w">        </span><span class="sd">"""Convert, chunk, cache, and enrich metadata for all files.</span>
+        <span class="n">worker_mem_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_WORKER_MEM_LIMIT</span><span class="p">,</span>
+        <span class="n">worker_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_WORKER_BATCH_SIZE</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Convert, chunk, and cache all files in memory-bounded workers.</span>
 
-<span class="sd">        Skips converting files whose cache entry exists (unless</span>
-<span class="sd">        ``force`` is ``True``).  Always caches newly-converted chunks.</span>
-<span class="sd">        Heading chains are collected per file for template generation.</span>
-<span class="sd">        The per-file ``DEFAULT`` template entry is pre-filled with the</span>
-<span class="sd">        automatically-extracted bibliographic metadata (see</span>
-<span class="sd">        :func:`~klea_utils.biblio.extract.extract_metadata`).</span>
+<span class="sd">        Uncached files are converted in short-lived subprocess workers</span>
+<span class="sd">        (:mod:`klea_utils.stores.chunk_worker`) so Docling's</span>
+<span class="sd">        per-conversion memory leak is reclaimed on worker exit; cache</span>
+<span class="sd">        hits are handled in-process.  The chunks live in the on-disk</span>
+<span class="sd">        cache -- they are never accumulated in this process -- so the run</span>
+<span class="sd">        stays memory-bounded on corpora of any size.  Cache entries whose</span>
+<span class="sd">        source file no longer exists are pruned at the end.</span>
 
-<span class="sd">        The metadata map is folded into the chunks via</span>
-<span class="sd">        :meth:`_fold_metadata_map`.  The cache-only ``store`` command</span>
-<span class="sd">        does not call this -- it uses :meth:`_load_and_fold_results`,</span>
-<span class="sd">        which loads cached chunks without converting.</span>
+<span class="sd">        Callers that need the chunked documents read them back from the</span>
+<span class="sd">        cache with :meth:`_load_and_fold_results` (the ``store`` command</span>
+<span class="sd">        and :meth:`build`), which streams them one file at a time.</span>
 
 <span class="sd">        :param source_path: Resolved source directory path</span>
-<span class="sd">        :param metadata_map: Metadata map for heading-based enrichment,</span>
-<span class="sd">            or ``None``</span>
 <span class="sd">        :param force: Re-process all files even if cached</span>
-<span class="sd">        :returns: ``(results, file_headings)`` where *results* is a</span>
-<span class="sd">            list of ``(file_hash, docs, file_path)`` tuples and</span>
-<span class="sd">            *file_headings* is a ``{file_name: {"DEFAULT": {extracted</span>
-<span class="sd">            metadata}, "heading &gt; heading": {}, ...}}`` dict</span>
+<span class="sd">        :param worker_mem_limit: Maximum RSS per conversion worker in</span>
+<span class="sd">            bytes; the limit includes the ~1-1.5 GiB Docling's models</span>
+<span class="sd">            occupy at worker startup, so headroom for its per-conversion</span>
+<span class="sd">            growth is roughly the limit minus that.  ``None`` disables</span>
+<span class="sd">            the cap (workers are then bounded only by</span>
+<span class="sd">            *worker_batch_size*).</span>
+<span class="sd">        :param worker_batch_size: Maximum files handed to any single</span>
+<span class="sd">            conversion worker before it is restarted.  A worker stops at</span>
+<span class="sd">            whichever comes first: its memory cap or this batch size.</span>
+<span class="sd">        :returns: ``file_headings`` -- a ``{file_name: {"DEFAULT":</span>
+<span class="sd">            {extracted metadata}, "heading &gt; heading": {}, ...}}`` dict</span>
+<span class="sd">            for template generation, pre-filled with the</span>
+<span class="sd">            automatically-extracted bibliographic metadata (see</span>
+<span class="sd">            :func:`~klea_utils.biblio.extract.extract_metadata`)</span>
 <span class="sd">        """</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_tokenizer</span><span class="p">()</span>
-
         <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_files</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> ingestible files in </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
         <span class="n">resolver</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_resolver</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
 
-        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">file_headings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
-
-        <span class="c1"># Hashes of every source file found (whether or not it converts</span>
-        <span class="c1"># successfully below).  Used to prune cache entries whose hash no</span>
-        <span class="c1"># longer matches a source file (e.g. renamed/removed files or</span>
-        <span class="c1"># legacy entries from a previous pipeline), so the cache always</span>
-        <span class="c1"># mirrors the source directory.</span>
         <span class="n">current_hashes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">pending</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
 
+        <span class="c1"># Phase A (in-process): hash every file, build entries for cache</span>
+        <span class="c1"># hits (with the legacy fallback extraction), and collect the</span>
+        <span class="c1"># uncached files for the workers.  The parent stays lean -- it</span>
+        <span class="c1"># never loads Docling's models.</span>
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">file_hash</span> <span class="o">=</span> <span class="n">_hash_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
             <span class="n">current_hashes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file_hash</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
+                <span class="n">pending</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span> <span class="n">file_hash</span><span class="p">))</span>
+                <span class="k">continue</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pending</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span> <span class="n">file_hash</span><span class="p">))</span>
+                <span class="k">continue</span>
+            <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="n">cached</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">extracted</span><span class="p">:</span>
+                <span class="c1"># No persisted extraction (e.g. a legacy cache entry</span>
+                <span class="c1"># written before the biblio cascade existed), so run the</span>
+                <span class="c1"># text-only extraction over the cached chunks.</span>
+                <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_metadata_fallback</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">resolver</span><span class="p">)</span>
+            <span class="n">file_headings</span><span class="p">[</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_file_headings_entry</span><span class="p">(</span>
+                <span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">extracted</span><span class="p">,</span> <span class="n">docs</span>
+            <span class="p">)</span>
 
-            <span class="n">docs</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
-                <span class="n">cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="n">cached</span>
+        <span class="c1"># Phase B (subprocess workers): convert+cache the uncached files.</span>
+        <span class="k">if</span> <span class="n">pending</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">.chunk_worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChunkWorkerConfig</span>
 
-            <span class="k">if</span> <span class="n">docs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processing: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_and_chunk</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">resolver</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_to_cache</span><span class="p">(</span><span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span><span class="p">,</span> <span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
-                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Failed to process </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-                    <span class="k">continue</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">docs</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">"No chunks produced for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. This usually "</span>
-                        <span class="sa">f</span><span class="s2">"means the PDF is scanned/image-based and its text "</span>
-                        <span class="sa">f</span><span class="s2">"could not be extracted with OCR disabled. Re-run "</span>
-                        <span class="sa">f</span><span class="s2">"with OCR enabled (drop --no-ocr) or run "</span>
-                        <span class="sa">f</span><span class="s2">"'klea-stores-create pre-check' to classify it."</span>
-                    <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">)"</span>
-                <span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">extracted</span><span class="p">:</span>
-                    <span class="c1"># No persisted extraction (e.g. a legacy cache entry</span>
-                    <span class="c1"># written before the biblio cascade existed), so run</span>
-                    <span class="c1"># the text-only extraction over the cached chunks:</span>
-                    <span class="c1"># regex + pdf-info (for PDFs) + DOI resolution.</span>
-                    <span class="n">cached_text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                        <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span> <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
-                    <span class="p">)</span>
-                    <span class="n">extracted</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="n">extract_metadata_from_text</span><span class="p">(</span>
-                            <span class="n">cached_text</span><span class="p">,</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
-                            <span class="n">pdf_path</span><span class="o">=</span><span class="p">(</span>
-                                <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-                                <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">".pdf"</span>
-                                <span class="k">else</span> <span class="kc">None</span>
-                            <span class="p">),</span>
-                            <span class="n">resolver</span><span class="o">=</span><span class="n">resolver</span><span class="p">,</span>
-                        <span class="p">)</span>
-                        <span class="k">if</span> <span class="n">cached_text</span>
-                        <span class="k">else</span> <span class="p">{}</span>
-                    <span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">"No cached metadata extraction for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, "</span>
-                        <span class="sa">f</span><span class="s2">"falling back to text-only extraction "</span>
-                        <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span><span class="si">}</span><span class="s2"> fields); re-run with --force to "</span>
-                        <span class="sa">f</span><span class="s2">"regenerate the full extraction"</span>
-                    <span class="p">)</span>
-
-            <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
-                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-                    <span class="p">{</span>
-                        <span class="s2">"file_hash"</span><span class="p">:</span> <span class="n">file_hash</span><span class="p">,</span>
-                        <span class="s2">"file_name"</span><span class="p">:</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="p">}</span>
-                <span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_fold_metadata_map</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
-
-            <span class="n">normalized_default</span> <span class="o">=</span> <span class="n">_normalize_extracted_metadata</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">normalized_default</span> <span class="o">!=</span> <span class="n">extracted</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Normalised extracted metadata for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-            <span class="n">split_default</span> <span class="o">=</span> <span class="n">_split_url_list</span><span class="p">(</span><span class="n">normalized_default</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">split_default</span> <span class="o">!=</span> <span class="n">normalized_default</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"Split url list into per-url keys for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
-                <span class="p">)</span>
-            <span class="n">default_metadata</span> <span class="o">=</span> <span class="n">_ensure_doi_url</span><span class="p">(</span><span class="n">split_default</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">default_metadata</span> <span class="o">!=</span> <span class="n">split_default</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Derived url_doi for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-            <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"DEFAULT"</span><span class="p">:</span> <span class="n">default_metadata</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
-                <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"headings"</span><span class="p">,</span> <span class="p">[])</span>
-                <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
-                    <span class="n">key</span> <span class="o">=</span> <span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">file_entry</span><span class="p">:</span>
-                        <span class="n">file_entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="n">file_headings</span><span class="p">[</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_entry</span>
-
-            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">ChunkWorkerConfig</span><span class="p">(</span>
+                <span class="n">source_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">source_path</span><span class="p">),</span>
+                <span class="n">max_tokens</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_tokens</span><span class="p">,</span>
+                <span class="n">tokenizer_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer_model</span><span class="p">,</span>
+                <span class="n">do_ocr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">do_ocr</span><span class="p">,</span>
+                <span class="n">mem_limit_bytes</span><span class="o">=</span><span class="n">worker_mem_limit</span><span class="p">,</span>
+                <span class="n">log_level</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">getEffectiveLevel</span><span class="p">(),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dispatch_conversion_batches</span><span class="p">(</span>
+                <span class="n">pending</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">worker_batch_size</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">file_headings_entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">file_headings</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">file_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">file_headings_entry</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_prune_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">current_hashes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">file_headings</span></div>
 
-        <span class="c1"># The resolver's HTTP client is left for the process to clean up;</span>
-        <span class="c1"># ingestion is a one-shot CLI run.</span>
-        <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">file_headings</span></div>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_metadata_fallback</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span>
+        <span class="n">resolver</span><span class="p">:</span> <span class="n">Resolver</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Run the text-only biblio extraction over cached chunks.</span>
+
+<span class="sd">        Cache-hit only: never used for freshly converted files (those</span>
+<span class="sd">        get the full biblio cascade from :meth:`_convert_and_chunk`).</span>
+<span class="sd">        Used when a cache entry predates the full cascade and holds no</span>
+<span class="sd">        persisted extraction: regex + pdf-info (for PDFs) + DOI</span>
+<span class="sd">        resolution over the chunk text.  Shared by the in-process and</span>
+<span class="sd">        worker :meth:`chunk_all` paths.</span>
+
+<span class="sd">        :param file_path: Source file the chunks came from</span>
+<span class="sd">        :param docs: Cached chunked documents</span>
+<span class="sd">        :param resolver: DOI resolver for the extraction, or ``None``</span>
+<span class="sd">        :returns: Flat bibliographic metadata dict</span>
+<span class="sd">        """</span>
+        <span class="n">cached_text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">page_content</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span> <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span><span class="p">)</span>
+        <span class="n">extracted</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">extract_metadata_from_text</span><span class="p">(</span>
+                <span class="n">cached_text</span><span class="p">,</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">),</span>
+                <span class="n">pdf_path</span><span class="o">=</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">".pdf"</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">),</span>
+                <span class="n">resolver</span><span class="o">=</span><span class="n">resolver</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">cached_text</span>
+            <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"No cached metadata extraction for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"falling back to text-only extraction "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span><span class="si">}</span><span class="s2"> fields); re-run with --force to "</span>
+            <span class="sa">f</span><span class="s2">"regenerate the full extraction"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">extracted</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dispatch_conversion_batches</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pending</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChunkWorkerConfig"</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"list[ChunkItemResult]"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert *pending* files in subprocess workers (test seam).</span>
+
+<span class="sd">        The default implementation delegates to</span>
+<span class="sd">        :func:`klea_utils.stores.chunk_worker.dispatch_conversion_batches`,</span>
+<span class="sd">        which spawns a fresh worker process per batch so each worker's</span>
+<span class="sd">        Docling memory leak is reclaimed on exit.  Tests override this</span>
+<span class="sd">        method to run the worker function in-process.</span>
+
+<span class="sd">        :param pending: ``(absolute_file_path, file_hash)`` pairs</span>
+<span class="sd">        :param config: Worker configuration</span>
+<span class="sd">        :param batch_size: Max files handed to a single worker</span>
+<span class="sd">        :returns: One :class:`ChunkItemResult` per item</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.chunk_worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">dispatch_conversion_batches</span>
+
+        <span class="k">return</span> <span class="n">dispatch_conversion_batches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">pending</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_file_headings_entry</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">file_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">extracted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Build a file's metadata-map template entry from its extraction.</span>
+
+<span class="sd">        The ``DEFAULT`` entry carries the normalised, url-split,</span>
+<span class="sd">        doi-ensured extracted metadata; one empty entry per unique heading</span>
+<span class="sd">        chain found in the chunks is added so the template lists every</span>
+<span class="sd">        section for the user to fill in.  Shared by :meth:`chunk_all`</span>
+<span class="sd">        (both its in-process and subprocess-worker paths) so every file's</span>
+<span class="sd">        entry is built identically.</span>
+
+<span class="sd">        :param file_name: Source file name (template key)</span>
+<span class="sd">        :param extracted: Flat bibliographic metadata dict for the file</span>
+<span class="sd">        :param docs: Chunked documents for the file</span>
+<span class="sd">        :returns: ``{"DEFAULT": {...}, "heading &gt; heading": {}, ...}``</span>
+<span class="sd">        """</span>
+        <span class="n">normalized_default</span> <span class="o">=</span> <span class="n">_normalize_extracted_metadata</span><span class="p">(</span><span class="n">extracted</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">normalized_default</span> <span class="o">!=</span> <span class="n">extracted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Normalised extracted metadata for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">split_default</span> <span class="o">=</span> <span class="n">_split_url_list</span><span class="p">(</span><span class="n">normalized_default</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">split_default</span> <span class="o">!=</span> <span class="n">normalized_default</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Split url list into per-url keys for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">default_metadata</span> <span class="o">=</span> <span class="n">_ensure_doi_url</span><span class="p">(</span><span class="n">split_default</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">default_metadata</span> <span class="o">!=</span> <span class="n">split_default</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Derived url_doi for </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"DEFAULT"</span><span class="p">:</span> <span class="n">default_metadata</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+            <span class="n">headings</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"headings"</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">headings</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="s2">" &gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">headings</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">file_entry</span><span class="p">:</span>
+                    <span class="n">file_entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="n">file_entry</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_fold_metadata_map</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -711,36 +797,54 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">metadata_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]:</span>
+        <span class="n">strict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""Load cached chunks and fold the metadata map into them.</span>
 
 <span class="sd">        Cache-only: every source file must already have a cache entry</span>
-<span class="sd">        (run ``klea-stores-create chunk`` or ``build`` first).  A file</span>
-<span class="sd">        with no cache entry raises ``ValueError`` instead of being</span>
-<span class="sd">        converted on the fly.  This is the cache-only path used by the</span>
-<span class="sd">        ``store`` command; ``chunk`` and ``build`` convert on the fly</span>
-<span class="sd">        via :meth:`chunk_all` instead.</span>
+<span class="sd">        (run ``klea-stores-create chunk`` or ``build`` first).  In the</span>
+<span class="sd">        default strict mode a file with no cache entry raises</span>
+<span class="sd">        ``ValueError`` instead of being converted on the fly -- this is</span>
+<span class="sd">        the ``store`` command's contract.  With *strict* false (used by</span>
+<span class="sd">        :meth:`build`, whose chunk phase just logged the conversion</span>
+<span class="sd">        failure) such files are skipped with an error so the rest of the</span>
+<span class="sd">        corpus is still stored.</span>
+
+<span class="sd">        This is a generator: it yields ``(file_hash, docs, file_path)``</span>
+<span class="sd">        per file, so the caller (:meth:`store_all`) consumes and releases</span>
+<span class="sd">        each file's chunks before the next file is loaded.  Memory stays</span>
+<span class="sd">        bounded per file instead of holding the whole corpus, which is</span>
+<span class="sd">        what lets the ``store`` command scale to large corpora.</span>
 
 <span class="sd">        :param source_path: Resolved source directory path</span>
 <span class="sd">        :param metadata_map: Metadata map for heading-based enrichment</span>
-<span class="sd">        :returns: List of ``(file_hash, docs, file_path)`` tuples ready</span>
-<span class="sd">            for :meth:`store_all`</span>
-<span class="sd">        :raises ValueError: When a source file has no cache entry</span>
+<span class="sd">        :param strict: Raise on files with no cache entry (default);</span>
+<span class="sd">            when false, skip them with an error instead</span>
+<span class="sd">        :returns: An iterator of ``(file_hash, docs, file_path)`` tuples</span>
+<span class="sd">            ready for :meth:`store_all`</span>
+<span class="sd">        :raises ValueError: When *strict* is true and a source file has</span>
+<span class="sd">            no cache entry</span>
 <span class="sd">        """</span>
         <span class="n">files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_files</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> ingestible files in </span><span class="si">{</span><span class="n">source_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">file_hash</span> <span class="o">=</span> <span class="n">_hash_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
             <span class="n">cached</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_from_cache</span><span class="p">(</span><span class="n">source_path</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"No cache entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. The cache-only "</span>
-                    <span class="sa">f</span><span class="s2">"store command requires every file to be converted "</span>
-                    <span class="sa">f</span><span class="s2">"first; run 'klea-stores-create chunk' (or 'build') "</span>
-                    <span class="sa">f</span><span class="s2">"to convert it."</span>
+                <span class="k">if</span> <span class="n">strict</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"No cache entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. The cache-only "</span>
+                        <span class="sa">f</span><span class="s2">"store command requires every file to be converted "</span>
+                        <span class="sa">f</span><span class="s2">"first; run 'klea-stores-create chunk' (or 'build') "</span>
+                        <span class="sa">f</span><span class="s2">"to convert it."</span>
+                    <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No cache entry for </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (its conversion "</span>
+                    <span class="sa">f</span><span class="s2">"failed); skipping it -- fix the file and re-run to "</span>
+                    <span class="sa">f</span><span class="s2">"store it"</span>
                 <span class="p">)</span>
+                <span class="k">continue</span>
             <span class="n">docs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cached</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Using cached chunks for: </span><span class="si">{</span><span class="n">file_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">ctr</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
@@ -764,15 +868,13 @@
             <span class="k">if</span> <span class="n">metadata_map</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_fold_metadata_map</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">metadata_map</span><span class="p">)</span>
 
-            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">))</span>
-
-        <span class="k">return</span> <span class="n">results</span>
+            <span class="k">yield</span> <span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span>
 
 <div class="viewcode-block" id="StoresBuilder.store_all">
 <a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.store_all">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">store_all</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]],</span>
+        <span class="n">results</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]],</span>
         <span class="n">store_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
@@ -798,8 +900,16 @@
 <span class="sd">        Chunk IDs are deterministic (``&lt;file_name&gt;:&lt;chunk_index&gt;``) so</span>
 <span class="sd">        deletion by ID works on every backend.</span>
 
-<span class="sd">        :param results: List of ``(file_hash, docs, file_path)`` tuples</span>
-<span class="sd">            from :meth:`chunk_all`</span>
+<span class="sd">        *results* may be any iterable, including the lazy generator from</span>
+<span class="sd">        :meth:`_load_and_fold_results`; each file's chunks are released</span>
+<span class="sd">        once they are stored, keeping memory bounded per file.  When a</span>
+<span class="sd">        BM25 corpus is requested it is written inline from the same</span>
+<span class="sd">        chunks during the store loop, one pickled batch per</span>
+<span class="sd">        :attr:`embed_batch_size` chunk (read back by looping</span>
+<span class="sd">        ``pickle.load`` until ``EOFError``).</span>
+
+<span class="sd">        :param results: Iterable of ``(file_hash, docs, file_path)``</span>
+<span class="sd">            tuples from :meth:`chunk_all` or :meth:`_load_and_fold_results`</span>
 <span class="sd">        :param store_uri: Vector store URI</span>
 <span class="sd">        :param collection_name: Collection name for the store</span>
 <span class="sd">        :param source_dir: Resolved source directory (for the manifest)</span>
@@ -810,6 +920,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Initialising embedding model (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="n">setup_embedding</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embedding_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">store_uri</span> <span class="ow">and</span> <span class="n">collection_name</span>
+
+        <span class="c1"># BM25 is written inline from the same chunks during the store</span>
+        <span class="c1"># loop (one pickled list per embed_batch_size), so the results</span>
+        <span class="c1"># stay lazy either way and memory stays bounded per file.  The</span>
+        <span class="c1"># file is only opened once a first batch is ready, so an empty</span>
+        <span class="c1"># corpus leaves no file behind.</span>
+        <span class="n">bm25_path_obj</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">bm25_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">bm25_path</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">bm25_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">bm25_batch</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">bm25_path_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bm25_path_obj</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_find_files</span><span class="p">(</span><span class="n">source_dir</span><span class="p">))</span>
 
         <span class="n">manifest_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manifest_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">manifest_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
@@ -849,10 +971,23 @@
             <span class="n">raw_files</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="n">manifest</span><span class="p">[</span><span class="s2">"files"</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_files</span>
         <span class="n">manifest_files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_files</span>
-        <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">ctr</span><span class="p">,</span> <span class="p">(</span><span class="n">file_hash</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
             <span class="n">file_name</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">name</span>
             <span class="n">known</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">manifest_files</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+
+            <span class="c1"># The BM25 corpus holds every file's chunks, including ones</span>
+            <span class="c1"># skipped as unchanged below, so accumulate before the skip.</span>
+            <span class="k">if</span> <span class="n">bm25_path_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">bm25_batch</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bm25_batch</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_batch_size</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">bm25_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="c1"># Deliberately not a context manager: the file is</span>
+                        <span class="c1"># opened only when the first batch is ready (an</span>
+                        <span class="c1"># empty corpus leaves no file) and closed after the</span>
+                        <span class="c1"># loop, across many batches.</span>
+                        <span class="n">bm25_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">bm25_path_obj</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span>  <span class="c1"># noqa: SIM115</span>
+                    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">bm25_batch</span><span class="p">,</span> <span class="n">bm25_file</span><span class="p">)</span>
+                    <span class="n">bm25_batch</span> <span class="o">=</span> <span class="p">[]</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span> <span class="ow">and</span> <span class="n">known</span> <span class="ow">and</span> <span class="n">known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_hash"</span><span class="p">)</span> <span class="o">==</span> <span class="n">file_hash</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
@@ -909,44 +1044,19 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_manifest</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">bm25_path</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">write_bm25_store</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">bm25_path</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="StoresBuilder.write_bm25_store">
-<a class="viewcode-back" href="../../../api/utils/stores.html#klea_utils.stores.ingestion.StoresBuilder.write_bm25_store">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">write_bm25_store</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">],</span> <span class="n">Path</span><span class="p">]],</span>
-        <span class="n">bm25_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Write the combined chunked documents to a BM25 corpus.</span>
-
-<span class="sd">        Flattens the per-file chunked documents from :meth:`chunk_all`</span>
-<span class="sd">        into a single list and pickles it to *bm25_path*.  This file is</span>
-<span class="sd">        the BM25 store: a :class:`BM25RetrieverManager` loads it at</span>
-<span class="sd">        runtime to build its keyword index.  It is independent of the</span>
-<span class="sd">        per-file ``.klea-cache``, so the cache can be removed once the</span>
-<span class="sd">        corpus has been written.</span>
-
-<span class="sd">        The corpus holds the same chunk units (and metadata) that are</span>
-<span class="sd">        stored in the vector store, so BM25 and vector retrieval return</span>
-<span class="sd">        consistent results.</span>
-
-<span class="sd">        :param results: List of ``(file_hash, docs, file_path)`` tuples</span>
-<span class="sd">            from :meth:`chunk_all`</span>
-<span class="sd">        :param bm25_path: Path to write the combined corpus pickle to</span>
-<span class="sd">        """</span>
-        <span class="n">all_docs</span> <span class="o">=</span> <span class="p">[</span><span class="n">doc</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">docs</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">all_docs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No documents to write to BM25 store, skipping"</span><span class="p">)</span>
-            <span class="k">return</span>
-
-        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">bm25_path</span><span class="p">)</span>
-        <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_docs</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Wrote BM25 store with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">bm25_path_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">bm25_file</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">bm25_batch</span><span class="p">:</span>
+                <span class="c1"># Nothing converted: no corpus to write.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No documents to write to BM25 store, skipping"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Flush the final partial batch (a corpus smaller than one</span>
+                <span class="c1"># batch never opened the file mid-loop).</span>
+                <span class="k">if</span> <span class="n">bm25_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">bm25_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">bm25_path_obj</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">bm25_batch</span><span class="p">:</span>
+                    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">bm25_batch</span><span class="p">,</span> <span class="n">bm25_file</span><span class="p">)</span>
+                <span class="n">bm25_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Wrote BM25 store to </span><span class="si">{</span><span class="n">bm25_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="StoresBuilder.write_heading_template">
@@ -1095,8 +1205,16 @@
 <span class="sd">        :meth:`chunk_all` run so the cache always mirrors the source</span>
 <span class="sd">        directory and users never need to clean it by hand.</span>
 
-<span class="sd">        Only ``*.pkl`` chunk-cache files are touched; other cache files</span>
-<span class="sd">        (e.g. ``doi-cache.json``) are left alone.</span>
+<span class="sd">        ``.corrupt`` artifacts (cache entries moved aside by</span>
+<span class="sd">        :meth:`_load_from_cache` because they were unreadable) are pruned</span>
+<span class="sd">        once their failure is resolved: the source file is gone, or a</span>
+<span class="sd">        valid cache entry was regenerated this run.  An artifact whose</span>
+<span class="sd">        source is current but still has no valid cache entry is kept, as</span>
+<span class="sd">        it is the only evidence of a failure that has not healed.</span>
+
+<span class="sd">        Only ``*.pkl`` chunk-cache files and ``*.pkl.corrupt`` artifacts</span>
+<span class="sd">        are touched; other cache files (e.g. ``doi-cache.json``) are left</span>
+<span class="sd">        alone.</span>
 
 <span class="sd">        :param source_dir: Resolved source directory path</span>
 <span class="sd">        :param current_hashes: xxhash digests of all source files found</span>
@@ -1105,12 +1223,12 @@
         <span class="n">cache_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">cache_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">return</span>
+        <span class="n">valid_names</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">file_hash</span> <span class="ow">in</span> <span class="n">current_hashes</span>
+        <span class="p">}</span>
         <span class="n">pruned</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">cache_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.pkl"</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
-                <span class="k">for</span> <span class="n">file_hash</span> <span class="ow">in</span> <span class="n">current_hashes</span>
-            <span class="p">}:</span>
+            <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_names</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
                     <span class="n">pruned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
@@ -1118,6 +1236,20 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"Could not remove stale cache entry </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">cache_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.pkl.corrupt"</span><span class="p">):</span>
+            <span class="n">stem</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="s2">".corrupt"</span><span class="p">)]</span>
+            <span class="c1"># Keep artifacts whose source is current but still lacks a</span>
+            <span class="c1"># valid cache entry (the failure has not healed); prune the</span>
+            <span class="c1"># rest -- the source file is gone or was regenerated this run.</span>
+            <span class="k">if</span> <span class="n">stem</span> <span class="ow">in</span> <span class="n">valid_names</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">cache_dir</span> <span class="o">/</span> <span class="n">stem</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+                <span class="n">pruned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Could not remove stale corrupt artifact </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
         <span class="k">if</span> <span class="n">pruned</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Pruned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span><span class="si">}</span><span class="s2"> stale cache entr</span><span class="si">{</span><span class="s1">'y'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'ies'</span><span class="si">}</span><span class="s2"> "</span>
@@ -1140,6 +1272,11 @@
 <span class="sd">        degrading to a weaker regex-only pass.  (Legacy cache entries</span>
 <span class="sd">        hold a plain list of docs; :meth:`_load_from_cache` handles both.)</span>
 
+<span class="sd">        The write is atomic: the pickle is dumped to a temp file in the</span>
+<span class="sd">        cache directory and then ``os.replace``d onto the final ``.pkl``</span>
+<span class="sd">        path, so a crash or kill mid-write can never leave a truncated</span>
+<span class="sd">        or empty cache entry that would poison future runs.</span>
+
 <span class="sd">        :param docs: List of chunked documents to cache</span>
 <span class="sd">        :param extracted: Bibliographic metadata extracted for the file</span>
 <span class="sd">        :param source_dir: Resolved source directory path</span>
@@ -1148,8 +1285,26 @@
         <span class="n">cache_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_dir</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span>
         <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span>
+        <span class="n">tmp_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">"wb"</span><span class="p">,</span>
+                <span class="nb">dir</span><span class="o">=</span><span class="n">cache_dir</span><span class="p">,</span>
+                <span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+                <span class="n">suffix</span><span class="o">=</span><span class="s2">".tmp"</span><span class="p">,</span>
+                <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span><span class="p">),</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="c1"># A failed dump/replace must not leave a stray temp file; after</span>
+            <span class="c1"># a successful os.replace the temp path no longer exists.</span>
+            <span class="k">if</span> <span class="n">tmp_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tmp_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">tmp_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="k">pass</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cached </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks to </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_from_cache</span><span class="p">(</span>
@@ -1169,17 +1324,51 @@
 <span class="sd">        Handles legacy cache entries (a plain list of documents) by</span>
 <span class="sd">        returning an empty extracted dict for them.</span>
 
+<span class="sd">        A corrupt or unreadable entry (empty/truncated file, malformed</span>
+<span class="sd">        pickle, or a pickle whose class definitions changed between</span>
+<span class="sd">        versions) is treated as a cache miss: the file is moved aside as</span>
+<span class="sd">        ``&lt;hash&gt;.pkl.corrupt`` (preserving the bytes for debugging) with</span>
+<span class="sd">        a warning so the source document is re-converted on the next</span>
+<span class="sd">        pass, rather than aborting the run.  :meth:`_prune_cache` removes</span>
+<span class="sd">        the artifact once a valid entry is regenerated.</span>
+
 <span class="sd">        :param source_dir: Resolved source directory path</span>
 <span class="sd">        :param file_hash: xxhash digest of the source file</span>
 <span class="sd">        :returns: ``(docs, extracted)``, or ``None`` if the cache file</span>
-<span class="sd">            does not exist</span>
+<span class="sd">            does not exist or is corrupt</span>
 <span class="sd">        """</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">file_hash</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cache hit: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span>
+            <span class="ne">EOFError</span><span class="p">,</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span><span class="p">,</span>
+            <span class="ne">AttributeError</span><span class="p">,</span>
+            <span class="ne">ImportError</span><span class="p">,</span>
+            <span class="ne">ValueError</span><span class="p">,</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="c1"># A torn write (e.g. from a crash mid-pickle.dump) or a stale</span>
+            <span class="c1"># entry from an older pipeline can leave an unreadable cache</span>
+            <span class="c1"># file.  Move it aside (preserving the bytes for debugging)</span>
+            <span class="c1"># and treat it as a cache miss so the source is re-converted;</span>
+            <span class="c1"># :meth:`_prune_cache` removes the artifact once the entry is</span>
+            <span class="c1"># regenerated.</span>
+            <span class="n">corrupt_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">".corrupt"</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">corrupt_path</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Discarding corrupt cache entry </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"(moved to </span><span class="si">{</span><span class="n">corrupt_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Could not move corrupt cache entry </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> aside: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
             <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="o">=</span> <span class="n">data</span>
             <span class="k">return</span> <span class="n">docs</span><span class="p">,</span> <span class="n">extracted</span> <span class="ow">or</span> <span class="p">{}</span>

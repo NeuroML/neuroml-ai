@@ -219,6 +219,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -293,6 +294,7 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
@@ -451,6 +453,105 @@
         <span class="n">project_root</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">),</span>
         <span class="n">allow_internal_hosts</span><span class="o">=</span><span class="n">allow_internal_hosts</span><span class="p">,</span>
     <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="download_files">
+<a class="viewcode-back" href="../../../../api/utils/mcp.html#klea_utils.mcp.tool_impls.download_file.download_files">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_files</span><span class="p">(</span>
+    <span class="n">session</span><span class="p">:</span> <span class="n">SessionLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">target_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">max_concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
+    <span class="n">retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Download a list of files into *target_dir*, bounded in concurrency.</span>
+
+<span class="sd">    Framework-agnostic helper that drives :func:`download_file` for each</span>
+<span class="sd">    entry in *files*, as returned by the repository source list functions</span>
+<span class="sd">    (entries carry ``path`` and ``download_url``).  Relative ``path`` values</span>
+<span class="sd">    are preserved under *target_dir* (parent directories are created as</span>
+<span class="sd">    needed), and writes stay confined to *target_dir*.</span>
+
+<span class="sd">    *target_dir* is an explicit destination directory -- it may be the</span>
+<span class="sd">    current project, a working subfolder, or a cache directory -- so the</span>
+<span class="sd">    downloaded files are immediately usable where the caller asked for</span>
+<span class="sd">    them.</span>
+
+<span class="sd">    Downloads run with bounded concurrency (an ``asyncio.Semaphore``) so a</span>
+<span class="sd">    large dataset does not hammer the source server.  Individual failures</span>
+<span class="sd">    are recorded per file and do not abort the rest of the batch, so a</span>
+<span class="sd">    caller (e.g. an LLM) can retry the failed paths.</span>
+
+<span class="sd">    :param session: HTTP session to use for the requests.  ``None`` when no</span>
+<span class="sd">        session is available.</span>
+<span class="sd">    :param files: File entries to download; each needs ``path`` (relative</span>
+<span class="sd">        target path) and ``download_url``.</span>
+<span class="sd">    :param target_dir: Destination directory under which the files are</span>
+<span class="sd">        written.</span>
+<span class="sd">    :param max_concurrency: Maximum number of downloads in flight.</span>
+<span class="sd">    :param timeout: Request timeout in seconds per download.</span>
+<span class="sd">    :param retries: Number of attempts for transient failures per download.</span>
+<span class="sd">    :returns: dict with ``results`` (one entry per file: ``path`` plus</span>
+<span class="sd">        ``saved_to`` on success or ``error`` on failure) and a top-level</span>
+<span class="sd">        ``error`` (only set when the whole batch fails unexpectedly).</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Downloading </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files into </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">max_concurrency</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">timeout</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">retries</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
+    <span class="p">)</span>
+
+    <span class="n">sem</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Semaphore</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_concurrency</span><span class="p">))</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_download_one</span><span class="p">(</span><span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">file_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">file_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"download_url"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">url</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Skipping file entry without path/download_url: </span><span class="si">{</span><span class="n">file_entry</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="s2">"missing path or download_url"</span><span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="k">await</span> <span class="n">download_file</span><span class="p">(</span>
+                <span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span>
+                <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+                <span class="n">file_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">path</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+                <span class="n">retries</span><span class="o">=</span><span class="n">retries</span><span class="p">,</span>
+                <span class="c1"># The batch boundary is its destination directory: files</span>
+                <span class="c1"># may be written inside it, and nowhere else.</span>
+                <span class="n">project_root</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">TimeoutError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected error downloading </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)}</span>
+        <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Download failed for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="s2">"download failed"</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">path</span><span class="p">,</span> <span class="s2">"saved_to"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">target</span><span class="p">)}</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_bounded</span><span class="p">(</span><span class="n">file_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">sem</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">_download_one</span><span class="p">(</span><span class="n">file_entry</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+        <span class="o">*</span><span class="p">(</span><span class="n">_bounded</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">),</span> <span class="n">return_exceptions</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">normalized</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="ne">BaseException</span><span class="p">):</span>
+            <span class="c1"># Only reachable for unexpected errors outside _download_one.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected download_files error: </span><span class="si">{</span><span class="n">entry</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">normalized</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"path"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">entry</span><span class="p">)})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">normalized</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Downloaded </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="s1">'saved_to'</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">normalized</span><span class="p">)</span><span class="si">}</span><span class="s2">/"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span><span class="si">}</span><span class="s2"> files into </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">"</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"results"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="s2">""</span><span class="p">}</span></div>
 
 </pre></div>
         </article>

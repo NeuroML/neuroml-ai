@@ -219,6 +219,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -349,7 +350,7 @@
     <span class="p">)</span>
 
     <span class="n">the_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-    <span class="n">truncated</span> <span class="o">=</span> <span class="s2">"False"</span>
+    <span class="n">truncated</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">error</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="n">files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -358,7 +359,7 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Rejecting path containing '..': </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"files"</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">"truncated"</span><span class="p">:</span> <span class="s2">"False"</span><span class="p">,</span>
+            <span class="s2">"truncated"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
             <span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Path contains '..', exiting."</span><span class="p">,</span>
         <span class="p">}</span>
 
@@ -368,7 +369,7 @@
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Permission denied for </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"files"</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">"truncated"</span><span class="p">:</span> <span class="s2">"False"</span><span class="p">,</span>
+            <span class="s2">"truncated"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
             <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span>
         <span class="p">}</span>
 
@@ -416,7 +417,7 @@
                         <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">p</span><span class="p">,</span> <span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_results</span><span class="p">:</span>
-            <span class="n">truncated</span> <span class="o">=</span> <span class="s2">"True"</span>
+            <span class="n">truncated</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">[:</span><span class="n">max_results</span><span class="p">]:</span>
             <span class="n">ftype</span> <span class="o">=</span> <span class="s2">"file"</span>

@@ -219,6 +219,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -317,8 +318,11 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">BM25RetrieverManager</span><span class="p">(</span><span class="n">BaseKleaRetriever</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Manages domain-specific BM25 keyword stores.</span>
 
-<span class="sd">    Each BM25 store is a pickled corpus of chunked documents written by</span>
-<span class="sd">    :class:`~klea_utils.stores.ingestion.StoresBuilder.write_bm25_store`.</span>
+<span class="sd">    Each BM25 store is a pickled corpus of chunked documents written</span>
+<span class="sd">    alongside the vector store by</span>
+<span class="sd">    :meth:`~klea_utils.stores.ingestion.StoresBuilder.store_all` (one</span>
+<span class="sd">    pickled list per batch; read back by looping ``pickle.load`` until</span>
+<span class="sd">    ``EOFError``).</span>
 <span class="sd">    Stores are loaded lazily per domain: the corpus is unpickled and used</span>
 <span class="sd">    to build a :class:`klea_utils.stores.langchain_bm25`, which</span>
 <span class="sd">    is queried with BM25 keyword scoring.</span>
@@ -385,8 +389,16 @@
             <span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
 
+        <span class="n">docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Document</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">corpus_path</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">docs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="c1"># Batched corpora hold one pickled list per batch; legacy</span>
+            <span class="c1"># corpora hold a single flat list.  Reading until EOF handles</span>
+            <span class="c1"># both transparently.</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">docs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+                    <span class="k">break</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> chunks for BM25 store '</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">'"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">BM25Retriever</span><span class="o">.</span><span class="n">from_documents</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span>
 

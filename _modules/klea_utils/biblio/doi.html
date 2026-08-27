@@ -219,6 +219,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../architecture.html">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -298,6 +299,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Self</span>
 
@@ -310,6 +312,12 @@
 
 <span class="c1">#: JATS/XML tags found in Crossref abstracts.</span>
 <span class="n">_JATS_TAG_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"&lt;[^&gt;]+&gt;"</span><span class="p">)</span>
+
+<span class="c1">#: Persist the DOI cache at most once per this many newly-resolved DOIs.</span>
+<span class="c1">#: :meth:`DoiResolver.close` always flushes whatever is left, so a crash</span>
+<span class="c1">#: between saves loses at most this many fresh resolutions (they are</span>
+<span class="c1">#: simply re-queried on the next run).</span>
+<span class="n">_SAVE_BATCH_SIZE</span> <span class="o">=</span> <span class="mi">25</span>
 
 
 <div class="viewcode-block" id="BiblioRecord">
@@ -486,6 +494,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_cycle</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SERVICE_ORDER</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span> <span class="o">/</span> <span class="s2">"doi-cache.json"</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_cache</span><span class="p">()</span>
+        <span class="c1"># Count of newly-resolved DOIs not yet written to disk; the cache</span>
+        <span class="c1"># is persisted every ``_SAVE_BATCH_SIZE`` of them and on close(),</span>
+        <span class="c1"># so a long run does not rewrite the whole file per resolution.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pending_saves</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span> <span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
@@ -497,7 +509,9 @@
 <div class="viewcode-block" id="DoiResolver.close">
 <a class="viewcode-back" href="../../../api/utils/biblio.html#klea_utils.biblio.doi.DoiResolver.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Close the underlying HTTP client."""</span>
+<span class="w">        </span><span class="sd">"""Flush any pending DOI resolutions, then close the HTTP client."""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_saves</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_cache</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
 
@@ -530,7 +544,9 @@
             <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="p">(</span><span class="n">service</span><span class="p">,</span> <span class="n">normalized</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">record</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">normalized</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_save_cache</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pending_saves</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_saves</span> <span class="o">&gt;=</span> <span class="n">_SAVE_BATCH_SIZE</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_save_cache</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Resolved DOI </span><span class="si">{</span><span class="n">normalized</span><span class="si">}</span><span class="s2"> via </span><span class="si">{</span><span class="n">service</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">record</span>
 
@@ -626,16 +642,51 @@
             <span class="k">return</span> <span class="p">{}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Write the DOI cache to disk, tolerating failures."""</span>
+<span class="w">        </span><span class="sd">"""Write the DOI cache to disk, tolerating failures.</span>
+
+<span class="sd">        The write is atomic: the cache is dumped to a temp file in the</span>
+<span class="sd">        cache directory and then ``os.replace``d onto the final</span>
+<span class="sd">        ``doi-cache.json`` path, so a crash or kill mid-write can never</span>
+<span class="sd">        leave a torn cache that would wipe every previously-resolved DOI</span>
+<span class="sd">        (the reader degrades to an empty cache on a corrupt file, forcing</span>
+<span class="sd">        re-queries).  Called every :data:`_SAVE_BATCH_SIZE` new</span>
+<span class="sd">        resolutions and once more from :meth:`close` to flush the tail;</span>
+<span class="sd">        the pending counter is only reset on a successful write.</span>
+<span class="sd">        """</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="c1"># ensure_ascii=False keeps accented author/title characters</span>
-                <span class="c1"># as literal UTF-8 (the cache may hold names like "B\u00f3ris").</span>
-                <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">tmp_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span>
+                    <span class="n">mode</span><span class="o">=</span><span class="s2">"w"</span><span class="p">,</span>
+                    <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">,</span>
+                    <span class="n">prefix</span><span class="o">=</span><span class="s2">"doi-cache."</span><span class="p">,</span>
+                    <span class="n">suffix</span><span class="o">=</span><span class="s2">".json.tmp"</span><span class="p">,</span>
+                    <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span>
+                <span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">tmp_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                    <span class="c1"># ensure_ascii=False keeps accented author/title characters</span>
+                    <span class="c1"># as literal UTF-8 (the cache may hold names like "B\u00f3ris").</span>
+                    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Wrote DOI cache with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">)</span><span class="si">}</span><span class="s2"> entries to "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># A failed dump/replace must not leave a stray temp file;</span>
+                <span class="c1"># after a successful os.replace it no longer exists.</span>
+                <span class="k">if</span> <span class="n">tmp_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">tmp_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">tmp_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+                    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                        <span class="k">pass</span>
         <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not write DOI cache </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not write DOI cache </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_cache_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pending_saves</span> <span class="o">=</span> <span class="mi">0</span></div>
 
 </pre></div>
         </article>
