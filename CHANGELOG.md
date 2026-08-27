@@ -283,11 +283,15 @@
   `<source_dir>/.klea-cache/` instead of the source directory; copy it
   out to review and pass the reviewed copy via `--metadata-map`.
 - A corrupt or truncated `.klea-cache` entry (e.g. left by a crash or
-  an interrupted run) no longer aborts the whole `chunk`/`build` run:
-  it is moved aside as `<hash>.pkl.corrupt`, the source is re-converted
-  on the fly, and the artifact is pruned once the entry is regenerated.
-  Cache writes are now atomic, so an interrupted run can no longer
-  leave a truncated entry behind.
+   an interrupted run) no longer aborts the whole `chunk`/`build` run:
+   it is moved aside as `<hash>.pkl.corrupt`, the source is re-converted
+   on the fly, and the artifact is pruned once the entry is regenerated.
+   Cache writes are now atomic, so an interrupted run can no longer
+   leave a truncated entry behind.
+- MCP tool execution failures now correctly report `isError: true` per the
+   MCP spec (previously every failure returned `isError: false`).
+- `list_files` now returns a boolean `truncated` flag for consistency with
+   other tools (previously `"True"`/`"False"` strings).
 
 ---
 
