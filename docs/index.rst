@@ -46,6 +46,15 @@ Web interfaces are available via NiceGUI (primary) and Streamlit.
 also code.  ``klea_rag`` is an additional component, primarily consumed by
 ``klea_agent`` as a retrieval/RAG service.
 
+C4 architecture model
+---------------------
+
+Although Klea is being validated in the neuroscience domain (via the
+``nml-mcp`` server and the curated NeuroML vector stores), it is developed as a
+general-purpose RAG + agentic assistant and is not tied to any single domain.
+The full C4 model (system context, containers, components, deployment) is
+maintained as developer documentation: see :doc:`architecture`.
+
 Prototype Deployments
 ---------------------
 
@@ -91,6 +100,7 @@ London <https://openneuroai.org/>`_.
    :caption: Develop
    :hidden:
 
+   architecture
    contributing
    api/index
 

@@ -31,6 +31,7 @@ Structure:
 
 | File | Topic |
 |------|-------|
+| `system/c4-system-context.md` | C4 model Level 1: system context diagram (whole Klea product as the system in scope) |
 | `system/store-create.md` | Store creation pipeline: chunk, store, build, worker isolation, and cache layout |
 | `system/mcp-permissions.md` | Filesystem permissions for MCP tools: the current in-tool check, why it cannot cover third-party servers, and what opencode does instead |
 | `adr/0001-chunk-workers.md` | ADR-0001: Subprocess chunk workers and DOI-cache batching for large-corpus ingestion |
