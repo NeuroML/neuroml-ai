@@ -38,7 +38,7 @@ We needed to decide how strictly Klea should enforce this boundary, especially f
 Chosen option: **A. Fix wrappers only, keep client strict**, because it enforces the spec at the producer (where `error` is known) without hiding non-compliance in the consumer. The alternative (B) would silently correct broken servers and make regressions invisible; the failing `osb-data-repos.sqlite: is_error=False` case is now fixed at its OSB server (`osb_mcp/tools/sqlite_tools.py:60`) rather than papered over in Klea's client.
 
 * Added `klea_utils/mcp/tool_result.py:to_result` (`utils_pkg/klea_utils/mcp/tool_result.py:1`) — checks `error`/`Error` (trimmed) and returns `ToolResult(content=[TextContent(json)], structured_content=dict, is_error=bool(error))`.
-* Updated 9 wrappers: `klea_utils/mcp/server/bundled_tools.py:18` (`web_fetch`, `list_files`, `read_file`, `download_file`, new `sqlite_query`/`sqlite_schema`), `mcp_pkg/neuroml_mcp/tools/code_tools.py:59` (`list_files`, `run_python_code` with `returncode` → `error`), `mcp_pkg/neuroml_mcp/tools/neuroml_tools.py:178` (`run_lems_simulation`), `get_models_from_neuromldb`/`get_repositories...` normalising `Error` → `error`, and all `osb_mcp/tools/*` (sqlite, biblio, github, biomodels, figshare, dandi, download, osb_tools).
+* Updated wrappers: `klea_utils/mcp/server/bundled_tools.py:18` (`web_fetch`, `list_files`, `read_file`, `download_file`), `mcp_pkg/neuroml_mcp/tools/code_tools.py:59` (`list_files`, `run_python_code` with `returncode` → `error`), `mcp_pkg/neuroml_mcp/tools/neuroml_tools.py:178` (`run_lems_simulation`, `get_models_from_neuromldb`/`get_repositories...` normalising `Error` → `error`), and `osb_mcp/tools/*` (`sqlite_tools`, biblio, github, biomodels, figshare, dandi, download, osb_tools). `sqlite_query`/`sqlite_schema` impls (`klea_utils/mcp/tool_impls/sqlite_query.py:46/158`) remain framework-agnostic dict-returning; only the OSB server exposes them as MCP tools via `osb_mcp/tools/sqlite_tools.py:60`.
 * Fixed impl inconsistency `klea_utils/mcp/tool_impls/list_files.py:65` `truncated: "False"` → `bool` to match `read_file.py`/`web_fetch.py` and spec-like booleans.
 * Kept `klea_utils/mcp/dispatch.py` and `klea_utils/tools.py` strict: `dispatch` inserts `res` unchanged (`dispatch.py:91`), `textualize_tool_results` checks `result.is_error` only (`tools.py:54`). A non-compliant server's `{"error": "..."}` with `is_error=False` will now surface as a code block, not `**Error:**`, making the server bug visible.
 
@@ -57,9 +57,9 @@ Chosen option: **A. Fix wrappers only, keep client strict**, because it enforces
 
 ### Confirmation
 
-* Updated `utils_pkg/tests/test_bundled_server.py`: expects 6 bundled tools (added `sqlite_query`, `sqlite_schema` with `checkpaths=["db_path"]`, `readOnlyHint:true`).
+* Updated `utils_pkg/tests/test_bundled_server.py`: remains 4 bundled tools (sqlite stays impl-only, not bundled).
 * Updated `mcp_pkg/tests/test_neuroml_tools.py` and `osb_mcp/tests/test_sqlite_tools.py`, `test_repository_tools.py`, `test_biblio_tools.py` to expect `ToolResult` (`assert not result.is_error; data = result.structured_content; assert data["error"]==""`) and `assert result.is_error` for failure cases.
-* Manual verification: `python -c Client(bundle_server).call_tool("sqlite_query", ... SELECT * FROM t) is_error False` vs `SELECT * FROM missing is_error True` (`error: no such table`).
+* Manual verification: `Client(osb_mcp).call_tool("query_osb_sqlite", ... SELECT * FROM t) is_error False` vs `SELECT * FROM missing is_error True` (`error: no such table`); bundled `read_file`/`web_fetch` similarly.
 * Lint/type: `ruff check` (fix), `ruff format`, `ty` (pre-existing errors only), `pytest -v` 100 `utils_pkg` + 14 `mcp_pkg` + OSB `mcp/tests` pass.
 
 ## Pros and Cons of the Options
@@ -88,4 +88,4 @@ Chosen option: **A. Fix wrappers only, keep client strict**, because it enforces
 * MCP spec: `modelcontextprotocol.io/specification/2025-06-18/server/tools#Error%20Handling`, `mcp/types.py:CallToolResult`
 * FastMCP mapping: `fastmcp/tools/base.py:ToolResult`, `fastmcp/tools/base.py:convert_result`, `mcp/server/lowlevel/server.py:_make_error_result`, `fastmcp/client/mixins/tools.py:_parse_call_tool_result`
 * Related: `devdocs/system/mcp-permissions.md`, `klea_utils/mcp/dispatch.py:23 _denied_result`, `klea_utils/mcp/tool_impls/list_files.py:65` truncated type fix.
-* Code: `utils_pkg/klea_utils/mcp/tool_result.py`, `utils_pkg/klea_utils/mcp/server/bundled_tools.py:215`, `osb_mcp/tools/sqlite_tools.py:60`, `mcp_pkg/neuroml_mcp/tools/code_tools.py:59`, `mcp_pkg/neuroml_mcp/tools/neuroml_tools.py:219`.
+* Code: `utils_pkg/klea_utils/mcp/tool_result.py`, `utils_pkg/klea_utils/mcp/server/bundled_tools.py:215` (no sqlite exposure), `klea_utils/mcp/tool_impls/sqlite_query.py:46` (framework-agnostic), `osb_mcp/tools/sqlite_tools.py:60`, `mcp_pkg/neuroml_mcp/tools/code_tools.py:59`, `mcp_pkg/neuroml_mcp/tools/neuroml_tools.py:219`.
