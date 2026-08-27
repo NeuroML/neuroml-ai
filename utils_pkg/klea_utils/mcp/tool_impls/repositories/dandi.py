@@ -69,8 +69,8 @@ async def dandi_list_versions(session: SessionLike | None, url: str) -> dict[str
     versions.
 
     Use when:
-    - Discovering which versions a DANDI dandiset offers before listing its
-      files.
+        - Discovering which versions a DANDI dandiset offers before listing its
+          files.
 
     Args:
         url: DANDI dandiset URL (https://dandiarchive.org/dandiset/<id>).

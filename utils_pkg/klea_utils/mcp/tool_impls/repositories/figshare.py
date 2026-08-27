@@ -59,12 +59,11 @@ async def figshare_list_versions(
     """List the available versions of a FigShare article.
 
     Use when:
-    - Discovering which versions a FigShare article offers before listing
-      its files.
+        - Discovering which versions a FigShare article offers before listing
+          its files.
 
     Args:
-        url: FigShare article URL (e.g.
-            https://figshare.com/articles/dataset/<title>/<article_id>).
+        url: FigShare article URL (e.g. https://figshare.com/articles/dataset/<title>/<article_id>).
 
     Returns:
         Dictionary with source, url, versions, and an empty files list.
@@ -103,12 +102,11 @@ async def figshare_list_files(
     omitted, the article's current version is reported.
 
     Use when:
-    - Getting the file list of a FigShare article so files can be
-      downloaded.
+        - Getting the file list of a FigShare article so files can be
+          downloaded.
 
     Args:
-        url: FigShare article URL (e.g.
-            https://figshare.com/articles/dataset/<title>/<article_id>).
+        url: FigShare article URL (e.g. https://figshare.com/articles/dataset/<title>/<article_id>).
         version: Version label for the result.  Defaults to the article's
             current version.
 

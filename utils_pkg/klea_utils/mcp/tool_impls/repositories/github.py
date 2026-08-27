@@ -84,8 +84,8 @@ async def github_list_versions(session: SessionLike | None, url: str) -> dict[st
     listed once.
 
     Use when:
-    - Discovering which branches/tags a GitHub repository offers before
-      listing its files.
+        - Discovering which branches/tags a GitHub repository offers before
+          listing its files.
 
     Args:
         url: GitHub repository URL (https://github.com/<owner>/<repo>).
@@ -137,8 +137,8 @@ async def github_list_files(
     branch is used.
 
     Use when:
-    - Getting the file list of a GitHub repository so files can be
-      downloaded.
+        - Getting the file list of a GitHub repository so files can be
+          downloaded.
 
     Args:
         url: GitHub repository URL (https://github.com/<owner>/<repo>).

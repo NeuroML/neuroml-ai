@@ -81,12 +81,11 @@ async def biomodels_list_versions(
     """List the available revisions (versions) of a BioModels model.
 
     Use when:
-    - Discovering which revisions a BioModels model offers before listing
-      its files.
+        - Discovering which revisions a BioModels model offers before listing
+          its files.
 
     Args:
-        url: BioModels model URL (e.g.
-            https://www.biomodels.org/MODEL0912160000).
+        url: BioModels model URL (e.g. https://www.biomodels.org/MODEL0912160000).
 
     Returns:
         Dictionary with source, url, versions, and an empty files list.
