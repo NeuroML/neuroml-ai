@@ -4,11 +4,28 @@ Contributing
 Development setup
 -----------------
 
+Requirements: Python 3.12 or later and ``uv`` (``pip`` works but ``uv``
+is preferred -- see :doc:`install` for extras and PyTorch notes).  To
+detect whether a venv is ``uv``-managed, look for ``uv = <version>`` in
+``<venv>/pyvenv.cfg`` (``uv`` writes it on ``uv venv``; ``python -m
+venv`` does not).
+
 Clone the repository and install in editable mode::
 
    git clone https://github.com/NeuroML/neuroklea.git
    cd neuroklea
-   pip install -r requirements-dev.txt
+   uv pip install -r requirements-dev.txt
+
+Use ``uv`` for all package operations when it is available; do not use
+``pip``.  Each ``*_pkg/`` is a separate installable (``setup.cfg``);
+see ``AGENTS.md`` for per-package ``uv pip install -e .`` notes.
+
+Building the docs locally needs ``sphinxcontrib-typer`` from
+``requirements-docs.txt`` -- without it ``make html`` falls back to the
+system sphinx and the ``.. typer::`` CLI reference pages render empty::
+
+   uv pip install -r requirements-docs.txt
+   cd docs && make html   # -> docs/_build/html
 
 Workflow
 --------
@@ -34,46 +51,65 @@ and tracked on the project ``Readme``.
 Commands
 --------
 
+This repository uses an incremental, review-driven workflow (see
+``AGENTS.md``): apply one logical change, run the relevant verification
+below, present the ``git diff`` for review, and wait for approval before
+the next step.  Verification covers lint, typecheck, relevant tests, and
+``--help`` for any CLI you touched.
+
 Lint and format
 ~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-   ruff check . --fix
+   ruff check . --fix          # in the affected package
    ruff format .
+   ruff check . --select I --fix   # import sorting
 
 Type check
 ~~~~~~~~~~
 
 .. code-block:: bash
 
-   ty
+   ty                          # from the repository root; extra-paths for all packages are in ty.toml
 
 Run tests
 ~~~~~~~~~
 
 .. code-block:: bash
 
-   # All tests
-   bash scripts/run_tests.sh
+   # All tests (from the repository root, with Ollama models qwen3:0.6b + bge-m3 when available)
+   bash scripts/run_tests.sh   # pytest -v -n auto in each *_pkg/tests
 
-   # Single package
-   cd utils_pkg && pytest -v
+   # Single package -- pytest MUST run from inside the package directory,
+   # never from the repository root (each pyproject.toml sets asyncio_mode="auto"
+   # and mcp_pkg adds -n 1).
+   cd utils_pkg && pytest -v   # mcp tools are asyncio, single-process via addopts = -n 1
+   cd mcp_pkg && pytest -v
 
    # Exclude tests that need an LLM
-   pytest -m "not localonly"
+   cd utils_pkg && pytest -m "not localonly"
+
+Notes: tests marked ``localonly`` require an LLM (some also need
+docling/HF downloads).  CI runs them against ``ollama pull qwen3:0.6b
+bge-m3`` and they self-skip when the backend is unreachable; use
+``-m "not localonly"`` for a quick offline run.  MCP tests are
+asyncio + single-process (``-n 1``).  ``utils_pkg/tests/test_stores_retrieval.py``
+reads ``STORES_TEST_CONFIG`` (default ``stores-tests.json``).
 
 Pre-commit
 ~~~~~~~~~~
 
 .. code-block:: bash
 
-   pre-commit run --all-files
+   pre-commit run --all-files   # CI gate; ruff checks changed files on PRs via .github/workflows/ruff.yml
 
 CLI verification
 ~~~~~~~~~~~~~~~~
 
-If you modify a CLI entry point, confirm it starts::
+If you modify a CLI entry point, confirm it starts (heavy imports must
+stay deferred inside the Typer command so ``--help`` does not eager-import
+the dependency chain -- see ``AGENTS.md`` CLI conventions)::
 
    <cli-name> --help
 
