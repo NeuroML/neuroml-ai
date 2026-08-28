@@ -331,7 +331,19 @@ _cross_encoder_cache: dict[str, Any] = {}
 
 def _load_cross_encoder(model_name: str) -> Any:
     """Return a cached :class:`~sentence_transformers.CrossEncoder` instance."""
-    if model_name not in _cross_encoder_cache:
+    cached = _cross_encoder_cache.get(model_name)
+    if cached is not None:
+        return cached
+
+    # Lazily create a per-function lock to avoid races when multiple callers
+    # try to initialize the same model concurrently.
+    import threading
+
+    lock = _load_cross_encoder.__dict__.setdefault("_lock", threading.Lock())
+    with lock:
+        cached = _cross_encoder_cache.get(model_name)
+        if cached is not None:
+            return cached
         try:
             from sentence_transformers import CrossEncoder
         except ImportError:
@@ -340,7 +352,7 @@ def _load_cross_encoder(model_name: str) -> Any:
                 "Install: pip install klea_utils[rerank]"
             ) from None
         _cross_encoder_cache[model_name] = CrossEncoder(model_name)
-    return _cross_encoder_cache[model_name]
+        return _cross_encoder_cache[model_name]
 
 
 def cross_encoder_rerank(
