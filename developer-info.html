@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Contributing" href="contributing.html"><link rel="prev" title="klea-serve" href="cli/klea-serve.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="API Reference" href="api/index.html"><link rel="prev" title="Contributing" href="contributing.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Architecture (C4 model) - Klea</title>
+        <title>Developer info - Klea</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -220,8 +220,8 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Architecture (C4 model)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Developer info</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2 has-children"><a class="reference internal" href="api/klea_utils.html">klea_utils</a><input aria-label="Toggle navigation of klea_utils" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/utils/graph.html">Orchestrator framework</a></li>
@@ -272,12 +272,12 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="https://github.com/NeuroML/neuroklea/blob/development/docs/architecture.rst?plain=true" title="View this page">
+  <a class="muted-link" href="https://github.com/NeuroML/neuroklea/blob/development/docs/developer-info.rst?plain=true" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
 </div><div class="edit-this-page">
-  <a class="muted-link" href="https://github.com/NeuroML/neuroklea/edit/development/docs/architecture.rst" rel="edit" title="Edit this page">
+  <a class="muted-link" href="https://github.com/NeuroML/neuroklea/edit/development/docs/developer-info.rst" rel="edit" title="Edit this page">
     <svg><use href="#svg-pencil"></use></svg>
     <span class="visually-hidden">Edit this page</span>
   </a>
@@ -294,15 +294,31 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="architecture-c4-model">
-<h1>Architecture (C4 model)<a class="headerlink" href="#architecture-c4-model" title="Link to this heading">¶</a></h1>
+          <section id="developer-info">
+<h1>Developer info<a class="headerlink" href="#developer-info" title="Link to this heading">¶</a></h1>
+<p>Klea keeps two documentation layers: this public user guide (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>) and
+internal developer notes (<code class="docutils literal notranslate"><span class="pre">devdocs/</span></code>) in the same repository.  <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code>
+is the single source of truth for architecture, component contracts, and
+decisions; this page links to it on GitHub (<code class="docutils literal notranslate"><span class="pre">development</span></code> branch) and avoids
+duplicating the diagrams and records here.</p>
+<section id="developer-docs-on-github">
+<h2>Developer docs on GitHub<a class="headerlink" href="#developer-docs-on-github" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/README.md">devdocs index on GitHub</a>
+– curated index of all developer notes (system docs and ADRs).</p></li>
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/tree/development/devdocs">devdocs/ on GitHub</a>
+– browse the full folder (<code class="docutils literal notranslate"><span class="pre">system/</span></code>, <code class="docutils literal notranslate"><span class="pre">adr/</span></code>, <code class="docutils literal notranslate"><span class="pre">.agents/</span></code>).</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> is for contributors.  See <a class="reference internal" href="contributing.html"><span class="doc">Contributing</span></a> for workflow,
+commands, and the <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> instructions for AI assistants.</p>
+</section>
+<section id="architecture-c4-model">
+<h2>Architecture (C4 model)<a class="headerlink" href="#architecture-c4-model" title="Link to this heading">¶</a></h2>
 <p>Klea’s architecture is documented with the <a class="reference external" href="https://c4model.com/">C4 model</a>.  The model is maintained as internal developer
-documentation in <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> (in this same repository), so the diagrams below
-link to the relevant files on GitHub (the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch).  This keeps a
-single source of truth and avoids duplicating the diagrams between the
-developer notes and this user guide.</p>
+documentation in <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> so the diagrams below link to the relevant
+files on GitHub.</p>
 <section id="level-1-system-context">
-<h2>Level 1 – System Context<a class="headerlink" href="#level-1-system-context" title="Link to this heading">¶</a></h2>
+<h3>Level 1 – System Context<a class="headerlink" href="#level-1-system-context" title="Link to this heading">¶</a></h3>
 <p>The system context diagram shows Klea as a single system, the people who use
 it, and the external software systems it depends on.  Klea is developed as a
 general-purpose RAG + agentic assistant; neuroscience is the current motivating
@@ -313,7 +329,7 @@ the agent and RAG are domain-configurable and work for any domain.</p>
 </ul>
 </section>
 <section id="level-2-container">
-<h2>Level 2 – Container<a class="headerlink" href="#level-2-container" title="Link to this heading">¶</a></h2>
+<h3>Level 2 – Container<a class="headerlink" href="#level-2-container" title="Link to this heading">¶</a></h3>
 <p>The container diagram zooms into Klea and shows the containers – the
 independently deployable applications/services/datastores and the shared
 library – plus how they interact and connect to the external systems
@@ -324,11 +340,25 @@ from Level 1.</p>
 <p>Levels 3-4 (component, code) and the deployment view are planned and will
 be added to <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> as they are written; this page will link to them
 when they exist.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The C4 diagrams live in <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> (developer notes), not in this user
-guide, to keep one canonical source.</p>
-</div>
+</section>
+</section>
+<section id="architecture-decision-records-adrs">
+<h2>Architecture Decision Records (ADRs)<a class="headerlink" href="#architecture-decision-records-adrs" title="Link to this heading">¶</a></h2>
+<p>ADRs are short, numbered records in MADR format in <code class="docutils literal notranslate"><span class="pre">devdocs/adr/</span></code>
+(<code class="docutils literal notranslate"><span class="pre">NNNN-&lt;slug&gt;.md</span></code>).  Each records context, options considered, outcome, and
+consequences.  See <a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr-template.md">adr-template.md</a>
+for the template.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0001-chunk-workers.md">ADR-0001 – Subprocess chunk workers and DOI-cache batching</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0002-worker-retry.md">ADR-0002 – Retry worker batches that die with no results</a></p></li>
+</ul>
+</section>
+<section id="other-system-notes">
+<h2>Other system notes<a class="headerlink" href="#other-system-notes" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/store-create.md">Store creation pipeline – chunk, store, build, worker isolation and cache</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/mcp-permissions.md">MCP tool permissions – current in-tool checks and the trust model</a></p></li>
+</ul>
 </section>
 </section>
 
@@ -337,23 +367,23 @@ guide, to keep one canonical source.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="contributing.html">
+          <a class="next-page" href="api/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Contributing</div>
+                <div class="title">API Reference</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="cli/klea-serve.html">
+          <a class="prev-page" href="contributing.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">klea-serve</div>
+                <div class="title">Contributing</div>
                 
               </div>
             </a>
@@ -386,9 +416,15 @@ guide, to keep one canonical source.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Architecture (C4 model)</a><ul>
+<li><a class="reference internal" href="#">Developer info</a><ul>
+<li><a class="reference internal" href="#developer-docs-on-github">Developer docs on GitHub</a></li>
+<li><a class="reference internal" href="#architecture-c4-model">Architecture (C4 model)</a><ul>
 <li><a class="reference internal" href="#level-1-system-context">Level 1 – System Context</a></li>
 <li><a class="reference internal" href="#level-2-container">Level 2 – Container</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#architecture-decision-records-adrs">Architecture Decision Records (ADRs)</a></li>
+<li><a class="reference internal" href="#other-system-notes">Other system notes</a></li>
 </ul>
 </li>
 </ul>
