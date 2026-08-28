@@ -58,15 +58,14 @@ Chosen option: "C. ``httpx`` everywhere with shared retry + lifespan
 session".
 
 * ``utils_pkg/klea_utils/api/utils.py:33`` -- ``_make_retryer_httpx(attempts, timeout)``
-  (default ``stop_after_delay(180.0)``, ``wait_random_exponential(1, max=10)``;
-  ``attempts`` takes precedence) and ``check_api_is_ready`` /
-  ``_get_ready`` using it.  Session helpers defer ``import httpx`` so
-  importing the module never requires ``httpx``.
+  (generous retry/budget defaults; ``attempts`` takes precedence over
+  ``timeout``) and ``check_api_is_ready`` / ``_get_ready`` using it.
+  Session helpers defer ``import httpx`` so importing the module never
+  requires ``httpx``.
 * ``utils_pkg/klea_utils/mcp/lifespan.py:26`` -- ``make_http_session_lifespan(session_key="http_session")``
-  returns a FastMCP ``@lifespan`` that yields ``httpx.AsyncClient(
-  limits=_SESSION_LIMITS, timeout=30.0, http2=True)`` with
-  ``_SESSION_LIMITS = Limits(max_connections=100, max_keepalive_connections=100,
-  keepalive_expiry=30.0)`` generous for bursty multi-user MCP servers.
+  returns a FastMCP ``@lifespan`` that yields a shared ``httpx.AsyncClient``
+  (``http2=True``, generous ``Limits``/timeout for bursty multi-user MCP
+  servers; specific values are configurable defaults in code).
   Shared servers reuse it via ``bundled.py:34``
   ``lifespan=make_http_session_lifespan()``; apps wrap it in their
   ``FastMCP`` instance lifespan chain.
