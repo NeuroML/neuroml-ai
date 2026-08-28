@@ -50,7 +50,7 @@ so the two layers agree.
 flowchart TD
     LLM[LLM selects tool call] --> Picker[ToolsPicker]
     Picker --> Caller[ToolsCallerNode]
-    Caller --> PreCheck{check_tool_arguments_permissions\n(checkpaths?)}
+    Caller --> PreCheck{"check_tool_arguments_permissions\n(checkpaths?)"}
     PreCheck -- allowed / no declaration --> Server[MCP server]
     PreCheck -- denied --> Synth1[Synthetic error\nnever reaches server]
     Server --> InTool[Tool impl\ncheck_path_access]
