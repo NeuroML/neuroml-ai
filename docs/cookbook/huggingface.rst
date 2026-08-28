@@ -274,3 +274,7 @@ Troubleshooting
     Check the Space logs for Python tracebacks.  Common causes: a typo in
     ``klea_rag.json`` (e.g. trailing comma), a missing vector store path,
     or an invalid model name in ``rag.env``.
+
+For other issues (name/path mismatches, empty retrieval, embedding model
+pitfalls, OCR, metadata maps, and log locations) see
+:doc:`../troubleshooting`.

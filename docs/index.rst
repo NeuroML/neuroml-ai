@@ -103,6 +103,7 @@ London <https://openneuroai.org/>`_.
    cookbook/index
    cli/index
    glossary
+   troubleshooting
 
 .. toctree::
    :caption: Develop
