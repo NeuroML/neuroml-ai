@@ -68,6 +68,8 @@ for the template.
   <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0001-chunk-workers.md>`__
 - `ADR-0002 -- Retry worker batches that die with no results
   <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0002-worker-retry.md>`__
+- `ADR-0003 -- Strictly require MCP isError for tool execution failures
+  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0003-mcp-iserror-compliance.md>`__
 
 Other system notes
 ------------------

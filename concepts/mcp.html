@@ -377,7 +377,7 @@ to expose, and whether to allow local or web-facing tools.  Two groups:</p>
 <code class="docutils literal notranslate"><span class="pre">local</span></code> (filesystem / process on the host) or <code class="docutils literal notranslate"><span class="pre">web</span></code> (interacts with
 external URLs / web APIs).</p></li>
 <li><p><strong>Domain / functional</strong> groups tools by purpose, for example <code class="docutils literal notranslate"><span class="pre">files</span></code>,
-<code class="docutils literal notranslate"><span class="pre">code</span></code>, <code class="docutils literal notranslate"><span class="pre">download</span></code>, <code class="docutils literal notranslate"><span class="pre">echo</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml-db</span></code>, <code class="docutils literal notranslate"><span class="pre">osb</span></code>.</p></li>
+<code class="docutils literal notranslate"><span class="pre">code</span></code>, <code class="docutils literal notranslate"><span class="pre">download</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml</span></code>, <code class="docutils literal notranslate"><span class="pre">neuroml-db</span></code>, <code class="docutils literal notranslate"><span class="pre">osb</span></code>.</p></li>
 </ul>
 <p>Every tool also carries the <code class="docutils literal notranslate"><span class="pre">bundled</span></code> tag when it comes from the common
 bundled server, so enabling the whole common set is a single
@@ -386,8 +386,8 @@ bundled server, so enabling the whole common set is a single
 
 <span class="n">Web</span> <span class="n">scope</span><span class="p">:</span>   <span class="n">web_fetch</span> <span class="p">(</span><span class="n">bundled</span><span class="p">),</span> <span class="n">download_file</span> <span class="p">(</span><span class="n">bundled</span><span class="p">,</span> <span class="n">download</span><span class="p">)</span>
 <span class="n">Local</span> <span class="n">scope</span><span class="p">:</span> <span class="n">list_files</span> <span class="o">/</span> <span class="n">read_file</span> <span class="p">(</span><span class="n">bundled</span><span class="p">,</span> <span class="n">files</span><span class="p">),</span>
-             <span class="n">run_python_code</span> <span class="o">/</span> <span class="n">run_lems_simulation</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">,</span> <span class="n">code</span><span class="p">)</span>
-<span class="n">Echo</span><span class="p">:</span>        <span class="n">dummy_code</span> <span class="o">/</span> <span class="n">dummy</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">,</span> <span class="n">echo</span><span class="p">)</span>
+             <span class="n">run_python_code</span> <span class="o">/</span> <span class="n">run_lems_simulation</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">,</span> <span class="n">code</span><span class="p">),</span>
+             <span class="n">create_new_NeuroML_model</span> <span class="p">(</span><span class="n">neuroml</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Behavioral intent (whether a tool is read-only or destructive) is <em>not</em>
@@ -456,12 +456,78 @@ required flag, description).</p></li>
 shows the opening text block as the description and the
 <code class="docutils literal notranslate"><span class="pre">Args:</span></code>-derived schema as the parameter list, so duplicating the
 <code class="docutils literal notranslate"><span class="pre">Args:</span></code>/<code class="docutils literal notranslate"><span class="pre">Returns:</span></code> prose in the description wastes prompt tokens.</p></li>
+<li><p><strong>Return value</strong> – framework-agnostic implementation helpers
+(<code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_impls.*</span></code>) return a plain <code class="docutils literal notranslate"><span class="pre">dict</span></code> that signals
+failure with a non-empty <code class="docutils literal notranslate"><span class="pre">error</span></code> field (or legacy <code class="docutils literal notranslate"><span class="pre">Error</span></code>).  Every
+<strong>FastMCP wrapper</strong> (functions decorated with <code class="docutils literal notranslate"><span class="pre">&#64;tool_meta</span></code>) must return
+<code class="docutils literal notranslate"><span class="pre">ToolResult</span></code> via <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_result.to_result</span></code> so the MCP
+<code class="docutils literal notranslate"><span class="pre">CallToolResult.isError</span></code> flag is set correctly while preserving the
+full <code class="docutils literal notranslate"><span class="pre">structured_content</span></code> for the LLM to repair.  Returning a bare
+<code class="docutils literal notranslate"><span class="pre">dict</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code> always yields <code class="docutils literal notranslate"><span class="pre">isError:</span> <span class="pre">false</span></code> (see
+<code class="docutils literal notranslate"><span class="pre">fastmcp/tools/base.py:convert_result</span></code>).</p></li>
 </ol>
-<p>Example:</p>
+<p>Framework-agnostic implementation (not an MCP tool – reused in tests and
+direct Python calls):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># klea_utils/mcp/tool_impls/list_files.py -- plain dict, tested directly</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">list_files</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"*"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""List files with optional pattern filtering.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: Directory to list.</span>
+<span class="sd">        pattern: Glob pattern.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dictionary with matching files, truncated flag, and error string</span>
+<span class="sd">        (empty on success, non-empty on permission / not-found failure).</span>
+<span class="sd">    """</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>FastMCP wrapper – the only form registered with <code class="docutils literal notranslate"><span class="pre">&#64;tool_meta</span></code> and exposed
+to clients (MCP spec <code class="docutils literal notranslate"><span class="pre">server/tools#Error</span> <span class="pre">Handling</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp</span><span class="w"> </span><span class="kn">import</span> <span class="n">Context</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">tool_meta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_result</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_result</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_impls.list_files</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_files</span> <span class="k">as</span> <span class="n">list_files_impl</span>
+
+<span class="nd">@tool_meta</span><span class="p">(</span><span class="n">ToolInfo</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"List files and directories"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">"local"</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">},</span> <span class="n">checkpaths</span><span class="o">=</span><span class="p">[</span><span class="s2">"path"</span><span class="p">],</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_files</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"*"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""List files and directories with filtering and metadata.</span>
+
+<span class="sd">    Use this tool to explore the local file system structure and find</span>
+<span class="sd">    specific files.</span>
+
+<span class="sd">    Use when:</span>
+<span class="sd">    - Discovering what files exist in the working directory.</span>
+<span class="sd">    - Finding files by name, type, or location.</span>
+
+<span class="sd">    Do not use for:</span>
+<span class="sd">    - Reading a file's contents (use the read file tool instead).</span>
+
+<span class="sd">    Example: list_files(path=".", pattern="*.py", recursive=True)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: Directory path to list.</span>
+<span class="sd">        pattern: Space separated file patterns to filter files by type.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ToolResult with structured_content dict (matching files, truncated</span>
+<span class="sd">        flag) and error field; isError is true exactly when error is</span>
+<span class="sd">        non-empty.  Preserve the dict shape so the LLM can remediate</span>
+<span class="sd">        (vs raising ToolError which would strip structured_content).</span>
+<span class="sd">    """</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">list_files_impl</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="n">pattern</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">to_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Example with web data (same pattern – <code class="docutils literal notranslate"><span class="pre">Error</span></code> is also honoured for legacy
+repository tools, see <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_result.to_result</span></code>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@tool_meta</span><span class="p">(</span><span class="n">ToolInfo</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"Find models on NeuroML-db"</span><span class="p">))</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_models_from_neuromldb</span><span class="p">(</span>
-    <span class="n">search_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">num</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">Context</span><span class="p">,</span> <span class="n">search_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">num</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Search and optionally download cell and ion channel models from</span>
 <span class="sd">    NeuroML-DB.</span>
 
@@ -485,9 +551,14 @@ shows the opening text block as the description and the
 <span class="sd">        download: set to true to also download the models.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Dictionary of model information with metadata and model content.</span>
+<span class="sd">        ToolResult whose structured_content is the model dictionary (with</span>
+<span class="sd">        an error field on failure); isError is true exactly when that</span>
+<span class="sd">        error field is non-empty.</span>
 <span class="sd">    """</span>
-    <span class="o">...</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">search_query</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">to_result</span><span class="p">({</span><span class="s2">"Error"</span><span class="p">:</span> <span class="s2">"search_query must be a non-empty string"</span><span class="p">})</span>
+    <span class="n">models</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_search_neuromldb</span><span class="p">(</span><span class="n">search_query</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="n">download</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">to_result</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Tool functions are registered by the <code class="docutils literal notranslate"><span class="pre">&#64;tool_meta</span></code> decoration (see
@@ -496,6 +567,43 @@ shows the opening text block as the description and the
 a tool named after the function.  Helper functions without the decoration
 are ignored.  Validation constraints (e.g. <code class="docutils literal notranslate"><span class="pre">Field(min_length=1)</span></code>) may be
 added to parameter annotations and are preserved in the schema.</p>
+</section>
+<section id="error-handling-iserror">
+<h2>Error handling (isError)<a class="headerlink" href="#error-handling-iserror" title="Link to this heading">¶</a></h2>
+<p>The <a class="reference external" href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools#Error%20Handling">MCP specification</a>
+distinguishes <em>protocol errors</em> (<code class="docutils literal notranslate"><span class="pre">error:</span> <span class="pre">{code,</span> <span class="pre">message}</span></code>) from <em>tool
+execution errors</em> (<code class="docutils literal notranslate"><span class="pre">result:</span> <span class="pre">{content:</span> <span class="pre">[TextContent(error)],</span> <span class="pre">isError:</span> <span class="pre">true}</span></code>
+for API failure / invalid input / business logic).  Klea’s
+<code class="docutils literal notranslate"><span class="pre">error</span></code>/<code class="docutils literal notranslate"><span class="pre">Error</span></code> field is the second category and <strong>must</strong> be
+<code class="docutils literal notranslate"><span class="pre">isError:</span> <span class="pre">true</span></code>.  <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_result.to_result</span></code> bridges the
+two: it preserves the full <code class="docutils literal notranslate"><span class="pre">dict</span></code> as <code class="docutils literal notranslate"><span class="pre">structured_content</span></code> (so the LLM
+keeps <code class="docutils literal notranslate"><span class="pre">columns</span></code>, <code class="docutils literal notranslate"><span class="pre">rows</span></code>, <code class="docutils literal notranslate"><span class="pre">known</span> <span class="pre">tables</span></code> hints for repair) while
+marking <code class="docutils literal notranslate"><span class="pre">is_error</span></code> from the trimmed <code class="docutils literal notranslate"><span class="pre">error</span></code>/<code class="docutils literal notranslate"><span class="pre">Error</span></code> string.  Raising
+<code class="docutils literal notranslate"><span class="pre">ToolError</span></code> would strip <code class="docutils literal notranslate"><span class="pre">structured_content</span></code> and <code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">{&quot;error&quot;:</span>
+<span class="pre">&quot;...&quot;</span> <span class="pre">}</span></code> as a bare <code class="docutils literal notranslate"><span class="pre">dict</span></code> would always yield <code class="docutils literal notranslate"><span class="pre">isError:</span> <span class="pre">false</span></code> via
+<code class="docutils literal notranslate"><span class="pre">fastmcp/tools/base.py:convert_result</span></code>.</p>
+<p>Clients that consume results – <code class="docutils literal notranslate"><span class="pre">klea_utils.tools.textualize_tool_results</span></code>
+(<code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">result.is_error:</span> <span class="pre">**Error:**</span></code>) and
+<code class="docutils literal notranslate"><span class="pre">klea_utils.nodes.tools_caller.ToolsCallerNode</span></code> / <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.dispatch</span></code>
+(<code class="docutils literal notranslate"><span class="pre">success_count</span> <span class="pre">=</span> <span class="pre">sum(not</span> <span class="pre">r.is_error)</span></code>; permission denials via
+<code class="docutils literal notranslate"><span class="pre">_denied_result(is_error=True)</span></code>) – strictly respect the wire
+<code class="docutils literal notranslate"><span class="pre">is_error</span></code> flag, not the dict’s <code class="docutils literal notranslate"><span class="pre">error</span></code> string.  Third-party servers
+that still return a bare <code class="docutils literal notranslate"><span class="pre">dict</span></code> with <code class="docutils literal notranslate"><span class="pre">{&quot;error&quot;:</span> <span class="pre">&quot;...&quot;}</span></code> will appear as
+success (a code block) until they return a properly structured
+<code class="docutils literal notranslate"><span class="pre">ToolResult</span></code> – via <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_result.to_result</span></code> for Klea
+servers or any equivalent <code class="docutils literal notranslate"><span class="pre">ToolResult(content=[...],</span> <span class="pre">is_error=True)</span></code>
+construction.  This visibility is intentional per ADR-0003; the server
+must be fixed rather than papered over client-side.  See
+<code class="docutils literal notranslate"><span class="pre">devdocs/adr/0003-mcp-iserror-compliance.md</span></code> on GitHub for options
+considered and verification.</p>
+<p>The wrapper contract in short:</p>
+<ul class="simple">
+<li><p>Impl <code class="docutils literal notranslate"><span class="pre">klea_utils.mcp.tool_impls.*</span></code>: <code class="docutils literal notranslate"><span class="pre">-&gt;</span> <span class="pre">dict</span></code> (with <code class="docutils literal notranslate"><span class="pre">error:</span> <span class="pre">&quot;&quot;</span></code> on
+success) – testable without MCP.</p></li>
+<li><p>Wrapper <code class="docutils literal notranslate"><span class="pre">&#64;tool_meta(ToolInfo(...))</span></code>: <code class="docutils literal notranslate"><span class="pre">-&gt;</span> <span class="pre">ToolResult</span></code>, <code class="docutils literal notranslate"><span class="pre">return</span>
+<span class="pre">to_result(dict)</span></code> on every path (success and failure) – the only path
+that sets <code class="docutils literal notranslate"><span class="pre">isError:</span> <span class="pre">true</span></code> without losing <code class="docutils literal notranslate"><span class="pre">structured_content</span></code>.</p></li>
+</ul>
 </section>
 <section id="tool-description-length-and-style">
 <h2>Tool description length and style<a class="headerlink" href="#tool-description-length-and-style" title="Link to this heading">¶</a></h2>
@@ -549,27 +657,37 @@ selection.</p></li>
 <section id="reusable-template">
 <h3>Reusable template<a class="headerlink" href="#reusable-template" title="Link to this heading">¶</a></h3>
 <p>Copy this template when implementing a new tool; fill in the placeholders
-and keep the whole block to roughly 100-250 tokens:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">"""&lt;One-sentence summary of what the tool does&gt;.</span>
+and keep the whole block to roughly 100-250 tokens.  The wrapper must
+return <code class="docutils literal notranslate"><span class="pre">ToolResult</span></code> via <code class="docutils literal notranslate"><span class="pre">to_result</span></code> (see above) – never a bare
+<code class="docutils literal notranslate"><span class="pre">dict</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_result</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_result</span>
 
-<span class="sd">Use this tool to &lt;primary purpose&gt;.</span>
+<span class="nd">@tool_meta</span><span class="p">(</span><span class="n">ToolInfo</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"&lt;Human title&gt;"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">"&lt;domain&gt;"</span><span class="p">}))</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="o">&lt;</span><span class="n">tool_name</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&lt;</span><span class="n">param</span><span class="o">&gt;</span><span class="p">:</span> <span class="o">&lt;</span><span class="nb">type</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""&lt;One-sentence summary of what the tool does&gt;.</span>
 
-<span class="sd">Use when:</span>
-<span class="sd">- &lt;case where this tool is the right choice&gt;</span>
-<span class="sd">- &lt;another concrete case&gt;</span>
+<span class="sd">    Use this tool to &lt;primary purpose&gt;.</span>
 
-<span class="sd">Do not use for:</span>
-<span class="sd">- &lt;case better handled elsewhere&gt; (use the &lt;role&gt; tool instead)</span>
+<span class="sd">    Use when:</span>
+<span class="sd">    - &lt;case where this tool is the right choice&gt;</span>
+<span class="sd">    - &lt;another concrete case&gt;</span>
 
-<span class="sd">Example: &lt;tool_name&gt;(&lt;param&gt;=&lt;value&gt;)</span>
+<span class="sd">    Do not use for:</span>
+<span class="sd">    - &lt;case better handled elsewhere&gt; (use the &lt;role&gt; tool instead)</span>
 
-<span class="sd">Args:</span>
-<span class="sd">    &lt;param&gt;: &lt;what the parameter means and how it affects behaviour&gt;.</span>
-<span class="sd">    &lt;param2&gt;: &lt;description&gt;. Defaults to &lt;default&gt; if not specified.</span>
+<span class="sd">    Example: &lt;tool_name&gt;(&lt;param&gt;=&lt;value&gt;)</span>
 
-<span class="sd">Returns:</span>
-<span class="sd">    &lt;brief description of the data returned&gt;.</span>
-<span class="sd">"""</span>
+<span class="sd">    Args:</span>
+<span class="sd">        &lt;param&gt;: &lt;what the parameter means and how it affects behaviour&gt;.</span>
+<span class="sd">        &lt;param2&gt;: &lt;description&gt;. Defaults to &lt;default&gt; if not specified.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ToolResult with structured_content dict and error field; isError</span>
+<span class="sd">        is true when error is non-empty.</span>
+<span class="sd">    """</span>
+    <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">impl_call</span><span class="o">&gt;</span><span class="p">(</span><span class="o">&lt;</span><span class="n">param</span><span class="o">&gt;=&lt;</span><span class="n">param</span><span class="o">&gt;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">to_result</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Use generic role references (“use the file reading tool”) rather than
@@ -645,6 +763,7 @@ those prefixes vary between deployments.</p>
 </li>
 <li><a class="reference internal" href="#how-klea-uses-the-tools">How Klea uses the tools</a></li>
 <li><a class="reference internal" href="#writing-tools-for-klea">Writing tools for Klea</a></li>
+<li><a class="reference internal" href="#error-handling-iserror">Error handling (isError)</a></li>
 <li><a class="reference internal" href="#tool-description-length-and-style">Tool description length and style</a><ul>
 <li><a class="reference internal" href="#reusable-template">Reusable template</a></li>
 </ul>
