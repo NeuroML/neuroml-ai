@@ -305,8 +305,6 @@ class BaseLangGraph(ABC):
         for domain, server_names in domain_servers.items():
             domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
-                if "dummy" in t.name:
-                    continue
                 # tools will be prefixed with server names
                 if num_servers > 1 and not any(
                     t.name.startswith(s + "_") for s in server_names

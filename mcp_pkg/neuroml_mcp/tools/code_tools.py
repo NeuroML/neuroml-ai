@@ -28,28 +28,6 @@ from .sandbox import nml_mcp_sandbox
 sbox = nml_mcp_sandbox
 
 
-@tool_meta(ToolInfo(title="Echo text", tags={"neuroml", "echo"}))
-async def dummy_code(
-    astring: str,
-) -> str:
-    """Return the input string in a sentence (testing tool only).
-
-    Use this tool to test and debug the MCP tool infrastructure.
-
-    Use when:
-    - Unit testing the tool server or the tool picker.
-
-    Do not use for:
-    - Any real task - this tool provides no real functionality.
-
-    Example: dummy_code("hello")
-
-    Args:
-        astring: String to be echoed back.
-    """
-    return f"I got {astring}"
-
-
 @tool_meta(
     ToolInfo(
         title="List files and directories",

@@ -18,8 +18,6 @@ from neuroml_mcp.server.main import create_server
 #: (read-only / destructive) is carried by standard MCP tool annotations,
 #: not by tags.
 _EXPECTED_TAGS = {
-    "dummy_code": {"neuroml", "echo"},
-    "dummy": {"neuroml", "echo"},
     "list_files": {"neuroml", "local", "files"},
     "run_python_code": {"neuroml", "local", "code"},
     "create_new_NeuroML_model": {"neuroml"},
@@ -70,7 +68,7 @@ async def test_annotation_hints_on_io_tools():
 
 async def test_echo_and_template_tools_declare_no_hints():
     tools = await _tools_by_name()
-    for name in ("dummy_code", "dummy", "create_new_NeuroML_model"):
+    for name in ("create_new_NeuroML_model",):
         assert tools[name].annotations is None, name
 
 

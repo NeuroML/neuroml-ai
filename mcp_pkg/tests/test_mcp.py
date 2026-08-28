@@ -25,7 +25,7 @@ async def mcp_client():
 async def test_list_tools(mcp_client: Client[FastMCPTransport]):
     all_tools = await mcp_client.list_tools()
     tool_names = [t.name for t in all_tools]
-    assert "dummy_code" in tool_names
+    assert "create_new_NeuroML_model" in tool_names
     assert "run_lems_simulation" in tool_names
 
     tools_by_name = {tool.name: tool for tool in all_tools}

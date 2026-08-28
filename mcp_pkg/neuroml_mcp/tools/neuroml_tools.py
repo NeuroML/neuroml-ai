@@ -109,28 +109,8 @@ async def _search_osbv2_repos(session, url, query, content_types, user_id, max_n
     return response.json()
 
 
-@tool_meta(ToolInfo(title="Echo text", tags={"neuroml", "echo"}))
-async def dummy(astring: str) -> str:
-    """Return the input string in a sentence (testing tool only).
-
-    Use this tool to test and debug the MCP tool infrastructure.
-
-    Use when:
-    - Unit testing the tool server or the tool picker.
-
-    Do not use for:
-    - Any real task - this tool provides no real functionality.
-
-    Example: dummy("hello")
-
-    Args:
-        astring: Any string to be echoed back.
-    """
-    return f"I got {astring}"
-
-
 @tool_meta(ToolInfo(title="Create a NeuroML model template", tags={"neuroml"}))
-def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
+def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> ToolResult:
     """Create a new blank NeuroML model template.
 
     Use this tool to generate a starting template for NeuroML models, which
@@ -153,7 +133,7 @@ def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
             Defaults to "NeuroMLModel" if not specified.
 
     Returns:
-        String containing the Python code template to execute.
+        Dictionary with the generated Python code template and an empty error field.
     """
     model_name = model_name.replace(" ", "")
 
@@ -167,7 +147,7 @@ def create_new_NeuroML_model(model_name: str = "NeuroMLModel") -> str:
     """
     )
 
-    return model_str
+    return to_result({"template": model_str, "error": ""})
 
 
 @tool_meta(
