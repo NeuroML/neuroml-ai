@@ -20,8 +20,19 @@ the agent and RAG are domain-configurable and work for any domain.
 - `System Context diagram (Level 1)
   <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-system-context.md>`__
 
-Levels 2-4 (container, component, code) and the deployment view are planned and
-will be added to ``devdocs/`` as they are written; this page will link to them
+Level 2 -- Container
+--------------------
+
+The container diagram zooms into Klea and shows the containers -- the
+independently deployable applications/services/datastores and the shared
+library -- plus how they interact and connect to the external systems
+from Level 1.
+
+- `Container diagram (Level 2)
+  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-container.md>`__
+
+Levels 3-4 (component, code) and the deployment view are planned and will
+be added to ``devdocs/`` as they are written; this page will link to them
 when they exist.
 
 .. note::
