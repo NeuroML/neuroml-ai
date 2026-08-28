@@ -42,3 +42,4 @@ Structure:
 | `adr/0005-httpx-single-stack.md` | ADR-0005: Single HTTP stack on httpx with shared retry and lifespan session |
 | `adr/0006-monorepo.md` | ADR-0006: Monorepo for all Klea packages |
 | `adr/0007-mcp-permissions.md` | ADR-0007: Declarative path permissions with dual-layer check and deferred interactive policy |
+| `adr/0008-always-retrieve.md` | ADR-0008: Always retrieve for RAG queries |
