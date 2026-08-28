@@ -41,3 +41,4 @@ Structure:
 | `adr/0004-bundled-stdio-server.md` | ADR-0004: Bundled stdio MCP server and tag-filterable tool filtering |
 | `adr/0005-httpx-single-stack.md` | ADR-0005: Single HTTP stack on httpx with shared retry and lifespan session |
 | `adr/0006-monorepo.md` | ADR-0006: Monorepo for all Klea packages |
+| `adr/0007-mcp-permissions.md` | ADR-0007: Declarative path permissions with dual-layer check and deferred interactive policy |
