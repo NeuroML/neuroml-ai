@@ -270,6 +270,8 @@ that vector stores load at startup from the embedding model, so an
 embedding model chosen per chat in the web UI cannot enable retrieval for
 stores -- set ``KLEA_RAG_EMBEDDING_MODEL`` before starting the server.
 
+.. _logging:
+
 Logging
 -------
 
@@ -305,6 +307,10 @@ third-party libraries.  Each CLI uses its own ``<app>`` name:
      - ``nml_mcp/nml_mcp.log``
 
 ``klea-stores-create`` logs to the console only.
+
+See :doc:`troubleshooting` for the full diagnostic checklist (name/path
+mismatches, embedding dimension, ``chroma.sqlite3`` location, OCR, metadata
+maps, and log locations).
 
 Web client user storage
 -----------------------

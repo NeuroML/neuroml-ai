@@ -473,6 +473,10 @@ Once the basic pipeline works, here are natural next steps:
 Troubleshooting
 ---------------
 
+For a full list of pitfalls (name/path mismatches, embedding dimension,
+``chroma.sqlite3`` folder vs file, OCR, metadata maps, logs, HuggingFace
+Spaces) see :doc:`../troubleshooting`.
+
 **Ollama is not running**
    Start it with ``ollama serve`` or run Ollama as a system service.
 
@@ -491,7 +495,8 @@ Troubleshooting
    path and collection name match.  Check that your source files are in
    a format Docling supports.  If raising ``default_k``/``k_max`` does
    not bring in more useful chunks, confirm ``max_refs_size`` is large
-   enough to fit them.
+   enough to fit them.  See :doc:`../troubleshooting` for the complete
+   checklist.
 
 .. seealso::
 

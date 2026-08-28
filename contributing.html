@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Developer info" href="developer-info.html"><link rel="prev" title="klea-serve" href="cli/klea-serve.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Developer info" href="developer-info.html"><link rel="prev" title="Troubleshooting" href="troubleshooting.html">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Contributing - Klea</title>
@@ -194,14 +194,13 @@
   <p class="caption" role="heading"><span class="caption-text">Usage</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="concepts/rag.html">RAG</a></li>
-<li class="toctree-l2"><a class="reference internal" href="concepts/mcp.html">MCP Server Support</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/create-and-use-rag.html">Create and use a RAG system</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="concepts/index.html">Concepts</a><input aria-label="Toggle navigation of Concepts" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts/rag.html">RAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/mcp.html">MCP Server Support</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="cookbook/index.html">Cookbook</a><input aria-label="Toggle navigation of Cookbook" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -217,6 +216,8 @@
 <li class="toctree-l2"><a class="reference internal" href="cli/klea-serve.html">klea-serve</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Develop</span></p>
 <ul class="current">
@@ -298,10 +299,25 @@
 <h1>Contributing<a class="headerlink" href="#contributing" title="Link to this heading">¶</a></h1>
 <section id="development-setup">
 <h2>Development setup<a class="headerlink" href="#development-setup" title="Link to this heading">¶</a></h2>
+<p>Requirements: Python 3.12 or later and <code class="docutils literal notranslate"><span class="pre">uv</span></code> (<code class="docutils literal notranslate"><span class="pre">pip</span></code> works but <code class="docutils literal notranslate"><span class="pre">uv</span></code>
+is preferred – see <a class="reference internal" href="install.html"><span class="doc">Installation</span></a> for extras and PyTorch notes).  To
+detect whether a venv is <code class="docutils literal notranslate"><span class="pre">uv</span></code>-managed, look for <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">=</span> <span class="pre">&lt;version&gt;</span></code> in
+<code class="docutils literal notranslate"><span class="pre">&lt;venv&gt;/pyvenv.cfg</span></code> (<code class="docutils literal notranslate"><span class="pre">uv</span></code> writes it on <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">venv</span></code>; <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span>
+<span class="pre">venv</span></code> does not).</p>
 <p>Clone the repository and install in editable mode:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">NeuroML</span><span class="o">/</span><span class="n">neuroklea</span><span class="o">.</span><span class="n">git</span>
 <span class="n">cd</span> <span class="n">neuroklea</span>
-<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">-</span><span class="n">dev</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">uv</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">-</span><span class="n">dev</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">uv</span></code> for all package operations when it is available; do not use
+<code class="docutils literal notranslate"><span class="pre">pip</span></code>.  Each <code class="docutils literal notranslate"><span class="pre">*_pkg/</span></code> is a separate installable (<code class="docutils literal notranslate"><span class="pre">setup.cfg</span></code>);
+see <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> for per-package <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> notes.</p>
+<p>Building the docs locally needs <code class="docutils literal notranslate"><span class="pre">sphinxcontrib-typer</span></code> from
+<code class="docutils literal notranslate"><span class="pre">requirements-docs.txt</span></code> – without it <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> falls back to the
+system sphinx and the <code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">typer::</span></code> CLI reference pages render empty:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uv</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">-</span><span class="n">docs</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">cd</span> <span class="n">docs</span> <span class="o">&amp;&amp;</span> <span class="n">make</span> <span class="n">html</span>   <span class="c1"># -&gt; docs/_build/html</span>
 </pre></div>
 </div>
 </section>
@@ -326,41 +342,58 @@ and tracked on the project <code class="docutils literal notranslate"><span clas
 </section>
 <section id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">¶</a></h2>
+<p>This repository uses an incremental, review-driven workflow (see
+<code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code>): apply one logical change, run the relevant verification
+below, present the <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code> for review, and wait for approval before
+the next step.  Verification covers lint, typecheck, relevant tests, and
+<code class="docutils literal notranslate"><span class="pre">--help</span></code> for any CLI you touched.</p>
 <section id="lint-and-format">
 <h3>Lint and format<a class="headerlink" href="#lint-and-format" title="Link to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ruff<span class="w"> </span>check<span class="w"> </span>.<span class="w"> </span>--fix
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ruff<span class="w"> </span>check<span class="w"> </span>.<span class="w"> </span>--fix<span class="w">          </span><span class="c1"># in the affected package</span>
 ruff<span class="w"> </span>format<span class="w"> </span>.
+ruff<span class="w"> </span>check<span class="w"> </span>.<span class="w"> </span>--select<span class="w"> </span>I<span class="w"> </span>--fix<span class="w">   </span><span class="c1"># import sorting</span>
 </pre></div>
 </div>
 </section>
 <section id="type-check">
 <h3>Type check<a class="headerlink" href="#type-check" title="Link to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ty
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ty<span class="w">                          </span><span class="c1"># from the repository root; extra-paths for all packages are in ty.toml</span>
 </pre></div>
 </div>
 </section>
 <section id="run-tests">
 <h3>Run tests<a class="headerlink" href="#run-tests" title="Link to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># All tests</span>
-bash<span class="w"> </span>scripts/run_tests.sh
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># All tests (from the repository root, with Ollama models qwen3:0.6b + bge-m3 when available)</span>
+bash<span class="w"> </span>scripts/run_tests.sh<span class="w">   </span><span class="c1"># pytest -v -n auto in each *_pkg/tests</span>
 
-<span class="c1"># Single package</span>
-<span class="nb">cd</span><span class="w"> </span>utils_pkg<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pytest<span class="w"> </span>-v
+<span class="c1"># Single package -- pytest MUST run from inside the package directory,</span>
+<span class="c1"># never from the repository root (each pyproject.toml sets asyncio_mode="auto"</span>
+<span class="c1"># and mcp_pkg adds -n 1).</span>
+<span class="nb">cd</span><span class="w"> </span>utils_pkg<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pytest<span class="w"> </span>-v<span class="w">   </span><span class="c1"># mcp tools are asyncio, single-process via addopts = -n 1</span>
+<span class="nb">cd</span><span class="w"> </span>mcp_pkg<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pytest<span class="w"> </span>-v
 
 <span class="c1"># Exclude tests that need an LLM</span>
-pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not localonly"</span>
+<span class="nb">cd</span><span class="w"> </span>utils_pkg<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">"not localonly"</span>
 </pre></div>
 </div>
+<p>Notes: tests marked <code class="docutils literal notranslate"><span class="pre">localonly</span></code> require an LLM (some also need
+docling/HF downloads).  CI runs them against <code class="docutils literal notranslate"><span class="pre">ollama</span> <span class="pre">pull</span> <span class="pre">qwen3:0.6b</span>
+<span class="pre">bge-m3</span></code> and they self-skip when the backend is unreachable; use
+<code class="docutils literal notranslate"><span class="pre">-m</span> <span class="pre">&quot;not</span> <span class="pre">localonly&quot;</span></code> for a quick offline run.  MCP tests are
+asyncio + single-process (<code class="docutils literal notranslate"><span class="pre">-n</span> <span class="pre">1</span></code>).  <code class="docutils literal notranslate"><span class="pre">utils_pkg/tests/test_stores_retrieval.py</span></code>
+reads <code class="docutils literal notranslate"><span class="pre">STORES_TEST_CONFIG</span></code> (default <code class="docutils literal notranslate"><span class="pre">stores-tests.json</span></code>).</p>
 </section>
 <section id="pre-commit">
 <h3>Pre-commit<a class="headerlink" href="#pre-commit" title="Link to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files<span class="w">   </span><span class="c1"># CI gate; ruff checks changed files on PRs via .github/workflows/ruff.yml</span>
 </pre></div>
 </div>
 </section>
 <section id="cli-verification">
 <h3>CLI verification<a class="headerlink" href="#cli-verification" title="Link to this heading">¶</a></h3>
-<p>If you modify a CLI entry point, confirm it starts:</p>
+<p>If you modify a CLI entry point, confirm it starts (heavy imports must
+stay deferred inside the Typer command so <code class="docutils literal notranslate"><span class="pre">--help</span></code> does not eager-import
+the dependency chain – see <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> CLI conventions):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">cli</span><span class="o">-</span><span class="n">name</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">help</span>
 </pre></div>
 </div>
@@ -415,14 +448,14 @@ to the developer docs on GitHub.</p>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="cli/klea-serve.html">
+          <a class="prev-page" href="troubleshooting.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">klea-serve</div>
+                <div class="title">Troubleshooting</div>
                 
               </div>
             </a>

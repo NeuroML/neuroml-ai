@@ -55,6 +55,14 @@ general-purpose RAG + agentic assistant and is not tied to any single domain.
 The full C4 model (system context, containers, components, deployment) is
 maintained as developer documentation: see :doc:`developer-info`.
 
+Quickstart
+----------
+
+New to Klea? Start with installation and the end-to-end RAG tutorial:
+
+* :doc:`install` -- install Klea (PyPI or from source, with optional extras)
+* :doc:`tutorials/create-and-use-rag` -- build your first vector store, configure a domain, and query it
+
 Prototype Deployments
 ---------------------
 
@@ -90,11 +98,12 @@ London <https://openneuroai.org/>`_.
    :hidden:
 
    install
-   concepts/index
-   glossary
    tutorials/index
+   concepts/index
    cookbook/index
    cli/index
+   glossary
+   troubleshooting
 
 .. toctree::
    :caption: Develop
