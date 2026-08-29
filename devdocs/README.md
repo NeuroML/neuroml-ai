@@ -56,4 +56,3 @@ Structure:
 | `adr/0019-shared-abstract-nodes.md` | ADR-0019: Shared abstract node hierarchy (Template Method for nodes) |
 | `adr/0020-unified-tool-caller.md` | ADR-0020: Unified shared tool picker/caller for agent and RAG |
 | `adr/0021-metadata-map.md` | ADR-0021: Compulsory metadata map with hierarchical folding |
-| `adr/0022-atomic-cache-prune.md` | ADR-0022: Atomic chunk cache with prune for resumable ingest |

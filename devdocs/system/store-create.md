@@ -198,12 +198,63 @@ are the same flags as `chunk`.
 
 * **`.klea-cache/*.pkl`** — `(docs, extracted)` tuples.  `_save_to_cache`
   writes atomically (`NamedTemporaryFile` + `os.replace`); stray `.tmp`
-  cleaned in `finally`.  `_prune_cache` keeps the cache mirrored.
+  cleaned in `finally`.  Unreadable entries are quarantined as
+  `*.pkl.corrupt` (preserving bytes) and pruned with orphaned entries by
+  `_prune_cache(current_hashes)` at the end of every `chunk_all` call,
+  making ingest resumable and self-healing after OOM-kills or `Ctrl-C`.
+  See ADR-0001 for worker isolation; the cache hygiene is the
+  resumable complement.
 * **`doi-cache.json`** — `{doi: BiblioRecord}` dict, loaded at resolver
   init.  Writes are atomic (same temp+replace) and batched: at most once
   per 25 new resolutions, plus a flush on `close()`.  Workers each load
   the current file at start and flush on exit; phases are sequential so
   appends are preserved.  Human-readable; tolerates loss (`{}` on corrupt).
+
+## Operational notes (demoted from ADRs)
+
+The following are features that do not warrant separate ADRs but are
+part of the ingest contract; they live here to keep ADR count focused
+on structural decisions.
+
+* **OCR-aware pre-check (was 0023).** `klea-stores-create pre-check
+  <source>` classifies PDFs by whether they have a text layer (via
+  `pypdfium2` char count) rather than by publication year, reporting
+  `needs OCR` vs `text-based`.  With `--organise` it copies files
+  into `ocr/` and `no-ocr/` subdirectories (source dir untouched)
+  and prints a two-pass `chunk` workflow.  The worker respects the
+  per-file `do_ocr` flag (`ChunkWorkerConfig.do_ocr`) and the
+  `DOCLING_DEVICE=cpu` / `DOCLING_NUM_THREADS` env tuning for
+  CUDA < 7.0 GPUs.
+
+* **Store/map linters (was 0024).** `klea-stores-create store-lint
+  <corpus.pkl>` runs LLM-free, deterministic checks over a written
+  BM25 corpus (summary, near-empty text from conversion/OCR miss,
+  missing bibliographic metadata, `file_name` structural checks) and
+  prints evenly-spaced contiguous sample windows.  It is also printed
+  automatically when a BM25 corpus is written.  `klea-stores-create
+  map-lint <dir>` runs the same style checks over the metadata map
+  (missing `DEFAULT`, suspicious titles/DOIs, year/filename
+  mismatches, `venue` staleness, excess `url*` keys, heading-keyed
+  vs filename-keyed map detection) and exits non-zero for fatal
+  conditions.  Both are source-document-aware.
+
+* **Char-budgeted reference material (was 0027).** `max_refs_size`
+  (default 20000 chars in `GeneralConfig`) caps the *serialized* reference
+  material fed to the answer LLM, not the number of retrieved docs.
+  `RetrieveInfoNode` first fetches per-store `k`/`k_max`/`k_inc`
+  candidates (RRF-merged per ADR-0012), then
+  `truncate_reference_material` applies the single global char budget
+  in RRF order.  This separates *fetch depth* (`k`) from *LLM context*
+  cost.
+
+* **Robust structured-output enforcement (was 0031).** The node
+  template (ADR-0019) enforces `output_schema` both in the LangChain
+  `invoke` call *and* as an injected schema block in the system
+  prompt (recency: schema last, closest to the human query) so models
+  that ignore `invoke`-time schemas still conform.  See
+  `docs/concepts/mcp.rst` docstring-first convention and
+  `klea_utils/nodes/base.py:722` for the prompt placement; the
+  `griffe` `Args:` parsing → tool schema remains the single source.
 
 ## References
 
