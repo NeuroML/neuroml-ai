@@ -48,3 +48,4 @@ Structure:
 | `adr/0011-multiple-query-domains.md` | ADR-0011: Multiple query domains per RAG query |
 | `adr/0012-bm25-hybrid.md` | ADR-0012: BM25 hybrid retrieval for exact string matches |
 | `adr/0013-inspection-features.md` | ADR-0013: Inspection features for validating RAG output |
+| `adr/0014-runtime-model-switching.md` | ADR-0014: Runtime per-request model switching with user-supplied API keys |
