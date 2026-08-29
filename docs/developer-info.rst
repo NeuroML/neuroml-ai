@@ -51,9 +51,29 @@ from Level 1.
 - `Container diagram (Level 2)
   <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-container.md>`__
 
-Levels 3-4 (component, code) and the deployment view are planned and will
-be added to ``devdocs/`` as they are written; this page will link to them
-when they exist.
+Level 3 -- Component (RAG)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The RAG component diagram zooms into the ``klea_rag`` container and shows
+its components -- the graph nodes plus retrieval, MCP, and store
+interactions -- and embeds the auto-generated LangGraph Mermaid source as
+its faithful core.
+
+- `RAG component diagram (Level 3)
+  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-component-rag.md>`__
+
+Deployment
+~~~~~~~~~~
+
+The deployment diagram maps the Klea containers onto build-time and
+run-time deployment nodes (developer workstation vs local vs container
+platform with HuggingFace Spaces as a nested node).
+
+- `Deployment diagram
+  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-deployment.md>`__
+
+Further component (agent) and code views will be added to ``devdocs/`` as
+they are written.
 
 Architecture Decision Records (ADRs)
 ------------------------------------
@@ -64,17 +84,16 @@ consequences.  See `adr-template.md
 <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr-template.md>`__
 for the template.
 
-- `ADR-0001 -- Subprocess chunk workers and DOI-cache batching
-  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0001-chunk-workers.md>`__
-- `ADR-0002 -- Retry worker batches that die with no results
-  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0002-worker-retry.md>`__
-- `ADR-0003 -- Strictly require MCP isError for tool execution failures
-  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0003-mcp-iserror-compliance.md>`__
+Browse all ADRs on GitHub:
+
+* `devdocs/adr/ on GitHub
+  <https://github.com/NeuroML/neuroklea/tree/development/devdocs/adr>`__
 
 Other system notes
 ------------------
 
-* `Store creation pipeline -- chunk, store, build, worker isolation and cache
-  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/store-create.md>`__
-* `MCP tool permissions -- current in-tool checks and the trust model
-  <https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/mcp-permissions.md>`__
+System and component contracts (Mermaid diagrams and data-flow notes)
+live in ``devdocs/system/``:
+
+* `devdocs/system/ on GitHub
+  <https://github.com/NeuroML/neuroklea/tree/development/devdocs/system>`__
