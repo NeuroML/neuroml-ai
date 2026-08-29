@@ -41,9 +41,9 @@ subclasses.
 ## Considered Options
 
 * **A. Per-app duplication** -- each app copies the ``setup`` logic from
-  an early ``code_ai`` package.  Rejected: the ``llm_models`` SSO T
-  refactor (``2325c9d``) and the ``httpx`` lifespan consolidation showed
-  duplication churn across two graphs.
+  an early ``code_ai`` package.  Rejected: the ``llm_models`` Single
+  Source Of Truth (SSOT) refactor (``2325c9d``) and the ``httpx`` lifespan
+  consolidation showed duplication churn across two graphs.
 * **B. Composition helpers (Strategy-like free functions)** -- expose ``load_env``,
   ``create_mcp_client``, ``load_vector_stores`` as standalone helpers
   that each app calls (composition / Strategy).  Rejected: call order
@@ -75,7 +75,7 @@ Chosen option: "C. ``BaseLangGraph`` Template Method in ``klea_utils`` (GoF Temp
   ``rag_pkg/klea_rag/rag.py:43`` ``RAG(BaseLangGraph)`` implement the
   abstracts.  ``BaseLangGraph`` is also re-exported via
   ``klea_utils.graph.base`` (``AGENTS.md:139``).
-* Model SSO T: ``llm_models: dict[str, LLMModel]`` is populated in
+* Model Single Source Of Truth (SSOT): ``llm_models: dict[str, LLMModel]`` is populated in
   ``_setup_models``; ``_build_env_class`` derives the
   ``BaseSettings`` env schema from its keys, so the env file is
   authoritative.  ``_apply_model_names`` + ``_apply_provider_defaults``
@@ -155,7 +155,7 @@ Chosen option: "C. ``BaseLangGraph`` Template Method in ``klea_utils`` (GoF Temp
   ``ADR-0005`` (httpx lifespan composed via the base), ``ADR-0006``
   (monorepo layout that makes the shared base possible), ``ADR-0013``
   (inspection stream owned by the base).
-* Commits: ``2325c9d`` (``llm_models`` SSO T), ``46c46df``/``96db080``
+* Commits: ``2325c9d`` (``llm_models`` Single Source Of Truth (SSOT)), ``46c46df``/``96db080``
   (bundled wiring through base), ``b73c3a5``/``65139e3`` (model
   checking + docs flow).
 * Codified ``2026-08-28``; base extracted early ``2026-03..04`` during
