@@ -87,6 +87,13 @@ awarded to `Padraig Gleeson
 <https://profiles.ucl.ac.uk/77575-ankur-sinha>`_ at `University College
 London <https://openneuroai.org/>`_.
 
+Klea is developed and maintained by `Ankur Sinha
+<https://profiles.ucl.ac.uk/77575-ankur-sinha>`_ (GitHub:
+`@sanjayankur31 <https://github.com/sanjayankur31>`_) with contributions
+from the NeuroML community (see `all-contributors
+<https://github.com/NeuroML/neuroklea#contributors>`_ and
+:doc:`contributing`).
+
 .. image:: _static/biofair-logo.png
    :alt: BioFAIR logo
    :class: biofair-logo

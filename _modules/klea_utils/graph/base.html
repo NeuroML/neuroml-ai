@@ -656,7 +656,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bm25_stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_export_graph_png</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Export the LangGraph as a Mermaid PNG diagram.</span>
+<span class="w">        </span><span class="sd">"""Export the LangGraph as a Mermaid PNG diagram and its Mermaid source.</span>
 
 <span class="sd">        Skipped when running inside Docker (``RUNNING_IN_DOCKER`` env var set).</span>
 
@@ -669,6 +669,24 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_graph</span><span class="p">()</span><span class="o">.</span><span class="n">draw_mermaid_png</span><span class="p">(</span><span class="n">output_file_path</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Something went wrong generating lang graph png"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># Also write the Mermaid source alongside the PNG so the explicit</span>
+        <span class="c1"># C4 Level-3 diagrams (``devdocs/system/c4-component-*.md``) can</span>
+        <span class="c1"># embed the auto-generated node/edge topology as their core and</span>
+        <span class="c1"># avoid drift between code and docs (see ADR-0016/0019).</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+            <span class="n">mermaid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_graph</span><span class="p">()</span><span class="o">.</span><span class="n">draw_mermaid</span><span class="p">()</span>
+            <span class="n">mermaid_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mermaid_path</span><span class="o">.</span><span class="n">suffix</span> <span class="o">==</span> <span class="s2">".png"</span><span class="p">:</span>
+                <span class="n">mermaid_path</span> <span class="o">=</span> <span class="n">mermaid_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".mmd"</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mermaid_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mermaid_path</span><span class="p">)</span> <span class="o">+</span> <span class="s2">".mmd"</span><span class="p">)</span>
+            <span class="n">mermaid_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">mermaid</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Wrote Mermaid source to </span><span class="si">{</span><span class="n">mermaid_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"Something went wrong generating lang graph mermaid"</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="c1"># ------------------------------------------------------------------</span>

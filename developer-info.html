@@ -338,9 +338,27 @@ from Level 1.</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-container.md">Container diagram (Level 2)</a></p></li>
 </ul>
-<p>Levels 3-4 (component, code) and the deployment view are planned and will
-be added to <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> as they are written; this page will link to them
-when they exist.</p>
+</section>
+<section id="level-3-component-rag">
+<h3>Level 3 – Component (RAG)<a class="headerlink" href="#level-3-component-rag" title="Link to this heading">¶</a></h3>
+<p>The RAG component diagram zooms into the <code class="docutils literal notranslate"><span class="pre">klea_rag</span></code> container and shows
+its components – the graph nodes plus retrieval, MCP, and store
+interactions – and embeds the auto-generated LangGraph Mermaid source as
+its faithful core.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-component-rag.md">RAG component diagram (Level 3)</a></p></li>
+</ul>
+</section>
+<section id="deployment">
+<h3>Deployment<a class="headerlink" href="#deployment" title="Link to this heading">¶</a></h3>
+<p>The deployment diagram maps the Klea containers onto build-time and
+run-time deployment nodes (developer workstation vs local vs container
+platform with HuggingFace Spaces as a nested node).</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/c4-deployment.md">Deployment diagram</a></p></li>
+</ul>
+<p>Further component (agent) and code views will be added to <code class="docutils literal notranslate"><span class="pre">devdocs/</span></code> as
+they are written.</p>
 </section>
 </section>
 <section id="architecture-decision-records-adrs">
@@ -349,17 +367,17 @@ when they exist.</p>
 (<code class="docutils literal notranslate"><span class="pre">NNNN-&lt;slug&gt;.md</span></code>).  Each records context, options considered, outcome, and
 consequences.  See <a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr-template.md">adr-template.md</a>
 for the template.</p>
+<p>Browse all ADRs on GitHub:</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0001-chunk-workers.md">ADR-0001 – Subprocess chunk workers and DOI-cache batching</a></p></li>
-<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0002-worker-retry.md">ADR-0002 – Retry worker batches that die with no results</a></p></li>
-<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/adr/0003-mcp-iserror-compliance.md">ADR-0003 – Strictly require MCP isError for tool execution failures</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/tree/development/devdocs/adr">devdocs/adr/ on GitHub</a></p></li>
 </ul>
 </section>
 <section id="other-system-notes">
 <h2>Other system notes<a class="headerlink" href="#other-system-notes" title="Link to this heading">¶</a></h2>
+<p>System and component contracts (Mermaid diagrams and data-flow notes)
+live in <code class="docutils literal notranslate"><span class="pre">devdocs/system/</span></code>:</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/store-create.md">Store creation pipeline – chunk, store, build, worker isolation and cache</a></p></li>
-<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/blob/development/devdocs/system/mcp-permissions.md">MCP tool permissions – current in-tool checks and the trust model</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NeuroML/neuroklea/tree/development/devdocs/system">devdocs/system/ on GitHub</a></p></li>
 </ul>
 </section>
 </section>
@@ -423,6 +441,8 @@ for the template.</p>
 <li><a class="reference internal" href="#architecture-c4-model">Architecture (C4 model)</a><ul>
 <li><a class="reference internal" href="#level-1-system-context">Level 1 – System Context</a></li>
 <li><a class="reference internal" href="#level-2-container">Level 2 – Container</a></li>
+<li><a class="reference internal" href="#level-3-component-rag">Level 3 – Component (RAG)</a></li>
+<li><a class="reference internal" href="#deployment">Deployment</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#architecture-decision-records-adrs">Architecture Decision Records (ADRs)</a></li>
