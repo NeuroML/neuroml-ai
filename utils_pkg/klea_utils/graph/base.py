@@ -367,7 +367,7 @@ class BaseLangGraph(ABC):
             self.logger.info(f"BM25 stores loaded: {self.bm25_stores.domains}")
 
     def _export_graph_png(self, filename: str) -> None:
-        """Export the LangGraph as a Mermaid PNG diagram.
+        """Export the LangGraph as a Mermaid PNG diagram and its Mermaid source.
 
         Skipped when running inside Docker (``RUNNING_IN_DOCKER`` env var set).
 
@@ -380,6 +380,24 @@ class BaseLangGraph(ABC):
             self.graph.get_graph().draw_mermaid_png(output_file_path=filename)
         except BaseException as e:
             self.logger.error("Something went wrong generating lang graph png")
+            self.logger.error(e)
+
+        # Also write the Mermaid source alongside the PNG so the explicit
+        # C4 Level-3 diagrams (``devdocs/system/c4-component-*.md``) can
+        # embed the auto-generated node/edge topology as their core and
+        # avoid drift between code and docs (see ADR-0016/0019).
+        try:
+            assert self.graph
+            mermaid = self.graph.get_graph().draw_mermaid()
+            mermaid_path = Path(filename)
+            if mermaid_path.suffix == ".png":
+                mermaid_path = mermaid_path.with_suffix(".mmd")
+            else:
+                mermaid_path = Path(str(mermaid_path) + ".mmd")
+            mermaid_path.write_text(mermaid)
+            self.logger.debug(f"Wrote Mermaid source to {mermaid_path}")
+        except BaseException as e:
+            self.logger.error("Something went wrong generating lang graph mermaid")
             self.logger.error(e)
 
     # ------------------------------------------------------------------
