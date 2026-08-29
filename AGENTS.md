@@ -29,6 +29,19 @@ Verification in step 2 covers:
 - If a CLI entry point was modified: `<cli-name> --help` to confirm it starts
 - If tests exist for the changed code: `pytest -v <test-path>`
 
+### Constraints
+
+- Only touch files directly relevant to the current micro-step (no drive-by refactoring).
+- Do not modify existing tests to force a pass unless the review explicitly requests a test update.
+
+## Git conventions
+
+- `git add --intent-to-add <new-file>` so new files appear in `git diff`.
+- Never stage/commit without explicit user approval.
+- Never run destructive Git commands (`git reset --hard`, `git clean -f`, stash drops) without confirmation.
+- Show `git diff --stat` first, then full diff before committing so scope is clear at a glance.
+- Conventional commit messages with issue numbers when applicable.
+
 ## Packages at a glance
 
 | Dir | Package name | CLI entry |
@@ -163,13 +176,6 @@ model attribution accurate when comparing outcomes across sessions.
 
 Keep logs high-level -- decisions, architecture changes, outcomes only.
 Git log has the step-by-step edits. Omit routine work.
-
-## Git conventions
-
-- `git add --intent-to-add <new-file>` so new files appear in `git diff`.
-- Never stage/commit without explicit user approval.
-- Show `git diff --stat` first, then full diff before committing so scope is clear at a glance.
-- Conventional commit messages with issue numbers when applicable.
 
 ## Versioning
 
