@@ -47,3 +47,4 @@ Structure:
 | `adr/0010-guard-node.md` | ADR-0010: Cheap guard node for production deployments |
 | `adr/0011-multiple-query-domains.md` | ADR-0011: Multiple query domains per RAG query |
 | `adr/0012-bm25-hybrid.md` | ADR-0012: BM25 hybrid retrieval for exact string matches |
+| `adr/0013-inspection-features.md` | ADR-0013: Inspection features for validating RAG output |
