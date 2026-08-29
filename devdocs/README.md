@@ -55,3 +55,4 @@ Structure:
 | `adr/0018-message-memory.md` | ADR-0018: Structured message memory for nodes |
 | `adr/0019-shared-abstract-nodes.md` | ADR-0019: Shared abstract node hierarchy (Template Method for nodes) |
 | `adr/0020-unified-tool-caller.md` | ADR-0020: Unified shared tool picker/caller for agent and RAG |
+| `adr/0021-metadata-map.md` | ADR-0021: Compulsory metadata map with hierarchical folding |
