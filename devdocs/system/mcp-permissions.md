@@ -5,7 +5,7 @@ are implemented; the allow/deny/ask ruleset and interactive approval loop
 are deferred.  Updates to this note should be reflected in the permission
 layer as it evolves.
 
-Last updated: 2026-08-26 (moved to `devdocs/system/`; see `devdocs/README.md`).
+Last updated: 2026-08-29 (layers as built; decision at `../adr/0007-mcp-permissions.md`).
 
 ## Current state
 
@@ -138,27 +138,37 @@ server process can reach, and "always" turns one careless approval into a
 session-wide pass.  The prompt is a consent mechanism, not a path
 confinement guarantee.
 
-## Options for Klea
+## Implemented layers for Klea
 
-1. **In-tool path checks (implemented)** -- path-aware and stricter than
-   opencode's name-based gate, but only for tools we author.  Keep this as
-   the author-side layer.
-2. **Client-side tool-call policy layer (partially implemented)** --
-   opencode-style allow / deny / ask per tool (and, where the tool declares
-   it, per path), evaluated at the call site before dispatching to the MCP
-   server.  The *per-path* half is done: the shared `ToolsCallerNode` gates
-   calls through `dispatch_tool_calls` + `check_tool_arguments_permissions`
-   using each tool's `checkpaths` declaration, denying out-of-boundary paths
-   before they reach the server.  The *allow / deny / ask* ruleset and the
+This document is a system-level contract, not an ADR.  The trust model is
+as built:
+
+1. **Author-side: in-tool path checks** -- path-aware and stricter than
+   opencode's name-based gate, implemented for tools Klea authors.
+   Every filesystem tool gates its path arguments through
+   `check_path_access` (see Current state and Declaring which arguments
+   are paths).  Kept as the author-side layer.
+
+2. **Client-side: pre-dispatch tool-call gate** -- evaluated at the call
+   site before dispatching to the MCP server.  The *per-path* half is
+   implemented: the shared `ToolsCallerNode` gates calls through
+   `dispatch_tool_calls` + `check_tool_arguments_permissions` using each
+   tool's `checkpaths` declaration, denying out-of-boundary paths before
+   they reach the server.  The *allow / deny / ask* ruleset and the
    interactive user-approval loop (graph pause + TUI/web input, opencode
-   style) are still deferred -- see the TODO in `permission.py` and the
+   style) are **deferred** -- see the TODO in `permission.py` and the
    kanban board.  The client-side gate only applies to tools that declare
    `checkpaths`; third-party servers that do not are not path-gated.
-3. **OS-level sandboxing** -- run third-party MCP servers (or the whole
-   agent) in a container / bubblewrap / chroot with only the project
-   directory mounted.  This is the only hard boundary for servers we do
-   not author, and it is orthogonal to options 1 and 2.
 
-Recommended posture: 1 + 2 together, document the trust model, and advise
-sandboxing for third-party servers.  In all cases, connecting to a server
-means trusting its author: never connect to a server you do not trust.
+3. **OS-level sandboxing (orthogonal)** -- run third-party MCP servers
+   (or the whole agent) in a container / bubblewrap / chroot with only
+   the project directory mounted.  This is the only hard boundary for
+   servers Klea does not author, and it is orthogonal to layers 1 and 2.
+
+Implemented posture: layers 1 + 2 together, trust model as documented
+above, and advise sandboxing for third-party servers.  In all cases,
+connecting to a server means trusting its author: never connect to a
+server you do not trust.
+
+See also ``../adr/0007-mcp-permissions.md`` for the architectural
+decision that adopts this posture.

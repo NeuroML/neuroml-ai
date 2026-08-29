@@ -2,8 +2,9 @@
 
 Status: architecture documentation. Reflects the monorepo at the time of
 writing. This is the Level 2 view of the Klea C4 model; the Level 1 system
-context diagram is in `c4-system-context.md`.  Lower levels (components,
-code, deployment) live in sibling files to be added.
+context is in `c4-system-context.md`, the RAG Level 3 view is in
+`c4-component-rag.md`, and the deployment view is in `c4-deployment.md`.
+Lower-level code views live in sibling files to be added as needed.
 
 ## Scope and intent
 
@@ -135,18 +136,23 @@ flowchart TB
 ## Open architecture decision (forward reference)
 
 The edge `klea_agent -> klea_rag` ("uses RAG as retrieval backend") is drawn
-but its **mechanism is undecided** -- see `adr/0003-agent-rag-integration.md`
-(when designed).  Candidate mechanisms are the RAG HTTP API versus direct
-vector-store access; note that RAG returns natural-language answers for humans
-while the agent needs the retrieved documents.  Until then, the agent and RAG
-are wired through shared MCP servers (e.g. both point at `nml-mcp`) rather than
-a direct code dependency.
+but its **mechanism is undecided** -- tracked as a future ADR.  Candidate mechanisms are the RAG HTTP API versus
+direct vector-store access; note that RAG returns natural-language answers
+for humans while the agent needs the retrieved documents.  Until then, the
+agent and RAG are wired through shared MCP servers (e.g. both point at
+``nml-mcp``) rather than a direct code dependency.  See also the agent
+topology ``ADR-0025`` (``proposed``).
 
 ## Out of scope (Level 3+)
 
-The internals of each container -- e.g. the agent's graph nodes (planner,
-explore_planner, goal_setter, evaluator, tools_router), the RAG graph nodes
-(classify_question, generate_retrieval_query, retrieve_info, answer_from_context),
-the `nml-mcp` tool/sandbox layout, and the `klea_utils` API/stores internals --
-are components and are shown at Level 3.  A deployment view (local vs
-HuggingFace Space) is a separate C4 deployment diagram.
+The internals of the RAG container (``classify_question``,
+``generate_retrieval_query``, ``retrieve_info``, ``answer_from_context``,
+``evaluator`` etc.) are shown at Level 3 in `c4-component-rag.md`
+(auto-generated Mermaid core + ``elk`` augmentation, with drift check
+against ``rag_pkg/example-configs/rag-lang-graph.mmd``).  The agent's graph
+nodes (``planner``, ``explore_planner``, ``goal_setter``,
+``evaluator``, ``tools_router``) will be shown at Level 3 when its
+topology is accepted (``proposed`` in ``ADR-0025``).  The ``nml-mcp``
+tool/sandbox layout and the ``klea_utils`` API/stores internals are
+future code-level views.  The deployment view (local vs container
+platform with HuggingFace Spaces as a nested node) is ``c4-deployment.md``.
