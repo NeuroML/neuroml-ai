@@ -56,3 +56,9 @@ Structure:
 | `adr/0019-shared-abstract-nodes.md` | ADR-0019: Shared abstract node hierarchy (Template Method for nodes) |
 | `adr/0020-unified-tool-caller.md` | ADR-0020: Unified shared tool picker/caller for agent and RAG |
 | `adr/0021-metadata-map.md` | ADR-0021: Compulsory metadata map with hierarchical folding |
+| `adr/0022-filter-system.md` | ADR-0022: Filter system: declarative fields, per-domain scoping, dialect translation |
+| `adr/0023-sqlite-checkpointer.md` | ADR-0023: SQLite checkpointer and session store for graph resumption |
+| `adr/0024-file-gateway.md` | ADR-0024: File-gateway pattern for external-repository tools |
+| `adr/0025-agent-topology.md` | ADR-0025: Agent loop topology: plan->explore->toolpick->observe->evaluate vs flat ReAct |
+| `adr/0026-client-server.md` | ADR-0026: Client-server architecture over monolithic app |
+| `adr/0027-doi-bibliographic-resolver.md` | ADR-0027: DOI/Bibliographic resolver: round-robin tiered cascade with disk cache |
