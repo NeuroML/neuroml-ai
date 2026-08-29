@@ -51,4 +51,5 @@ Structure:
 | `adr/0014-runtime-model-switching.md` | ADR-0014: Runtime per-request model switching with user-supplied API keys |
 | `adr/0015-profile-env-config.md` | ADR-0015: Layered config via env file and profile-resolved JSON |
 | `adr/0016-baselanggraph-orchestrator.md` | ADR-0016: BaseLangGraph as single model/MCP/VS orchestrator (Template Method) |
+| `adr/0017-llm-invoke-retry.md` | ADR-0017: LLM invoke retry and token-window adaptation |
 | `adr/0019-shared-abstract-nodes.md` | ADR-0019: Shared abstract node hierarchy (Template Method for nodes) |
