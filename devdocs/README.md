@@ -46,3 +46,4 @@ Structure:
 | `adr/0009-no-answer-fallback.md` | ADR-0009: Configurable fallback when no grounded answer can be generated |
 | `adr/0010-guard-node.md` | ADR-0010: Cheap guard node for production deployments |
 | `adr/0011-multiple-query-domains.md` | ADR-0011: Multiple query domains per RAG query |
+| `adr/0012-bm25-hybrid.md` | ADR-0012: BM25 hybrid retrieval for exact string matches |
