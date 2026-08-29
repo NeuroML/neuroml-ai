@@ -49,3 +49,4 @@ Structure:
 | `adr/0012-bm25-hybrid.md` | ADR-0012: BM25 hybrid retrieval for exact string matches |
 | `adr/0013-inspection-features.md` | ADR-0013: Inspection features for validating RAG output |
 | `adr/0014-runtime-model-switching.md` | ADR-0014: Runtime per-request model switching with user-supplied API keys |
+| `adr/0015-profile-env-config.md` | ADR-0015: Layered config via env file and profile-resolved JSON |
