@@ -106,10 +106,13 @@ Chosen option: "C. ``BaseLangGraph`` Template Method in ``klea_utils`` (GoF Temp
   visible to both graphs.
 * Good, because ``ty`` and ``ruff`` have a single import root
   (``ty.toml`` extra-paths) rather than per-app path tricks.
-* Bad, because inheritance couples ``klea_rag``/``klea_agent`` to
-  ``klea_utils.graph.base`` -- a base change touches every app.  The
-  three abstracts keep the seam explicit, but the template order is
-  fixed and ``@final setup()`` cannot be overridden.
+* Bad (inherent to pattern): inheritance couples
+  ``klea_rag``/``klea_agent`` to ``klea_utils.graph.base`` -- a base
+  change touches every app.  The three abstracts keep the seam
+  explicit, but the template order is fixed and ``@final setup()``
+  cannot be overridden.  One cannot have Template Method without this
+  rigidity; hooks (``_pre_setup``, ``_pre_graph``, subclass
+  abstracts) are the intended extension points.
 * Bad, because abstract-method contracts are not enforced at import
   time beyond ``abstractmethod``; a missing ``_setup_models`` fails
   only on ``setup()``.
@@ -131,7 +134,9 @@ Chosen option: "C. ``BaseLangGraph`` Template Method in ``klea_utils`` (GoF Temp
 
 * Good, because DRY lifecycle with single override point per phase
 * Good, because env schema stays single source of truth via ``llm_models``
-* Bad, because template order is fixed via ``@final``
+* Bad (inherent to pattern): template order is fixed via ``@final`` --
+  one cannot have Template Method without this rigidity; hooks are the
+  extension points
 
 ### Per-app duplication
 
