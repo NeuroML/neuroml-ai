@@ -50,3 +50,4 @@ Structure:
 | `adr/0013-inspection-features.md` | ADR-0013: Inspection features for validating RAG output |
 | `adr/0014-runtime-model-switching.md` | ADR-0014: Runtime per-request model switching with user-supplied API keys |
 | `adr/0015-profile-env-config.md` | ADR-0015: Layered config via env file and profile-resolved JSON |
+| `adr/0016-baselanggraph-orchestrator.md` | ADR-0016: BaseLangGraph as single model/MCP/VS orchestrator (Template Method) |
