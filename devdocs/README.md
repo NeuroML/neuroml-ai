@@ -44,3 +44,4 @@ Structure:
 | `adr/0007-mcp-permissions.md` | ADR-0007: Declarative path permissions with dual-layer check and deferred interactive policy |
 | `adr/0008-always-retrieve.md` | ADR-0008: Always retrieve for RAG queries |
 | `adr/0009-no-answer-fallback.md` | ADR-0009: Configurable fallback when no grounded answer can be generated |
+| `adr/0010-guard-node.md` | ADR-0010: Cheap guard node for production deployments |
