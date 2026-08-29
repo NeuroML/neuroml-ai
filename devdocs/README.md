@@ -62,3 +62,4 @@ Structure:
 | `adr/0025-agent-topology.md` | ADR-0025: Agent loop topology: plan->explore->toolpick->observe->evaluate vs flat ReAct |
 | `adr/0026-client-server.md` | ADR-0026: Client-server architecture over monolithic app |
 | `adr/0027-doi-bibliographic-resolver.md` | ADR-0027: DOI/Bibliographic resolver: round-robin tiered cascade with disk cache |
+| `system/c4-component-rag.md` | C4 model Level 3: RAG component diagram (auto-generated Mermaid core + elk augmentation) |
