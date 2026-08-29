@@ -45,3 +45,4 @@ Structure:
 | `adr/0008-always-retrieve.md` | ADR-0008: Always retrieve for RAG queries |
 | `adr/0009-no-answer-fallback.md` | ADR-0009: Configurable fallback when no grounded answer can be generated |
 | `adr/0010-guard-node.md` | ADR-0010: Cheap guard node for production deployments |
+| `adr/0011-multiple-query-domains.md` | ADR-0011: Multiple query domains per RAG query |
