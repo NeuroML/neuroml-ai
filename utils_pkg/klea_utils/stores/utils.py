@@ -443,20 +443,27 @@ def truncate_reference_material(
     :returns: New mapping with the same domain keys, lists truncated to the
         budget
     """
-    budgeted: dict[str, list[tuple[Document, float]]] = {}
+    budgeted: dict[str, list[tuple[Document, float]]] = {
+        d: [] for d in reference_material
+    }
     total = 0
     crossed = False
-    for domain, docs in reference_material.items():
-        domain_docs: list[tuple[Document, float]] = []
-        for doc, score in docs:
+    # Round-robin across domains to avoid starvation: take one doc at a time
+    # from each domain in dict order, rather than filling first domain fully
+    # before later domains get any docs.
+    max_len = max((len(v) for v in reference_material.values()), default=0)
+    for idx in range(max_len):
+        for domain, docs in reference_material.items():
+            if idx >= len(docs):
+                continue
+            doc, score = docs[idx]
             size = len(doc.page_content) + REF_DOC_OVERHEAD
             if total + size > max_chars:
                 if crossed:
-                    break
+                    continue
                 crossed = True
-            domain_docs.append((doc, score))
+            budgeted[domain].append((doc, score))
             total += size
-        budgeted[domain] = domain_docs
     return budgeted
 
 
