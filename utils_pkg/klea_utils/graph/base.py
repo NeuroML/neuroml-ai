@@ -338,20 +338,10 @@ class BaseLangGraph(ABC):
             )
             self.stores.setup()
             self.logger.info(f"Vector stores loaded: {self.stores.domains}")
-
-            # dynamically generate schema for domains
-            all_domains = self.stores.domains.copy()
-            all_domains.append("undefined")
-
-            self.QueryDomainSchema = create_model(
-                "QueryDomainSchema",
-                query_domains=(
-                    list[Literal[tuple(all_domains)]],
-                    Field(default=["undefined"], validate_default=True),
-                ),
+        elif self.retriever_config:
+            self.logger.warning(
+                "No vector stores configured (missing embedding model)."
             )
-        else:
-            self.logger.warning("No vector stores configured.")
 
         # BM25 keyword stores need no embedding model, so build them whenever
         # any domain configures bm25_stores.
@@ -366,6 +356,22 @@ class BaseLangGraph(ABC):
                 k_inc=self.k_inc,
             )
             self.logger.info(f"BM25 stores loaded: {self.bm25_stores.domains}")
+
+        # Build QueryDomainSchema from all configured domains (vector or BM25)
+        # so BM25-only deployments still get structured classification.
+        if self.retriever_config and self.retriever_config.domains:
+            all_domains = list(self.retriever_config.domains.keys())
+            if "undefined" not in all_domains:
+                all_domains.append("undefined")
+            self.QueryDomainSchema = create_model(
+                "QueryDomainSchema",
+                query_domains=(
+                    list[Literal[tuple(all_domains)]],
+                    Field(default=["undefined"], validate_default=True),
+                ),
+            )
+        elif self.QueryDomainSchema is None:
+            self.logger.warning("No domains configured for QueryDomainSchema")
 
     def _export_graph_png(self, filename: str) -> None:
         """Export the LangGraph as a Mermaid PNG diagram and its Mermaid source.
