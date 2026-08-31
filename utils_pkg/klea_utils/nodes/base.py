@@ -262,9 +262,10 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         limits) before applying provider field filtering to strip fields
         invalid for the resolved provider.
         """
-        role_overrides = model_overrides_ctx.get().get(self.model_type, {})
+        ctx_val = model_overrides_ctx.get()
+        role_overrides = (ctx_val or {}).get(self.model_type, {})  # type: ignore[union-attr]
         self.logger.debug(
-            f"{mask_sensitive(model_overrides_ctx.get()) = }\n"
+            f"{mask_sensitive(ctx_val or {}) = }\n"
             f"{self.model_type = }\n"
             f"{mask_sensitive(role_overrides) = }\n"
             f"{self.model_defaults = }"

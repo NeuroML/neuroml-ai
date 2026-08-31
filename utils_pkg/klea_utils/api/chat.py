@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import copy
 import json
 import logging
 import traceback
@@ -54,8 +55,8 @@ def create_chat_router() -> APIRouter:
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
 
         store.create_chat(payload.user_id, payload.chat_id)
-        model_overrides_ctx.set(store.get_overrides(payload.user_id, payload.chat_id))
-
+        overrides = store.get_overrides(payload.user_id, payload.chat_id)
+        token = model_overrides_ctx.set(copy.deepcopy(overrides or {}))
         try:
             result = await graph.run_graph_invoke(payload.query, thread_id)
             message = result if isinstance(result, str) else str(result)
@@ -70,6 +71,8 @@ def create_chat_router() -> APIRouter:
         except Exception as e:
             logger.error(f"{e}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            model_overrides_ctx.reset(token)
 
         return {"result": message}
 
@@ -89,9 +92,10 @@ def create_chat_router() -> APIRouter:
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
 
         store.create_chat(payload.user_id, payload.chat_id)
-        model_overrides_ctx.set(store.get_overrides(payload.user_id, payload.chat_id))
+        overrides = store.get_overrides(payload.user_id, payload.chat_id)
 
         async def event_stream():
+            token = model_overrides_ctx.set(copy.deepcopy(overrides or {}))
             query = payload.query
             user_id = payload.user_id
             chat_id = payload.chat_id
@@ -118,6 +122,8 @@ def create_chat_router() -> APIRouter:
                     }
                 )
                 yield f"data: {error_event}\n\n"
+            finally:
+                model_overrides_ctx.reset(token)
 
         return StreamingResponse(
             event_stream(),

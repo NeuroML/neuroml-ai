@@ -40,9 +40,10 @@ from klea_utils.tools import build_tool_description, clean_tool_meta
 # Per-request context variable carrying per-session model overrides (api_key,
 # model, provider, etc.).  Set by the API layer before graph.ainvoke() and
 # read by _invoke_llm() so that nodes don't need to thread overrides through
-# their signatures.  Falls back to an empty dict if not set.
-model_overrides_ctx: contextvars.ContextVar[dict[str, Any]] = contextvars.ContextVar(
-    "model_overrides", default={}
+# their signatures.  Falls back to ``None`` (treated as empty dict) if not
+# set, avoiding a mutable default.
+model_overrides_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
+    contextvars.ContextVar("model_overrides", default=None)
 )
 
 
