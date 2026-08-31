@@ -68,6 +68,10 @@ def parse_model_name(raw: str) -> ParsedModelName:
         return ParsedModelName(provider=None, model_name=raw, suffix=None)
 
     provider = parts[0].lower()
+    if not provider:
+        raise ValueError(f"Invalid model name {raw!r}: missing provider before ':'")
+    if not parts[1]:
+        raise ValueError(f"Invalid model name {raw!r}: missing model after ':'")
 
     if len(parts) == 2:
         return ParsedModelName(provider=provider, model_name=parts[1], suffix=None)
@@ -457,7 +461,11 @@ def resolve_output_token_limit(
         value = overrides.get("max_output_tokens")
     if value is None:
         value = _ROLE_MAX_OUTPUT_TOKENS.get(role or "", DEFAULT_MAX_OUTPUT_TOKENS)
-    value = int(value)
+    try:
+        value = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        logger.warning(f"Invalid token limit {value!r}: {exc}, using fallback")
+        value = _ROLE_MAX_OUTPUT_TOKENS.get(role or "", DEFAULT_MAX_OUTPUT_TOKENS)
 
     # Clamp to the model's output limit and total budget, if known.
     # models.dev's limits are per-deployment config and may under-report a
@@ -1154,9 +1162,17 @@ def load_prompt(prompt_name: str, prompt_registry_location: str):
     :returns: loaded prompt text
 
     """
-    prompt_path = Path(f"{prompt_registry_location}/{prompt_name}.md")
-    if not prompt_path.exists():
+    base = Path(prompt_registry_location).resolve()
+    prompt_path = (base / f"{prompt_name}.md").resolve()
+    # Prevent path traversal (e.g. prompt_name="../../etc/passwd")
+    try:
+        prompt_path.relative_to(base)
+    except ValueError:
+        raise FileNotFoundError(
+            f"Invalid prompt name {prompt_name!r}: outside registry"
+        ) from None
+    if not prompt_path.is_file():
         raise FileNotFoundError(f"{prompt_path} was not found")
 
-    with open(prompt_path, "r") as f:
+    with open(prompt_path, "r", encoding="utf-8") as f:
         return f.read()
