@@ -13,7 +13,7 @@ from typing import Any
 
 from klea_utils.mcp.server.config import BundledToolsConfig
 from klea_utils.stores.config import PerDomainConfig as BasePerDomainConfig
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class GeneralConfig(BaseModel):
@@ -27,19 +27,19 @@ class GeneralConfig(BaseModel):
     actually fed to the answer LLM, independent of ``k``.
     """
 
-    default_k: int = 5
-    k_max: int = 10
-    k_inc: int = 1
+    default_k: int = Field(default=5, ge=1)
+    k_max: int = Field(default=10, ge=1)
+    k_inc: int = Field(default=1, ge=1)
     # char budget for the reference material serialized into the LLM context
     # (see klea_utils.stores.utils.truncate_reference_material)
-    max_refs_size: int = 20000
+    max_refs_size: int = Field(default=20000, ge=1)
     # TODO: unused---what is this for?
     pre_prompt: str = ""
     non_domain_chat: bool = True
     fallback_to_training_data: bool = True
     fallback_warning: str = ""
-    max_retrieval_attempts: int = 5
-    max_rewrite_attempts: int = 1
+    max_retrieval_attempts: int = Field(default=5, ge=1)
+    max_rewrite_attempts: int = Field(default=1, ge=0)
     #: The shared bundled tools server is opt-in for the RAG: deployments
     #: wire in the common file/web/download tools explicitly rather than
     #: getting them by default (RAGs are domain specific, so which common
@@ -47,6 +47,14 @@ class GeneralConfig(BaseModel):
     bundled_tools: BundledToolsConfig = Field(
         default_factory=lambda: BundledToolsConfig(enabled=False)
     )
+
+    @model_validator(mode="after")
+    def _validate_k(self) -> "GeneralConfig":
+        if self.k_max < self.default_k:
+            raise ValueError(
+                f"k_max ({self.k_max}) must be >= default_k ({self.default_k})"
+            )
+        return self
 
 
 class PerDomainConfig(BasePerDomainConfig):
