@@ -84,8 +84,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         res_message = AIMessage(content=full_answer)
         self.logger.debug(res_message.pretty_repr())
 
-        messages = state.messages  # type: ignore
-        messages.append(res_message)
+        messages = [*state.messages, res_message]  # type: ignore[attr-defined]
 
         is_rewrite = state.text_response_eval.next_step == "rewrite_answer"  # type: ignore
         return {

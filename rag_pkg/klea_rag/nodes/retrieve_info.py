@@ -118,7 +118,7 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
 
         self.write_custom_stream({"type": "progress", "node": self.label})
 
-        reference_material = state.reference_material
+        reference_material = dict(state.reference_material)
         # Apply the same normalization used at indexing time so query and
         # stored chunks share an identical plain-text form (see
         # klea_utils.stores.utils.normalize_text).  The query is LLM-generated

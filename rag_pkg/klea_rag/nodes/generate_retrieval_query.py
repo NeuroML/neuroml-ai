@@ -166,9 +166,7 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
         allowed = self._configured_filter_fields(state)
         result.config_filters = normalize_config_filters(result.filters, allowed)
 
-        messages = state.messages
-        output = AIMessage(content=result.search_query)
-        messages.append(output)
+        messages = [*state.messages, AIMessage(content=result.search_query)]
 
         return {
             "messages": messages,

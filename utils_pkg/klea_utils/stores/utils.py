@@ -302,8 +302,22 @@ def rrf_merge(
             key = doc.page_content
             rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (RRF_K + rank)
             if key not in doc_by_key:
-                doc_by_key[key] = doc
-                doc.metadata[SOURCE_SCORES_KEY] = {}
+                # Copy metadata so we don't mutate the retriever's original doc
+                # (which would pollute cached results and checkpoint history)
+                try:
+                    # langchain Document is a Pydantic model — model_copy is cheapest
+                    copied = doc.model_copy(deep=True)  # type: ignore[attr-defined]
+                except (AttributeError, TypeError):
+                    # Fallback for plain objects / older versions
+                    from langchain_core.documents import (
+                        Document as _Doc,  # type: ignore[import]
+                    )
+
+                    copied = _Doc(
+                        page_content=doc.page_content, metadata=dict(doc.metadata)
+                    )
+                copied.metadata[SOURCE_SCORES_KEY] = {}
+                doc_by_key[key] = copied
             # Cast to Python floats: BM25 and vector-store scores are numpy
             # scalars (np.float64/np.float32).  The scores are persisted in
             # doc metadata, which ends up inside the graph state; LangGraph's
