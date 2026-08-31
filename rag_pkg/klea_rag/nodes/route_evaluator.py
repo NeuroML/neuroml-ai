@@ -111,9 +111,9 @@ class RouteEvaluator(AbstractRouterNode):
                         and resp.confidence >= 0.5
                         and (
                             resp.relevance < 0.5
-                            and resp.groundedness < 0.5
-                            and resp.coherence < 0.5
-                            and resp.conciseness < 0.5
+                            or resp.groundedness < 0.5
+                            or resp.coherence < 0.5
+                            or resp.conciseness < 0.5
                         )
                     )
                 )

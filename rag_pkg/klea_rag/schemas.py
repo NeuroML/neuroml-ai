@@ -21,12 +21,12 @@ from pydantic import BaseModel, Field
 class EvaluateAnswerSchema(BaseModel):
     """Evaluation of LLM generated answer. Descriptions given in the main prompt"""
 
-    confidence: float = 0.0
-    coverage: float = 0.0
-    relevance: float = 0.0
-    groundedness: float = 0.0
-    coherence: float = 0.0
-    conciseness: float = 0.0
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    relevance: float = Field(default=0.0, ge=0.0, le=1.0)
+    groundedness: float = Field(default=0.0, ge=0.0, le=1.0)
+    coherence: float = Field(default=0.0, ge=0.0, le=1.0)
+    conciseness: float = Field(default=0.0, ge=0.0, le=1.0)
     next_step: Literal[
         "continue", "retrieve_more_info", "modify_query", "rewrite_answer", "undefined"
     ] = Field(default="undefined", validate_default=True)
