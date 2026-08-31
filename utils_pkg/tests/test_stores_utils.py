@@ -577,18 +577,19 @@ def test_truncate_reference_material_keeps_oversized_single_doc():
 
 
 def test_truncate_reference_material_global_across_domains():
-    """The budget is shared across domains: the first to hit it empties the rest."""
+    """Budget is shared but round-robin ensures fairness across domains."""
     refs = {
         "A": [(_doc("c" * 50), 0.9), (_doc("c" * 50), 0.8)],
         "B": [(_doc("c" * 50), 0.7)],
     }
-    # doc A1 fits (250); A2 crosses the 450 budget and is kept; B has no budget
-    # left and is dropped entirely
+    # Budget 450 with doc size 250 (50+200 overhead): round-robin gives
+    # A1 (250), B1 (250) -> total 500 crosses but B1 is kept as fair share,
+    # A2 is then skipped.
     budgeted = truncate_reference_material(refs, max_chars=450)
     logger.info(f"domain counts: A={len(budgeted['A'])}, B={len(budgeted['B'])}")
 
-    assert len(budgeted["A"]) == 2
-    assert len(budgeted["B"]) == 0
+    assert len(budgeted["A"]) == 1
+    assert len(budgeted["B"]) == 1
 
 
 def test_find_source_files_excludes_cache_dir(tmp_path):
