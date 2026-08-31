@@ -63,11 +63,14 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         reference_material = state.reference_material  # type: ignore
         reference_material_text = serialize_reference_material(reference_material)
 
-        # Add tool results to the reference material
+        # Add tool results to the reference material (per-tool capped to avoid
+        # starvation; no total cap — per-tool 2500 is the bound)
         if hasattr(state, "tool_results") and state.tool_results:  # type: ignore
-            reference_material_text += "\n" + textualize_tool_results(
-                state.tool_results
-            )  # type: ignore
+            tool_text = textualize_tool_results(
+                state.tool_results,
+                max_len_per_tool=2500,  # type: ignore
+            )
+            reference_material_text += "\n" + tool_text
 
         return {
             "query": state.query,  # type: ignore
