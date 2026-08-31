@@ -13,7 +13,7 @@ from typing import Any
 
 from klea_utils.nodes.abstract import AbstractLangGraphNode
 
-from klea_rag.schemas import EvaluateAnswerSchema, RAGState
+from klea_rag.schemas import EvaluateAnswerSchema, RAGState, RetrievalQueryOutput
 
 
 class InitRAGState(AbstractLangGraphNode[RAGState, dict[str, Any]]):
@@ -32,9 +32,8 @@ class InitRAGState(AbstractLangGraphNode[RAGState, dict[str, Any]]):
             "message_for_user": "",
             "retrieval_attempts": 0,
             "rewrite_attempts": 0,
-            # retrieval_query is deliberately not reset here: the query
-            # generator is its sole writer and always writes a fresh
-            # RetrievalQueryOutput, so no cleanup is needed
+            "query_domains": ["undefined"],
+            "retrieval_query": RetrievalQueryOutput(),
             "tool_calls": [],
             "tool_results": [],
             "reference_material": {},
