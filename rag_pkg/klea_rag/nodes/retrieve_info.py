@@ -113,7 +113,12 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         retrieval_attempts = state.retrieval_attempts + 1
 
         if not self.retrievers:
-            self.logger.debug("No retrievers configured, skipping retrieval")
+            if any(d != "undefined" for d in state.query_domains):
+                self.logger.warning(
+                    f"No retrievers configured for domains {state.query_domains}, skipping retrieval"
+                )
+            else:
+                self.logger.debug("No retrievers configured, skipping retrieval")
             return {"retrieval_attempts": retrieval_attempts}
 
         self.write_custom_stream({"type": "progress", "node": self.label})
