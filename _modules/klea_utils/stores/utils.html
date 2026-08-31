@@ -370,11 +370,19 @@
     <span class="c1"># (when it lives under the source dir) and any Chroma store folder</span>
     <span class="c1"># (a dir containing chroma.sqlite3) inside the source dir.</span>
     <span class="n">skip_dirs</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">source_resolved</span> <span class="ow">in</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
-        <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resolved_store</span> <span class="o">=</span> <span class="n">store_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">resolved_store</span> <span class="o">!=</span> <span class="n">source_resolved</span> <span class="ow">and</span> <span class="n">resolved_store</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span>
+            <span class="n">source_resolved</span>
+        <span class="p">):</span>
+            <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">resolved_store</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">chroma_db</span> <span class="ow">in</span> <span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"chroma.sqlite3"</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">chroma_db</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-            <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">chroma_db</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="n">chroma_db</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="c1"># Don't add source_dir itself  ---  when store==source, we only want to</span>
+            <span class="c1"># exclude the DB file, not all docs in the source</span>
+            <span class="k">if</span> <span class="n">parent</span> <span class="o">!=</span> <span class="n">source_resolved</span><span class="p">:</span>
+                <span class="n">skip_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
 
     <span class="n">supported</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">"*"</span><span class="p">)):</span>
@@ -603,8 +611,22 @@
             <span class="n">key</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">page_content</span>
             <span class="n">rrf_scores</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">rrf_scores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">RRF_K</span> <span class="o">+</span> <span class="n">rank</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">doc_by_key</span><span class="p">:</span>
-                <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc</span>
-                <span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="c1"># Copy metadata so we don't mutate the retriever's original doc</span>
+                <span class="c1"># (which would pollute cached results and checkpoint history)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># langchain Document is a Pydantic model  ---  model_copy is cheapest</span>
+                    <span class="n">copied</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">model_copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># type: ignore[attr-defined]</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                    <span class="c1"># Fallback for plain objects / older versions</span>
+                    <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.documents</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                        <span class="n">Document</span> <span class="k">as</span> <span class="n">_Doc</span><span class="p">,</span>  <span class="c1"># type: ignore[import]</span>
+                    <span class="p">)</span>
+
+                    <span class="n">copied</span> <span class="o">=</span> <span class="n">_Doc</span><span class="p">(</span>
+                        <span class="n">page_content</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">page_content</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">copied</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="n">SOURCE_SCORES_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">doc_by_key</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">copied</span>
             <span class="c1"># Cast to Python floats: BM25 and vector-store scores are numpy</span>
             <span class="c1"># scalars (np.float64/np.float32).  The scores are persisted in</span>
             <span class="c1"># doc metadata, which ends up inside the graph state; LangGraph's</span>
@@ -728,20 +750,27 @@
 <span class="sd">    :returns: New mapping with the same domain keys, lists truncated to the</span>
 <span class="sd">        budget</span>
 <span class="sd">    """</span>
-    <span class="n">budgeted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">budgeted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">d</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">reference_material</span>
+    <span class="p">}</span>
     <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">crossed</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">for</span> <span class="n">domain</span><span class="p">,</span> <span class="n">docs</span> <span class="ow">in</span> <span class="n">reference_material</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">domain_docs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Document</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+    <span class="c1"># Round-robin across domains to avoid starvation: take one doc at a time</span>
+    <span class="c1"># from each domain in dict order, rather than filling first domain fully</span>
+    <span class="c1"># before later domains get any docs.</span>
+    <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">reference_material</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_len</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">domain</span><span class="p">,</span> <span class="n">docs</span> <span class="ow">in</span> <span class="n">reference_material</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">doc</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">docs</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
             <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">page_content</span><span class="p">)</span> <span class="o">+</span> <span class="n">REF_DOC_OVERHEAD</span>
             <span class="k">if</span> <span class="n">total</span> <span class="o">+</span> <span class="n">size</span> <span class="o">&gt;</span> <span class="n">max_chars</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">crossed</span><span class="p">:</span>
-                    <span class="k">break</span>
+                    <span class="k">continue</span>
                 <span class="n">crossed</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="n">domain_docs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">))</span>
+            <span class="n">budgeted</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">doc</span><span class="p">,</span> <span class="n">score</span><span class="p">))</span>
             <span class="n">total</span> <span class="o">+=</span> <span class="n">size</span>
-        <span class="n">budgeted</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">domain_docs</span>
     <span class="k">return</span> <span class="n">budgeted</span></div>
 
 

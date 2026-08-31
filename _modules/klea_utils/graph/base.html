@@ -327,9 +327,10 @@
 <span class="c1"># Per-request context variable carrying per-session model overrides (api_key,</span>
 <span class="c1"># model, provider, etc.).  Set by the API layer before graph.ainvoke() and</span>
 <span class="c1"># read by _invoke_llm() so that nodes don't need to thread overrides through</span>
-<span class="c1"># their signatures.  Falls back to an empty dict if not set.</span>
-<span class="n">model_overrides_ctx</span><span class="p">:</span> <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">(</span>
-    <span class="s2">"model_overrides"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">{}</span>
+<span class="c1"># their signatures.  Falls back to ``None`` (treated as empty dict) if not</span>
+<span class="c1"># set, avoiding a mutable default.</span>
+<span class="n">model_overrides_ctx</span><span class="p">:</span> <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">contextvars</span><span class="o">.</span><span class="n">ContextVar</span><span class="p">(</span><span class="s2">"model_overrides"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 <span class="p">)</span>
 
 
@@ -626,20 +627,10 @@
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">setup</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Vector stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-            <span class="c1"># dynamically generate schema for domains</span>
-            <span class="n">all_domains</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stores</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">all_domains</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"undefined"</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span> <span class="o">=</span> <span class="n">create_model</span><span class="p">(</span>
-                <span class="s2">"QueryDomainSchema"</span><span class="p">,</span>
-                <span class="n">query_domains</span><span class="o">=</span><span class="p">(</span>
-                    <span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">all_domains</span><span class="p">)]],</span>
-                    <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">"undefined"</span><span class="p">],</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-                <span class="p">),</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"No vector stores configured (missing embedding model)."</span>
             <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No vector stores configured."</span><span class="p">)</span>
 
         <span class="c1"># BM25 keyword stores need no embedding model, so build them whenever</span>
         <span class="c1"># any domain configures bm25_stores.</span>
@@ -654,6 +645,22 @@
                 <span class="n">k_inc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_inc</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"BM25 stores loaded: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bm25_stores</span><span class="o">.</span><span class="n">domains</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="c1"># Build QueryDomainSchema from all configured domains (vector or BM25)</span>
+        <span class="c1"># so BM25-only deployments still get structured classification.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span><span class="o">.</span><span class="n">domains</span><span class="p">:</span>
+            <span class="n">all_domains</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retriever_config</span><span class="o">.</span><span class="n">domains</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="k">if</span> <span class="s2">"undefined"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_domains</span><span class="p">:</span>
+                <span class="n">all_domains</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"undefined"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span> <span class="o">=</span> <span class="n">create_model</span><span class="p">(</span>
+                <span class="s2">"QueryDomainSchema"</span><span class="p">,</span>
+                <span class="n">query_domains</span><span class="o">=</span><span class="p">(</span>
+                    <span class="nb">list</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">all_domains</span><span class="p">)]],</span>
+                    <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">"undefined"</span><span class="p">],</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">QueryDomainSchema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"No domains configured for QueryDomainSchema"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_export_graph_png</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Export the LangGraph as a Mermaid PNG diagram and its Mermaid source.</span>
@@ -858,6 +865,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Opening sqlite checkpointer at </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">db_path</span><span class="p">)</span>
             <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">aiosqlite</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">AsyncSqliteSaver</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+            <span class="c1"># Keep raw connection for lifespan cleanup (AsyncSqliteSaver holds it as .conn)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_checkpointer_conn</span> <span class="o">=</span> <span class="n">conn</span>  <span class="c1"># type: ignore[attr-defined]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Sqlite checkpointer ready"</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">"inmemory"</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">()</span>
@@ -950,8 +959,9 @@
         <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
         <span class="k">if</span> <span class="s2">"query"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Provided state should include the key 'query': </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"state must contain 'query' key"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Graph not compiled. Call setup() first."</span><span class="p">)</span>
 
         <span class="n">final_state</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">final_state</span><span class="p">)</span>
@@ -973,6 +983,9 @@
 <span class="sd">        """</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Graph not compiled. Call setup() first."</span><span class="p">)</span>
+
         <span class="n">final_state</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">ainvoke</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">final_state</span><span class="w"> </span><span class="si">=}</span><span class="s2">"</span><span class="p">)</span>
@@ -992,6 +1005,9 @@
 <span class="sd">        :yields: ``message_for_user`` strings from each node</span>
 <span class="sd">        """</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Graph not compiled. Call setup() first."</span><span class="p">)</span>
 
         <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">chunk</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1014,7 +1030,10 @@
 <span class="sd">        """</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="n">res</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Graph not compiled. Call setup() first."</span><span class="p">)</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span></div>
 
 
@@ -1054,7 +1073,8 @@
 <span class="sd">        """</span>
         <span class="n">config</span><span class="p">:</span> <span class="n">RunnableConfig</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"configurable"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"thread_id"</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">}}</span>
 
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="s2">"Graph not compiled. Call setup() first."</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">"Graph not compiled. Call setup() first."</span><span class="p">)</span>
 
         <span class="n">stream</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">astream_events</span><span class="p">(</span>
             <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">},</span>

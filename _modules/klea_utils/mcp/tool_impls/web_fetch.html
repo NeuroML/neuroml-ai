@@ -302,7 +302,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlparse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urljoin</span><span class="p">,</span> <span class="n">urlparse</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">bs4</span><span class="w"> </span><span class="kn">import</span> <span class="n">BeautifulSoup</span>
@@ -310,7 +310,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_make_retryer_httpx</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_impls.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">SessionLike</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_impls.ssrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_ssrf</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.tool_impls.ssrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">_MAX_REDIRECTS</span><span class="p">,</span> <span class="n">check_ssrf_async</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cache_dir</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -556,7 +556,7 @@
         <span class="p">}</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_internal_hosts</span><span class="p">:</span>
-        <span class="n">ssrf_error</span> <span class="o">=</span> <span class="n">check_ssrf</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">ssrf_error</span> <span class="o">=</span> <span class="k">await</span> <span class="n">check_ssrf_async</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ssrf_error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"SSRF guard blocked </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">ssrf_error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">{</span>
@@ -584,9 +584,10 @@
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_stream_once</span><span class="p">(</span><span class="n">user_agent</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Stream the URL once with *user_agent*.</span>
 
-<span class="sd">        Writes the result into the enclosing nonlocals.  Returns ``False``</span>
-<span class="sd">        when a Cloudflare challenge should trigger an honest-UA retry,</span>
-<span class="sd">        ``True`` otherwise (including HTTP errors).</span>
+<span class="sd">        Follows redirects manually (up to :data:`_MAX_REDIRECTS`) so each</span>
+<span class="sd">        hop can be SSRF-checked. Returns ``False`` when a Cloudflare</span>
+<span class="sd">        challenge should trigger an honest-UA retry, ``True`` otherwise</span>
+<span class="sd">        (including HTTP errors).</span>
 <span class="sd">        """</span>
         <span class="k">nonlocal</span> \
             <span class="n">status_code</span><span class="p">,</span> \
@@ -600,62 +601,108 @@
             <span class="s2">"Accept-Language"</span><span class="p">:</span> <span class="s2">"en-US,en;q=0.9"</span><span class="p">,</span>
             <span class="s2">"User-Agent"</span><span class="p">:</span> <span class="n">user_agent</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Streaming </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">user_agent</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">allow_internal_hosts</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span><span class="p">)</span>
-        <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
-            <span class="s2">"GET"</span><span class="p">,</span>
-            <span class="n">url</span><span class="p">,</span>
-            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
-            <span class="n">timeout</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span><span class="n">timeout</span><span class="p">),</span>
-            <span class="n">follow_redirects</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
-            <span class="n">status_code</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
-            <span class="n">content_type</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content-type"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">current_url</span> <span class="o">=</span> <span class="n">url</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">_MAX_REDIRECTS</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Streaming </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">user_agent</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">allow_internal_hosts</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">stream</span><span class="p">(</span>
+                <span class="s2">"GET"</span><span class="p">,</span>
+                <span class="n">current_url</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span><span class="n">timeout</span><span class="p">),</span>
+                <span class="n">follow_redirects</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">status_code</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
+                <span class="n">content_type</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content-type"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="p">(</span>
-                <span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span>
-                <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cf-mitigated"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"challenge"</span>
-            <span class="p">):</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cloudflare challenge for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">; retrying honestly"</span><span class="p">)</span>
-                <span class="k">return</span> <span class="kc">False</span>
-
-            <span class="k">if</span> <span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">status_code</span> <span class="o">==</span> <span class="mi">429</span> <span class="ow">or</span> <span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">500</span><span class="p">:</span>
-                    <span class="c1"># Transient server-side error; raise so the retryer can</span>
-                    <span class="c1"># retry (other 4xx are returned as-is below).</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">"Transient HTTP </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">; will retry"</span>
+                <span class="c1"># Follow redirects manually with per-hop SSRF check</span>
+                <span class="k">if</span> <span class="n">status_code</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">301</span><span class="p">,</span> <span class="mi">302</span><span class="p">,</span> <span class="mi">303</span><span class="p">,</span> <span class="mi">307</span><span class="p">,</span> <span class="mi">308</span><span class="p">):</span>
+                    <span class="n">loc</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">loc</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"Redirect </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> with no Location for </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2">"</span>
+                        <span class="p">)</span>
+                        <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Redirect </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> with no Location"</span>
+                        <span class="k">return</span> <span class="kc">True</span>
+                    <span class="n">next_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">current_url</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+                    <span class="n">parsed_next</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">next_url</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">parsed_next</span><span class="o">.</span><span class="n">scheme</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"http"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="ow">not</span> <span class="n">parsed_next</span><span class="o">.</span><span class="n">netloc</span>
+                    <span class="p">):</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Redirect to invalid URL: </span><span class="si">{</span><span class="n">next_url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                        <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Redirect to invalid URL: </span><span class="si">{</span><span class="n">next_url</span><span class="si">}</span><span class="s2">"</span>
+                        <span class="k">return</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_internal_hosts</span><span class="p">:</span>
+                        <span class="n">ssrf_error</span> <span class="o">=</span> <span class="k">await</span> <span class="n">check_ssrf_async</span><span class="p">(</span><span class="n">next_url</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">ssrf_error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">"SSRF guard blocked redirect </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">next_url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">ssrf_error</span><span class="si">}</span><span class="s2">"</span>
+                            <span class="p">)</span>
+                            <span class="n">error</span> <span class="o">=</span> <span class="n">ssrf_error</span>
+                            <span class="n">status_code</span> <span class="o">=</span> <span class="kc">None</span>
+                            <span class="n">content_type</span> <span class="o">=</span> <span class="s2">""</span>
+                            <span class="k">return</span> <span class="kc">True</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Following redirect </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">next_url</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
-                    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"HTTP error </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-                <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"HTTP </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="n">current_url</span> <span class="o">=</span> <span class="n">next_url</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span>
+                    <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cf-mitigated"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"challenge"</span>
+                <span class="p">):</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Cloudflare challenge for </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2">; retrying honestly"</span>
+                    <span class="p">)</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+
+                <span class="k">if</span> <span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">status_code</span> <span class="o">==</span> <span class="mi">429</span> <span class="ow">or</span> <span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">500</span><span class="p">:</span>
+                        <span class="c1"># Transient server-side error; raise so the retryer can</span>
+                        <span class="c1"># retry (other 4xx are returned as-is below).</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"Transient HTTP </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2">; will retry"</span>
+                        <span class="p">)</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"HTTP error </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">current_url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                    <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"HTTP </span><span class="si">{</span><span class="n">status_code</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Response received</span><span class="se">\n</span><span class="si">{</span><span class="n">current_url</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">status_code</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">content_type</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
+                <span class="p">)</span>
+
+                <span class="n">raw</span><span class="p">,</span> <span class="n">download_truncated</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_read_capped</span><span class="p">(</span>
+                    <span class="n">response</span><span class="p">,</span> <span class="n">max_download_bytes</span>
+                <span class="p">)</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="s2">"html"</span> <span class="ow">in</span> <span class="n">content_type</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="n">content</span> <span class="o">=</span> <span class="n">_html_to_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">content</span> <span class="o">=</span> <span class="n">text</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_chars</span><span class="p">:</span>
+                    <span class="n">content</span> <span class="o">=</span> <span class="n">content</span><span class="p">[:</span><span class="n">max_chars</span><span class="p">]</span>
+                    <span class="n">truncated</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Fetched URL</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">current_url</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">status_code</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">content_type</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">truncated</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">download_truncated</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
+                <span class="p">)</span>
                 <span class="k">return</span> <span class="kc">True</span>
 
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Response received</span><span class="se">\n</span><span class="si">{</span><span class="n">url</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">status_code</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="si">{</span><span class="n">content_type</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
-            <span class="p">)</span>
-
-            <span class="n">raw</span><span class="p">,</span> <span class="n">download_truncated</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_read_capped</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">max_download_bytes</span><span class="p">)</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="s2">"html"</span> <span class="ow">in</span> <span class="n">content_type</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
-                <span class="n">content</span> <span class="o">=</span> <span class="n">_html_to_text</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">content</span> <span class="o">=</span> <span class="n">text</span>
-
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_chars</span><span class="p">:</span>
-                <span class="n">content</span> <span class="o">=</span> <span class="n">content</span><span class="p">[:</span><span class="n">max_chars</span><span class="p">]</span>
-                <span class="n">truncated</span> <span class="o">=</span> <span class="kc">True</span>
-
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Fetched URL</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">url</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">status_code</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">content_type</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">content</span><span class="p">)</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">truncated</span><span class="w"> </span><span class="si">= }</span><span class="se">\n</span><span class="s2">"</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">download_truncated</span><span class="w"> </span><span class="si">= }</span><span class="s2">"</span>
-            <span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Too many redirects for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="s2">"Too many redirects"</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_do_fetch</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">user_agents</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_resolve_user_agents</span><span class="p">()</span>
