@@ -39,6 +39,9 @@ def check_path_access(
         Defaults to the current working directory.
     :raises PermissionDeniedError: when *path* resolves outside the boundary.
     """
+    if not str(path).strip():
+        logger.warning("Permission denied: empty path")
+        raise PermissionDeniedError("Empty path is not allowed")
     the_path = Path(path).expanduser().resolve()
     root = (
         Path(project_root).expanduser().resolve()

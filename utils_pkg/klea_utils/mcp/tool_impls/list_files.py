@@ -67,14 +67,6 @@ def list_files(
     files: list[dict[str, Any]] = []
     paths: list[Path] = []
 
-    if ".." in path:
-        logger.warning(f"Rejecting path containing '..': {path}")
-        return {
-            "files": [],
-            "truncated": False,
-            "error": "Path contains '..', exiting.",
-        }
-
     try:
         check_path_access(the_path, project_root)
     except PermissionDeniedError as exc:
