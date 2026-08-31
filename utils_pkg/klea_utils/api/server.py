@@ -221,19 +221,19 @@ def spawn_server(
         existing server was reused)
     """
     # Lazy: asyncio/httpx and the api utils pull in heavy deps; keep --help fast.
-    import asyncio
 
     import httpx
-
-    from klea_utils.api.utils import check_api_is_ready
 
     health_url = f"http://{host}:{port}/health/ready"
 
     def _probe_once() -> bool:
         try:
-            asyncio.run(check_api_is_ready(health_url, attempts=1))
-            return True
-        except (httpx.HTTPError, OSError):
+            with httpx.Client(timeout=2.0) as client:
+                resp = client.get(health_url)
+                resp.raise_for_status()
+                data = resp.json()
+                return data.get("status") == "ready"
+        except Exception:
             return False
 
     if _probe_once():
@@ -258,6 +258,7 @@ def spawn_server(
             str(port),
             "--no-access-log",
         ],
+        start_new_session=True,
     )
 
     try:
@@ -276,21 +277,54 @@ def spawn_server(
                 break
             time.sleep(1.0)
         else:
-            try:
-                asyncio.run(check_api_is_ready(health_url, timeout=timeout))
-            except httpx.HTTPError as exc:
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                if proc.poll() is not None:
+                    raise RuntimeError(
+                        f"Server at {health_url} did not become ready within {timeout:g}s "
+                        f"(process exited with code {proc.returncode}). "
+                        "Check the server's log file, or run the server directly "
+                        "with 'klea-rag-serve' / 'klea-serve' "
+                        "to see the error."
+                    )
+                if _probe_once():
+                    break
+                time.sleep(1.0)
+            else:
                 raise RuntimeError(
                     f"Server at {health_url} did not become ready within {timeout:g}s. "
                     "Check the server's log file, or run the server directly "
                     "with 'klea-rag-serve' / 'klea-serve' "
                     "to see the error."
-                ) from exc
+                )
 
         yield proc
     finally:
         if proc.poll() is None:
-            proc.terminate()
+            try:
+                if hasattr(os, "killpg"):
+                    os.killpg(os.getpgid(proc.pid), 15)  # SIGTERM to group
+                else:
+                    proc.terminate()
+            except Exception:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                try:
+                    if hasattr(os, "killpg"):
+                        os.killpg(os.getpgid(proc.pid), 9)  # SIGKILL to group
+                    else:
+                        proc.kill()
+                except Exception:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                try:
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
