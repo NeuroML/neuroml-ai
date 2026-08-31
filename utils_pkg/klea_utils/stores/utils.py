@@ -81,11 +81,19 @@ def find_source_files(
     # (when it lives under the source dir) and any Chroma store folder
     # (a dir containing chroma.sqlite3) inside the source dir.
     skip_dirs: set[Path] = set()
-    if store_dir is not None and source_resolved in store_dir.resolve().parents:
-        skip_dirs.add(store_dir.resolve())
+    if store_dir is not None:
+        resolved_store = store_dir.resolve()
+        if resolved_store != source_resolved and resolved_store.is_relative_to(
+            source_resolved
+        ):
+            skip_dirs.add(resolved_store)
     for chroma_db in source_dir.rglob("chroma.sqlite3"):
         if chroma_db.is_file():
-            skip_dirs.add(chroma_db.parent.resolve())
+            parent = chroma_db.parent.resolve()
+            # Don't add source_dir itself  ---  when store==source, we only want to
+            # exclude the DB file, not all docs in the source
+            if parent != source_resolved:
+                skip_dirs.add(parent)
 
     supported: list[Path] = []
     for f in sorted(source_dir.rglob("*")):
@@ -305,7 +313,7 @@ def rrf_merge(
                 # Copy metadata so we don't mutate the retriever's original doc
                 # (which would pollute cached results and checkpoint history)
                 try:
-                    # langchain Document is a Pydantic model — model_copy is cheapest
+                    # langchain Document is a Pydantic model  ---  model_copy is cheapest
                     copied = doc.model_copy(deep=True)  # type: ignore[attr-defined]
                 except (AttributeError, TypeError):
                     # Fallback for plain objects / older versions
