@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import asyncio
 
-from pydantic import AnyUrl
+from pydantic import HttpUrl
 from pydantic import ValidationError as PydanticValidationError
 from tenacity import (
     AsyncRetrying,
@@ -24,7 +24,7 @@ from tenacity import (
 def validate_url(value: str) -> str:
     """Return *value* if it is a valid HTTP(S) URL, else raise ``ValueError``."""
     try:
-        AnyUrl(value)
+        HttpUrl(value)
     except PydanticValidationError:
         raise ValueError(f"'{value}' is not a valid HTTP(S) URL")
     return value
@@ -78,7 +78,7 @@ async def _get_ready(url: str) -> dict:
     # Deferred so importing this module never requires httpx.
     import httpx
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
         response = await client.get(url)
         response.raise_for_status()
         return response.json()

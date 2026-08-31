@@ -50,7 +50,7 @@ async def stream_events(
     """
     url = f"{server_url}/query/stream"
     async with (
-        httpx.AsyncClient(timeout=None) as client,
+        httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0)) as client,
         client.stream(
             "POST",
             url,
@@ -64,7 +64,11 @@ async def stream_events(
                     logger.warning("Skipping non-data line: %s", line[:80])
                 continue
             # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
-            yield json.loads(line[6:])
+            try:
+                yield json.loads(line[6:])
+            except (json.JSONDecodeError, ValueError) as exc:
+                logger.warning(f"Skipping malformed SSE line: {line[:80]!r} ({exc})")
+                continue
 
 
 # TODO: if more fetch-json-from-endpoint functions are added, consider
@@ -187,7 +191,7 @@ def stream_events_sync(
     """
     url = f"{server_url}/query/stream"
     with (
-        httpx.Client(timeout=None) as client,
+        httpx.Client(timeout=httpx.Timeout(300.0, connect=10.0)) as client,
         client.stream(
             "POST",
             url,
@@ -201,4 +205,8 @@ def stream_events_sync(
                     logger.warning("Skipping non-data line: %s", line[:80])
                 continue
             # Strip the SSE "data: " prefix (6 chars) to get raw JSON.
-            yield json.loads(line[6:])
+            try:
+                yield json.loads(line[6:])
+            except (json.JSONDecodeError, ValueError) as exc:
+                logger.warning(f"Skipping malformed SSE line: {line[:80]!r} ({exc})")
+                continue
