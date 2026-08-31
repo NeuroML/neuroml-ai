@@ -138,7 +138,11 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         # Check if evaluator requested more info
         if state.text_response_eval.next_step == "retrieve_more_info":
             for retriever in self.retrievers:
-                retriever.inc_k()
+                grew = retriever.inc_k()
+                if not grew:
+                    self.logger.debug(
+                        f"{retriever.source_label} k already at max, not grown"
+                    )
 
         # Retrieve from all retrievers for all domains
         metadata_filter = state.retrieval_query.to_metadata_filter()
@@ -155,17 +159,26 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
                 f"{domain_name = } got {domain_filter = } (from {metadata_filter = })"
             )
 
-            result_sets = [
-                (
-                    retriever.source_label,
-                    retriever.retrieve(
+            result_sets: list[tuple[str, list[tuple[Any, float]]]] = []
+            for retriever in self.retrievers:
+                try:
+                    docs = retriever.retrieve(
                         domain_name=domain_name,
                         query=cleaned_query,
                         metadata_filter=domain_filter,
-                    ),
+                    )
+                except Exception as exc:  # noqa: BLE001   ---  per-retriever isolation, other retrievers still contribute
+                    self.logger.warning(
+                        f"Retriever {retriever.source_label} failed for {domain_name}: {exc}"
+                    )
+                    continue
+                result_sets.append((retriever.source_label, docs))
+            if not result_sets:
+                self.logger.warning(
+                    f"All retrievers failed for domain {domain_name}, skipping"
                 )
-                for retriever in self.retrievers
-            ]
+                reference_material[domain_name] = []
+                continue
             merged = rrf_merge(result_sets)
             reference_material[domain_name] = rerank_by_recency(merged)
 
