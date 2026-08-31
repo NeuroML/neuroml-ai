@@ -570,6 +570,8 @@ class BaseLangGraph(ABC):
             self.logger.debug("Opening sqlite checkpointer at %s", db_path)
             conn = await aiosqlite.connect(str(db_path))
             self.checkpointer = AsyncSqliteSaver(conn)
+            # Keep raw connection for lifespan cleanup (AsyncSqliteSaver holds it as .conn)
+            self._checkpointer_conn = conn  # type: ignore[attr-defined]
             self.logger.debug("Sqlite checkpointer ready")
         elif self.checkpointer_mode == "inmemory":
             self.checkpointer = InMemorySaver()

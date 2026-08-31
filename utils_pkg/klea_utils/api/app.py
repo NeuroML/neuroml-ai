@@ -8,10 +8,13 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
+
+logger = logging.getLogger(__name__)
 
 from klea_utils.api.sessions_db import SessionStore
 from klea_utils.graph.base import BaseLangGraph
@@ -58,7 +61,50 @@ def make_app(
         yield
 
         app.state.is_ready = False
-        app.state.chat_sessions.close()
+        # Clean up checkpointer and MCP client to avoid fd leaks / DB locks
+        try:
+            checkpointer = getattr(graph, "checkpointer", None)
+            if checkpointer is not None:
+                # AsyncSqliteSaver holds an aiosqlite Connection
+                conn = getattr(checkpointer, "conn", None) or getattr(
+                    graph, "_checkpointer_conn", None
+                )
+                if conn is not None:
+                    try:
+                        await conn.close()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(f"Failed to close checkpointer conn: {exc}")
+                # Some checkpointer implementations expose aclose
+                aclose = getattr(checkpointer, "aclose", None)
+                if callable(aclose):
+                    try:
+                        await aclose()
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(f"Failed to aclose checkpointer: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Error during checkpointer cleanup: {exc}")
+
+        try:
+            mcp_client = getattr(graph, "mcp_client", None)
+            if mcp_client is not None:
+                # FastMCP Client may have async close
+                closer = getattr(mcp_client, "aclose", None) or getattr(
+                    mcp_client, "close", None
+                )
+                if callable(closer):
+                    try:
+                        res = closer()
+                        if hasattr(res, "__await__"):
+                            await res
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(f"Failed to close MCP client: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Error during MCP client cleanup: {exc}")
+
+        try:
+            app.state.chat_sessions.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Failed to close SessionStore: {exc}")
 
     app = FastAPI(lifespan=lifespan, title=title, version=version)
 

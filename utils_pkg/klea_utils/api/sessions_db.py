@@ -71,9 +71,19 @@ class SessionStore:
     def __init__(self, db_path: str | Path) -> None:
         self._path = Path(db_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
+        self._conn = sqlite3.connect(
+            str(self._path), check_same_thread=False, timeout=5.0
+        )
         self._conn.row_factory = sqlite3.Row
         self._lock = threading.Lock()
+        # Improve concurrency and durability for threaded access
+        try:
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA busy_timeout=5000")
+            self._conn.execute("PRAGMA foreign_keys=ON")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+        except sqlite3.Error as exc:
+            logger.warning(f"Failed to set PRAGMAs: {exc}")
         self._conn.executescript(self._SCHEMA_SQL)
         self._conn.commit()
         logger.debug("SessionStore opened at %s", self._path)
@@ -91,7 +101,13 @@ class SessionStore:
     def _json_loads(self, raw: str | None) -> Any:
         if raw is None:
             return {}
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            logger.warning(
+                f"Corrupt JSON in DB, returning empty dict: {exc!r} raw={raw!r}"
+            )
+            return {}
 
     # ------------------------------------------------------------------
     # Chat sessions
