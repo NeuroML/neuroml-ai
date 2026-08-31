@@ -25,6 +25,11 @@ from klea_utils.mcp.tool_impls.web_fetch import _honest_user_agent
 
 logger = logging.getLogger(__name__)
 
+#: Default cap for downloaded files (100 MiB). Larger datasets (GB) should
+#: be downloaded by the user directly; the cap prevents OOM via
+#: response.content buffering while still allowing streaming to disk.
+_DEFAULT_MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+
 
 async def download_file(
     session: SessionLike | None,
@@ -35,6 +40,7 @@ async def download_file(
     retries: int = 3,
     project_root: str | None = None,
     allow_internal_hosts: bool = False,
+    max_download_bytes: int = _DEFAULT_MAX_DOWNLOAD_BYTES,
 ) -> Path | None:
     """Download a URL to *file_path* (overwriting) and return the path.
 
@@ -64,6 +70,8 @@ async def download_file(
         Defaults to the current working directory.
     :param allow_internal_hosts: Skip the SSRF guard (requests to loopback,
         private, link-local, or reserved addresses).
+    :param max_download_bytes: Maximum bytes to download; larger responses
+        are aborted and the download is treated as failed to avoid OOM.
     :returns: The written :class:`Path`, or ``None`` on failure.
     """
     logger.debug(
@@ -97,55 +105,223 @@ async def download_file(
         current_url = url
         current_params = params
         for _ in range(_MAX_REDIRECTS + 1):
-            response = await session.get(
-                current_url,
-                params=current_params,
-                headers={"User-Agent": _honest_user_agent()},
-                timeout=timeout,
-                follow_redirects=False,
-            )
-            # Follow redirects manually with per-hop SSRF check
-            if response.status_code in (301, 302, 303, 307, 308):
-                loc = response.headers.get("location")
-                if not loc:
-                    logger.warning(
-                        f"Redirect {response.status_code} with no Location for {current_url}"
+            response = None  # type: ignore[assignment]
+            stream_exit = None  # type: ignore[assignment]
+            # Prefer streaming to avoid OOM; fallback to get for fakes that raise
+            if hasattr(session, "stream"):
+                try:
+                    stream_ctx = session.stream(
+                        "GET",
+                        current_url,
+                        params=current_params,
+                        headers={"User-Agent": _honest_user_agent()},
+                        timeout=httpx.Timeout(timeout)
+                        if not isinstance(timeout, httpx.Timeout)
+                        else timeout,
+                        follow_redirects=False,
                     )
-                    return None
-                next_url = urljoin(current_url, loc)
-                parsed_next = urlparse(next_url)
-                if (
-                    parsed_next.scheme not in ("http", "https")
-                    or not parsed_next.netloc
-                ):
-                    logger.warning(f"Redirect to invalid URL: {next_url}")
-                    return None
-                if not allow_internal_hosts:
-                    ssrf_error = await check_ssrf_async(next_url)
-                    if ssrf_error is not None:
+                    # Support both real httpx (async context manager) and fake
+                    if hasattr(stream_ctx, "__aenter__"):
+                        response = await stream_ctx.__aenter__()  # type: ignore[attr-defined]
+                        stream_exit = stream_ctx.__aexit__  # type: ignore[attr-defined]
+                    else:
+                        response = stream_ctx  # type: ignore[assignment]
+                        stream_exit = None  # type: ignore[assignment]
+                except AssertionError as exc:
+                    logger.debug(
+                        f"stream not supported for download, fallback to get: {exc}"
+                    )
+                    response = await session.get(  # type: ignore[attr-defined]
+                        current_url,
+                        params=current_params,
+                        headers={"User-Agent": _honest_user_agent()},
+                        timeout=timeout,
+                        follow_redirects=False,
+                    )
+            else:
+                response = await session.get(  # type: ignore[attr-defined]
+                    current_url,
+                    params=current_params,
+                    headers={"User-Agent": _honest_user_agent()},
+                    timeout=timeout,
+                    follow_redirects=False,
+                )
+
+            try:
+                # Follow redirects manually with per-hop SSRF check
+                if response.status_code in (301, 302, 303, 307, 308):
+                    loc = response.headers.get("location")
+                    if not loc:
                         logger.warning(
-                            f"SSRF guard blocked redirect {current_url} -> {next_url}: {ssrf_error}"
+                            f"Redirect {response.status_code} with no Location for {current_url}"
                         )
                         return None
-                logger.debug(
-                    f"Following redirect {response.status_code}: {current_url} -> {next_url}"
-                )
-                current_url = next_url
-                current_params = None  # params already encoded in Location
-                continue
-            if not response.is_success:
-                if response.status_code == 429 or response.status_code >= 500:
-                    # Transient server-side error; raise so the retryer retries.
-                    response.raise_for_status()
-                logger.warning(
-                    f"Failed to download {current_url}: HTTP {response.status_code}"
-                )
-                return None
-            target = Path(file_path)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(response.content)
-            logger.info(f"Saved downloaded file to {target}")
-            return target
+                    next_url = urljoin(current_url, loc)
+                    parsed_next = urlparse(next_url)
+                    if (
+                        parsed_next.scheme not in ("http", "https")
+                        or not parsed_next.netloc
+                    ):
+                        logger.warning(f"Redirect to invalid URL: {next_url}")
+                        return None
+                    if not allow_internal_hosts:
+                        ssrf_error = await check_ssrf_async(next_url)
+                        if ssrf_error is not None:
+                            logger.warning(
+                                f"SSRF guard blocked redirect {current_url} -> {next_url}: {ssrf_error}"
+                            )
+                            return None
+                    logger.debug(
+                        f"Following redirect {response.status_code}: {current_url} -> {next_url}"
+                    )
+                    current_url = next_url
+                    current_params = None  # params already encoded in Location
+                    continue
+                if not response.is_success:
+                    if response.status_code == 429 or response.status_code >= 500:
+                        # Transient server-side error; raise so the retryer retries.
+                        response.raise_for_status()
+                    logger.warning(
+                        f"Failed to download {current_url}: HTTP {response.status_code}"
+                    )
+                    return None
+
+                # Cap and symlink checks before writing
+                target = Path(file_path)
+                # Resolve boundary for symlink checks
+                try:
+                    root = (
+                        Path(project_root).resolve()
+                        if project_root
+                        else Path.cwd().resolve()
+                    )
+                except Exception:
+                    root = Path.cwd().resolve()
+
+                # Early Content-Length guard
+                clen = response.headers.get("content-length")
+                if clen is not None:
+                    try:
+                        if int(clen) > max_download_bytes:
+                            logger.warning(
+                                f"Download Content-Length {clen} exceeds cap {max_download_bytes} for {current_url}"
+                            )
+                            return None
+                    except (TypeError, ValueError):
+                        pass
+
+                target.parent.mkdir(parents=True, exist_ok=True)
+                # Post-mkdir symlink escape check (TOCTOU mitigation)
+                try:
+                    if not target.parent.resolve().is_relative_to(root):
+                        logger.warning(
+                            f"Download parent outside project after resolve: {target.parent}"
+                        )
+                        return None
+                    if target.exists() and target.is_symlink():
+                        # Leaf is a symlink to outside — re-resolve and check
+                        if not target.resolve().is_relative_to(root):
+                            logger.warning(
+                                f"Download target symlink outside project: {target} -> {target.resolve()}"
+                            )
+                            return None
+                    # Also reject if any parent component is a symlink outside root
+                    for parent in target.parent.parents:
+                        if parent == root or str(parent).startswith(str(root)):
+                            break
+                        if parent.is_symlink() and not parent.resolve().is_relative_to(
+                            root
+                        ):
+                            logger.warning(
+                                f"Download parent symlink outside project: {parent}"
+                            )
+                            return None
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"Symlink check failed for {target}: {exc}")
+                    return None
+
+                # Stream to temp file with per-chunk cap to avoid OOM
+                tmp = target.with_name(target.name + ".tmp")
+                written = 0
+                try:
+                    # Prefer aiter_bytes for streaming; fallback to content for fakes
+                    aiter = getattr(response, "aiter_bytes", None)
+                    if callable(aiter):
+                        with open(tmp, "wb") as f:
+                            async for chunk in aiter():
+                                if not chunk:
+                                    continue
+                                if written + len(chunk) > max_download_bytes:
+                                    logger.warning(
+                                        f"Download exceeds cap {max_download_bytes} for {current_url} ({written + len(chunk)} bytes)"
+                                    )
+                                    try:
+                                        f.close()
+                                        tmp.unlink(missing_ok=True)
+                                    except Exception:
+                                        pass
+                                    return None
+                                f.write(chunk)
+                                written += len(chunk)
+                    else:
+                        # Fallback for non-streaming fakes (response.content)
+                        data = getattr(response, "content", b"")
+                        if (
+                            isinstance(data, (str, bytes))
+                            and len(data) > max_download_bytes
+                        ):
+                            logger.warning(
+                                f"Download content size {len(data)} exceeds cap {max_download_bytes} for {current_url}"
+                            )
+                            return None
+                        # Re-check cap before write
+                        if isinstance(data, str):
+                            data = data.encode()
+                        with open(tmp, "wb") as f:
+                            f.write(data)  # type: ignore[arg-type]
+                            written = len(data)  # type: ignore[arg-type]
+                    # Atomic replace after successful write and re-check
+                    if not tmp.exists():
+                        logger.warning(
+                            f"Temp file missing after write for {current_url}"
+                        )
+                        return None
+                    # Final symlink check before replace (target may have become symlink)
+                    if (
+                        target.exists()
+                        and target.is_symlink()
+                        and not target.resolve().is_relative_to(root)
+                    ):
+                        logger.warning(
+                            f"Download target symlink outside project at replace: {target}"
+                        )
+                        try:
+                            tmp.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                        return None
+                    tmp.replace(target)
+                except Exception as exc:
+                    logger.warning(
+                        f"Failed to stream download for {current_url}: {exc}"
+                    )
+                    try:
+                        if tmp.exists():
+                            tmp.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                    # Let retryer handle transient errors
+                    if isinstance(exc, (httpx.HTTPError, TimeoutError)):
+                        raise
+                    return None
+                logger.info(f"Saved downloaded file to {target} ({written} bytes)")
+                return target
+            finally:
+                if stream_exit is not None:
+                    try:
+                        await stream_exit(None, None, None)
+                    except Exception:
+                        pass
         logger.warning(f"Too many redirects for {url}")
         return None
 
@@ -166,6 +342,7 @@ async def download_file_to_cache(
     timeout: float | httpx.Timeout = 30.0,
     retries: int = 3,
     allow_internal_hosts: bool = False,
+    max_download_bytes: int = _DEFAULT_MAX_DOWNLOAD_BYTES,
 ) -> Path | None:
     """Download a URL into *cache_dir* as *file_name* and return the path.
 
@@ -184,6 +361,8 @@ async def download_file_to_cache(
     :param retries: Number of attempts for transient failures.
     :param allow_internal_hosts: Skip the SSRF guard (requests to loopback,
         private, link-local, or reserved addresses).
+    :param max_download_bytes: Maximum bytes to download; larger responses
+        are aborted.
     :returns: The written :class:`Path`, or ``None`` on failure.
     """
     target = Path(cache_dir) / file_name
@@ -198,6 +377,7 @@ async def download_file_to_cache(
         # write anywhere inside it, and nowhere else.
         project_root=str(cache_dir),
         allow_internal_hosts=allow_internal_hosts,
+        max_download_bytes=max_download_bytes,
     )
 
 
@@ -208,6 +388,7 @@ async def download_files(
     max_concurrency: int = 3,
     timeout: float | httpx.Timeout = 30.0,
     retries: int = 3,
+    max_download_bytes: int = _DEFAULT_MAX_DOWNLOAD_BYTES,
 ) -> dict[str, Any]:
     """Download a list of files into *target_dir*, bounded in concurrency.
 
@@ -236,6 +417,8 @@ async def download_files(
     :param max_concurrency: Maximum number of downloads in flight.
     :param timeout: Request timeout in seconds per download.
     :param retries: Number of attempts for transient failures per download.
+    :param max_download_bytes: Maximum bytes per file; larger files are
+        treated as failed to avoid OOM.
     :returns: dict with ``results`` (one entry per file: ``path`` plus
         ``saved_to`` on success or ``error`` on failure) and a top-level
         ``error`` (only set when the whole batch fails unexpectedly).
@@ -265,6 +448,7 @@ async def download_files(
                 # The batch boundary is its destination directory: files
                 # may be written inside it, and nowhere else.
                 project_root=str(target_dir),
+                max_download_bytes=max_download_bytes,
             )
         except (OSError, TimeoutError, httpx.HTTPError) as exc:
             logger.warning(f"Unexpected error downloading {url}: {exc}")
