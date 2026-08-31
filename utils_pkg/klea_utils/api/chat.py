@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 class ChatPayload(BaseModel):
     query: str = Field(..., min_length=1)
-    chat_id: str
-    user_id: str = ""
+    chat_id: str = Field(..., pattern=r"^[^:]+$")
+    user_id: str = Field(default="", pattern=r"^[^:]*$")
 
 
 def create_chat_router() -> APIRouter:

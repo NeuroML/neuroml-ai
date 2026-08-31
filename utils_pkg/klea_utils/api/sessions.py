@@ -15,10 +15,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from typing import Annotated
 
 import coolname
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from klea_utils.api.sessions_db import SessionStore
 from klea_utils.graph.base import BaseLangGraph
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class CreateChatPayload(BaseModel):
-    chat_id: str
+    chat_id: str = Field(..., pattern=r"^[^:]+$")
     title: str = ""
 
 
@@ -59,14 +60,20 @@ def create_sessions_router() -> APIRouter:
     router = APIRouter(prefix="/chat", tags=["sessions"])
 
     @router.get("/{user_id}")
-    async def list_chats(user_id: str, request: Request):
+    async def list_chats(
+        user_id: Annotated[str, Field(pattern=r"^[^:]*$")], request: Request
+    ):
         store: SessionStore = request.app.state.chat_sessions
         chats = store.list_chats(user_id)
         logger.debug("list_chats(%s): %d chat(s)", user_id, len(chats))
         return chats
 
     @router.post("/{user_id}")
-    async def create_chat(user_id: str, payload: CreateChatPayload, request: Request):
+    async def create_chat(
+        user_id: Annotated[str, Field(pattern=r"^[^:]*$")],
+        payload: CreateChatPayload,
+        request: Request,
+    ):
         store: SessionStore = request.app.state.chat_sessions
         title = payload.title or coolname.generate_slug(2)
         store.create_chat(user_id, payload.chat_id, title)
@@ -85,7 +92,10 @@ def create_sessions_router() -> APIRouter:
 
     @router.patch("/{user_id}/{chat_id}")
     async def update_chat(
-        user_id: str, chat_id: str, payload: UpdateChatPayload, request: Request
+        user_id: Annotated[str, Field(pattern=r"^[^:]*$")],
+        chat_id: Annotated[str, Field(pattern=r"^[^:]+$")],
+        payload: UpdateChatPayload,
+        request: Request,
     ):
         store: SessionStore = request.app.state.chat_sessions
         if not store.get_chat(user_id, chat_id):
@@ -98,7 +108,11 @@ def create_sessions_router() -> APIRouter:
         return store.get_chat(user_id, chat_id)
 
     @router.delete("/{user_id}/{chat_id}")
-    async def delete_chat(user_id: str, chat_id: str, request: Request):
+    async def delete_chat(
+        user_id: Annotated[str, Field(pattern=r"^[^:]*$")],
+        chat_id: Annotated[str, Field(pattern=r"^[^:]+$")],
+        request: Request,
+    ):
         store: SessionStore = request.app.state.chat_sessions
         if not store.get_chat(user_id, chat_id):
             logger.warning("delete_chat(%s, %s): chat not found", user_id, chat_id)
@@ -108,7 +122,9 @@ def create_sessions_router() -> APIRouter:
         return {"status": "ok", "chat_id": chat_id}
 
     @router.delete("/{user_id}")
-    async def delete_user(user_id: str, request: Request):
+    async def delete_user(
+        user_id: Annotated[str, Field(pattern=r"^[^:]*$")], request: Request
+    ):
         store: SessionStore = request.app.state.chat_sessions
         graph: BaseLangGraph = request.app.state.graph
 
