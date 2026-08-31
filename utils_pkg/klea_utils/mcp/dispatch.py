@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 
 from fastmcp.client.client import CallToolResult
 from mcp.types import TextContent
@@ -60,7 +60,8 @@ async def dispatch_tool_calls(
     :returns: One :class:`CallToolResult` per input call, in input order.
     """
     tools_meta = tools_meta or {}
-    results: list[CallToolResult] = []
+    n = len(tool_calls)
+    results: list[CallToolResult | None] = [None] * n
     pending: list[tuple[int, Any]] = []
 
     async with mcp_client:
@@ -71,7 +72,7 @@ async def dispatch_tool_calls(
                 logger.warning(
                     f"Denied tool call before dispatch\n{tool = }\n{denials = }"
                 )
-                results.append(_denied_result(denials))
+                results[i] = _denied_result(denials)
             else:
                 pending.append(
                     (
@@ -86,9 +87,31 @@ async def dispatch_tool_calls(
 
         if pending:
             indices, coros = zip(*pending)
-            # Insert dispatched results at their original positions so the
-            # returned list stays aligned with the input tool_calls.
-            for idx, res in zip(indices, await asyncio.gather(*coros)):
-                results.insert(idx, res)
+            gathered = await asyncio.gather(*coros, return_exceptions=True)
+            for idx, res in zip(indices, gathered):
+                if isinstance(res, BaseException):
+                    tool, args = tool_calls[idx]
+                    logger.warning(
+                        f"Tool call failed\n{tool = }\n{idx = }\n{args = }\n{res = }"
+                    )
+                    results[idx] = CallToolResult(
+                        content=[
+                            TextContent(
+                                type="text",
+                                text=f"{res.__class__.__name__}: {res}",
+                            )
+                        ],
+                        structured_content=None,
+                        meta=None,
+                        is_error=True,
+                    )
+                else:
+                    results[idx] = res  # type: ignore[assignment]
 
-    return results
+    if any(r is None for r in results):
+        missing = [i for i, r in enumerate(results) if r is None]
+        offending = [(i, tool_calls[i]) for i in missing]
+        logger.error(f"dispatch left unfilled slots\n{offending = }")
+        raise RuntimeError(f"dispatch internal error: unfilled results at {missing}")
+
+    return cast(list[CallToolResult], results)

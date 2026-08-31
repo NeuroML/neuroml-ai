@@ -10,6 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 from fastmcp.client.client import CallToolResult
 from klea_utils.mcp.dispatch import dispatch_tool_calls
+from mcp.types import TextContent
 
 
 class FakeMCPClient:
@@ -101,3 +102,33 @@ async def test_dispatch_without_meta_skips_gate(tmp_path):
     )
     assert [r.is_error for r in results] == [False]
     assert client.calls == [("list_files", {"path": str(tmp_path)})]
+
+
+async def test_one_tool_fails_others_succeed():
+    class FailingClient(FakeMCPClient):
+        async def call_tool(self, name, arguments, raise_on_error=False):
+            self.calls.append((name, arguments))
+            if name == "bad_tool":
+                raise RuntimeError("boom")
+            return CallToolResult(content=[], structured_content=None, meta=None)
+
+    client = FailingClient()
+    results = await dispatch_tool_calls(
+        client,
+        [("good", {"x": 1}), ("bad_tool", {"y": 2}), ("good2", {"z": 3})],
+    )
+
+    assert len(results) == 3
+    assert results[0].is_error is False
+    assert results[1].is_error is True
+    first = results[1].content[0]
+    assert isinstance(first, TextContent)
+    assert "RuntimeError" in first.text
+    assert "boom" in first.text
+    assert results[2].is_error is False
+    # All three were attempted; order preserved despite middle failure
+    assert client.calls == [
+        ("good", {"x": 1}),
+        ("bad_tool", {"y": 2}),
+        ("good2", {"z": 3}),
+    ]
