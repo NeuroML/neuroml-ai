@@ -303,6 +303,10 @@ class RAG(BaseLangGraph):
         retrievers: list[BaseKleaRetriever] = [
             r for r in (self.stores, self.bm25_stores) if r is not None
         ]
+        if not retrievers:
+            self.logger.warning(
+                "No retrievers (vector or BM25) configured for any domain"
+            )
 
         self._retrieve_info_node = RetrieveInfoNode(
             logger=self.logger,
