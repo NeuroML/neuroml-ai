@@ -18,6 +18,7 @@ from pathlib import Path
 from subprocess import Popen
 from urllib.parse import urlsplit
 
+import httpx
 import typer
 
 from klea_utils.paths import resolve_app_config_path

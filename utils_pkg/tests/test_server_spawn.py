@@ -124,8 +124,13 @@ class TestSpawnServer(unittest.TestCase):
         self.addCleanup(mock.patch.stopall)
         # Avoid actually sleeping through the fast-fail window.
         self.mock_sleep = mock.patch("klea_utils.api.server.time.sleep").start()
-        self.mock_ready = mock.patch(
-            "klea_utils.api.utils.check_api_is_ready", new_callable=mock.AsyncMock
+        self.mock_client = mock.patch("klea_utils.api.server.httpx.Client").start()
+        self.mock_monotonic = mock.patch("klea_utils.api.server.time.monotonic").start()
+        # Default monotonic progression for deadline loop
+        self.mock_monotonic.side_effect = lambda: 0  # overridden per-test as needed
+        self.mock_killpg = mock.patch("klea_utils.api.server.os.killpg").start()
+        self.mock_getpgid = mock.patch(
+            "klea_utils.api.server.os.getpgid", return_value=12345
         ).start()
 
     def _proc(self, poll_result=None, returncode=None):
@@ -133,13 +138,26 @@ class TestSpawnServer(unittest.TestCase):
         proc = mock.Mock()
         proc.poll.return_value = poll_result
         proc.returncode = returncode
+        proc.pid = 12345
         self.mock_popen.return_value = proc
         return proc
+
+    def _client_resp(self, status="ready", raise_error=None):
+        """Helper to make httpx.Client.get return value."""
+        if raise_error:
+            raise raise_error
+        mock_resp = mock.Mock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.return_value = {"status": status}
+        return mock_resp
 
     def test_reuses_existing_server(self):
         # The very first probe already reports ready, so spawn_server must
         # yield None (reuse, no lifecycle ownership) and never spawn.
-        self.mock_ready.return_value = {"status": "ready"}
+        mock_instance = self.mock_client.return_value.__enter__.return_value
+        mock_instance.get.return_value = self._client_resp(status="ready")
+        self.mock_monotonic.side_effect = None
+        self.mock_monotonic.return_value = 0
 
         with spawn_server("klea_rag.api.main:app", port=8005) as proc:
             self.assertIsNone(proc)
@@ -150,20 +168,22 @@ class TestSpawnServer(unittest.TestCase):
         # Probe 1 (reuse check): down -> spawn.
         # Probe 2 (window iteration 1): still down.
         # Probe 3 (window iteration 2): up -> break out of the window.
-        self.mock_ready.side_effect = [
+        mock_instance = self.mock_client.return_value.__enter__.return_value
+        mock_instance.get.side_effect = [
             httpx.ConnectError("down"),
             httpx.ConnectError("down"),
-            {"status": "ready"},
+            self._client_resp(status="ready"),
         ]
+        self.mock_monotonic.side_effect = None
+        self.mock_monotonic.return_value = 0
 
         with spawn_server("klea_rag.api.main:app", port=8005) as proc:
             self.assertIsNotNone(proc)
             logger.debug("server considered ready inside the with block")
 
-        # Leaving the with block must terminate the spawned process.
+        # Leaving the with block must terminate the spawned process (via killpg).
         self.mock_popen.assert_called_once()
-        mock_proc.terminate.assert_called_once()
-        mock_proc.wait.assert_called_once()
+        self.mock_killpg.assert_called()
         logger.debug("spawned process was terminated and reaped on exit")
 
     def test_fast_fail_on_instant_crash(self):
@@ -172,7 +192,9 @@ class TestSpawnServer(unittest.TestCase):
         # window must raise right away instead of waiting out the retry
         # budget, and the (already dead) process is not terminated again.
         mock_proc = self._proc(poll_result=3, returncode=3)
-        self.mock_ready.side_effect = httpx.ConnectError("down")
+        mock_instance = self.mock_client.return_value.__enter__.return_value
+        mock_instance.get.side_effect = httpx.ConnectError("down")
+        self.mock_monotonic.return_value = 0
 
         with (
             self.assertRaisesRegex(RuntimeError, "exited immediately"),
@@ -180,7 +202,9 @@ class TestSpawnServer(unittest.TestCase):
         ):
             pass
 
-        mock_proc.terminate.assert_not_called()
+        # Already dead, so no terminate (or killpg) should be called
+        self.mock_killpg.assert_not_called()
+        self.mock_popen.return_value.terminate.assert_not_called()
         logger.debug("instant crash surfaced without terminating the dead process")
 
     def test_timeout_when_never_ready(self):
@@ -189,7 +213,10 @@ class TestSpawnServer(unittest.TestCase):
         # retrying wait gives up after ``timeout``, and spawn_server raises
         # while still cleaning up the spawned process.
         mock_proc = self._proc(poll_result=None)
-        self.mock_ready.side_effect = httpx.ConnectError("down")
+        mock_instance = self.mock_client.return_value.__enter__.return_value
+        mock_instance.get.side_effect = httpx.ConnectError("down")
+        # Simulate time progression: start 0, then deadline 1, need monotonic to exceed
+        self.mock_monotonic.side_effect = [0, 0, 0, 0, 0, 0, 2]
 
         with (
             self.assertRaisesRegex(RuntimeError, "did not become ready"),
@@ -199,7 +226,7 @@ class TestSpawnServer(unittest.TestCase):
 
         # Went through the fast-fail window before giving up, then cleaned up.
         self.mock_sleep.assert_called()
-        mock_proc.terminate.assert_called_once()
+        self.mock_killpg.assert_called()
         logger.debug("timeout surfaced after the fast-fail window; process terminated")
 
 
