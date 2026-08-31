@@ -11,6 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 import re
 import sqlite3
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -406,7 +407,9 @@ def _connect_readonly(the_path: Path, max_ops: int | None = None) -> sqlite3.Con
     :param max_ops: Optional VM-instruction work budget for statements
     :returns: Open read-only connection
     """
-    conn = sqlite3.connect(f"file:{the_path.resolve()}?mode=ro", uri=True)
+    # Quote the path so '?'/'#' in the filename don't break URI parsing
+    quoted = urllib.parse.quote(str(the_path.resolve()), safe="/:")
+    conn = sqlite3.connect(f"file:{quoted}?mode=ro", uri=True)
     conn.execute("PRAGMA query_only=ON")
     logger.debug(f"Opened read-only connection: {the_path = }\n{max_ops = }")
     if max_ops is not None:

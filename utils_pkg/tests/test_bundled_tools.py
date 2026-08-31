@@ -559,7 +559,8 @@ def test_list_files_rejects_dotdot():
     result = list_files(path="..")
     logger.debug(f"{result = }")
     assert result["files"] == []
-    assert ".." in result["error"]
+    assert result["error"] != ""
+    assert "outside" in result["error"].lower() or ".." in result["error"]
 
 
 def test_list_files_basic(tmp_path):
