@@ -14,7 +14,7 @@ import traceback
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from klea_utils.api.sessions_db import SessionStore
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChatPayload(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1)
     chat_id: str
     user_id: str = ""
 
@@ -42,6 +42,13 @@ def create_chat_router() -> APIRouter:
         # Lazy: BaseLangGraph is the base class for all graphs
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
 
+        if (
+            not getattr(request.app.state, "is_ready", False)
+            or not getattr(request.app.state, "graph", None)
+            or getattr(request.app.state.graph, "graph", None) is None
+        ):
+            raise HTTPException(status_code=503, detail="Service not ready")
+
         graph: BaseLangGraph = request.app.state.graph
         store: SessionStore = request.app.state.chat_sessions
         thread_id = f"user_{payload.user_id}:chat_{payload.chat_id}"
@@ -54,6 +61,12 @@ def create_chat_router() -> APIRouter:
             message = result if isinstance(result, str) else str(result)
             store.add_message(payload.user_id, payload.chat_id, "user", payload.query)
             store.add_message(payload.user_id, payload.chat_id, "assistant", message)
+        except ValueError as e:
+            logger.warning(f"Bad request: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
+        except RuntimeError as e:
+            logger.warning(f"Service not ready: {e}")
+            raise HTTPException(status_code=503, detail=str(e))
         except Exception as e:
             logger.error(f"{e}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=str(e))
@@ -63,6 +76,13 @@ def create_chat_router() -> APIRouter:
     @router.post("/query/stream")
     async def query_stream(request: Request, payload: ChatPayload):
         from klea_utils.graph.base import BaseLangGraph, model_overrides_ctx
+
+        if (
+            not getattr(request.app.state, "is_ready", False)
+            or not getattr(request.app.state, "graph", None)
+            or getattr(request.app.state.graph, "graph", None) is None
+        ):
+            raise HTTPException(status_code=503, detail="Service not ready")
 
         graph: BaseLangGraph = request.app.state.graph
         store: SessionStore = request.app.state.chat_sessions

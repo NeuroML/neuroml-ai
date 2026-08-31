@@ -656,8 +656,9 @@ class BaseLangGraph(ABC):
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
         if "query" not in state:
-            self.logger.error(f"Provided state should include the key 'query': {state}")
-            sys.exit(-1)
+            raise ValueError("state must contain 'query' key")
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
 
         final_state = await self.graph.ainvoke(state, config=config)
         self.logger.debug(final_state)
@@ -676,6 +677,9 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
+
         final_state = await self.graph.ainvoke({"query": query}, config=config)
 
         self.logger.debug(f"{final_state =}")
@@ -692,6 +696,9 @@ class BaseLangGraph(ABC):
         :yields: ``message_for_user`` strings from each node
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
 
         async for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
@@ -711,7 +718,10 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
-        res = await self.graph.astream({"query": query}, config=config)
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
+
+        res = self.graph.astream({"query": query}, config=config)
         return res
 
     async def run_graph_astream_events(
@@ -748,7 +758,8 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
-        assert self.graph, "Graph not compiled. Call setup() first."
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
 
         stream = await self.graph.astream_events(
             {"query": query},

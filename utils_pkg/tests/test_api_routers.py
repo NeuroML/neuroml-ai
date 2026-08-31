@@ -130,7 +130,7 @@ class TestChat:
     async def test_query_error_returns_500(self, app, client):
         """Graph error surfaces as an HTTP 500."""
         self.logger.info("Injecting error into run_graph_invoke")
-        app.state.graph.run_graph_invoke.side_effect = ValueError("boom")
+        app.state.graph.run_graph_invoke.side_effect = Exception("boom")
 
         self.logger.info("POST /query with broken graph")
         response = await client.post(
@@ -236,7 +236,7 @@ class TestChat:
     async def test_query_error_not_stored(self, app, client):
         """Graph error on /query raises 500 and nothing is persisted."""
         self.logger.info("Injecting error into run_graph_invoke")
-        app.state.graph.run_graph_invoke.side_effect = ValueError("boom")
+        app.state.graph.run_graph_invoke.side_effect = Exception("boom")
 
         self.logger.info("POST /query with broken graph")
         response = await client.post(
