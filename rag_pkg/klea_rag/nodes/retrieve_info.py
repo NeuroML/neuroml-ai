@@ -126,6 +126,14 @@ class RetrieveInfoNode(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         raw_query = state.retrieval_query.search_query
         cleaned_query = normalize_text(raw_query)
         self.logger.debug(f"{raw_query = }\n{cleaned_query = }")
+        if not cleaned_query.strip():
+            self.logger.warning(
+                "Empty retrieval query after normalization, skipping retrieval"
+            )
+            return {
+                "retrieval_attempts": retrieval_attempts,
+                "reference_material": reference_material,
+            }
 
         # Check if evaluator requested more info
         if state.text_response_eval.next_step == "retrieve_more_info":

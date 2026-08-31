@@ -173,8 +173,12 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
             heading=info.heading, summary=info.summary, details=details
         )
 
-    # TODO: may need updating
     @override
-    def _get_default_error_result(self) -> AIMessage:
+    def _get_default_error_result(self) -> Any:
         """Return default result when processing fails."""
+        if self.output_schema is not None:
+            try:
+                return self.output_schema(query_domains=["undefined"])  # type: ignore[call-arg]
+            except (TypeError, ValueError) as exc:
+                self.logger.warning(f"Fallback schema instantiation failed: {exc}")
         return AIMessage(content="")

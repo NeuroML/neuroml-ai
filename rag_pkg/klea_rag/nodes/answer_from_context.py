@@ -164,4 +164,4 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     @override
     def _get_default_error_result(self) -> Any:
         """Return default result when processing fails."""
-        return ""
+        return AnswerSchema(answer="", references=[])
