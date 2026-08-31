@@ -8,12 +8,19 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import asyncio
 import ipaddress
 import logging
 import socket
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+# Maximum time to wait for DNS resolution when called from async context
+_SSRF_DNS_TIMEOUT = 5.0
+
+#: Maximum redirects followed by ``web_fetch``/``download_file`` (per-hop SSRF-checked)
+_MAX_REDIRECTS = 5
 
 
 def is_private_or_reserved(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -40,9 +47,10 @@ def check_ssrf(url: str) -> str | None:
     is private, loopback, link-local, reserved, or multicast.  Returns
     ``None`` when the request is allowed.
 
-    NOTE: only the initial *url* is checked; an ``httpx`` client that follows
-    redirects could still be redirected to an internal host.  This is a
-    known best-effort limitation, acceptable for typical use.
+    .. note::
+        This is the synchronous, blocking variant (uses ``socket.getaddrinfo``
+        directly). Call :func:`check_ssrf_async` from async code to avoid
+        stalling the event loop.
 
     :param url: Absolute URL to check.
     :returns: An error message describing the denial, or ``None`` when the
@@ -63,3 +71,24 @@ def check_ssrf(url: str) -> str | None:
             logger.warning(f"SSRF guard: {host} resolves to {ip} (blocked)")
             return f"Blocked request to private/internal address: {ip}"
     return None
+
+
+async def check_ssrf_async(url: str, timeout: float = _SSRF_DNS_TIMEOUT) -> str | None:
+    """Async wrapper around :func:`check_ssrf` that offloads DNS to a thread.
+
+    ``socket.getaddrinfo`` is blocking; running it in ``asyncio.to_thread``
+    keeps the event loop responsive and adds a timeout.
+
+    :param url: Absolute URL to check.
+    :param timeout: Seconds to wait for DNS before returning a timeout error.
+    :returns: Error message or ``None`` when allowed.
+    """
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(check_ssrf, url),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        host = urlparse(url).hostname or url
+        logger.warning(f"SSRF DNS timeout for {host}")
+        return f"DNS timeout for {host}"

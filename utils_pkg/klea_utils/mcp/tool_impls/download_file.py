@@ -12,6 +12,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -19,7 +20,7 @@ from klea_utils.api.utils import _make_retryer_httpx
 from klea_utils.mcp.errors import PermissionDeniedError
 from klea_utils.mcp.tool_impls.permission import check_path_access
 from klea_utils.mcp.tool_impls.session import SessionLike
-from klea_utils.mcp.tool_impls.ssrf import check_ssrf
+from klea_utils.mcp.tool_impls.ssrf import _MAX_REDIRECTS, check_ssrf_async
 from klea_utils.mcp.tool_impls.web_fetch import _honest_user_agent
 
 logger = logging.getLogger(__name__)
@@ -81,7 +82,7 @@ async def download_file(
         return None
 
     if not allow_internal_hosts:
-        ssrf_error = check_ssrf(url)
+        ssrf_error = await check_ssrf_async(url)
         if ssrf_error is not None:
             logger.warning(f"SSRF guard blocked {url}: {ssrf_error}")
             return None
@@ -93,24 +94,60 @@ async def download_file(
         return None
 
     async def _do_download() -> Path | None:
-        response = await session.get(
-            url,
-            params=params,
-            headers={"User-Agent": _honest_user_agent()},
-            timeout=timeout,
-            follow_redirects=True,
-        )
-        if not response.is_success:
-            if response.status_code == 429 or response.status_code >= 500:
-                # Transient server-side error; raise so the retryer retries.
-                response.raise_for_status()
-            logger.warning(f"Failed to download {url}: HTTP {response.status_code}")
-            return None
-        target = Path(file_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(response.content)
-        logger.info(f"Saved downloaded file to {target}")
-        return target
+        current_url = url
+        current_params = params
+        for _ in range(_MAX_REDIRECTS + 1):
+            response = await session.get(
+                current_url,
+                params=current_params,
+                headers={"User-Agent": _honest_user_agent()},
+                timeout=timeout,
+                follow_redirects=False,
+            )
+            # Follow redirects manually with per-hop SSRF check
+            if response.status_code in (301, 302, 303, 307, 308):
+                loc = response.headers.get("location")
+                if not loc:
+                    logger.warning(
+                        f"Redirect {response.status_code} with no Location for {current_url}"
+                    )
+                    return None
+                next_url = urljoin(current_url, loc)
+                parsed_next = urlparse(next_url)
+                if (
+                    parsed_next.scheme not in ("http", "https")
+                    or not parsed_next.netloc
+                ):
+                    logger.warning(f"Redirect to invalid URL: {next_url}")
+                    return None
+                if not allow_internal_hosts:
+                    ssrf_error = await check_ssrf_async(next_url)
+                    if ssrf_error is not None:
+                        logger.warning(
+                            f"SSRF guard blocked redirect {current_url} -> {next_url}: {ssrf_error}"
+                        )
+                        return None
+                logger.debug(
+                    f"Following redirect {response.status_code}: {current_url} -> {next_url}"
+                )
+                current_url = next_url
+                current_params = None  # params already encoded in Location
+                continue
+            if not response.is_success:
+                if response.status_code == 429 or response.status_code >= 500:
+                    # Transient server-side error; raise so the retryer retries.
+                    response.raise_for_status()
+                logger.warning(
+                    f"Failed to download {current_url}: HTTP {response.status_code}"
+                )
+                return None
+            target = Path(file_path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(response.content)
+            logger.info(f"Saved downloaded file to {target}")
+            return target
+        logger.warning(f"Too many redirects for {url}")
+        return None
 
     retryer = _make_retryer_httpx(attempts=retries)
     try:

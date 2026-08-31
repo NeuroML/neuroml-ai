@@ -15,7 +15,7 @@ import os
 import random
 import time
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -23,7 +23,7 @@ from platformdirs import PlatformDirs
 
 from klea_utils.api.utils import _make_retryer_httpx
 from klea_utils.mcp.tool_impls.session import SessionLike
-from klea_utils.mcp.tool_impls.ssrf import check_ssrf
+from klea_utils.mcp.tool_impls.ssrf import _MAX_REDIRECTS, check_ssrf_async
 from klea_utils.paths import get_cache_dir
 
 logger = logging.getLogger(__name__)
@@ -267,7 +267,7 @@ async def web_fetch(
         }
 
     if not allow_internal_hosts:
-        ssrf_error = check_ssrf(url)
+        ssrf_error = await check_ssrf_async(url)
         if ssrf_error is not None:
             logger.warning(f"SSRF guard blocked {url}: {ssrf_error}")
             return {
@@ -295,9 +295,10 @@ async def web_fetch(
     async def _stream_once(user_agent: str) -> bool:
         """Stream the URL once with *user_agent*.
 
-        Writes the result into the enclosing nonlocals.  Returns ``False``
-        when a Cloudflare challenge should trigger an honest-UA retry,
-        ``True`` otherwise (including HTTP errors).
+        Follows redirects manually (up to :data:`_MAX_REDIRECTS`) so each
+        hop can be SSRF-checked. Returns ``False`` when a Cloudflare
+        challenge should trigger an honest-UA retry, ``True`` otherwise
+        (including HTTP errors).
         """
         nonlocal \
             status_code, \
@@ -311,62 +312,108 @@ async def web_fetch(
             "Accept-Language": "en-US,en;q=0.9",
             "User-Agent": user_agent,
         }
-        logger.debug(f"Streaming {url}\n{user_agent = }\n{allow_internal_hosts = }")
-        async with session.stream(
-            "GET",
-            url,
-            headers=headers,
-            timeout=httpx.Timeout(timeout),
-            follow_redirects=True,
-        ) as response:
-            status_code = response.status_code
-            content_type = response.headers.get("content-type", "")
+        current_url = url
+        for _ in range(_MAX_REDIRECTS + 1):
+            logger.debug(
+                f"Streaming {current_url}\n{user_agent = }\n{allow_internal_hosts = }"
+            )
+            async with session.stream(
+                "GET",
+                current_url,
+                headers=headers,
+                timeout=httpx.Timeout(timeout),
+                follow_redirects=False,
+            ) as response:
+                status_code = response.status_code
+                content_type = response.headers.get("content-type", "")
 
-            if (
-                status_code == 403
-                and response.headers.get("cf-mitigated") == "challenge"
-            ):
-                logger.warning(f"Cloudflare challenge for {url}; retrying honestly")
-                return False
-
-            if status_code >= 400:
-                if status_code == 429 or status_code >= 500:
-                    # Transient server-side error; raise so the retryer can
-                    # retry (other 4xx are returned as-is below).
-                    logger.warning(
-                        f"Transient HTTP {status_code} from {url}; will retry"
+                # Follow redirects manually with per-hop SSRF check
+                if status_code in (301, 302, 303, 307, 308):
+                    loc = response.headers.get("location")
+                    if not loc:
+                        logger.warning(
+                            f"Redirect {status_code} with no Location for {current_url}"
+                        )
+                        error = f"Redirect {status_code} with no Location"
+                        return True
+                    next_url = urljoin(current_url, loc)
+                    parsed_next = urlparse(next_url)
+                    if (
+                        parsed_next.scheme not in ("http", "https")
+                        or not parsed_next.netloc
+                    ):
+                        logger.warning(f"Redirect to invalid URL: {next_url}")
+                        error = f"Redirect to invalid URL: {next_url}"
+                        return True
+                    if not allow_internal_hosts:
+                        ssrf_error = await check_ssrf_async(next_url)
+                        if ssrf_error is not None:
+                            logger.warning(
+                                f"SSRF guard blocked redirect {current_url} -> {next_url}: {ssrf_error}"
+                            )
+                            error = ssrf_error
+                            status_code = None
+                            content_type = ""
+                            return True
+                    logger.debug(
+                        f"Following redirect {status_code}: {current_url} -> {next_url}"
                     )
-                    response.raise_for_status()
-                logger.warning(f"HTTP error {status_code} for {url}")
-                error = f"HTTP {status_code}"
+                    current_url = next_url
+                    continue
+
+                if (
+                    status_code == 403
+                    and response.headers.get("cf-mitigated") == "challenge"
+                ):
+                    logger.warning(
+                        f"Cloudflare challenge for {current_url}; retrying honestly"
+                    )
+                    return False
+
+                if status_code >= 400:
+                    if status_code == 429 or status_code >= 500:
+                        # Transient server-side error; raise so the retryer can
+                        # retry (other 4xx are returned as-is below).
+                        logger.warning(
+                            f"Transient HTTP {status_code} from {current_url}; will retry"
+                        )
+                        response.raise_for_status()
+                    logger.warning(f"HTTP error {status_code} for {current_url}")
+                    error = f"HTTP {status_code}"
+                    return True
+
+                logger.debug(
+                    f"Response received\n{current_url = }\n{status_code = }\n{content_type = }"
+                )
+
+                raw, download_truncated = await _read_capped(
+                    response, max_download_bytes
+                )
+                text = raw.decode("utf-8", errors="replace")
+
+                if "html" in content_type.lower():
+                    content = _html_to_text(text)
+                else:
+                    content = text
+
+                if len(content) > max_chars:
+                    content = content[:max_chars]
+                    truncated = True
+
+                logger.debug(
+                    f"Fetched URL\n"
+                    f"{current_url = }\n"
+                    f"{status_code = }\n"
+                    f"{content_type = }\n"
+                    f"{len(content) = }\n"
+                    f"{truncated = }\n"
+                    f"{download_truncated = }"
+                )
                 return True
 
-            logger.debug(
-                f"Response received\n{url = }\n{status_code = }\n{content_type = }"
-            )
-
-            raw, download_truncated = await _read_capped(response, max_download_bytes)
-            text = raw.decode("utf-8", errors="replace")
-
-            if "html" in content_type.lower():
-                content = _html_to_text(text)
-            else:
-                content = text
-
-            if len(content) > max_chars:
-                content = content[:max_chars]
-                truncated = True
-
-            logger.debug(
-                f"Fetched URL\n"
-                f"{url = }\n"
-                f"{status_code = }\n"
-                f"{content_type = }\n"
-                f"{len(content) = }\n"
-                f"{truncated = }\n"
-                f"{download_truncated = }"
-            )
-            return True
+        logger.warning(f"Too many redirects for {url}")
+        error = "Too many redirects"
+        return True
 
     async def _do_fetch() -> None:
         user_agents = await _resolve_user_agents()
