@@ -34,6 +34,7 @@ def _textualize_content_block(block: Any) -> str:
 
 def textualize_tool_results(
     tool_results: list[CallToolResult],
+    max_len_per_tool: int | None = None,
 ) -> str:
     """Format tool call results as LLM-ready text for use in prompt context.
 
@@ -42,6 +43,9 @@ def textualize_tool_results(
     separation from surrounding prompt text.
 
     :param tool_results: List of tool call results
+    :param max_len_per_tool: If set, truncate each tool's textual content to
+        this many characters (per-tool cap, not total). Ensures a large first
+        result doesn't starve later tools' outputs.
     :returns: Formatted string suitable for inclusion in an LLM prompt
     """
     if not tool_results:
@@ -51,12 +55,14 @@ def textualize_tool_results(
     for i, result in enumerate(tool_results, 1):
         text += f"\n### Result {i}/{len(tool_results)}\n"
 
+        parts = [_textualize_content_block(c) for c in result.content]
+        content = "\n".join(parts)
+        if max_len_per_tool is not None and len(content) > max_len_per_tool:
+            content = content[:max_len_per_tool] + f"\n[tool result {i} truncated]"
         if result.is_error:
-            parts = [_textualize_content_block(c) for c in result.content]
-            text += "**Error:** " + "\n".join(parts) + "\n"
+            text += "**Error:** " + content + "\n"
         else:
-            parts = [_textualize_content_block(c) for c in result.content]
-            text += "```\n" + "\n".join(parts) + "\n```\n"
+            text += "```\n" + content + "\n```\n"
 
     return text
 
