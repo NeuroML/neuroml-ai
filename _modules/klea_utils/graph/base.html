@@ -317,7 +317,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">ConfigDict</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">create_model</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMModel</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolInfo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolCallSchema</span><span class="p">,</span> <span class="n">ToolInfo</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_config_dir</span><span class="p">,</span> <span class="n">init_dir</span><span class="p">,</span> <span class="n">resolve_app_config_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">RetrieverConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.stores.retrieval.bm25</span><span class="w"> </span><span class="kn">import</span> <span class="n">BM25RetrieverManager</span>
@@ -844,6 +844,43 @@
     <span class="c1"># Hook methods -- override for pre/post setup work</span>
     <span class="c1"># ------------------------------------------------------------------</span>
 
+<div class="viewcode-block" id="BaseLangGraph.get_allowed_msgpack_modules">
+<a class="viewcode-back" href="../../../api/utils/graph.html#klea_utils.graph.base.BaseLangGraph.get_allowed_msgpack_modules">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_allowed_msgpack_modules</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">type</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Return types allowed for checkpoint msgpack deserialization.</span>
+
+<span class="sd">        Subclasses should override to add their state schemas</span>
+<span class="sd">        (e.g. ``EvaluateAnswerSchema``, ``RetrievalQueryOutput``).  The base</span>
+<span class="sd">        list covers shared utils types checkpointed by all graphs.</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp.client.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallToolResult</span> <span class="k">as</span> <span class="n">FastMCPCallToolResult</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmbeddedResource</span><span class="p">,</span> <span class="n">ImageContent</span><span class="p">,</span> <span class="n">TextContent</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.graph.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenUsage</span>
+
+        <span class="n">modules</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">type</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">TokenUsage</span><span class="p">,</span>
+            <span class="n">ToolCallSchema</span><span class="p">,</span>
+            <span class="n">FastMCPCallToolResult</span><span class="p">,</span>
+            <span class="n">TextContent</span><span class="p">,</span>
+            <span class="n">ImageContent</span><span class="p">,</span>
+            <span class="n">EmbeddedResource</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioContent</span>
+
+            <span class="n">modules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AudioContent</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">CallToolResult</span> <span class="k">as</span> <span class="n">McpCallToolResult</span>
+
+            <span class="n">modules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">McpCallToolResult</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">modules</span></div>
+
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_pre_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Hook called before the standard setup sequence.</span>
 
@@ -860,16 +897,25 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">"sqlite"</span><span class="p">:</span>
             <span class="kn">import</span><span class="w"> </span><span class="nn">aiosqlite</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.checkpoint.serde.jsonplus</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonPlusSerializer</span>
 
             <span class="n">db_path</span> <span class="o">=</span> <span class="n">init_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"checkpoints.db"</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Opening sqlite checkpointer at </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">db_path</span><span class="p">)</span>
             <span class="n">conn</span> <span class="o">=</span> <span class="k">await</span> <span class="n">aiosqlite</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">AsyncSqliteSaver</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+            <span class="n">serde</span> <span class="o">=</span> <span class="n">JsonPlusSerializer</span><span class="p">(</span>
+                <span class="n">allowed_msgpack_modules</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_allowed_msgpack_modules</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">AsyncSqliteSaver</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">serde</span><span class="o">=</span><span class="n">serde</span><span class="p">)</span>
             <span class="c1"># Keep raw connection for lifespan cleanup (AsyncSqliteSaver holds it as .conn)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_checkpointer_conn</span> <span class="o">=</span> <span class="n">conn</span>  <span class="c1"># type: ignore[attr-defined]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Sqlite checkpointer ready"</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">==</span> <span class="s2">"inmemory"</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">()</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">langgraph.checkpoint.serde.jsonplus</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonPlusSerializer</span>
+
+            <span class="n">serde</span> <span class="o">=</span> <span class="n">JsonPlusSerializer</span><span class="p">(</span>
+                <span class="n">allowed_msgpack_modules</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_allowed_msgpack_modules</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="n">InMemorySaver</span><span class="p">(</span><span class="n">serde</span><span class="o">=</span><span class="n">serde</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"In-memory checkpointer ready"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_post_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

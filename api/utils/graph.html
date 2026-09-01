@@ -358,6 +358,15 @@ Each model role <code class="docutils literal notranslate"><span class="pre">r</
 <dd><p>Name of the environment variable that controls the env file path.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.get_allowed_msgpack_modules">
+<span class="sig-name descname"><span class="pre">get_allowed_msgpack_modules</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/klea_utils/graph/base.html#BaseLangGraph.get_allowed_msgpack_modules"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.get_allowed_msgpack_modules" title="Link to this definition">¶</a></dt>
+<dd><p>Return types allowed for checkpoint msgpack deserialization.</p>
+<p>Subclasses should override to add their state schemas
+(e.g. <code class="docutils literal notranslate"><span class="pre">EvaluateAnswerSchema</span></code>, <code class="docutils literal notranslate"><span class="pre">RetrievalQueryOutput</span></code>).  The base
+list covers shared utils types checkpointed by all graphs.</p>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="klea_utils.graph.base.BaseLangGraph.graph_name">
 <span class="sig-name descname"><span class="pre">graph_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'BaseLangGraph'</span></span><a class="headerlink" href="#klea_utils.graph.base.BaseLangGraph.graph_name" title="Link to this definition">¶</a></dt>
@@ -591,6 +600,7 @@ Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</p>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_file_default"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_file_default</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_prefix"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_prefix</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.env_var"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.env_var</span></code></a></li>
+<li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.get_allowed_msgpack_modules"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.get_allowed_msgpack_modules()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_name"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_name</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.graph_stream"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.graph_stream()</span></code></a></li>
 <li><a class="reference internal" href="#klea_utils.graph.base.BaseLangGraph.run_graph_astream_events"><code class="docutils literal notranslate"><span class="pre">BaseLangGraph.run_graph_astream_events()</span></code></a></li>
