@@ -299,15 +299,22 @@ def rrf_merge(
         to return every fused document.  Callers that want to bound the
         context fed to an LLM should cap by characters via
         :func:`truncate_reference_material` instead of by document count.
-    :returns: Documents ordered by RRF score, deduplicated by content, capped
-        at *num_refs_max* when set
+    :returns: Documents ordered by RRF score, deduplicated by file+content,
+        capped at *num_refs_max* when set
     """
-    rrf_scores: dict[str, float] = {}
-    doc_by_key: dict[str, Document] = {}
+    # Key by (file_name, page_content) so identical boilerplate in different
+    # files is not collapsed to a single provenance
+    rrf_scores: dict[tuple[str, str], float] = {}
+    doc_by_key: dict[tuple[str, str], Document] = {}
 
     for source_label, results in result_sets:
         for rank, (doc, score) in enumerate(results, start=1):
-            key = doc.page_content
+            fname = (
+                doc.metadata.get("file_name", "")
+                if isinstance(doc.metadata.get("file_name"), str)
+                else ""
+            )
+            key = (fname, doc.page_content)
             rrf_scores[key] = rrf_scores.get(key, 0.0) + 1.0 / (RRF_K + rank)
             if key not in doc_by_key:
                 # Copy metadata so we don't mutate the retriever's original doc
