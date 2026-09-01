@@ -137,9 +137,9 @@ def test_prompt_block_example_matches_schema():
     assert example == {"tool_calls": [{}]}
 
 
-def test_system_prompt_puts_schema_after_memory(tmp_path):
-    """The output-schema block is appended after memory so it is the last
-    system instruction before the human query."""
+def test_system_prompt_puts_schema_before_memory(tmp_path):
+    """The output-schema block is prepended before memory so the stable
+    prefix (``load_prompt`` + schema) stays cacheable."""
     prompts = tmp_path / "prompts"
     prompts.mkdir()
     (prompts / "DummyNode_system.md").write_text("Base system prompt.")
@@ -155,7 +155,7 @@ def test_system_prompt_puts_schema_after_memory(tmp_path):
     assert isinstance(system, list)
     system_text = system[0][1]
     assert "remember-the-context" in system_text
-    assert system_text.index("## Output schema (strict)") > system_text.index(
+    assert system_text.index("## Output schema (strict)") < system_text.index(
         "remember-the-context"
     )
 
