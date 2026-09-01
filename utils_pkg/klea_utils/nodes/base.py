@@ -19,8 +19,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any, Literal, cast
 
-from langchain.messages import AIMessage
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import PromptValue
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
@@ -37,8 +36,8 @@ from ..llm import (
     classify_llm_invocation_error,
     content_to_str,
     estimate_input_tokens,
+    get_last_n_conversations,
     get_provider_allowed_fields,
-    get_recent_messages,
     get_token_limit_param,
     is_output_truncated,
     load_prompt,
@@ -167,7 +166,6 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         llm_models: dict[str, Any],
         output_schema: type[TSchema] | None,
         memory: bool = False,
-        num_history_chars: int = 10_000,
     ):
         """Initialize with file-based prompt loading and memory support.
 
@@ -176,15 +174,12 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param output_schema: Pydantic schema for structured output
         :param memory: Whether to append memory content to the system prompt
-        :param num_history_chars: Character budget for the recent verbatim
-            history messages injected between the system and human prompts.
         """
         super().__init__(logger, label, llm_models, output_schema=output_schema)
 
         self._prompt_prefix: str | None = None
         self._prompt_registry_location: Path | None = None
         self.memory = memory
-        self.num_history_chars = num_history_chars
 
     @property
     def prompt_prefix(self) -> str:
@@ -321,6 +316,33 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
         return cast(RunnableConfig, {"configurable": overrides})
 
+    def _add_cache_control(
+        self, prompt: PromptValue, config: RunnableConfig
+    ) -> PromptValue:
+        """Add Anthropic cache_control to the system message if applicable.
+
+        Only Anthropic supports `cache_control: ephemeral` on system blocks,
+        and it requires the `model_provider` to be known (resolved at
+        invoke time, not at prompt creation). Other providers ignore it, so
+        we only set it for `anthropic`.
+        """
+        provider = config.get("configurable", {}).get("model_provider")
+        if provider != "anthropic":
+            return prompt
+        # PromptValue -> messages -> add cache_control to first SystemMessage
+        try:
+            messages = prompt.to_messages()
+            if messages and messages[0].type == "system":
+                # SystemMessage is a BaseMessage with additional_kwargs
+                messages[0].additional_kwargs["cache_control"] = {"type": "ephemeral"}
+                # Rebuild PromptValue from modified messages
+                from langchain_core.prompt_values import ChatPromptValue
+
+                return ChatPromptValue(messages=messages)
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug(f"Failed to add cache_control: {exc}")
+        return prompt
+
     async def _invoke_llm(
         self, llm: Runnable, prompt: PromptValue, config: RunnableConfig
     ) -> AIMessage | dict[str, Any]:
@@ -335,6 +357,7 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         Both paths route through :meth:`_invoke_with_retries` for adaptive
         retries on context overflow / truncated output.
         """
+        prompt = self._add_cache_control(prompt, config)
         inst = self._llm_entry.instance
         if self.output_schema:
             llm_wrapped = inst.with_structured_output(
@@ -715,20 +738,13 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
         """
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
+        if self.output_schema:
+            system_prompt += self._format_output_schema_prompt()
+
         if self.memory:
             memory_addition = self._get_memory_addition(state)
             system_prompt += memory_addition
 
-        if self.output_schema:
-            # we pass this as part of the prompt because not all models/end
-            # points support passing schemas separately, or respect `with
-            # structured output`.  This is the safest, most general way of
-            # doing it.
-            # Appended last so it is the instruction closest to the human
-            # query (recency), maximizing adherence to the JSON format.
-            system_prompt += self._format_output_schema_prompt()
-
-        if self.memory:
             system_messages: list[Any] = [("system", system_prompt)]
             system_messages += self._get_recent_memory_messages(state)
             self.logger.debug(f"{system_messages =}")
@@ -740,17 +756,32 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
     def _get_recent_memory_messages(self, state: BaseModel) -> list[BaseMessage]:
         """Return the recent verbatim history messages for the prompt.
 
-        The most recent human/ai messages, bounded by ``num_history_chars``,
-        are injected as real message objects between the system and human
-        prompts (instead of being flattened into the system prompt).
+        Forward-stable: ``messages[summarised_till - N:]`` keeps the cached
+        prefix stable (``messages[summarised_till]`` stays for ``5`` turns)
+        vs ``get_recent_messages`` ``last N`` which drifts every turn. ``N=2``
+        keeps the last ``human``/``ai`` pair for continuity even after
+        ``context_summary`` has absorbed it.
 
         :param state: Graph state.
         :returns: Ordered recent human/ai messages.
         """
-        return get_recent_messages(
-            state.messages,  # type: ignore
-            self.num_history_chars,
-        )
+        # Fallback: if state has no summarised_till (e.g. legacy checkpoint),
+        # include all messages and skip summarisation (caller handles).
+        if not hasattr(state, "summarised_till"):
+            return [
+                m  # type: ignore[return-value]
+                for m in state.messages  # type: ignore
+                if isinstance(m, (HumanMessage, AIMessage))
+            ]
+        try:
+            till = int(getattr(state, "summarised_till", 0) or 0)
+        except (TypeError, ValueError):
+            till = 0
+        N = 2  # one human+ai pair overlap for continuity
+        start = max(0, till - N)
+        # get_last_n_conversations filters to Human/AI and preserves order
+        _, recent = get_last_n_conversations(state.messages, start=start)  # type: ignore
+        return recent
 
     def _get_human_prompt(self, state: BaseModel) -> str:
         """Load human prompt from file."""
