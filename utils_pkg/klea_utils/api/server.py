@@ -223,8 +223,6 @@ def spawn_server(
     """
     # Lazy: asyncio/httpx and the api utils pull in heavy deps; keep --help fast.
 
-    import httpx
-
     health_url = f"http://{host}:{port}/health/ready"
 
     def _probe_once() -> bool:

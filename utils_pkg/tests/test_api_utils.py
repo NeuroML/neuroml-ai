@@ -289,7 +289,7 @@ class TestSse:
 
     def test_stream_events_uses_bounded_timeout(self, monkeypatch):
         import httpx as httpx_mod
-        import klea_utils.api.sse as sse
+        from klea_utils.api import sse
 
         captured = {}
 
@@ -339,10 +339,9 @@ class TestSse:
         assert str(captured["timeout"]) != "None"
 
     def test_stream_events_skips_malformed_json(self, monkeypatch):
-        import json
 
         import httpx as httpx_mod
-        import klea_utils.api.sse as sse
+        from klea_utils.api import sse
 
         class FakeResp:
             def raise_for_status(self):
