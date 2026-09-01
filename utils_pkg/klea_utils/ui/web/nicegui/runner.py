@@ -15,11 +15,13 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from typing import Any
 
 import coolname
 import httpx
-from nicegui import app, background_tasks, ui
+from nicegui import app, background_tasks, core, ui
 from nicegui.events import GenericEventArguments
+from nicegui.storage import request_contextvar
 
 from klea_utils.api.sse import (
     fetch_active_models,
@@ -41,6 +43,48 @@ from .state import chats, ensure_chat, get_chats_sorted
 from .widgets import ChatBubble
 
 logger = logging.getLogger(__name__)
+
+
+async def _ensure_user_storage():
+    """Return ``app.storage.user`` recreating it if stale.
+
+    When the ``.nicegui/storage-user-*.json`` file is missing but the
+    browser still sends the old session cookie, ``app.storage.user``
+    raises ``AssertionError``. We warn and recreate the backing
+    ``FilePersistentDict`` for that ``session_id`` so the page can
+    continue with a fresh ``user_id`` instead of 500.
+    """
+    try:
+        return app.storage.user
+    except AssertionError as e:
+        request = request_contextvar.get()
+        session_id = request.session.get("id", "unknown") if request else "unknown"
+        logger.warning(
+            f"stale nicegui session {session_id = } missing storage, recreating: {e}"
+        )
+        if request is not None:
+            await core.app.storage._create_user_storage(session_id)
+        return app.storage.user
+
+
+def _user_storage_or_none():
+    """Return ``app.storage.user`` or ``None`` if stale (no await)."""
+    try:
+        return app.storage.user
+    except AssertionError as e:
+        request = request_contextvar.get()
+        session_id = request.session.get("id", "unknown") if request else "unknown"
+        logger.warning(f"stale nicegui session {session_id = } at storage access: {e}")
+        return None
+
+
+def _safe_set_user(key: str, value: Any) -> None:
+    """Set ``app.storage.user[key]`` if storage is available, else warn."""
+    store = _user_storage_or_none()
+    if store is not None:
+        store[key] = value
+    else:
+        logger.warning(f"skipping persistent set {key}={value!r} due to stale storage")
 
 
 def setup_layout(
@@ -177,9 +221,11 @@ def setup_layout(
 
     # --- Persistent dark mode ---
     dark = ui.dark_mode()
-    if "dark_mode" not in app.storage.user:
-        app.storage.user["dark_mode"] = False
-    dark.bind_value(app.storage.user, "dark_mode")
+    _store = _user_storage_or_none()
+    if _store is not None:
+        if "dark_mode" not in _store:
+            _store["dark_mode"] = False
+        dark.bind_value(_store, "dark_mode")
 
     mini_state = True
     # Mutable containers so refreshable functions can pick up changes.
@@ -423,7 +469,7 @@ def setup_layout(
 
     def _switch_chat(chat_id: str) -> None:
         """Switch the active chat without a page reload."""
-        app.storage.user["chat_id"] = chat_id
+        _safe_set_user("chat_id", chat_id)
         _current_chat_id[0] = chat_id
         logger.debug("chat_id=%s user_id=%s", chat_id, user_id)
         _render_chat_area()
@@ -453,7 +499,7 @@ def setup_layout(
                 _switch_chat(remaining[0][0])
             else:
                 _current_chat_id[0] = ""
-                app.storage.user["chat_id"] = ""
+                _safe_set_user("chat_id", "")
                 _render_chat_area()
                 _render_chat_list.refresh()
                 _status_pane.refresh()
@@ -712,9 +758,9 @@ def setup_layout(
                 chats.pop(key, None)
 
         _current_chat_id[0] = ""
-        app.storage.user["chat_id"] = ""
+        _safe_set_user("chat_id", "")
         new_id = str(uuid.uuid4())
-        app.storage.user["user_id"] = new_id
+        _safe_set_user("user_id", new_id)
         # Rebind the closure so every handler (new chat, send, status pane,
         # etc.) uses the fresh identity for the rest of this page session.
         user_id = new_id
@@ -1096,7 +1142,7 @@ def setup_layout(
                         if not current:
                             current = coolname.generate_slug(2)
                             _current_chat_id[0] = current
-                            app.storage.user["chat_id"] = current
+                            _safe_set_user("chat_id", current)
                             ensure_chat(user_id, current)
                             background_tasks.create(
                                 create_chat_on_server(server_url, user_id, current)
@@ -1219,13 +1265,17 @@ def run_nicegui_app(
         # build; after awaiting client.connected() / check_api_is_ready()
         # the task may run outside that context and NiceGUI raises
         # "user storage for ... should be created before accessing it".
-        if "user_id" not in app.storage.user:
-            app.storage.user["user_id"] = str(uuid.uuid4())
-            logger.debug("NEW user_id=%s", app.storage.user["user_id"])
+        # If ``.nicegui/storage-user-*.json`` was lost (e.g. HF rebuild)
+        # the browser still sends the old session cookie → AssertionError.
+        # Warn and recreate the backing storage so the page continues.
+        store = await _ensure_user_storage()
+        if "user_id" not in store:
+            store["user_id"] = str(uuid.uuid4())
+            logger.debug("NEW user_id=%s", store["user_id"])
         else:
-            logger.debug("EXISTING user_id=%s", app.storage.user["user_id"])
+            logger.debug("EXISTING user_id=%s", store["user_id"])
 
-        user_id = app.storage.user["user_id"]
+        user_id = store["user_id"]
 
         await ui.context.client.connected()
 
