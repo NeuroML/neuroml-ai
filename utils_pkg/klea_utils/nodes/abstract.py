@@ -372,6 +372,15 @@ class AbstractLLMNode[TSchema: BaseModel](
             total_tokens=(meta.get("input_tokens", 0) + meta.get("output_tokens", 0)),
         )
         self.logger.debug(f"Node token usage: {token_usage}")
+        # Track prompt cache hits (Anthropic/OpenAI expose cached tokens)
+        cached = (
+            meta.get("cache_read_input_tokens")
+            or meta.get("cached_tokens")
+            or meta.get("prompt_cache_hit_tokens")
+            or meta.get("cache_creation_input_tokens")
+        )
+        if cached:
+            self.logger.info(f"Cache hit for {self.label}: {cached} tokens cached")
         return token_usage
 
     def _get_usage(self) -> NodeStreamData | None:
