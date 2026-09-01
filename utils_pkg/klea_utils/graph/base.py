@@ -30,7 +30,7 @@ from platformdirs import PlatformDirs
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from klea_utils.llm import LLMModel
-from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.schemas import ToolCallSchema, ToolInfo
 from klea_utils.paths import get_config_dir, init_dir, resolve_app_config_path
 from klea_utils.stores.config import RetrieverConfig
 from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
@@ -555,6 +555,40 @@ class BaseLangGraph(ABC):
     # Hook methods -- override for pre/post setup work
     # ------------------------------------------------------------------
 
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Return types allowed for checkpoint msgpack deserialization.
+
+        Subclasses should override to add their state schemas
+        (e.g. ``EvaluateAnswerSchema``, ``RetrievalQueryOutput``).  The base
+        list covers shared utils types checkpointed by all graphs.
+        """
+        from fastmcp.client.client import CallToolResult as FastMCPCallToolResult
+        from mcp.types import EmbeddedResource, ImageContent, TextContent
+
+        from klea_utils.graph.schemas import TokenUsage
+
+        modules: list[type | tuple[str, ...]] = [
+            TokenUsage,
+            ToolCallSchema,
+            FastMCPCallToolResult,
+            TextContent,
+            ImageContent,
+            EmbeddedResource,
+        ]
+        try:
+            from mcp.types import AudioContent
+
+            modules.append(AudioContent)
+        except ImportError:
+            pass
+        try:
+            from mcp.types import CallToolResult as McpCallToolResult
+
+            modules.append(McpCallToolResult)
+        except ImportError:
+            pass
+        return modules
+
     def _pre_setup(self) -> None:
         """Hook called before the standard setup sequence.
 
@@ -571,16 +605,25 @@ class BaseLangGraph(ABC):
         """
         if self.checkpointer_mode == "sqlite":
             import aiosqlite
+            from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
             db_path = init_dir(self.paths.user_data_dir) / "checkpoints.db"
             self.logger.debug("Opening sqlite checkpointer at %s", db_path)
             conn = await aiosqlite.connect(str(db_path))
-            self.checkpointer = AsyncSqliteSaver(conn)
+            serde = JsonPlusSerializer(
+                allowed_msgpack_modules=self.get_allowed_msgpack_modules()
+            )
+            self.checkpointer = AsyncSqliteSaver(conn, serde=serde)
             # Keep raw connection for lifespan cleanup (AsyncSqliteSaver holds it as .conn)
             self._checkpointer_conn = conn  # type: ignore[attr-defined]
             self.logger.debug("Sqlite checkpointer ready")
         elif self.checkpointer_mode == "inmemory":
-            self.checkpointer = InMemorySaver()
+            from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+            serde = JsonPlusSerializer(
+                allowed_msgpack_modules=self.get_allowed_msgpack_modules()
+            )
+            self.checkpointer = InMemorySaver(serde=serde)
             self.logger.debug("In-memory checkpointer ready")
 
     def _post_setup(self) -> None:

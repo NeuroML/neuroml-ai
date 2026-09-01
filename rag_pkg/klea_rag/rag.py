@@ -36,7 +36,7 @@ from .nodes.init_rag import InitRAGState
 from .nodes.retrieve_info import RetrieveInfoNode
 from .nodes.route_evaluator import RouteEvaluator
 from .nodes.route_query import RouteQuery
-from .schemas import RAGState
+from .schemas import EvaluateAnswerSchema, RAGState, RetrievalQueryOutput
 
 
 @final
@@ -60,6 +60,11 @@ class RAG(BaseLangGraph):
     ):
         """Initialise"""
         super().__init__(logging_level=logging_level, checkpoint=checkpoint)
+
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Extend base allowlist with RAG-specific checkpointed schemas."""
+        base = super().get_allowed_msgpack_modules()
+        return base + [EvaluateAnswerSchema, RetrievalQueryOutput]
 
     def _has_vector_stores(self) -> bool:
         """Return whether any configured domain declares vector stores.

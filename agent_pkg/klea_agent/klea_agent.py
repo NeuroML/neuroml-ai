@@ -33,7 +33,15 @@ from klea_agent.nodes.planner import Planner
 from klea_agent.nodes.tools_router import ToolsRouter
 
 from .config import AppConfig
-from .schemas import GoalSchema, KleaAgentState
+from .schemas import (
+    ArtefactSchema,
+    CodeSchema,
+    Discovery,
+    GoalSchema,
+    KleaAgentState,
+    PlanSchema,
+    StepSchema,
+)
 
 
 @final
@@ -86,6 +94,18 @@ class KleaAgent(BaseLangGraph):
                 modifiable=False,
             ),
         }
+
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Extend base allowlist with Agent-specific checkpointed schemas."""
+        base = super().get_allowed_msgpack_modules()
+        return base + [
+            CodeSchema,
+            StepSchema,
+            PlanSchema,
+            GoalSchema,
+            ArtefactSchema,
+            Discovery,
+        ]
 
     @override
     def _configure_resources(self) -> None:
