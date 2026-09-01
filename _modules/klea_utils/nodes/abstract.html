@@ -679,6 +679,15 @@
             <span class="n">total_tokens</span><span class="o">=</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"input_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"output_tokens"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Node token usage: </span><span class="si">{</span><span class="n">token_usage</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="c1"># Track prompt cache hits (Anthropic/OpenAI expose cached tokens)</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cache_read_input_tokens"</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cached_tokens"</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"prompt_cache_hit_tokens"</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"cache_creation_input_tokens"</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cache hit for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">cached</span><span class="si">}</span><span class="s2"> tokens cached"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">token_usage</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_usage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeStreamData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
