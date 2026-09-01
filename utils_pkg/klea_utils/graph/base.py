@@ -150,7 +150,7 @@ class BaseLangGraph(ABC):
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
         self.checkpointer_mode = checkpoint
         self.memory = checkpoint != "none"
-        self.checkpointer = None
+        self.checkpointer: None | AsyncSqliteSaver | InMemorySaver = None
 
         self.paths = PlatformDirs(self.graph_name.lower())
 
