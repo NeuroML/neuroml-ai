@@ -54,7 +54,10 @@ class AnswerUser(AbstractLangGraphNode[RAGState, dict[str, Any]]):
         answer = messages[-1]
         message = content_to_str(answer.content)
 
-        if state.text_response_eval.next_step != "continue":
+        if (
+            state.text_response_eval.next_step != "continue"
+            and self.BEST_EFFORT_WARNING not in message
+        ):
             message = f"{format_alert(self.BEST_EFFORT_WARNING)}\n\n" + message
 
         self.logger.info(f"Returning final answer to user: {message}")
