@@ -253,3 +253,136 @@ class TestMakeRetryerHttpx:
         with pytest.raises(httpx.ConnectError):
             await retryer(flaky)
         assert calls == 3
+
+
+class TestValidateUrl:
+    """HttpUrl rejects ftp/file/ws, accepts http/https."""
+
+    def test_accepts_http(self):
+        assert api_utils.validate_url("http://example.com") == "http://example.com"
+
+    def test_accepts_https(self):
+        assert (
+            api_utils.validate_url("https://example.com/path?x=1")
+            == "https://example.com/path?x=1"
+        )
+
+    def test_rejects_ftp(self):
+        with pytest.raises(ValueError, match="not a valid HTTP"):
+            api_utils.validate_url("ftp://example.com")
+
+    def test_rejects_file(self):
+        with pytest.raises(ValueError, match="not a valid HTTP"):
+            api_utils.validate_url("file:///etc/passwd")
+
+    def test_rejects_ws(self):
+        with pytest.raises(ValueError, match="not a valid HTTP"):
+            api_utils.validate_url("ws://example.com")
+
+    def test_rejects_bare(self):
+        with pytest.raises(ValueError, match="not a valid HTTP"):
+            api_utils.validate_url("example.com")
+
+
+class TestSse:
+    """stream_events guards: timeout and malformed JSON."""
+
+    def test_stream_events_uses_bounded_timeout(self, monkeypatch):
+        import httpx as httpx_mod
+        import klea_utils.api.sse as sse
+
+        captured = {}
+
+        class FakeClient:
+            def __init__(self, timeout=None):
+                captured["timeout"] = timeout
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            def stream(self, method, url, **kw):
+                class FakeStream:
+                    async def __aenter__(self):
+                        class FakeResp:
+                            def raise_for_status(self):
+                                pass
+
+                            async def aiter_lines(self):
+                                if False:
+                                    yield ""
+
+                        return FakeResp()
+
+                    async def __aexit__(self, *a):
+                        return False
+
+                return FakeStream()
+
+        monkeypatch.setattr(httpx_mod, "AsyncClient", FakeClient)
+        import asyncio
+
+        async def run():
+            gen = sse.stream_events("q", "c", "http://x")
+            try:
+                await asyncio.wait_for(gen.__anext__(), timeout=0.5)
+            except StopAsyncIteration:
+                pass
+            except asyncio.TimeoutError:
+                pass
+
+        asyncio.run(run())
+        assert captured["timeout"] is not None
+        # httpx.Timeout(300) is not None and not infinite
+        assert str(captured["timeout"]) != "None"
+
+    def test_stream_events_skips_malformed_json(self, monkeypatch):
+        import json
+
+        import httpx as httpx_mod
+        import klea_utils.api.sse as sse
+
+        class FakeResp:
+            def raise_for_status(self):
+                pass
+
+            async def aiter_lines(self):
+                yield 'data: {"type": "progress", "node": "a"}'
+                yield "data: {not json"
+                yield 'data: {"type": "complete", "message_for_user": "hi"}'
+
+        class FakeStream:
+            async def __aenter__(self):
+                return FakeResp()
+
+            async def __aexit__(self, *a):
+                return False
+
+        class FakeClient:
+            def __init__(self, timeout=None):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            def stream(self, *a, **kw):
+                return FakeStream()
+
+        monkeypatch.setattr(httpx_mod, "AsyncClient", FakeClient)
+        import asyncio
+
+        async def run():
+            events = []
+            async for ev in sse.stream_events("q", "c", "http://x"):
+                events.append(ev)
+            return events
+
+        events = asyncio.run(run())
+        assert len(events) == 2
+        assert events[0]["type"] == "progress"
+        assert events[1]["type"] == "complete"

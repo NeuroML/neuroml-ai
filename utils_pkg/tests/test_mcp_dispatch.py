@@ -104,6 +104,33 @@ async def test_dispatch_without_meta_skips_gate(tmp_path):
     assert client.calls == [("list_files", {"path": str(tmp_path)})]
 
 
+async def test_dispatch_leading_denied_keeps_order(tmp_path):
+    """Leading denied must not shift later results (old insert bug)."""
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.touch()
+
+    client = FakeMCPClient()
+    tools_meta = {"list_files": {"checkpaths": ["path"]}}
+    results = await dispatch_tool_calls(
+        client,
+        [
+            ("list_files", {"path": str(outside)}),
+            ("list_files", {"path": str(root)}),
+            ("other", {"n": 1}),
+        ],
+        tools_meta,
+        str(root),
+    )
+
+    assert [r.is_error for r in results] == [True, False, False]
+    assert client.calls == [
+        ("list_files", {"path": str(root)}),
+        ("other", {"n": 1}),
+    ]
+
+
 async def test_one_tool_fails_others_succeed():
     class FailingClient(FakeMCPClient):
         async def call_tool(self, name, arguments, raise_on_error=False):
