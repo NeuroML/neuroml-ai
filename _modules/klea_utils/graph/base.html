@@ -439,7 +439,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">domain_mcp_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MCPConfig</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer_mode</span> <span class="o">=</span> <span class="n">checkpoint</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">!=</span> <span class="s2">"none"</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkpointer</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="n">AsyncSqliteSaver</span> <span class="o">|</span> <span class="n">InMemorySaver</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="n">PlatformDirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_name</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
 
