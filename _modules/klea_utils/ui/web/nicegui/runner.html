@@ -302,11 +302,13 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">coolname</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">nicegui</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span><span class="p">,</span> <span class="n">background_tasks</span><span class="p">,</span> <span class="n">ui</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nicegui</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span><span class="p">,</span> <span class="n">background_tasks</span><span class="p">,</span> <span class="n">core</span><span class="p">,</span> <span class="n">ui</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">nicegui.events</span><span class="w"> </span><span class="kn">import</span> <span class="n">GenericEventArguments</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">nicegui.storage</span><span class="w"> </span><span class="kn">import</span> <span class="n">request_contextvar</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.api.sse</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">fetch_active_models</span><span class="p">,</span>
@@ -328,6 +330,48 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatBubble</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_user_storage</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Return ``app.storage.user`` recreating it if stale.</span>
+
+<span class="sd">    When the ``.nicegui/storage-user-*.json`` file is missing but the</span>
+<span class="sd">    browser still sends the old session cookie, ``app.storage.user``</span>
+<span class="sd">    raises ``AssertionError``. We warn and recreate the backing</span>
+<span class="sd">    ``FilePersistentDict`` for that ``session_id`` so the page can</span>
+<span class="sd">    continue with a fresh ``user_id`` instead of 500.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">request_contextvar</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">session_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"unknown"</span><span class="p">)</span> <span class="k">if</span> <span class="n">request</span> <span class="k">else</span> <span class="s2">"unknown"</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"stale nicegui session </span><span class="si">{</span><span class="n">session_id</span><span class="w"> </span><span class="si">= }</span><span class="s2"> missing storage, recreating: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">await</span> <span class="n">core</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">_create_user_storage</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_user_storage_or_none</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Return ``app.storage.user`` or ``None`` if stale (no await)."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span>
+    <span class="k">except</span> <span class="ne">AssertionError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">request_contextvar</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">session_id</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"unknown"</span><span class="p">)</span> <span class="k">if</span> <span class="n">request</span> <span class="k">else</span> <span class="s2">"unknown"</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"stale nicegui session </span><span class="si">{</span><span class="n">session_id</span><span class="w"> </span><span class="si">= }</span><span class="s2"> at storage access: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_safe_set_user</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Set ``app.storage.user[key]`` if storage is available, else warn."""</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="n">_user_storage_or_none</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">store</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"skipping persistent set </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> due to stale storage"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="setup_layout">
@@ -466,9 +510,11 @@
 
     <span class="c1"># --- Persistent dark mode ---</span>
     <span class="n">dark</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">dark_mode</span><span class="p">()</span>
-    <span class="k">if</span> <span class="s2">"dark_mode"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">:</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"dark_mode"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">dark</span><span class="o">.</span><span class="n">bind_value</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s2">"dark_mode"</span><span class="p">)</span>
+    <span class="n">_store</span> <span class="o">=</span> <span class="n">_user_storage_or_none</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">_store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"dark_mode"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_store</span><span class="p">:</span>
+            <span class="n">_store</span><span class="p">[</span><span class="s2">"dark_mode"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">dark</span><span class="o">.</span><span class="n">bind_value</span><span class="p">(</span><span class="n">_store</span><span class="p">,</span> <span class="s2">"dark_mode"</span><span class="p">)</span>
 
     <span class="n">mini_state</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="c1"># Mutable containers so refreshable functions can pick up changes.</span>
@@ -712,7 +758,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_switch_chat</span><span class="p">(</span><span class="n">chat_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Switch the active chat without a page reload."""</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_id</span>
+        <span class="n">_safe_set_user</span><span class="p">(</span><span class="s2">"chat_id"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
         <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_id</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"chat_id=</span><span class="si">%s</span><span class="s2"> user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
         <span class="n">_render_chat_area</span><span class="p">()</span>
@@ -742,7 +788,7 @@
                 <span class="n">_switch_chat</span><span class="p">(</span><span class="n">remaining</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">""</span>
-                <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">""</span>
+                <span class="n">_safe_set_user</span><span class="p">(</span><span class="s2">"chat_id"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
                 <span class="n">_render_chat_area</span><span class="p">()</span>
                 <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
                 <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
@@ -1001,9 +1047,9 @@
                 <span class="n">chats</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">""</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="n">_safe_set_user</span><span class="p">(</span><span class="s2">"chat_id"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
         <span class="n">new_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-        <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_id</span>
+        <span class="n">_safe_set_user</span><span class="p">(</span><span class="s2">"user_id"</span><span class="p">,</span> <span class="n">new_id</span><span class="p">)</span>
         <span class="c1"># Rebind the closure so every handler (new chat, send, status pane,</span>
         <span class="c1"># etc.) uses the fresh identity for the rest of this page session.</span>
         <span class="n">user_id</span> <span class="o">=</span> <span class="n">new_id</span>
@@ -1385,7 +1431,7 @@
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
                             <span class="n">current</span> <span class="o">=</span> <span class="n">coolname</span><span class="o">.</span><span class="n">generate_slug</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
                             <span class="n">_current_chat_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
-                            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"chat_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">current</span>
+                            <span class="n">_safe_set_user</span><span class="p">(</span><span class="s2">"chat_id"</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
                             <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
                             <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
                                 <span class="n">create_chat_on_server</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">current</span><span class="p">)</span>
@@ -1511,13 +1557,17 @@
         <span class="c1"># build; after awaiting client.connected() / check_api_is_ready()</span>
         <span class="c1"># the task may run outside that context and NiceGUI raises</span>
         <span class="c1"># "user storage for ... should be created before accessing it".</span>
-        <span class="k">if</span> <span class="s2">"user_id"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">:</span>
-            <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"NEW user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">])</span>
+        <span class="c1"># If ``.nicegui/storage-user-*.json`` was lost (e.g. HF rebuild)</span>
+        <span class="c1"># the browser still sends the old session cookie → AssertionError.</span>
+        <span class="c1"># Warn and recreate the backing storage so the page continues.</span>
+        <span class="n">store</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_ensure_user_storage</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">"user_id"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">store</span><span class="p">:</span>
+            <span class="n">store</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"NEW user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">store</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"EXISTING user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"EXISTING user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">store</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">])</span>
 
-        <span class="n">user_id</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">user</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">]</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">store</span><span class="p">[</span><span class="s2">"user_id"</span><span class="p">]</span>
 
         <span class="k">await</span> <span class="n">ui</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">connected</span><span class="p">()</span>
 
