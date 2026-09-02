@@ -95,8 +95,15 @@ class KleaAgent(BaseLangGraph):
             ),
         }
 
+    @override
     def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
-        """Extend base allowlist with Agent-specific checkpointed schemas."""
+        """Extend base allowlist with Agent-specific checkpointed schemas.
+
+        Mirrors ``rag_pkg/klea_rag/rag.py:get_allowed_msgpack_modules`` — the
+        base list (``TokenUsage``, ``ToolCallSchema``, ``CallToolResult``, …)
+        is extended with schemas that are stored in the checkpoint.  The base
+        already probes for ``AudioContent``/``McpCallToolResult``.
+        """
         base = super().get_allowed_msgpack_modules()
         return base + [
             CodeSchema,
@@ -112,8 +119,12 @@ class KleaAgent(BaseLangGraph):
         """Configure MCP servers and a default domain.
 
         Merges the external MCP server (if any) with the bundled tools server
-        into a single MCPConfig, and sets up a single domain that includes
-        both so tool descriptions are built correctly.
+        into a single ``MCPConfig``, and sets up a single domain that includes
+        both so tool descriptions are built correctly.  This mirrors the
+        per-domain merging in ``rag_pkg/klea_rag/rag.py:_configure_resources``
+        but with the agent's single ``code`` domain.  Retrieval
+        (``RetrieverConfig``/``default_k``/``k_max``) remains deferred
+        until the ADR-0029 retrieval phase.
         """
         all_servers: dict[str, Any] = dict(self.app_config.mcp_servers)
         if bundled := self._bundled_server_config():
@@ -124,8 +135,22 @@ class KleaAgent(BaseLangGraph):
         self.mcp_config = MCPConfig(mcpServers=all_servers)
         self.domain_mcp_configs = {"code": MCPConfig(mcpServers=all_servers)}
 
-    # TODO: replace with class
+    @override
+    async def _pre_graph(self) -> None:
+        """Hook before graph compilation — parity with RAG.
+
+        Currently a no-op; reserved for wiring that depends on the MCP client
+        but must happen before ``_create_graph`` (e.g. future retrieval setup).
+        """
+
+    async def get_graph(self):
+        """Setup and return the compiled graph (helper for tests/docs)."""
+        await self.setup()
+        return self.graph
+
+    # TODO: replace with dedicated router node (see ``RouteEvaluator`` in RAG)
     async def _step_router_node(self, state: KleaAgentState) -> str:
+        """Return ``plan.status`` for conditional routing."""
         return state.plan.status
 
     def _update_plan_step_status(
@@ -133,12 +158,24 @@ class KleaAgent(BaseLangGraph):
     ) -> dict[str, Any]:
         """Mark the current plan step done/failed from the tool results.
 
+        Any ``is_error`` result marks the step ``failed`` — this mirrors the
+        permission + ``isError`` handling in
+        ``klea_utils/mcp/dispatch.py:dispatch_tool_calls`` and
+        ``klea_utils/nodes/tools_caller.py:ToolsCallerNode``.  Guards against
+        empty plans and missing steps.
+
         :param state: Current graph state.
         :param results: Tool call results (one per call in ``tool_calls``).
         :returns: State updates carrying the updated plan.
         """
+        if not state.plan.step_list:
+            self.logger.warning("No plan steps to update")
+            return {}
+        if state.plan.current_step_index >= len(state.plan.step_list):
+            self.logger.warning("Plan step index out of range")
+            return {"plan": state.plan}
         current_step = state.plan.step_list[state.plan.current_step_index]
-        current_step.status = "failed" if results[0].is_error else "done"
+        current_step.status = "failed" if any(r.is_error for r in results) else "done"
         state.plan.current_step_index += 1
         return {"plan": state.plan}
 
