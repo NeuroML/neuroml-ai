@@ -141,7 +141,7 @@ direct vector-store access; note that RAG returns natural-language answers
 for humans while the agent needs the retrieved documents.  Until then, the
 agent and RAG are wired through shared MCP servers (e.g. both point at
 ``nml-mcp``) rather than a direct code dependency.  See also the agent
-topology ``ADR-0025`` (``proposed``).
+correctness architecture ``ADR-0029`` (``proposed``; supersedes ``ADR-0025``).
 
 ## Out of scope (Level 3+)
 
@@ -151,8 +151,8 @@ The internals of the RAG container (``classify_question``,
 (auto-generated Mermaid core + ``elk`` augmentation, with drift check
 against ``rag_pkg/example-configs/rag-lang-graph.mmd``).  The agent's graph
 nodes (``planner``, ``explore_planner``, ``goal_setter``,
-``evaluator``, ``tools_router``) will be shown at Level 3 when its
-topology is accepted (``proposed`` in ``ADR-0025``).  The ``nml-mcp``
+``evaluator``, ``tools_router``) will be shown at Level 3 when the
+correctness architecture (``ADR-0029``, superseding ``ADR-0025``) is accepted.  The ``nml-mcp``
 tool/sandbox layout and the ``klea_utils`` API/stores internals are
 future code-level views.  The deployment view (local vs container
 platform with HuggingFace Spaces as a nested node) is ``c4-deployment.md``.
