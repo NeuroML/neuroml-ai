@@ -252,10 +252,7 @@ Git log has the step-by-step edits. Omit routine work.
 - Use `f"{variable = }"` (Python 3.8+ f-string debug syntax) when logging
   variable values, one variable per line:
   ```python
-  self.logger.debug(
-      f"{current_chat = }\n"
-      f"{model_info = }"
-  )
+  self.logger.debug(f"{current_chat = }\n{model_info = }")
   ```
 - This avoids manual label strings and keeps the variable name in the log output.
 - Every Klea CLI defaults to `INFO` console logging (progress on stdout,
