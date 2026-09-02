@@ -850,7 +850,7 @@
                     <span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">"open"</span><span class="p">)</span>
                     <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"inspector-entry mb-2 w-full"</span><span class="p">)</span>
                 <span class="p">):</span>
-                    <span class="k">with</span> <span class="p">(</span>
+                    <span class="k">with</span> <span class="p">(</span>  <span class="c1"># noqa: SIM117</span>
                         <span class="n">ui</span><span class="o">.</span><span class="n">element</span><span class="p">(</span><span class="s2">"summary"</span><span class="p">)</span>
                         <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-xs font-bold cursor-pointer w-full"</span><span class="p">)</span>
                         <span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">"click"</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">i</span><span class="o">=</span><span class="n">idx</span><span class="p">:</span> <span class="n">_toggle_inspector_entry</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
@@ -1029,7 +1029,7 @@
                     <span class="p">)</span>
                     <span class="n">dialog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                     <span class="k">return</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to delete user session: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
             <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Failed to delete session: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>

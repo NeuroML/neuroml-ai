@@ -360,7 +360,7 @@
                                 <span class="p">)</span>
                                 <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">msg_resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                             <span class="p">]</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to hydrate chats from server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
@@ -380,7 +380,7 @@
                 <span class="n">chat_data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
                 <span class="n">ensure_chat</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
                 <span class="n">chats</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">chat_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to create chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
@@ -394,7 +394,7 @@
         <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"status=</span><span class="si">%d</span><span class="s2">"</span><span class="p">,</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to delete chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
@@ -411,7 +411,7 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">},</span>
             <span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to rename chat on server: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span></div>
 
 
@@ -429,7 +429,7 @@
                 <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to set model override: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span></div>
 
@@ -447,7 +447,7 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/chat/</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">chat_id</span><span class="si">}</span><span class="s2">/models/overrides/</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Failed to clear model override: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span></div>
 

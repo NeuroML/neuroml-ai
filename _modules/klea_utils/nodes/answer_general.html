@@ -296,7 +296,7 @@
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">override</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">override</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_core.messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">AIMessage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
@@ -324,7 +324,10 @@
 <a class="viewcode-back" href="../../../api/utils/nodes.html#klea_utils.nodes.answer_general.AnswerGeneral">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">AnswerGeneral</span><span class="p">(</span><span class="n">BaseLLMNode</span><span class="p">):</span>
     <span class="n">model_type</span> <span class="o">=</span> <span class="s2">"chat"</span>
-    <span class="n">model_defaults</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"temperature"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"max_output_tokens"</span><span class="p">:</span> <span class="mi">2048</span><span class="p">}</span>
+    <span class="n">model_defaults</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"temperature"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span>
+        <span class="s2">"max_output_tokens"</span><span class="p">:</span> <span class="mi">2048</span><span class="p">,</span>
+    <span class="p">}</span>
 <span class="w">    </span><span class="sd">"""Answer general (non-domain) questions using the LLM's training data.</span>
 
 <span class="sd">    Provides a conversational, user-friendly response. Optionally appends</span>
@@ -385,7 +388,7 @@
                 <span class="n">answer</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n\n</span><span class="si">{</span><span class="n">format_alert</span><span class="p">(</span><span class="n">fallback</span><span class="o">.</span><span class="n">warning</span><span class="p">)</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">"</span>
 
         <span class="n">content</span> <span class="o">=</span> <span class="n">content_to_str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
-        <span class="n">thought</span><span class="p">,</span> <span class="n">answer_text</span> <span class="o">=</span> <span class="n">split_output_by_section</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s2">"&lt;think&gt;"</span><span class="p">,</span> <span class="s2">"&lt;/think&gt;"</span><span class="p">)</span>
+        <span class="n">_thought</span><span class="p">,</span> <span class="n">answer_text</span> <span class="o">=</span> <span class="n">split_output_by_section</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s2">"&lt;think&gt;"</span><span class="p">,</span> <span class="s2">"&lt;/think&gt;"</span><span class="p">)</span>
         <span class="n">answer</span> <span class="o">+=</span> <span class="n">answer_text</span>
 
         <span class="n">messages</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>  <span class="c1"># type: ignore</span>

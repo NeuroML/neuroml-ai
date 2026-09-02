@@ -484,7 +484,7 @@
                         <span class="k">if</span> <span class="n">project_root</span>
                         <span class="k">else</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
                     <span class="p">)</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
                     <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
                 <span class="c1"># Early Content-Length guard</span>
@@ -507,13 +507,15 @@
                             <span class="sa">f</span><span class="s2">"Download parent outside project after resolve: </span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="si">}</span><span class="s2">"</span>
                         <span class="p">)</span>
                         <span class="k">return</span> <span class="kc">None</span>
-                    <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">target</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
-                        <span class="c1"># Leaf is a symlink to outside — re-resolve and check</span>
-                        <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">root</span><span class="p">):</span>
-                            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                                <span class="sa">f</span><span class="s2">"Download target symlink outside project: </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
-                            <span class="p">)</span>
-                            <span class="k">return</span> <span class="kc">None</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+                        <span class="ow">and</span> <span class="n">target</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span>
+                        <span class="ow">and</span> <span class="ow">not</span> <span class="n">target</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+                    <span class="p">):</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"Download target symlink outside project: </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">target</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span>
+                        <span class="p">)</span>
+                        <span class="k">return</span> <span class="kc">None</span>
                     <span class="c1"># Also reject if any parent component is a symlink outside root</span>
                     <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">parent</span> <span class="o">==</span> <span class="n">root</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">root</span><span class="p">)):</span>
@@ -536,7 +538,7 @@
                     <span class="c1"># Prefer aiter_bytes for streaming; fallback to content for fakes</span>
                     <span class="nb">aiter</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s2">"aiter_bytes"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="nb">aiter</span><span class="p">):</span>
-                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># noqa: ASYNC230</span>
                             <span class="k">async</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">aiter</span><span class="p">():</span>
                                 <span class="k">if</span> <span class="ow">not</span> <span class="n">chunk</span><span class="p">:</span>
                                     <span class="k">continue</span>
@@ -547,7 +549,7 @@
                                     <span class="k">try</span><span class="p">:</span>
                                         <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                                         <span class="n">tmp</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001, S110</span>
                                         <span class="k">pass</span>
                                     <span class="k">return</span> <span class="kc">None</span>
                                 <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
@@ -566,7 +568,7 @@
                         <span class="c1"># Re-check cap before write</span>
                         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
-                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c1"># noqa: ASYNC230</span>
                             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
                             <span class="n">written</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
                     <span class="c1"># Atomic replace after successful write and re-check</span>
@@ -586,7 +588,7 @@
                         <span class="p">)</span>
                         <span class="k">try</span><span class="p">:</span>
                             <span class="n">tmp</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001, S110</span>
                             <span class="k">pass</span>
                         <span class="k">return</span> <span class="kc">None</span>
                     <span class="n">tmp</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
@@ -597,7 +599,7 @@
                     <span class="k">try</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">tmp</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                             <span class="n">tmp</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001, S110</span>
                         <span class="k">pass</span>
                     <span class="c1"># Let retryer handle transient errors</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">,</span> <span class="ne">TimeoutError</span><span class="p">)):</span>
@@ -609,7 +611,7 @@
                 <span class="k">if</span> <span class="n">stream_exit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="k">await</span> <span class="n">stream_exit</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001, S110</span>
                         <span class="k">pass</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Too many redirects for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
