@@ -239,12 +239,19 @@ class KleaAgent(BaseLangGraph):
             llm_models=self.llm_models,
         )
         self._planner_node.set_tools_info(self.tools_info)
+        # ToolsPicker/Caller are the shared nodes from ``klea_utils`` (ADR-0020).
+        # ``tools_info`` is the per-domain description map built by
+        # ``BaseLangGraph._build_tools_info`` before ``_create_graph``; the
+        # explicit ``prompt_registry_location`` is required — the shared
+        # class would otherwise resolve ``prompts/`` relative to
+        # ``klea_utils``.  ``model_type="chat"`` per review (may become a
+        # dedicated "reasoning" role later).
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
             llm_models=self.llm_models,
             tools_info=self.tools_info,
-            model_type="plan",
+            model_type="chat",
             prompt_registry_location=Path(__file__).parent / "nodes" / "prompts",
         )
         self._tools_caller_node = ToolsCallerNode(
