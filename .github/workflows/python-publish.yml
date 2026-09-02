@@ -10,7 +10,7 @@ on:
         options:
           - klea_utils
           - klea_rag
-          - klea_code
+          - klea_agent
           - neuroml_mcp
   release:
     types: [published]
@@ -18,7 +18,7 @@ on:
     tags:
       - 'klea_utils-v*'
       - 'klea_rag-v*'
-      - 'klea_code-v*'
+      - 'klea_agent-v*'
       - 'neuroml_mcp-v*'
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         else
           TAG="${{ github.event.release.tag_name || github.ref_name }}"
           echo "Tag: $TAG"
-          if [[ "$TAG" =~ ^(klea_utils|klea_rag|klea_code|neuroml_mcp)-v(.+)$ ]]; then
+          if [[ "$TAG" =~ ^(klea_utils|klea_rag|klea_agent|neuroml_mcp)-v(.+)$ ]]; then
             PKG_NAME="${BASH_REMATCH[1]}"
             VERSION="${BASH_REMATCH[2]}"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -61,7 +61,7 @@ jobs:
         case "$PKG_NAME" in
           klea_utils)   PKG_DIR="utils_pkg" ;;
           klea_rag)     PKG_DIR="rag_pkg" ;;
-          klea_code)    PKG_DIR="code_pkg" ;;
+          klea_agent)   PKG_DIR="agent_pkg" ;;
           neuroml_mcp)  PKG_DIR="mcp_pkg" ;;
         esac
 

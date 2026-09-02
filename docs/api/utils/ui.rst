@@ -1,10 +1,10 @@
 UI
 ==
 
-.. automodule:: klea_utils.ui.web.streamlit.runner
-   :members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 1
 
-.. automodule:: klea_utils.ui.tui.repl
-   :members:
-   :show-inheritance:
+   ui-nicegui
+   ui-tui
+   ui-cli
+   ui-stores-create

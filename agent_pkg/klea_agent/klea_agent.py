@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+Klea agent framework implementation
+
+File: klea_agent.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import logging
+from pathlib import Path
+from typing import Any, final, override
+
+from fastmcp.client.client import CallToolResult
+from fastmcp.mcp_config import MCPConfig
+from klea_utils.graph.base import BaseLangGraph
+from klea_utils.llm import create_configurable_model
+from klea_utils.nodes.fixed_answer import FixedAnswer
+from klea_utils.nodes.guard import GuardNode
+from klea_utils.nodes.guard_router import GuardRouterNode
+from klea_utils.nodes.summarise_memory import SummariseMemoryNode
+from klea_utils.nodes.tools_caller import ToolsCallerNode
+from klea_utils.nodes.tools_picker import ToolsPicker
+from langgraph.graph import END, START, StateGraph
+
+from klea_agent.nodes.answer_user import AnswerUser
+from klea_agent.nodes.evaluator import Evaluator
+from klea_agent.nodes.explore_planner import ExplorePlanner
+from klea_agent.nodes.goal_setter import GoalSetter
+from klea_agent.nodes.init_graph import InitGraphState
+from klea_agent.nodes.planner import Planner
+from klea_agent.nodes.tools_router import ToolsRouter
+
+from .config import AppConfig
+from .schemas import (
+    ArtefactSchema,
+    CodeSchema,
+    Discovery,
+    GoalSchema,
+    KleaAgentState,
+    PlanSchema,
+    StepSchema,
+)
+
+
+@final
+class KleaAgent(BaseLangGraph):
+    """Klea Agent implementation"""
+
+    env_prefix = "KLEA_AGENT_"
+    env_var = "KLEA_AGENT_ENV_FILE"
+    env_file_default = "klea_agent.env"
+    config_class = AppConfig
+    config_file_default = "klea_agent.json"
+    graph_name = "klea"
+
+    # type hints
+    app_config: AppConfig
+
+    def __init__(
+        self,
+        logging_level: int = logging.INFO,
+        checkpoint: str = "inmemory",
+    ):
+        """Initialise"""
+        super().__init__(logging_level=logging_level, checkpoint=checkpoint)
+
+    @override
+    def _setup_models(self) -> None:
+        """Set up the LLM chat model
+
+        A single ``_ConfigurableModel`` is shared across all roles.  Each
+        role's ``model_name`` is populated by the base class from the
+        ``{role}_model`` env field after the env is loaded.  The guard role
+        is optional and not modifiable per request.
+        """
+        from klea_utils.llm import LLMModel
+
+        model = create_configurable_model(logger=self.logger)
+
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                required=True,
+            ),
+            "plan": LLMModel(
+                instance=model,
+                required=True,
+            ),
+            "guard": LLMModel(
+                instance=model,
+                required=False,
+                modifiable=False,
+            ),
+        }
+
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Extend base allowlist with Agent-specific checkpointed schemas."""
+        base = super().get_allowed_msgpack_modules()
+        return base + [
+            CodeSchema,
+            StepSchema,
+            PlanSchema,
+            GoalSchema,
+            ArtefactSchema,
+            Discovery,
+        ]
+
+    @override
+    def _configure_resources(self) -> None:
+        """Configure MCP servers and a default domain.
+
+        Merges the external MCP server (if any) with the bundled tools server
+        into a single MCPConfig, and sets up a single domain that includes
+        both so tool descriptions are built correctly.
+        """
+        all_servers: dict[str, Any] = dict(self.app_config.mcp_servers)
+        if bundled := self._bundled_server_config():
+            all_servers["bundled"] = bundled
+        else:
+            self.logger.info("Bundled tools server disabled")
+
+        self.mcp_config = MCPConfig(mcpServers=all_servers)
+        self.domain_mcp_configs = {"code": MCPConfig(mcpServers=all_servers)}
+
+    # TODO: replace with class
+    async def _step_router_node(self, state: KleaAgentState) -> str:
+        return state.plan.status
+
+    def _update_plan_step_status(
+        self, state: KleaAgentState, results: list[CallToolResult]
+    ) -> dict[str, Any]:
+        """Mark the current plan step done/failed from the tool results.
+
+        :param state: Current graph state.
+        :param results: Tool call results (one per call in ``tool_calls``).
+        :returns: State updates carrying the updated plan.
+        """
+        current_step = state.plan.step_list[state.plan.current_step_index]
+        current_step.status = "failed" if results[0].is_error else "done"
+        state.plan.current_step_index += 1
+        return {"plan": state.plan}
+
+    async def _create_graph(self):
+        """Create the LangGraph"""
+        self.workflow = StateGraph(KleaAgentState)
+
+        self._init_graph_state_node = InitGraphState(
+            logger=self.logger, label="Initializing"
+        )
+        self.workflow.add_node(
+            self._init_graph_state_node.label, self._init_graph_state_node.execute
+        )
+
+        # Guard nodes
+        self._guard_node = GuardNode(
+            logger=self.logger,
+            label="Checking safety",
+            llm_models=self.llm_models,
+            memory=self.memory,
+        )
+        self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
+
+        self._guard_router_node = GuardRouterNode(
+            logger=self.logger, label="Routing safety"
+        )
+
+        self._decline_to_answer_node = FixedAnswer(
+            logger=self.logger,
+            label="Declining query",
+            state_attr="message_for_user",
+            message="I cannot respond to this query. Please try another.",
+        )
+        self.workflow.add_node(
+            self._decline_to_answer_node.label, self._decline_to_answer_node.execute
+        )
+
+        self._goal_setter_node = GoalSetter(
+            logger=self.logger,
+            label="Setting goal",
+            llm_models=self.llm_models,
+            output_schema=GoalSchema,
+            memory=False,
+        )
+        self.workflow.add_node(
+            self._goal_setter_node.label, self._goal_setter_node.execute
+        )
+
+        self._explore_planner_node = ExplorePlanner(
+            logger=self.logger,
+            label="Exploring",
+            llm_models=self.llm_models,
+        )
+        self.workflow.add_node(
+            self._explore_planner_node.label, self._explore_planner_node.execute
+        )
+
+        self._planner_node = Planner(
+            logger=self.logger,
+            label="Planning",
+            llm_models=self.llm_models,
+        )
+        self._planner_node.set_tools_info(self.tools_info)
+        self._tools_picker_node = ToolsPicker(
+            logger=self.logger,
+            label="Selecting tools",
+            llm_models=self.llm_models,
+            tools_info=self.tools_info,
+            model_type="plan",
+            prompt_registry_location=Path(__file__).parent / "nodes" / "prompts",
+        )
+        self._tools_caller_node = ToolsCallerNode(
+            logger=self.logger,
+            label="Running tools",
+            mcp_client=self.mcp_client,
+            tools_meta={t.name: t.meta for t in (self.mcp_tools or []) if t.meta},
+            post_dispatch=self._update_plan_step_status,
+        )
+        self._tools_router_node = ToolsRouter(logger=self.logger, label="Routing tools")
+        self._evaluator_node = Evaluator(logger=self.logger, label="Evaluating")
+        self._answer_user_node = AnswerUser(
+            logger=self.logger, label="Preparing response"
+        )
+        self.workflow.add_node(self._planner_node.label, self._planner_node.execute)
+        # TODO: modify to use a ToolOrchestrator that can call multiple tools
+        # in parallel asynchronously
+        # Note that this depends on how the agent is setup---if it's setup to
+        # run one call at a time, this isn't required, but ideally, it should
+        # be able to call multiple tools---but the prompts/state schema will
+        # need to updated for that
+        self.workflow.add_node(
+            self._tools_caller_node.label, self._tools_caller_node.execute
+        )
+        self.workflow.add_node(
+            self._tools_picker_node.label, self._tools_picker_node.execute
+        )
+        # Evaluator: needs to handle failed tool calls and ask the planner to
+        # update the plan if required
+        self.workflow.add_node(self._evaluator_node.label, self._evaluator_node.execute)
+        self.workflow.add_node(
+            self._answer_user_node.label, self._answer_user_node.execute
+        )
+
+        if self.memory:
+            self._summarise_history_node = SummariseMemoryNode(
+                logger=self.logger,
+                label="Summarizing history",
+                llm_models=self.llm_models,
+                summarisation_threshold_chars=10_000,
+                num_history_chars=10_000,
+            )
+            self.workflow.add_node(
+                self._summarise_history_node.label,
+                self._summarise_history_node.execute,
+            )
+
+        self.workflow.add_edge(START, self._init_graph_state_node.label)
+        self.workflow.add_edge(
+            self._init_graph_state_node.label, self._guard_node.label
+        )
+        self.workflow.add_conditional_edges(
+            self._guard_node.label,
+            self._guard_router_node.execute,
+            {
+                "safe": self._goal_setter_node.label,
+                "unsafe": self._decline_to_answer_node.label,
+            },
+        )
+        self.workflow.add_edge(
+            self._goal_setter_node.label, self._explore_planner_node.label
+        )
+        self.workflow.add_edge(
+            self._explore_planner_node.label, self._tools_picker_node.label
+        )
+        self.workflow.add_edge(self._planner_node.label, self._tools_picker_node.label)
+        self.workflow.add_edge(
+            self._tools_picker_node.label, self._tools_caller_node.label
+        )
+        # TODO: we probably need a node here that takes tools output from
+        # picker and puts them in the right state field for exploration
+        # TODO: we also need some flag that decides whether the next step here
+        # should be planning or evaluation. If it's coming off exploration, it
+        # needs to go to planning. If it's in the plan, it needs to go to
+        # evaluation
+        self.workflow.add_conditional_edges(
+            self._tools_caller_node.label,
+            self._tools_router_node.execute,
+            {
+                "failed": self._tools_picker_node.label,
+                "explored": self._planner_node.label,
+                "continue": self._evaluator_node.label,
+            },
+        )
+
+        self.workflow.add_conditional_edges(
+            self._evaluator_node.label,
+            self._step_router_node,
+            {
+                # should never be here
+                "not_started": self._planner_node.label,
+                # next step
+                "in_progress": self._tools_picker_node.label,
+                # plan isn't working
+                "failed": self._planner_node.label,
+                "aborted": self._answer_user_node.label,
+                "completed": self._answer_user_node.label,
+            },
+        )
+        if self.memory:
+            self.workflow.add_edge(
+                self._answer_user_node.label,
+                self._summarise_history_node.label,
+            )
+            self.workflow.add_edge(self._summarise_history_node.label, END)
+        else:
+            self.workflow.add_edge(self._answer_user_node.label, END)
+        self.workflow.add_edge(self._decline_to_answer_node.label, END)
+
+        if self.checkpointer:
+            self.graph = self.workflow.compile(checkpointer=self.checkpointer)
+        else:
+            self.graph = self.workflow.compile()
+
+        self._export_graph_png("klea-agent-lang-graph.png")

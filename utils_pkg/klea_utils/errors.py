@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Custom errors
+Custom errors.
 
 File: utils_pkg/klea_utils/errors.py
 
 Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
+
+from enum import Enum
 
 
 class LLMInitializationError(Exception):
@@ -15,3 +17,23 @@ class LLMInitializationError(Exception):
 
 class PromptTemplateError(Exception):
     pass
+
+
+class LLMInvocationErrorCategory(str, Enum):
+    """Classification of LLM invocation failures.
+
+    Providers report errors inconsistently, so the classification is a
+    best-effort heuristic driven by tolerant regex matching (see
+    ``klea_utils.llm.classify_llm_invocation_error``).  The category
+    drives retry behaviour in the LLM nodes: some categories are retried
+    with adjusted parameters, others surface immediately.
+    """
+
+    CONTEXT_OVERFLOW = "context_overflow"
+    LENGTH_TRUNCATION = "length_truncation"
+    RATE_LIMITED = "rate_limited"
+    AUTH_FAILED = "auth_failed"
+    MODEL_NOT_FOUND = "model_not_found"
+    TIMEOUT = "timeout"
+    STRUCTURED_OUTPUT_REJECTED = "structured_output_rejected"
+    UNKNOWN = "unknown"

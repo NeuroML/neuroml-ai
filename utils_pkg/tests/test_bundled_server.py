@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""
+Tests for the shared bundled tools server.
+
+File: utils_pkg/tests/test_bundled_server.py
+
+Copyright 2026 Ankur Sinha
+Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
+"""
+
+import inspect
+
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.server import bundled_tools
+from klea_utils.mcp.server.bundled import app, bundle_server
+
+BUNDLED = "bundled"
+
+
+def _tool_info(fn) -> ToolInfo:
+    assert hasattr(fn, "_tool_meta"), f"{fn.__name__} is not a registered tool"
+    return fn._tool_meta
+
+
+def _tags(fn) -> set[str]:
+    return _tool_info(fn).tags or set()
+
+
+def test_all_bundled_wrappers_carry_bundled_tag():
+    names = {
+        name
+        for name, fn in inspect.getmembers(bundled_tools, inspect.isfunction)
+        if fn.__module__ == bundled_tools.__name__ and hasattr(fn, "_tool_meta")
+    }
+    assert names == {
+        "web_fetch",
+        "list_files",
+        "read_file",
+        "download_file",
+    }
+    for name in names:
+        assert BUNDLED in _tags(getattr(bundled_tools, name))
+
+
+def test_web_fetch_tags():
+    assert _tags(bundled_tools.web_fetch) == {BUNDLED, "web"}
+    assert _tool_info(bundled_tools.web_fetch).checkpaths is None
+
+
+def test_list_files_tags_and_checkpaths():
+    assert _tags(bundled_tools.list_files) == {BUNDLED, "local", "files"}
+    assert _tool_info(bundled_tools.list_files).checkpaths == ["path"]
+
+
+def test_read_file_tags_and_checkpaths():
+    assert _tags(bundled_tools.read_file) == {BUNDLED, "local", "files"}
+    assert _tool_info(bundled_tools.read_file).checkpaths == ["path"]
+
+
+def test_download_file_tags_and_checkpaths():
+    assert _tags(bundled_tools.download_file) == {BUNDLED, "web", "download"}
+    assert _tool_info(bundled_tools.download_file).checkpaths == ["file_path"]
+
+
+def test_context_wrapper_contract():
+    """Web-fetching wrappers must declare the fastmcp Context to reach the
+    lifespan-provided httpx session; file tools must not need one.  Note that
+    fastmcp's tool registration rewrites each signature (moving Context after
+    the data params), so membership is checked, not position."""
+
+    for name in ("web_fetch", "download_file"):
+        sig = inspect.signature(getattr(bundled_tools, name))
+        assert "ctx" in sig.parameters, name
+    for name in ("list_files", "read_file"):
+        sig = inspect.signature(getattr(bundled_tools, name))
+        assert "ctx" not in sig.parameters, name
+
+
+async def test_bundle_server_registers_expected_tools():
+    tools = await bundle_server.list_tools()
+    by_name = {t.name: t for t in tools}
+    assert set(by_name) == {"web_fetch", "list_files", "read_file", "download_file"}
+    for t in by_name.values():
+        assert BUNDLED in t.tags
+    assert (by_name["list_files"].meta or {}).get("checkpaths") == ["path"]
+    assert (by_name["read_file"].meta or {}).get("checkpaths") == ["path"]
+    assert (by_name["download_file"].meta or {}).get("checkpaths") == ["file_path"]
+    assert by_name["web_fetch"].meta is None
+
+
+async def test_bundle_server_annotation_hints():
+    """Read-only bundled tools carry readOnlyHint; the download tool is
+    marked destructive + open world."""
+    tools = {t.name: t for t in await bundle_server.list_tools()}
+
+    for name in ("web_fetch", "list_files", "read_file"):
+        ann = tools[name].annotations
+        assert ann is not None, name
+        assert ann.readOnlyHint is True, name
+        assert ann.destructiveHint is None, name
+
+    download = tools["download_file"]
+    assert download.annotations is not None
+    assert download.annotations.readOnlyHint is None
+    assert download.annotations.destructiveHint is True
+    assert download.annotations.openWorldHint is True
+
+
+async def test_bundle_server_serves_via_inprocess_client():
+    from fastmcp import Client
+
+    async with Client(transport=bundle_server) as client:
+        tools = await client.list_tools()
+        names = [t.name for t in tools]
+    assert {"web_fetch", "list_files", "read_file", "download_file"} <= set(names)
+
+
+def test_cli_help():
+    from typer.testing import CliRunner
+
+    result = CliRunner().invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "stdio" in result.output
+    assert "http" in result.output
+
+
+def test_module_entry_point_help_smoke():
+    """The module must run as ``python -m klea_utils.mcp.server.bundled``,
+    the invocation the agent uses to auto-launch the bundled server."""
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "klea_utils.mcp.server.bundled", "--help"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0
+    assert "stdio" in result.stdout

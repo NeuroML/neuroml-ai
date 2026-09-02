@@ -9,20 +9,24 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
+from pathlib import Path
 from typing import final, override
 
 from fastmcp.mcp_config import MCPConfig
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral, FallbackConfig
 from klea_utils.nodes.fixed_answer import FixedAnswer
 from klea_utils.nodes.guard import GuardNode
 from klea_utils.nodes.guard_router import GuardRouterNode
 from klea_utils.nodes.summarise_memory import SummariseMemoryNode
-from klea_utils.stores.config import VectorStoresConfig
+from klea_utils.nodes.tools_caller import ToolsCallerNode
+from klea_utils.nodes.tools_picker import ToolsPicker
+from klea_utils.stores.config import FilterFieldInfo, RetrieverConfig
+from klea_utils.stores.retrieval.base import BaseKleaRetriever
 from langgraph.graph import END, START, StateGraph
 
-from .config import AppConfig, AppEnv
+from .config import AppConfig
 from .nodes.answer_from_context import AnswerFromContext
 from .nodes.answer_user import AnswerUser
 from .nodes.classify_question import ClassifyQuestion
@@ -32,46 +36,82 @@ from .nodes.init_rag import InitRAGState
 from .nodes.retrieve_info import RetrieveInfoNode
 from .nodes.route_evaluator import RouteEvaluator
 from .nodes.route_query import RouteQuery
-from .nodes.tools_caller import ToolsCaller
-from .nodes.tools_picker import ToolsPicker
-from .schemas import RAGState
-
-logging.basicConfig()
-logging.root.setLevel(logging.WARNING)
+from .schemas import EvaluateAnswerSchema, RAGState, RetrievalQueryOutput
 
 
 @final
 class RAG(BaseLangGraph):
     """General RAG implementation"""
 
-    env_class = AppEnv
+    env_prefix = "KLEA_RAG_"
     env_var = "KLEA_RAG_ENV_FILE"
     env_file_default = "rag.env"
     config_class = AppConfig
-    logger_name = "RAG"
+    config_file_default = "klea_rag.json"
+    graph_name = "klea-rag"
 
     # type hints
-    app_env: AppEnv
     app_config: AppConfig
 
     def __init__(
         self,
-        logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        logging_level: int = logging.INFO,
+        checkpoint: str = "inmemory",
     ):
         """Initialise"""
-        super().__init__(logging_level=logging_level, memory=memory)
+        super().__init__(logging_level=logging_level, checkpoint=checkpoint)
 
-        self.g_model = None
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Extend base allowlist with RAG-specific checkpointed schemas."""
+        base = super().get_allowed_msgpack_modules()
+        return base + [EvaluateAnswerSchema, RetrievalQueryOutput]
 
-        # total number of reference documents
-        self.num_refs_max = 10
+    def _has_vector_stores(self) -> bool:
+        """Return whether any configured domain declares vector stores.
+
+        Vector stores load at startup from the embedding model, so an
+        embedding override set later per chat cannot enable retrieval.
+        BM25-only domains need no embedding model.
+        """
+        return bool(
+            self.retriever_config
+            and any(
+                domain.vector_stores
+                for domain in self.retriever_config.domains.values()
+            )
+        )
 
     @override
     def _setup_models(self) -> None:
-        """Set up the LLM chat model"""
-        self.c_model = setup_llm(self.app_env.chat_model, self.logger)
-        self.g_model = setup_llm(self.app_env.guard_model, self.logger)
+        """Set up the LLM chat model
+
+        A single ``_ConfigurableModel`` is shared across the chat roles.
+        Each role's ``model_name`` is populated by the base class from the
+        ``{role}_model`` env field after the env is loaded.  The embedding
+        role has no chat instance; it only carries the embedding model name
+        used to load vector stores at startup.  The guard role is optional
+        and not modifiable per request.
+        """
+        from klea_utils.llm import LLMModel
+
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                required=True,
+            ),
+            "guard": LLMModel(
+                instance=model,
+                required=False,
+                modifiable=False,
+            ),
+            # required is adjusted in ``_configure_resources`` once the
+            # vector store configuration is known.
+            "embedding": LLMModel(
+                instance=None,
+                required=True,
+            ),
+        }
 
     async def get_graph(self):
         """Setup and get compiled graph"""
@@ -97,46 +137,66 @@ class RAG(BaseLangGraph):
         """Configure resources"""
         assert self.app_config
         domains = self.app_config.domains
-        domain_vs = {}
+        domain_stores = {}
         domain_ms = {}
         for d, inf in domains.items():
-            domain_vs[d] = inf.model_dump(include={"vector_stores", "description"})
+            domain_stores[d] = inf.model_dump(
+                include={
+                    "vector_stores",
+                    "bm25_stores",
+                    "description",
+                    "filter_fields",
+                }
+            )
 
             # flat config for mcp client initialization
             domain_ms.update(inf.model_dump(include={"mcp_servers"})["mcp_servers"])
 
-        self.logger.debug(f"{domain_vs = }")
+        self.logger.debug(f"{domain_stores = }")
         self.logger.debug(f"{domain_ms = }")
 
         # set up configs
-        self.stores_config = VectorStoresConfig(domains=domain_vs)
-        self.embedding_model = self.app_env.embedding_model
+        self.retriever_config = RetrieverConfig(domains=domain_stores)
         self.default_k = self.app_config.general.default_k
         self.k_max = self.app_config.general.k_max
+        self.k_inc = self.app_config.general.k_inc
+        self.max_refs_size = self.app_config.general.max_refs_size
+
+        # The bundled tools server, when enabled, is a general, domain-agnostic
+        # tool source: it is made available to every configured domain.
+        bundled = self._bundled_server_config()
+        if bundled:
+            domain_ms["bundled"] = bundled
+            self.logger.debug("Bundled tools server enabled across all domains")
         self.mcp_config = MCPConfig(mcpServers=domain_ms)
+
+        # The embedding model is only required when vector stores are
+        # configured.  ``_check_required_models`` runs after this, so adjust
+        # the flag now that the store configuration is known.
+        if "embedding" in self.llm_models:
+            self.llm_models["embedding"].required = self._has_vector_stores()
 
         # store per-domain MCP configs for domain-aware tool descriptions
         self.domain_mcp_configs = {}
         for d, inf in domains.items():
-            domain_ms = inf.model_dump(include={"mcp_servers"}).get("mcp_servers", {})
-            if domain_ms:
-                self.domain_mcp_configs[d] = MCPConfig(mcpServers=domain_ms)
+            domain_servers = inf.model_dump(include={"mcp_servers"}).get(
+                "mcp_servers", {}
+            )
+            if bundled:
+                domain_servers = {**domain_servers, "bundled": bundled}
+            if domain_servers:
+                self.domain_mcp_configs[d] = MCPConfig(mcpServers=domain_servers)
 
     @override
     async def _create_graph(self):
         """Create the LangGraph"""
-        self.workflow = StateGraph(RAGState)  # ty: ignore[invalid-assignment]
-
-        # TODO: should be a check that gives user an error
-        assert self.stores is not None or self.mcp_client is not None
-        assert self.QueryDomainSchema is not None
+        self.workflow = StateGraph(RAGState)
 
         # Guard nodes
         self._guard_node = GuardNode(
             logger=self.logger,
             label="Checking safety",
-            model=self.g_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=self.memory,
         )
         self.workflow.add_node(self._guard_node.label, self._guard_node.execute)
@@ -164,9 +224,8 @@ class RAG(BaseLangGraph):
         self._classify_question_node = ClassifyQuestion(
             logger=self.logger,
             label="Classifying question",
-            model=self.c_model,
+            llm_models=self.llm_models,
             output_schema=self.QueryDomainSchema,
-            temperature=0.3,
             memory=self.memory,
             domains={
                 d: info.description for d, info in self.app_config.domains.items()
@@ -183,11 +242,17 @@ class RAG(BaseLangGraph):
             non_domain_chat=self.app_config.general.non_domain_chat,
         )
 
+        # Domains are configured (with their filter fields) in
+        # ``_configure_resources`` before the graph is built.
+        assert self.retriever_config
+        filter_fields_by_domain: dict[str, list[FilterFieldInfo]] = {
+            d: inf.filter_fields for d, inf in self.retriever_config.domains.items()
+        }
         self._generate_retrieval_query_node = GenerateRetrievalQuery(
             logger=self.logger,
             label="Generating search",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
+            filter_fields_by_domain=filter_fields_by_domain,
         )
         self.workflow.add_node(
             self._generate_retrieval_query_node.label,
@@ -196,18 +261,20 @@ class RAG(BaseLangGraph):
         self._tools_picker_node = ToolsPicker(
             logger=self.logger,
             label="Selecting tools",
-            model=self.c_model,
-            temperature=0.01,
-            domain_tools_description=self.tools_description,
+            llm_models=self.llm_models,
+            tools_info=self.tools_info,
+            model_type="chat",
+            prompt_registry_location=Path(__file__).parent / "nodes" / "prompts",
         )
         self.workflow.add_node(
             self._tools_picker_node.label, self._tools_picker_node.execute
         )
 
-        self._tools_caller_node = ToolsCaller(
+        self._tools_caller_node = ToolsCallerNode(
             logger=self.logger,
             label="Running tools",
             mcp_client=self.mcp_client,
+            tools_meta={t.name: t.meta for t in (self.mcp_tools or []) if t.meta},
         )
         self.workflow.add_node(
             self._tools_caller_node.label, self._tools_caller_node.execute
@@ -216,8 +283,7 @@ class RAG(BaseLangGraph):
         self._answer_general_node = AnswerGeneral(
             logger=self.logger,
             label="Answering generally",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=self.memory,
             fallback_config=FallbackConfig(
                 enabled=self.app_config.general.fallback_to_training_data,
@@ -238,11 +304,21 @@ class RAG(BaseLangGraph):
             self._refuse_answer_node.label, self._refuse_answer_node.execute
         )
 
+        # All configured retrievers (vector stores and/or BM25 stores)
+        retrievers: list[BaseKleaRetriever] = [
+            r for r in (self.stores, self.bm25_stores) if r is not None
+        ]
+        if not retrievers:
+            self.logger.warning(
+                "No retrievers (vector or BM25) configured for any domain"
+            )
+
         self._retrieve_info_node = RetrieveInfoNode(
             logger=self.logger,
             label="Retrieving information",
-            stores=self.stores,
-            num_refs_max=self.num_refs_max,
+            retrievers=retrievers,
+            max_refs_size=self.max_refs_size,
+            filter_fields_by_domain=filter_fields_by_domain,
         )
         self.workflow.add_node(
             self._retrieve_info_node.label, self._retrieve_info_node.execute
@@ -250,8 +326,7 @@ class RAG(BaseLangGraph):
         self._generate_answer_from_context_node = AnswerFromContext(
             logger=self.logger,
             label="Generating answer",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=False,
         )
         self.workflow.add_node(
@@ -261,8 +336,7 @@ class RAG(BaseLangGraph):
         self._evaluate_answer_node = Evaluator(
             logger=self.logger,
             label="Evaluating answer",
-            model=self.c_model,
-            temperature=0.0,
+            llm_models=self.llm_models,
         )
         self.workflow.add_node(
             self._evaluate_answer_node.label, self._evaluate_answer_node.execute
@@ -271,7 +345,7 @@ class RAG(BaseLangGraph):
         self._route_evaluator_node = RouteEvaluator(
             logger=self.logger,
             label="Routing evaluation",
-            stores=self.stores,
+            retrievers=retrievers,
             max_retrieval_attempts=self.app_config.general.max_retrieval_attempts,
             max_rewrite_attempts=self.app_config.general.max_rewrite_attempts,
             fallback_to_training_data=self.app_config.general.fallback_to_training_data,
@@ -299,9 +373,9 @@ class RAG(BaseLangGraph):
             self._summarise_history_node = SummariseMemoryNode(
                 logger=self.logger,
                 label="Summarizing history",
-                model=self.c_model,
-                temperature=0.3,
-                summarisation_threshold=10,
+                llm_models=self.llm_models,
+                summarisation_threshold_chars=10_000,
+                num_history_chars=10_000,
             )
             self.workflow.add_node(
                 self._summarise_history_node.label,
@@ -365,6 +439,7 @@ class RAG(BaseLangGraph):
                 "rewrite_answer": self._generate_answer_from_context_node.label,
                 "modify_query": self._generate_retrieval_query_node.label,
                 "fallback": self._answer_general_node.label,
+                "best_effort": self._answer_user_node.label,
                 "undefined": self._ask_user_for_clarification_node.label,
             },
         )

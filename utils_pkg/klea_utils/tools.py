@@ -9,17 +9,12 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from fastmcp.client.client import CallToolResult
-from mcp.types import EmbeddedResource, TextContent
-
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
+from mcp.types import EmbeddedResource, TextContent, Tool
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def _textualize_content_block(block: Any) -> str:
@@ -38,7 +33,8 @@ def _textualize_content_block(block: Any) -> str:
 
 
 def textualize_tool_results(
-    tool_results: List[CallToolResult],
+    tool_results: list[CallToolResult],
+    max_len_per_tool: int | None = None,
 ) -> str:
     """Format tool call results as LLM-ready text for use in prompt context.
 
@@ -47,6 +43,9 @@ def textualize_tool_results(
     separation from surrounding prompt text.
 
     :param tool_results: List of tool call results
+    :param max_len_per_tool: If set, truncate each tool's textual content to
+        this many characters (per-tool cap, not total). Ensures a large first
+        result doesn't starve later tools' outputs.
     :returns: Formatted string suitable for inclusion in an LLM prompt
     """
     if not tool_results:
@@ -56,11 +55,107 @@ def textualize_tool_results(
     for i, result in enumerate(tool_results, 1):
         text += f"\n### Result {i}/{len(tool_results)}\n"
 
+        parts = [_textualize_content_block(c) for c in result.content]
+        content = "\n".join(parts)
+        if max_len_per_tool is not None and len(content) > max_len_per_tool:
+            content = content[:max_len_per_tool] + f"\n[tool result {i} truncated]"
         if result.is_error:
-            parts = [_textualize_content_block(c) for c in result.content]
-            text += "**Error:** " + "\n".join(parts) + "\n"
+            text += "**Error:** " + content + "\n"
         else:
-            parts = [_textualize_content_block(c) for c in result.content]
-            text += "```\n" + "\n".join(parts) + "\n```\n"
+            text += "```\n" + content + "\n```\n"
 
     return text
+
+
+def _collapse_schema_type(schema: dict[str, Any]) -> str:
+    """Collapse a JSON Schema type spec into a single compact type name.
+
+    Handles ``anyOf`` unions (e.g. ``[{"type": "integer"}, {"type": "null"}]``
+    collapses to ``integer``) and plain ``type`` strings.
+    """
+    if "anyOf" in schema:
+        types = [
+            t.get("type")
+            for t in schema["anyOf"]
+            if isinstance(t, dict) and t.get("type") != "null"
+        ]
+        if types:
+            return "|".join(str(t) for t in types)
+    return schema.get("type") or "any"
+
+
+def _format_tool_parameters(input_schema: dict[str, Any] | None) -> str:
+    """Return a compact one-line-per-parameter summary of an MCP tool schema.
+
+    The raw JSON Schema ``properties`` dict is verbose (defaults, length and
+    range validators, ``anyOf`` unions); only the parameter name, type,
+    required flag, and description are useful for tool selection, so the
+    rest is dropped and whitespace is normalised.
+    """
+    if not input_schema:
+        return ""
+    properties = input_schema.get("properties") or {}
+    if not properties:
+        return ""
+    required = set(input_schema.get("required") or [])
+    lines = []
+    for name, schema in properties.items():
+        if not isinstance(schema, dict):
+            continue
+        ptype = _collapse_schema_type(schema)
+        desc = " ".join((schema.get("description") or "").split())
+        flag = ", required" if name in required else ""
+        lines.append(f"- {name} ({ptype}{flag}): {desc}".rstrip())
+    if not lines:
+        return ""
+    return "Parameters:\n" + "\n".join(lines)
+
+
+def build_tool_description(t: Tool) -> str:
+    """Build the compact LLM-facing description for an MCP tool.
+
+    Used to populate :class:`klea_utils.mcp.schemas.ToolInfo.description`
+    so the tool picker's prompt stays small as more tools are added.
+
+    Klea expects MCP tool descriptions to follow the *docstring-first*
+    convention (see ``docs/concepts/mcp.rst``, "Tool description length and
+    style"): the LLM-facing description is the opening text block of the
+    function docstring, written as a one-sentence summary followed by
+    "Use when:" / "Do not use for:" bullet sections and a single example
+    line, bounded to roughly 100-250 tokens.  Anthropic recommends at
+    least 3-4 sentences covering what a tool does and when it should (and
+    should not) be used; opencode keeps its tool descriptions to roughly
+    100-600 tokens with a one-line summary first.
+
+    Parameter descriptions are given in a Google-style ``Args:`` section
+    that fastmcp parses into the schema, so they must not be repeated in
+    the description.  MCP servers must not set the tool description to the
+    raw full docstring (see ``neuroml_mcp.utils.register_tools``),
+    otherwise the prompt carries duplicated ``Args:``/``Returns:`` prose
+    in both the description and the compact parameter list built here.
+    """
+    parts = [f"## {t.name}"]
+    if t.description:
+        parts.append(t.description)
+    params = _format_tool_parameters(t.inputSchema)
+    if params:
+        parts.append(params)
+    return "\n\n".join(parts)
+
+
+def clean_tool_meta(meta: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Drop developer tags from tool metadata before storing it.
+
+    FastMCP populates ``meta`` with ``{"fastmcp": {"tags": [...]}}``; the
+    tags are mostly developer labels (e.g. ``testing``) that are not used
+    by the tool picker, so they are stripped to keep stored metadata lean.
+    """
+    if not meta:
+        return None
+    cleaned = {k: (dict(v) if isinstance(v, dict) else v) for k, v in meta.items()}
+    fastmcp_meta = cleaned.get("fastmcp")
+    if isinstance(fastmcp_meta, dict):
+        fastmcp_meta.pop("tags", None)
+        if not fastmcp_meta:
+            cleaned.pop("fastmcp", None)
+    return cleaned or None

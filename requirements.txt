@@ -1,4 +1,4 @@
 ./utils_pkg[dev]
 ./rag_pkg[dev]
-./code_pkg[dev]
+./agent_pkg[dev]
 ./mcp_pkg[dev]

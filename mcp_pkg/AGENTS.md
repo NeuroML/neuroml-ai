@@ -12,10 +12,10 @@ CLI entry: `nml-mcp`
 ### Building and Installation
 ```bash
 # Install in development mode
-pip install -e .
+uv pip install -e .
 
 # Install development dependencies
-pip install -e .[dev]
+uv pip install -e .[dev]
 ```
 
 ### Linting and Formatting
@@ -54,11 +54,18 @@ pytest -m "not localonly"
 ### Package Structure
 ```
 neuroml_mcp/
-├── server/      # FastMCP server
-├── tools/       # Auto-discovered tools
-├── sandbox/     # Sandboxed code execution
-├── utils.py     # Utilities
-└── __init__.py
+├── server/        # FastMCP server
+│   ├── app_lifespan.py
+│   └── main.py
+├── tools/         # Auto-discovered tools
+│   ├── code_tools.py     # Code execution tools
+│   ├── neuroml_tools.py  # NeuroML model tools
+│   ├── web_tools.py      # Web search tools
+│   └── sandbox/           # Sandboxed code execution
+│       ├── docker.py     # Docker sandbox
+│       ├── local.py      # Local subprocess sandbox
+│       └── sandbox.py    # Abstract sandbox base
+└── utils.py
 ```
 
 ### Key Technologies
@@ -68,10 +75,23 @@ neuroml_mcp/
 - Sandbox isolation for code execution
 
 ### Tool Development
-- Tools must be functions ending with `_tool` suffix
+- Tools are functions decorated with `@tool_meta(ToolInfo(...))`; the
+  function name becomes the tool name (a `_tool` suffix is optional)
 - Use `@context.require()` decorator for dependencies
-- Include comprehensive docstrings with parameter types and examples
 - Return structured data (dicts, Pydantic models) rather than raw strings
+- **Docstring-first convention (Klea's expectation):** the tool's LLM-facing
+  description is the docstring's *opening text block*, written as a
+  one-sentence summary, a "Use this tool to ..." sentence, "Use when:" /
+  "Do not use for:" bullet sections, and one example line (target ~100-250
+  tokens). Parameter descriptions go in a Google-style `Args:` section,
+  which fastmcp parses into the input schema. Do NOT include long prose
+  sections (template structure, next steps, error handling, etc.) or an
+  `Args:` dump in the description: Klea's tool picker shows the opening
+  block as the description and the `Args:`-derived schema as compact
+  parameter lines, so duplicated prose just wastes prompt tokens.
+  Rationale and sources (Anthropic, OpenAI, MCP spec, opencode) plus a
+  reusable template: `docs/concepts/mcp.rst` ("Tool description length and
+  style").
 
 ### Sandbox Implementation
 - Inherit from `AsyncSandbox` abstract base class
@@ -84,9 +104,9 @@ neuroml_mcp/
 
 ### File Organization
 - **Header**: All Python files must start with `#!/usr/bin/env python3` shebang
-- **Copyright**: Follow with copyright format: `# Copyright 2025 Ankur Sinha <ankursinha@fedoraproject.org>`
+- **Copyright**: Follow with copyright format: `# Copyright 2026 Ankur Sinha <ankursinha@fedoraproject.org>`
 - **Docstrings**: Use reStructuredText format with parameter and return type documentation
-- **Module structure**: `__init__.py` files should be minimal or empty
+- **Module structure**: `__init__.py` files should be minimal or empty; do not add `__all__` re-exports -- import from the specific modules
 
 ### Import Conventions
 ```python
@@ -106,11 +126,12 @@ from neuroml_mcp.utils import register_all_tools
 ```
 
 ### Naming Conventions
-- **Functions**: snake_case with descriptive names (`create_new_NeuroML_model_tool`)
+- **Functions**: snake_case with descriptive names (`create_new_NeuroML_model`)
 - **Classes**: PascalCase (`LocalSandbox`, `RunCommand`)
 - **Variables**: snake_case (`tool_context`, `sandbox_manager`)
 - **Constants**: UPPER_CASE (`DEFAULT_TIMEOUT`, `MAX_RETRIES`)
-- **Tool functions**: Must end with `_tool` suffix for auto-discovery
+- **Tool functions**: Marked with `@tool_meta` for auto-discovery (the
+  `_tool` suffix is a naming convention, not a requirement)
 - **Private functions**: Prefix with underscore (`_internal_helper`)
 
 ### Async/Await Patterns

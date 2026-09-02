@@ -9,19 +9,30 @@
 # changes and it's a pain to keep stashing them, each time pre-commit runs, for
 # example
 #
+#
+#
+
+mapfile -d $'\0' VECTOR_STORES_DIR < <(find . -name "vector*" -type d -print0)
+
+echo "${VECTOR_STORES_DIR}"
 
 ignore () {
-    pushd vector-stores || exit 1
-        find . -type f -print -execdir git update-index --assume-unchanged '{}' \;
-    popd || exit 1
+    for folder in "${VECTOR_STORES_DIR[@]}"
+    do
+        pushd "$folder" || exit 1
+            find . -type f -print -execdir git update-index --assume-unchanged '{}' \;
+        popd || exit 1
+    done
     echo > "VECTOR_STORES_IGNORED"
-
 }
 
 unignore () {
-    pushd vector-stores || exit 1
-        find . -type f -print -execdir git update-index --no-assume-unchanged '{}' \;
-    popd || exit 1
+    for folder in "${VECTOR_STORES_DIR[@]}"
+    do
+        pushd "$folder" || exit 1
+            find . -type f -print -execdir git update-index --no-assume-unchanged '{}' \;
+        popd || exit 1
+    done
     rm -f "VECTOR_STORES_IGNORED"
 }
 

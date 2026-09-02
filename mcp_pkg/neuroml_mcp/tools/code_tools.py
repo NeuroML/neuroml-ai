@@ -11,154 +11,127 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 from dataclasses import asdict
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import Annotated
 
+from fastmcp.tools import ToolResult
+from klea_utils.mcp.registry import tool_meta
+from klea_utils.mcp.schemas import ToolInfo
+from klea_utils.mcp.tool_impls.list_files import list_files as list_files_impl
+from klea_utils.mcp.tool_result import to_result
 from pydantic import Field
-from typing_extensions import Annotated
 
 from neuroml_mcp.tools.sandbox.sandbox import RunPythonCode
 
-from ..utils import ToolInfo, tool_meta
 from .sandbox import nml_mcp_sandbox
 
 # set the implementation for development
 sbox = nml_mcp_sandbox
 
 
-@tool_meta(ToolInfo(tags={"testing"}))
-async def dummy_code_tool(
-    astring: Annotated[str, Field(description="String to be echoed back")],
-) -> str:
-    """Return the input string in a sentence (testing tool only).
-
-    This is a dummy tool used only for unit testing and debugging.
-
-    Example: dummy_code_tool("hello") returns "I got hello"
-    """
-    return f"I got {astring}"
-
-
-@tool_meta(ToolInfo(tags={"testing"}))
-async def list_files_tool(
-    path: Annotated[
-        str,
-        Field(
-            description=(
-                "Directory path to list. Must be relative to current working "
-                "directory and cannot contain '..' for security"
-            ),
-            min_length=1,
-        ),
-    ],
-    max_depth: Annotated[
-        int | None,
-        Field(description="Maximum directory depth to traverse. 'None' for unlimited"),
-    ] = None,
+@tool_meta(
+    ToolInfo(
+        title="List files and directories",
+        tags={"neuroml", "local", "files"},
+        checkpaths=["path"],
+        read_only=True,
+    )
+)
+async def list_files(
+    path: Annotated[str, Field(min_length=1)],
+    max_depth: int | None = None,
     # LLMs are trained on shell style globs, so they insist on using space
     # separated file patterns. So we explicitly support these. Otherwise, this
     # becomes error prone.
-    pattern: Annotated[
-        str,
-        Field(
-            description=(
-                """
-                Space separated file patterns to filter based on files type.
-                Correct: '*.py'
-                Correct: '*.md'
-                Correct: '*.py *.md'
-            """
-            )
-        ),
-    ] = "*",
-    include_files: Annotated[
-        bool, Field(description="Whether to include files in results")
-    ] = True,
-    include_directories: Annotated[
-        bool, Field(description="Whether to include directories in results")
-    ] = True,
-    recursive: Annotated[
-        bool, Field(description="If True, traverse subdirectories recursively")
-    ] = False,
-    max_results: Annotated[
-        int, Field(description="Maximum number of entries to return", ge=1, le=10000)
-    ] = 100,
-) -> Dict[str, Any]:
+    pattern: str = "*",
+    include_files: bool = True,
+    include_directories: bool = True,
+    recursive: bool = False,
+    max_results: Annotated[int, Field(ge=1, le=10000)] = 100,
+) -> ToolResult:
     """List files and directories with filtering and metadata.
-    Use this tool to explore file system structure and find specific files.
 
-    Example: list_files_tool(path=".", pattern="*.py", recursive=True)
+    Use this tool to explore the file system structure and find specific
+    files.
+
+    Use when:
+    - You need to see what files and directories exist under a path.
+    - You want to locate files matching a pattern (e.g. '*.py').
+
+    Do not use for:
+    - Reading the contents of a file (use the file reading tool instead).
+    - Running commands or scripts (use the code execution tool instead).
+
+    Example: list_files(path=".", pattern="*.py", recursive=True)
+
+    Args:
+        path: Directory path to list. Must be relative to the current working
+            directory and cannot contain '..' for security.
+        max_depth: Maximum directory depth to traverse. 'None' for unlimited.
+        pattern: Space separated file patterns to filter based on file type.
+            Correct: '*.py', '*.md', '*.py *.md'.
+        include_files: Whether to include files in results.
+        include_directories: Whether to include directories in results.
+        recursive: If True, traverse subdirectories recursively.
+        max_results: Maximum number of entries to return.
+
+    Returns:
+        Dict with the matching files, an error message (if any), and a
+        truncated flag.
     """
-    the_path = Path(path)
-    truncated = "False"
-    error = ""
-    files: List[Dict[str, Any]] = []
-    paths: List[Path] = []
-
-    if ".." in path:
-        return {
-            "files": [],
-            "truncated": "False",
-            "error": "Path contains '..', exiting.",
-        }
-
-    patterns = pattern.split()
-    patterns = list(set(patterns))
-
-    try:
-        for p in patterns:
-            if recursive:
-                paths.extend(list(the_path.rglob(p)))
-            else:
-                paths.extend(list(the_path.glob(p)))
-
-        if len(paths) > max_results:
-            truncated = "True"
-
-        for f in paths[:max_results]:
-            ftype = "file"
-            if f.is_dir():
-                ftype = "directory"
-            if f.is_symlink():
-                ftype = "link"
-            files.append(
-                {
-                    "path": str(f),
-                    "type": ftype,
-                    "modified time": f.stat().st_mtime,
-                    "size": f.stat().st_size,
-                }
-            )
-    except Exception as e:
-        error = e.__str__()
-
-    result = {"files": files, "error": error, "truncated": truncated}
-
-    return result
+    result = list_files_impl(
+        path=path,
+        max_depth=max_depth,
+        pattern=pattern,
+        include_files=include_files,
+        include_directories=include_directories,
+        recursive=recursive,
+        max_results=max_results,
+    )
+    return to_result(result)
 
 
-@tool_meta(ToolInfo(tags={"testing"}))
-async def run_python_code_tool(
-    code: Annotated[
-        str,
-        Field(
-            description=(
-                "Complete Python code to execute. Must be valid Python syntax "
-                "and cannot require interactive input"
-            ),
-            min_length=1,
-        ),
-    ],
-) -> Dict[str, Any]:
+@tool_meta(
+    ToolInfo(
+        title="Execute Python code",
+        tags={"neuroml", "local", "code"},
+        destructive=True,
+    )
+)
+async def run_python_code(
+    code: Annotated[str, Field(min_length=1)],
+) -> ToolResult:
     """Execute Python code in a sandboxed environment.
 
-    Use this tool to test code snippets, generate models, and perform calculations.
+    Use this tool to test code snippets, generate models, and perform
+    calculations.
 
-    Example: run_python_code_tool(
-        "import numpy; print('numpy version:', numpy.__version__)"
-    )
+    Use when:
+    - You need to run a short Python snippet to test or compute something.
+    - You need to generate or manipulate NeuroML structures with code.
+
+    Do not use for:
+    - Simple file operations (use the file tools instead).
+    - Long-running or interactive programs (the sandbox rejects these).
+
+    Example: run_python_code("import numpy; print('numpy version:', numpy.__version__)")
+
+    Args:
+        code: Complete Python code to execute. Must be valid Python syntax
+            and cannot require interactive input.
+
+    Returns:
+        Dict with the execution result.
     """
     request = RunPythonCode(code=code)
     async with sbox(".") as f:
         result = await f.run(request)
-    return asdict(result)
+    data = asdict(result)
+    if data.get("returncode") not in (0, None):
+        data = {
+            **data,
+            "error": data.get("stderr")
+            or f"Python code failed with returncode {data.get('returncode')}",
+        }
+    else:
+        data = {**data, "error": ""}
+    return to_result(data)

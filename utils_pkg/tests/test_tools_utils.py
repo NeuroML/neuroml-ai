@@ -11,17 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 
 from fastmcp.client.client import CallToolResult
+from klea_utils.tools import textualize_tool_results
 from mcp.types import EmbeddedResource, TextContent, TextResourceContents
 from pydantic.networks import AnyUrl
 
-from klea_utils.tools import textualize_tool_results
-
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def test_textualize_tool_results_success():

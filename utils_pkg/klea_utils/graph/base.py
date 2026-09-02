@@ -8,6 +8,7 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import contextvars
 import json
 import logging
 import os
@@ -15,20 +16,35 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from textwrap import dedent
-from typing import Any, List, Literal, Type, final
+from typing import Any, Literal, cast, final
 
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.stream import StreamTransformer
 from langgraph.types import RunnableConfig
 from mcp.types import Tool
-from pydantic import BaseModel, create_model
+from platformdirs import PlatformDirs
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from klea_utils.stores.config import VectorStoresConfig
-from klea_utils.stores.retrieval import VSRetriever
+from klea_utils.llm import LLMModel
+from klea_utils.mcp.schemas import ToolCallSchema, ToolInfo
+from klea_utils.paths import get_config_dir, init_dir, resolve_app_config_path
+from klea_utils.stores.config import RetrieverConfig
+from klea_utils.stores.retrieval.bm25 import BM25RetrieverManager
+from klea_utils.stores.retrieval.vs import VSRetriever
+from klea_utils.tools import build_tool_description, clean_tool_meta
+
+# Per-request context variable carrying per-session model overrides (api_key,
+# model, provider, etc.).  Set by the API layer before graph.ainvoke() and
+# read by _invoke_llm() so that nodes don't need to thread overrides through
+# their signatures.  Falls back to ``None`` (treated as empty dict) if not
+# set, avoiding a mutable default.
+model_overrides_ctx: contextvars.ContextVar[dict[str, Any] | None] = (
+    contextvars.ContextVar("model_overrides", default=None)
+)
 
 
 class _CustomChannelEnabler(StreamTransformer):
@@ -64,18 +80,21 @@ class BaseLangGraph(ABC):
     - Dual-stream logging
 
     Subclasses must implement:
-    - :meth:`_setup_models`: Create LLM model instances
-    - :meth:`_create_graph`: Build and compile the LangGraph
-    - Set ``env_class`` to the appropriate Pydantic settings class
+
+    - ``_setup_models``: create ``self.llm_models``; the env schema is
+      generated from its roles.
+    - ``_create_graph``: build and compile the LangGraph.
+    - ``config_class``: the Pydantic class for the JSON configuration.
     """
 
-    #: Pydantic BaseSettings class for env loading.
-    #: Subclasses must set this to their AppEnv class.
-    env_class: Type[BaseModel]
+    #: Pydantic BaseSettings class for env loading.  Subclasses need not
+    #: set this: it is generated at load time from ``self.llm_models`` (see
+    #: :meth:`_build_env_class`).
+    env_class: type[BaseModel] = BaseModel
 
     #: Pydantic BaseModel class for configuration loading.
     #: Subclasses must set this to their AppConfig class.
-    config_class: Type[BaseModel]
+    config_class: type[BaseModel]
 
     #: Name of the environment variable that controls the env file path.
     env_var: str = "ENV_FILE"
@@ -83,29 +102,57 @@ class BaseLangGraph(ABC):
     #: Default config file name if the environment variable is not set.
     env_file_default: str = "config.env"
 
-    #: Logger name for this orchestrator.
-    logger_name: str = "BaseLangGraph"
+    #: Prefix prepended to generated env var names (e.g. ``"KLEA_AGENT_"``).
+    #: Each model role ``r`` becomes the env var ``<env_prefix>R_MODEL``.
+    env_prefix: str = ""
+
+    #: Default JSON config file name, used as the ``app_config_file`` env
+    #: field default when none is set in the env file or process env.
+    config_file_default: str = ""
+
+    #: Logger name for this orchestrator, also used as the app name
+    #: for ``platformdirs`` data/cache directories.
+    graph_name: str = "BaseLangGraph"
 
     def __init__(
         self,
-        logging_level: int = logging.DEBUG,
-        memory: bool = True,
+        logging_level: int = logging.INFO,
+        checkpoint: str = "inmemory",
+        log_file: bool = True,
     ):
         """Initialise the base orchestrator.
 
-        :param logging_level: Logging level for the orchestrator
-        :param memory: Whether to enable checkpoint-based session memory
+        :param logging_level: Logging level for the orchestrator.  The
+            :data:`KLEA_LOG_LEVEL` environment variable (and the ``--debug``
+            flag that sets it) takes precedence over this constructor
+            argument: when it resolves to ``DEBUG``, full debug logging is
+            enabled regardless of *logging_level*; otherwise *logging_level*
+            is used (default ``INFO``).
+        :param checkpoint: Checkpointer mode  ---  ``"inmemory"`` (volatile, default),
+            ``"sqlite"`` (persistent via ``self.paths.user_data_dir``),
+            or ``"none"`` (no checkpointing).  When set to ``"none"``, nodes
+            that need conversation history receive ``memory=False``.
+        :param log_file: When ``True`` (default), configure the process-wide
+            root logger with a rotating file handler writing to
+            ``{self.paths.user_data_dir}/{self.graph_name}.log``, alongside
+            the checkpoints and session database.  Set to ``False`` in
+            short-lived processes (e.g. tests) to avoid writing log files.
         """
         self.env_file = os.getenv(self.env_var, self.env_file_default)
         self.app_env: BaseModel
 
-        self.c_model = None
+        # Graph-level default models per role.  Per-request model
+        # overrides are merged at invoke time via ``model_overrides_ctx``
+        # and do NOT change this dict.
+        self.llm_models: dict[str, LLMModel] = {}
 
-        self.memory = memory
-
-        self.tools_description: dict[str, str] = {}
+        self.tools_info: dict[str, dict[str, ToolInfo]] = {}
         self.domain_mcp_configs: dict[str, MCPConfig] = {}
-        self.checkpointer: InMemorySaver | None = InMemorySaver() if memory else None
+        self.checkpointer_mode = checkpoint
+        self.memory = checkpoint != "none"
+        self.checkpointer: None | AsyncSqliteSaver | InMemorySaver = None
+
+        self.paths = PlatformDirs(self.graph_name.lower())
 
         self.config_dict: dict[str, Any]
 
@@ -115,50 +162,111 @@ class BaseLangGraph(ABC):
         self.mcp_client: Client | None = None
         self.mcp_tools: list[Tool] | None = None
 
-        self.stores_config: VectorStoresConfig | None = None
+        self.retriever_config: RetrieverConfig | None = None
         self.stores: VSRetriever | None = None
-        self.embedding_model: str | None = None
+        self.bm25_stores: BM25RetrieverManager | None = None
+        # Graph-wide fallback retrieval settings.  Individual vector stores
+        # may override these in the config with their own default_k / k_max /
+        # k_inc values.
         self.default_k: int = 5
         self.k_max: int = 10
+        self.k_inc: int = 1
 
-        self.QueryDomainSchema: Type[BaseModel] | None = None
+        self.QueryDomainSchema: type[BaseModel] | None = None
 
-        from klea_utils.plogging import setup_logger
+        from klea_utils.plogging import resolve_log_level, setup_root_logger
 
-        self.logger = setup_logger(self.logger_name, stderr_level=logging_level)
+        # The KLEA_LOG_LEVEL env var (set by --debug) overrides the
+        # constructor's logging_level: when it resolves to DEBUG we show
+        # full debug output regardless of the passed level.
+        if resolve_log_level() == logging.DEBUG:
+            stderr_level = logging.DEBUG
+        else:
+            stderr_level = logging_level
+
+        setup_root_logger(
+            self.graph_name,
+            stderr_level=stderr_level,
+            log_dir=self.paths.user_data_dir if log_file else None,
+        )
+        self.logger = logging.getLogger(self.graph_name)
+
+    def _build_env_class(self) -> type[BaseModel]:
+        """Build the pydantic-settings class for this graph's environment.
+
+        The schema is derived from ``self.llm_models``: each model role ``r``
+        becomes a ``{r}_model`` string field (env var ``<env_prefix>R_MODEL``),
+        plus ``app_config_file``.  Generating the class from the model
+        declaration keeps the env schema and the model roles as a single
+        source of truth, so they cannot drift apart.
+
+        :returns: A ``BaseSettings`` subclass configured with ``env_prefix``.
+        """
+        # Lazy: pydantic-settings is only needed when loading the env.
+        from pydantic_settings import BaseSettings, SettingsConfigDict
+
+        fields: dict[str, Any] = {
+            f"{role}_model": (str, "") for role in self.llm_models
+        }
+        fields["app_config_file"] = (str, self.config_file_default)
+        return create_model(
+            f"{self.graph_name}Env",
+            __base__=BaseSettings,
+            __config__=cast(ConfigDict, SettingsConfigDict(env_prefix=self.env_prefix)),
+            **fields,
+        )
 
     def _load_env(self) -> None:
         """Load env file, and configuration
 
-        Uses ``self.env_class`` and ``self.env_file`` to locate and parse
-        the configuration file. Raises FileNotFoundError if the file does not exist.
+        Builds the env settings class from ``self.llm_models`` (see
+        :meth:`_build_env_class`) and parses the env file (optional --
+        when missing, process environment variables and class defaults are
+        used), then resolves the application config file (from
+        ``self.app_env.app_config_file``) via
+        :func:`klea_utils.paths.resolve_app_config_path` -- the working
+        directory first, then the per-app config directory.  Raises
+        ``FileNotFoundError`` if the config file does not exist.
         """
+        self.env_class = self._build_env_class()
+
         env_file_path = Path(self.env_file)
         if not env_file_path.exists():
-            raise FileNotFoundError(
-                f"""Could not find env file: {self.env_file}. You can use the {self.env_var} environment variable to specify the env file."""
+            # Env files are optional.  With no file, pydantic-settings
+            # falls back to process environment variables and class
+            # defaults, so a clean machine can run with only a JSON config
+            # (models are then set via shell env vars or the web UI).
+            self.logger.warning(
+                f"Env file not found: {self.env_file}. "
+                f"Using process environment variables and defaults only. "
+                f"Set {self.env_var} to specify an env file."
             )
-
-        self.app_env = self.env_class(_env_file=self.env_file)
+            self.app_env = self.env_class()
+        else:
+            self.app_env = self.env_class(_env_file=self.env_file)
         assert self.app_env
         self.logger.debug(f"env file: {self.env_file}")
         self.logger.debug(f"env: {self.app_env}")
 
-        if "app_config_file" in self.env_class.model_fields:
-            config_file = Path(self.app_env.app_config_file)
-            if not config_file.exists():
-                raise FileNotFoundError(f"Could not find config file: {config_file}")
-            else:
-                with open(config_file, "r") as f:
-                    config_dict = json.load(f)
-                    self.logger.debug(f"{config_dict = }")
-                    self.app_config = self.config_class(**config_dict)
-                    self.logger.debug(f"{self.app_config = }")
-        else:
-            raise FileNotFoundError(
-                f"No config file provided. Please provide one in the env file ({self.env_file})."
-                + f"You can use the {self.env_var} environment variable to specify the env file."
+        # An explicit empty value means "not set" -- fall back to the field
+        # default so a line like ``KLEA_AGENT_APP_CONFIG_FILE=`` does not
+        # resolve to the current directory itself.
+        app_config_file = self.app_env.app_config_file
+        if not app_config_file:
+            app_config_file = self.env_class.model_fields["app_config_file"].default
+            self.logger.debug(
+                f"empty app_config_file -- using default {app_config_file}"
             )
+
+        config_file = resolve_app_config_path(
+            app_config_file, get_config_dir(self.paths)
+        )
+        self.logger.debug(f"config file: {config_file}")
+        with open(config_file, "r") as f:
+            config_dict = json.load(f)
+            self.logger.debug(f"{config_dict = }")
+            self.app_config = self.config_class(**config_dict)
+            self.logger.debug(f"{self.app_config = }")
 
     def _create_mcp_client(self) -> None:
         """Create MCP client from the JSON config file.
@@ -179,11 +287,11 @@ class BaseLangGraph(ABC):
             async with self.mcp_client:
                 self.mcp_tools = await self.mcp_client.list_tools()
             self.logger.debug(f"{self.mcp_tools =}")
-            self._build_tools_description()
+            self._build_tools_info()
 
-    def _build_tools_description(self) -> None:
-        """Build per-domain tool descriptions from fetched MCP tools."""
-        self.tools_description = {}
+    def _build_tools_info(self) -> None:
+        """Build per-domain tool metadata from fetched MCP tools."""
+        self.tools_info = {}
         if not self.mcp_tools or not self.domain_mcp_configs:
             return
 
@@ -196,72 +304,107 @@ class BaseLangGraph(ABC):
                 num_servers += len(list(config.mcpServers.keys()))
 
         for domain, server_names in domain_servers.items():
-            desc = ""
-            ctr = 0
+            domain_tools_info: dict[str, ToolInfo] = {}
             for t in self.mcp_tools:
-                if "dummy" in t.name:
-                    continue
                 # tools will be prefixed with server names
-                if num_servers > 1:
-                    if not any(t.name.startswith(s + "_") for s in server_names):
-                        continue
+                if num_servers > 1 and not any(
+                    t.name.startswith(s + "_") for s in server_names
+                ):
+                    continue
                 # otherwise, there's only one server
-                ctr += 1
-                desc += dedent(f"""
-                    ## {ctr}.  {t.name}
-
-                    ### Description
-
-                    {t.description}
-
-                    """)
-                if t.inputSchema:
-                    desc += dedent(f"""
-                        ### Parameters
-
-                        {t.inputSchema.get("properties")}
-
-                        """)
-            self.tools_description[domain] = desc
+                # Klea expects MCP tools to follow the docstring-first
+                # convention (summary + Use when / Do not use for bullets +
+                # one example; params via Args:), see build_tool_description
+                # and docs/concepts/mcp.rst.
+                domain_tools_info[t.name] = ToolInfo(
+                    title=t.title,
+                    description=build_tool_description(t),
+                    meta=clean_tool_meta(t.meta),
+                )
+            self.tools_info[domain] = domain_tools_info
+        self.logger.debug(f"{self.tools_info = }")
 
     async def _get_vector_stores(self) -> None:
         """Get vector stores"""
-        if self.stores_config and self.embedding_model:
+        emb = self.llm_models.get("embedding")
+        if self.retriever_config and emb and emb.model_name:
             self.stores = VSRetriever(
-                vs_config=self.stores_config,
+                config=self.retriever_config,
                 logger=self.logger,
-                embedding_model=self.embedding_model,
+                embedding_model=emb.model_name,
                 default_k=self.default_k,
                 k_max=self.k_max,
+                k_inc=self.k_inc,
             )
             self.stores.setup()
             self.logger.info(f"Vector stores loaded: {self.stores.domains}")
+        elif self.retriever_config:
+            self.logger.warning(
+                "No vector stores configured (missing embedding model)."
+            )
 
-            # dynamically generate schema for domains
-            all_domains = self.stores.domains.copy()
-            all_domains.append("undefined")
+        # BM25 keyword stores need no embedding model, so build them whenever
+        # any domain configures bm25_stores.
+        if self.retriever_config and any(
+            domain.bm25_stores for domain in self.retriever_config.domains.values()
+        ):
+            self.bm25_stores = BM25RetrieverManager(
+                config=self.retriever_config,
+                logger=self.logger,
+                default_k=self.default_k,
+                k_max=self.k_max,
+                k_inc=self.k_inc,
+            )
+            self.logger.info(f"BM25 stores loaded: {self.bm25_stores.domains}")
 
+        # Build QueryDomainSchema from all configured domains (vector or BM25)
+        # so BM25-only deployments still get structured classification.
+        if self.retriever_config and self.retriever_config.domains:
+            all_domains = list(self.retriever_config.domains.keys())
+            if "undefined" not in all_domains:
+                all_domains.append("undefined")
             self.QueryDomainSchema = create_model(
                 "QueryDomainSchema",
-                query_domains=(List[Literal[tuple(all_domains)]], "undefined"),
+                query_domains=(
+                    list[Literal[tuple(all_domains)]],
+                    Field(default=["undefined"], validate_default=True),
+                ),
             )
-        else:
-            self.logger.warning("No vector stores configured.")
+        elif self.QueryDomainSchema is None:
+            self.logger.warning("No domains configured for QueryDomainSchema")
 
     def _export_graph_png(self, filename: str) -> None:
-        """Export the LangGraph as a Mermaid PNG diagram.
+        """Export the LangGraph as a Mermaid PNG diagram and its Mermaid source.
 
         Skipped when running inside Docker (``RUNNING_IN_DOCKER`` env var set).
 
         :param filename: Output file path for the PNG
         """
-        if os.environ.get("RUNNING_IN_DOCKER", 0):
+        if os.environ.get("RUNNING_IN_DOCKER"):
             return
         try:
             assert self.graph
             self.graph.get_graph().draw_mermaid_png(output_file_path=filename)
-        except BaseException as e:
+        except BaseException as e:  # noqa: BLE001
             self.logger.error("Something went wrong generating lang graph png")
+            self.logger.error(e)
+
+        # Also write the Mermaid source alongside the PNG so the explicit
+        # C4 Level-3 diagrams (``devdocs/system/c4-component-*.md``) can
+        # embed the auto-generated node/edge topology as their core and
+        # avoid drift between code and docs (see ADR-0016/0019).
+        try:
+            assert self.graph
+            mermaid = self.graph.get_graph().draw_mermaid()
+            mermaid_path = Path(filename)
+            if mermaid_path.suffix == ".png":
+                mermaid_path = mermaid_path.with_suffix(".mmd")
+            else:
+                mermaid_path = Path(str(mermaid_path) + ".mmd")
+            mermaid_path.write_text(mermaid)
+            self.logger.debug(f"Wrote Mermaid source to {mermaid_path}")
+        except BaseException as e:  # noqa: BLE001
+            self.logger.error("Something went wrong generating lang graph mermaid")
             self.logger.error(e)
 
     # ------------------------------------------------------------------
@@ -272,7 +415,7 @@ class BaseLangGraph(ABC):
     def _configure_resources(self) -> None:
         """Configure vector stores and MCP servers
 
-        Subclasses should implement this to populate ``self.stores_config``,
+        Subclasses should implement this to populate ``self.retriever_config``,
         ``self.mcp_config``, and ``self.domain_mcp_configs``, which will be used
         to create the vector store class, mcp client, and per-domain tool descriptions.
         """
@@ -282,10 +425,122 @@ class BaseLangGraph(ABC):
     def _setup_models(self) -> None:
         """Set up LLM model instances.
 
-        Subclasses should assign model instances to ``self.c_model`` (and
-        optionally ``self.r_model`` for reasoning models).
+        Subclasses must populate ``self.llm_models`` with ``LLMModel``
+        entries keyed by role (e.g. ``"chat"``, ``"plan"``, ``"guard"``),
+        setting ``required`` on each.  This runs *before* ``_load_env()``,
+        so the roles declared here define the env schema generated by
+        :meth:`_build_env_class`.  ``model_name`` is populated from the env
+        by :meth:`_apply_model_names` after the env is loaded.  These are
+        graph-wide defaults; per-request overrides are applied at runtime
+        via ``model_overrides_ctx``.
         """
         ...
+
+    def _apply_model_names(self) -> None:
+        """Populate ``model_name`` on each LLMModel from the loaded env.
+
+        Called by :meth:`setup` after ``_load_env()``.  Each role ``r``
+        reads its default model from the generated ``app_env.<r>_model``
+        field (env var ``<env_prefix>R_MODEL``).
+        """
+        for role, entry in self.llm_models.items():
+            # The env field is generated from the role declaration, so the
+            # attribute is not statically known on the settings instance.
+            entry.model_name = getattr(self.app_env, f"{role}_model")
+
+    def _apply_provider_defaults(self) -> None:
+        """Populate per-provider defaults on each LLMModel from the config.
+
+        Called by :meth:`setup` after ``_load_env()`` (which loads
+        ``app_config``), since ``_setup_models`` runs before the config is
+        available.
+        """
+        for role, entry in self.llm_models.items():
+            entry.provider_defaults = self._provider_defaults_for_role(role)
+
+    def _check_required_models(self) -> None:
+        """Warn at startup when required model roles have no default model.
+
+        Missing models are not fatal: the server still starts so the
+        frontends can be used to set models per chat.  The warning lists
+        all model env vars (derived as ``<env_prefix><ROLE>_MODEL``) with
+        their current state so users can see exactly what to set.
+        """
+        missing = [
+            role
+            for role, entry in self.llm_models.items()
+            if entry.required and not entry.model_name
+        ]
+        if not missing:
+            return
+
+        lines = [
+            (
+                f"The following models have not been set: {', '.join(missing)}. "
+                "Please set them before running queries (or from the web UI, "
+                "Choose models)."
+            ),
+            "Current configured models:",
+        ]
+        for role, entry in self.llm_models.items():
+            env_var = f"{self.env_prefix}{role.upper()}_MODEL"
+            lines.append(f"  {env_var}={entry.model_name or '<not set>'}")
+        self.logger.warning("\n".join(lines))
+
+    def _provider_defaults_for_role(self, role: str) -> dict[str, dict[str, Any]]:
+        """Return per-provider default params for *role* from the config.
+
+        Reads the optional ``providers`` config section, e.g.::
+
+            {"huggingface": {"chat": {"max_output_tokens": 2048}}}
+
+        and returns just the entries relevant to *role*, so each
+        ``LLMModel`` carries the defaults for its own role.  Shared by all
+        graphs so ``_setup_models`` implementations do not repeat it.
+
+        :param role: Model role (``chat``, ``plan``, ``guard``, ...).
+        :returns: ``{provider: {param: value}}`` for *role*.
+        """
+        result: dict[str, dict[str, Any]] = {}
+        # ``app_config`` is the concrete ``config_class`` instance; access
+        # via getattr so this works for any subclass without extra typing.
+        providers = getattr(self.app_config, "providers", {})
+        for provider, role_configs in providers.items():
+            if role in role_configs:
+                result[provider] = dict(role_configs[role])
+        return result
+
+    def _bundled_server_config(self) -> dict[str, Any] | None:
+        """Build the bundled tools server config entry from the app config.
+
+        Reads ``app_config.general.bundled_tools`` and returns ``None`` when
+        the bundled tools are disabled.  The entry is a *dict*, not a
+        ``StdioMCPServer`` instance, so ``MCPConfig``'s union validator picks
+        ``TransformingStdioMCPServer`` whenever tag filters are present and
+        applies them; without filters it stays a plain ``StdioMCPServer``.
+
+        Apps merge the result into their ``mcpServers`` mapping; when merged
+        into a domain's config the bundled tools become available to that
+        domain's tool picker.
+
+        :returns: Dict-form stdio server config, or ``None`` when disabled.
+        """
+        general = getattr(self.app_config, "general", None)
+        bundled = getattr(general, "bundled_tools", None)
+        if bundled is None or not bundled.enabled:
+            self.logger.debug("Bundled tools server disabled or not configured")
+            return None
+
+        config: dict[str, Any] = {
+            "command": sys.executable,
+            "args": ["-m", "klea_utils.mcp.server.bundled"],
+        }
+        if bundled.include_tags:
+            config["include_tags"] = list(bundled.include_tags)
+        if bundled.exclude_tags:
+            config["exclude_tags"] = list(bundled.exclude_tags)
+        self.logger.debug(f"Bundled tools server config: {config}")
+        return config
 
     @abstractmethod
     async def _create_graph(self) -> None:
@@ -300,6 +555,40 @@ class BaseLangGraph(ABC):
     # Hook methods -- override for pre/post setup work
     # ------------------------------------------------------------------
 
+    def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
+        """Return types allowed for checkpoint msgpack deserialization.
+
+        Subclasses should override to add their state schemas
+        (e.g. ``EvaluateAnswerSchema``, ``RetrievalQueryOutput``).  The base
+        list covers shared utils types checkpointed by all graphs.
+        """
+        from fastmcp.client.client import CallToolResult as FastMCPCallToolResult
+        from mcp.types import EmbeddedResource, ImageContent, TextContent
+
+        from klea_utils.graph.schemas import TokenUsage
+
+        modules: list[type | tuple[str, ...]] = [
+            TokenUsage,
+            ToolCallSchema,
+            FastMCPCallToolResult,
+            TextContent,
+            ImageContent,
+            EmbeddedResource,
+        ]
+        try:
+            from mcp.types import AudioContent
+
+            modules.append(AudioContent)
+        except ImportError:
+            pass
+        try:
+            from mcp.types import CallToolResult as McpCallToolResult
+
+            modules.append(McpCallToolResult)
+        except ImportError:
+            pass
+        return modules
+
     def _pre_setup(self) -> None:
         """Hook called before the standard setup sequence.
 
@@ -307,6 +596,35 @@ class BaseLangGraph(ABC):
         config loading and model setup.
         """
         pass
+
+    async def _setup_checkpointer(self) -> None:
+        """Set up the checkpointer.
+
+        ``setup()`` calls this hook before ``_load_env()``.
+        The checkpointer is ``None`` when ``checkpoint="none"``.
+        """
+        if self.checkpointer_mode == "sqlite":
+            import aiosqlite
+            from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+            db_path = init_dir(self.paths.user_data_dir) / "checkpoints.db"
+            self.logger.debug("Opening sqlite checkpointer at %s", db_path)
+            conn = await aiosqlite.connect(str(db_path))
+            serde = JsonPlusSerializer(
+                allowed_msgpack_modules=self.get_allowed_msgpack_modules()
+            )
+            self.checkpointer = AsyncSqliteSaver(conn, serde=serde)
+            # Keep raw connection for lifespan cleanup (AsyncSqliteSaver holds it as .conn)
+            self._checkpointer_conn = conn  # type: ignore[attr-defined]
+            self.logger.debug("Sqlite checkpointer ready")
+        elif self.checkpointer_mode == "inmemory":
+            from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+            serde = JsonPlusSerializer(
+                allowed_msgpack_modules=self.get_allowed_msgpack_modules()
+            )
+            self.checkpointer = InMemorySaver(serde=serde)
+            self.logger.debug("In-memory checkpointer ready")
 
     def _post_setup(self) -> None:
         """Hook called after the standard setup sequence.
@@ -324,7 +642,7 @@ class BaseLangGraph(ABC):
         """Hook called after MCP client setup but before graph compilation.
 
         Override to perform subclass-specific initialisation that depends
-        on config and MCP client but must happen before the LangGraph is built.
+        on config and MCP client but must happen         before the LangGraph is built.
         """
         pass
 
@@ -333,18 +651,40 @@ class BaseLangGraph(ABC):
         """Set up the orchestrator.
 
         Calls hooks and template methods in this order:
-        1. ``_pre_setup()``
-        2. ``_load_env()``
-        3. ``_setup_models()``
-        4. ``_create_mcp_client()``
-        5. ``_pre_graph()``
-        6. ``_create_graph()``
-        7. ``_post_setup()``
+
+        #. ``_pre_setup()``
+        #. ``_setup_checkpointer()``
+        #. ``_setup_models()``: build ``self.llm_models`` (roles and required
+           flags) that the env schema is generated from.
+        #. ``_load_env()``: parse the env into ``self.app_env`` using the
+           schema generated from ``llm_models``, then load the JSON config.
+        #. ``_configure_resources()``
+        #. ``_check_required_models()``
+        #. ``_create_mcp_client()``
+        #. ``_pre_graph()``
+        #. ``_create_graph()``
+        #. ``_post_setup()``
         """
         self._pre_setup()
-        self._load_env()
-        self._configure_resources()
+        await self._setup_checkpointer()
         self._setup_models()
+        self._load_env()
+        self._apply_model_names()
+        self._apply_provider_defaults()
+        # ``llm_models`` is now fully populated (roles, model names, required
+        # flags, provider defaults) -- log the resolved config once.
+        self.logger.debug(
+            "Resolved model configuration:\n"
+            + "\n".join(
+                f"  {role}: "
+                f"model={entry.model_name or '<not set>'}, "
+                f"required={entry.required}, "
+                f"modifiable={entry.modifiable}"
+                for role, entry in self.llm_models.items()
+            )
+        )
+        self._configure_resources()
+        self._check_required_models()
         self._create_mcp_client()
         await self._get_mcp_tools()
         await self._get_vector_stores()
@@ -368,8 +708,9 @@ class BaseLangGraph(ABC):
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
         if "query" not in state:
-            self.logger.error(f"Provided state should include the key 'query': {state}")
-            sys.exit(-1)
+            raise ValueError("state must contain 'query' key")
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
 
         final_state = await self.graph.ainvoke(state, config=config)
         self.logger.debug(final_state)
@@ -388,6 +729,9 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
+
         final_state = await self.graph.ainvoke({"query": query}, config=config)
 
         self.logger.debug(f"{final_state =}")
@@ -405,9 +749,12 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
+
         async for chunk in self.graph.astream({"query": query}, config=config):
             for node, state in chunk.items():
-                self.logger.debug(f"{node}: {repr(state)}")
+                self.logger.debug(f"{node}: {state!r}")
                 if message := state.get("message_for_user", None):
                     self.logger.info(f"User message: {message}")
                     yield message
@@ -423,7 +770,10 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
-        res = await self.graph.astream({"query": query}, config=config)
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
+
+        res = self.graph.astream({"query": query}, config=config)
         return res
 
     async def run_graph_astream_events(
@@ -435,8 +785,14 @@ class BaseLangGraph(ABC):
 
         ``{"type": "progress", "node": "<label>"}``
             When the graph enters a new node (via ``write_custom_stream``)
+        ``{"type": "info", "node": "<label>", "data": {...}}``
+            Structured summary data from a node after execution
+        ``{"type": "debug", "node": "<label>", "data": {...}}``
+            Full data dump from a node after execution
         ``{"type": "token", "content": "<chunk>", "node": "<label>"}``
             LLM token chunk from the current node
+        ``{"type": "usage", "node": "<label>", "data": {...}}``
+            Per-node token usage (input / output / total tokens)
         ``{"type": "complete", "message_for_user": "<answer>"}``
             Final answer from the completed graph
 
@@ -454,7 +810,8 @@ class BaseLangGraph(ABC):
         """
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
 
-        assert self.graph, "Graph not compiled. Call setup() first."
+        if self.graph is None:
+            raise RuntimeError("Graph not compiled. Call setup() first.")
 
         stream = await self.graph.astream_events(
             {"query": query},
@@ -473,11 +830,12 @@ class BaseLangGraph(ABC):
 
             if method == "custom":
                 data = event["params"]["data"]
-                if (
-                    isinstance(data, dict)
-                    and data.get("type") == "progress"
-                    and data.get("node")
-                ):
+                if not isinstance(data, dict) or not data.get("node"):
+                    continue
+
+                event_type = data.get("type")
+
+                if event_type == "progress":
                     node = data["node"]
                     if node != current_node:
                         now = time.monotonic()
@@ -491,6 +849,15 @@ class BaseLangGraph(ABC):
                         current_node = node
                         self.logger.debug(f"Progress: {current_node}")
                         yield {"type": "progress", "node": current_node}
+
+                elif event_type in ("info", "debug", "state", "usage"):
+                    data_out = data.get("data", {}).copy()
+                    data_out["timing_seconds"] = round(time.monotonic() - node_start, 2)
+                    yield {
+                        "type": event_type,
+                        "node": data["node"],
+                        "data": data_out,
+                    }
 
             elif method == "messages":
                 data = event["params"]["data"]

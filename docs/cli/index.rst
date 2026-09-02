@@ -7,7 +7,7 @@ Vector store management
 .. toctree::
    :maxdepth: 1
 
-   klea-vs-create
+   klea-stores-create
 
 RAG
 ---
@@ -26,10 +26,11 @@ MCP
 
    nml-mcp
 
-Coding / Workflow
------------------
+Agent  (WIP: coming soon)
+-------------------------
 
 .. toctree::
    :maxdepth: 1
 
-   klea-code
+   klea
+   klea-serve

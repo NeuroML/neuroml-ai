@@ -9,47 +9,57 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, Dict, override
+from typing import Any, ClassVar, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
+from ..llm import content_to_str
 from .base import BaseLLMNode
 
 
 class GuardNode(BaseLLMNode):
+    model_type = "guard"
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 2048,
+    }
     """Safety guard node that checks if user queries are safe to process.
 
     Evaluates whether a query contains potentially harmful content
     and returns a routing decision ("safe" or "unsafe").
 
     Note: to be used with llama-guard, which always returns safe/unsafe.
+
+    To skip, do not set a model.
     """
 
     def __init__(
         self,
         logger: logging.Logger,
         label: str,
-        model: Any,
-        temperature: float = 0.3,
+        llm_models: dict[str, Any],
         memory: bool = False,
     ):
         """Initialise the guard node.
 
         :param logger: Logger instance
         :param label: Human-readable label for UI progress display
-        :param model: LLM model instance
-        :param temperature: Sampling temperature for LLM calls
+        :param llm_models: ``{role: LLMModel}`` dict (from ``BaseLangGraph.llm_models``)
         :param memory: Whether to include conversation history in the prompt
         """
         super().__init__(
             logger=logger,
             label=label,
-            model=model,
-            temperature=temperature,
+            llm_models=llm_models,
             output_schema=None,
             memory=memory,
         )
+
+    @override
+    def _pre_exec(self, state: BaseModel) -> bool:
+        """Skip execution if no guard model is configured."""
+        return bool(self._llm_entry.model_name)
 
     @override
     def _get_prompt_variables(self, state: BaseModel) -> dict:
@@ -61,12 +71,14 @@ class GuardNode(BaseLLMNode):
         return ""
 
     @override
-    def _update_state(self, result: AIMessage, state: BaseModel) -> Dict[str, Any]:
+    def _update_state(self, result: AIMessage, state: BaseModel) -> dict[str, Any]:
         """Check result for safety and return routing decision."""
         self.logger.debug(f"{result = }")
 
-        if "unsafe" in result.content:
+        content = content_to_str(result.content)
+        if "unsafe" in content:
             return {"guard_decision": "unsafe"}
+
         return {"guard_decision": "safe"}
 
     @override

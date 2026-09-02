@@ -10,17 +10,19 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
-import aiohttp
+import httpx
 from fastmcp.server.lifespan import lifespan
 
 from ..utils import cleanup_cache_dir, init_cache_dir
 
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
-)
-
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+
+#: Connection-pool tuning for the shared HTTP session.  Generous so a busy
+#: multi-user MCP server keeps many warm connections instead of paying
+#: TCP/TLS handshakes under bursty load.
+_SESSION_LIMITS = httpx.Limits(
+    max_connections=100, max_keepalive_connections=100, keepalive_expiry=30.0
+)
 
 
 @lifespan
@@ -29,15 +31,17 @@ async def app_lifespan(server):
     logger.info("MCP Server starting up")
 
     # add more sessions here as required
-    aiohttp_session = aiohttp.ClientSession()
+    http_session = httpx.AsyncClient(
+        limits=_SESSION_LIMITS, timeout=httpx.Timeout(30.0), http2=True
+    )
     init_cache_dir()
 
     try:
-        yield {"aiohttp_session": aiohttp_session}
+        yield {"http_session": http_session}
     finally:
         logger.info("MCP Server shutting down")
 
-        await aiohttp_session.close()
+        await http_session.aclose()
         cleanup_cache_dir()
 
         logger.info("MCP Server shut down")

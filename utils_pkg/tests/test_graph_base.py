@@ -9,17 +9,15 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import List, Type, override
+from typing import override
 
 import pytest
-from langchain_core.messages import AnyMessage
-from pydantic import BaseModel, Field
-
 from klea_utils.graph.base import BaseLangGraph
-from klea_utils.llm import setup_llm
+from klea_utils.llm import LLMModel, create_configurable_model
 from klea_utils.nodes.answer_general import AnswerGeneral
 from klea_utils.nodes.fixed_answer import FixedAnswer
-from klea_utils.plogging import setup_logger
+from langchain_core.messages import AnyMessage
+from pydantic import BaseModel, Field
 
 
 class ToyState(BaseModel):
@@ -27,28 +25,43 @@ class ToyState(BaseModel):
 
     query: str = ""
     message_for_user: str = ""
-    messages: List[AnyMessage] = Field(default_factory=list)
+    messages: list[AnyMessage] = Field(default_factory=list)
     context_summary: str = ""
 
 
 class ToyGraph(BaseLangGraph):
     """Minimal graph: AnswerGeneral (LLM) -> FixedAnswer (non-LLM) -> END."""
 
-    env_class: Type[BaseModel] = BaseModel
-    config_class: Type[BaseModel] = BaseModel
+    env_class: type[BaseModel] = BaseModel
+    config_class: type[BaseModel] = BaseModel
     env_var: str = "TOY_ENV_FILE"
     env_file_default: str = "toy.env"
-    logger_name: str = "ToyGraph"
+    graph_name: str = "ToyGraph"
 
     def __init__(self):
-        super().__init__(logging_level=logging.WARNING, memory=False)
-        self.logger = setup_logger(self.logger_name, stderr_level=logging.INFO)
-        self.logger.propagate = False
+        super().__init__(logging_level=logging.INFO, checkpoint="none", log_file=False)
+        from platformdirs import PlatformDirs
+
+        self.paths = PlatformDirs(self.graph_name.lower())
+        self.logger = logging.getLogger(self.graph_name)
 
     @override
     def _load_env(self) -> None:
-        """No-op: skip env file loading."""
-        pass
+        """No-op: skip env file loading, provide minimal app_env/app_config.
+
+        ``setup()`` calls ``_apply_model_names`` and
+        ``_apply_provider_defaults`` after ``_load_env``, so the no-op must
+        still provide the objects those helpers read from.
+        """
+        from types import SimpleNamespace
+        from typing import cast
+
+        from pydantic import BaseModel
+
+        # ``app_env`` is typed ``BaseModel`` on the base class; the generated
+        # settings instance is not available since ``_load_env`` is a no-op.
+        self.app_env = cast(BaseModel, SimpleNamespace(chat_model="ollama:qwen3:0.6b"))
+        self.app_config = cast(BaseModel, SimpleNamespace(providers={}))
 
     @override
     def _configure_resources(self) -> None:
@@ -56,7 +69,13 @@ class ToyGraph(BaseLangGraph):
 
     @override
     def _setup_models(self) -> None:
-        self.c_model = setup_llm("ollama:qwen3:0.6b", self.logger)
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(
+                instance=model,
+                model_name="ollama:qwen3:0.6b",
+            ),
+        }
 
     @override
     async def _create_graph(self) -> None:
@@ -67,8 +86,7 @@ class ToyGraph(BaseLangGraph):
         self._answer_node = AnswerGeneral(
             logger=self.logger,
             label="Saying hello",
-            model=self.c_model,
-            temperature=0.3,
+            llm_models=self.llm_models,
             memory=False,
         )
         workflow.add_node(self._answer_node.label, self._answer_node.execute)
@@ -86,6 +104,141 @@ class ToyGraph(BaseLangGraph):
         workflow.add_edge(self._fixed_node.label, END)
 
         self.graph = workflow.compile()
+
+
+class WarningGraph(ToyGraph):
+    """ToyGraph with required model roles and empty model names.
+
+    ``_setup_models`` declares the model roles with their ``required``
+    flags, matching how real graphs declare ``llm_models``.
+    """
+
+    env_prefix = "TOY_"
+
+    def _setup_models(self):
+        model = create_configurable_model(logger=self.logger)
+        self.llm_models = {
+            "chat": LLMModel(instance=model, model_name="", required=True),
+            "plan": LLMModel(instance=model, model_name="", required=True),
+            "guard": LLMModel(instance=model, model_name="", required=False),
+        }
+
+
+class TestCheckRequiredModels:
+    """Tests for the startup missing-model warning."""
+
+    def test_warns_for_missing_models(self, caplog):
+        graph = WarningGraph()
+        graph._setup_models()
+
+        with caplog.at_level(logging.WARNING, logger=graph.graph_name):
+            graph._check_required_models()
+
+        assert "have not been set: chat, plan" in caplog.text
+        assert "have not been set: chat, plan, guard" not in caplog.text
+        assert "TOY_CHAT_MODEL=<not set>" in caplog.text
+        assert "TOY_PLAN_MODEL=<not set>" in caplog.text
+        # Optional roles still appear in the current-state listing.
+        assert "TOY_GUARD_MODEL=<not set>" in caplog.text
+
+    def test_no_warning_when_required_models_set(self, caplog):
+        graph = WarningGraph()
+        graph._setup_models()
+        instance = graph.llm_models["chat"].instance
+        graph.llm_models["chat"] = LLMModel(
+            instance=instance, model_name="ollama:qwen3:0.6b", required=True
+        )
+        graph.llm_models["plan"] = LLMModel(
+            instance=instance, model_name="ollama:qwen3:0.6b", required=True
+        )
+        # guard stays empty but is optional -- must not trigger a warning.
+
+        with caplog.at_level(logging.WARNING, logger=graph.graph_name):
+            graph._check_required_models()
+
+        assert "have not been set" not in caplog.text
+
+
+class TestGraphLoggingLevel:
+    """BaseLangGraph resolves its console logging level from env/flag > arg."""
+
+    def _make_bare_graph(self):
+        """A minimal BaseLangGraph subclass that skips heavy setup."""
+        from types import SimpleNamespace
+
+        class BareGraph(BaseLangGraph):
+            env_class: type[BaseModel] = BaseModel
+            config_class: type[BaseModel] = BaseModel
+            env_var: str = "BARE_ENV_FILE"
+            env_file_default: str = "bare.env"
+            graph_name: str = "BareGraph"
+            paths = SimpleNamespace(user_data_dir="/tmp/bare")
+
+            def _configure_resources(self):
+                pass
+
+            def _setup_models(self):
+                pass
+
+            async def _create_graph(self):
+                pass
+
+        return BareGraph(log_file=False, checkpoint="none")
+
+    def test_default_level_is_info(self, monkeypatch):
+        """Without KLEA_LOG_LEVEL the default constructor level is INFO."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.delenv("KLEA_LOG_LEVEL", raising=False)
+        self._make_bare_graph()
+        assert seen.get("level") == logging.INFO
+
+    def test_env_debug_overrides_constructor_level(self, monkeypatch):
+        """KLEA_LOG_LEVEL=debug forces DEBUG regardless of the passed level."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.setenv("KLEA_LOG_LEVEL", "debug")
+        self._make_bare_graph()
+        assert seen.get("level") == logging.DEBUG
+
+    def test_explicit_constructor_level_wins_when_env_unset(self, monkeypatch):
+        """Without KLEA_LOG_LEVEL, an explicit logging_level is honored."""
+        seen = {}
+
+        def fake_setup(app_name, stderr_level=logging.INFO, **kwargs):
+            seen["level"] = stderr_level
+
+        monkeypatch.setattr("klea_utils.plogging.setup_root_logger", fake_setup)
+        monkeypatch.delenv("KLEA_LOG_LEVEL", raising=False)
+        from types import SimpleNamespace
+
+        class WarningGraph(BaseLangGraph):
+            env_class: type[BaseModel] = BaseModel
+            config_class: type[BaseModel] = BaseModel
+            env_var: str = "WARN_ENV_FILE"
+            env_file_default: str = "warn.env"
+            graph_name: str = "WarningGraph"
+            paths = SimpleNamespace(user_data_dir="/tmp/warn")
+
+            def _configure_resources(self):
+                pass
+
+            def _setup_models(self):
+                pass
+
+            async def _create_graph(self):
+                pass
+
+        WarningGraph(logging_level=logging.WARNING, log_file=False, checkpoint="none")
+        assert seen.get("level") == logging.WARNING
 
 
 class TestGraphBase:

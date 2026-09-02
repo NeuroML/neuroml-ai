@@ -23,11 +23,11 @@ async def create_server(port: int = 8542):
     # Keep at function level so --help on the containing typer app stays fast.
     from fastmcp import FastMCP
     from fastmcp_docs import FastMCPDocs
+    from klea_utils.mcp.registry import register_tools
     from starlette.requests import Request
     from starlette.responses import JSONResponse, PlainTextResponse
 
     from neuroml_mcp.tools import code_tools, neuroml_tools
-    from neuroml_mcp.utils import register_tools
 
     from .app_lifespan import app_lifespan
 
@@ -47,10 +47,15 @@ async def create_server(port: int = 8542):
     @mcp.custom_route("/list", methods=["GET"])
     async def tool_list(request: Request) -> JSONResponse:
         all_tools = await mcp.list_tools()
-        tools_description = [
-            {str(tool.name): str(tool.description)} for tool in all_tools
+        tools_info = [
+            {
+                "name": str(tool.name),
+                "title": tool.title,
+                "description": tool.description,
+            }
+            for tool in all_tools
         ]
-        resp = {"registered_tools": tools_description}
+        resp = {"registered_tools": tools_info}
         return JSONResponse(resp)
 
     docs = FastMCPDocs(mcp, title="NeuroML MCP")
@@ -60,8 +65,22 @@ async def create_server(port: int = 8542):
 
 
 @mcp_app.command()
-def mcp_cli(port: int = 8542, transport: str = "streamable-http"):
+def mcp_cli(
+    port: int = 8542,
+    transport: str = "streamable-http",
+    debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
+):
     """main runner method"""
+    # Configure process-wide logging for this server.  Lazy: keeps the
+    # fastmcp/starlette import chain out of --help.
+    from klea_utils.plogging import resolve_log_level, setup_root_logger
+    from platformdirs import PlatformDirs
+
+    setup_root_logger(
+        "nml-mcp",
+        stderr_level=resolve_log_level(debug),
+        log_dir=PlatformDirs("nml_mcp").user_data_dir,
+    )
     mcp = asyncio.run(create_server(port))
     mcp.run(transport=transport, port=8542)
 

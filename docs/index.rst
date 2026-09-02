@@ -3,9 +3,9 @@ Welcome to Klea
 
 Knowledge vaLidated Expert AI Assistant for Neuroscience.
 
-Klea is a suite of AI tools for Neuroscience.  It provides a generic
-RAG pipeline, an AI-assisted coding workflow system, and MCP servers
-for modelling and analysis.
+Klea is a suite of AI tools for Neuroscience.  It provides a general
+purpose agent with coding capabilities, a generic RAG pipeline, and
+MCP servers for modelling and analysis.
 
 Architecture
 ------------
@@ -21,24 +21,47 @@ The project is organised as a monorepo with four installable packages:
      - Purpose
    * - ``utils_pkg``
      - ``klea_utils``
-     - ``klea-vs-create``
+     - ``klea-stores-create``
      - Shared utilities, vector store management, base graph classes
    * - ``rag_pkg``
      - ``klea_rag``
      - ``klea-rag``, ``klea-rag-serve``
      - Generic RAG pipeline with multi-domain support
-   * - ``code_pkg``
-     - ``klea_code``
-     - ``klea-code``
-     - AI-assisted coding and workflow system
+   * - ``agent_pkg``
+     - ``klea_agent``
+     - ``klea``, ``klea-serve``
+     - General purpose agent with coding capabilities
    * - ``mcp_pkg``
      - ``neuroml_mcp``
      - ``nml-mcp``
      - MCP server for NeuroML tooling
 
 Each package is built on a shared foundation in ``klea_utils``, which
-provides LLM setup, vector store abstraction, and the
+provides configurable LLM setup (with runtime model switching), vector
+store abstraction (Chroma / PGVector / Qdrant), and the
 :class:`~klea_utils.graph.base.BaseLangGraph` orchestrator framework.
+Web interfaces are available via NiceGUI (primary) and Streamlit.
+
+``klea_agent`` is the main application: a general purpose agent that can
+also code.  ``klea_rag`` is an additional component, primarily consumed by
+``klea_agent`` as a retrieval/RAG service.
+
+C4 architecture model
+---------------------
+
+Although Klea is being validated in the neuroscience domain (via the
+``nml-mcp`` server and the curated NeuroML vector stores), it is developed as a
+general-purpose RAG + agentic assistant and is not tied to any single domain.
+The full C4 model (system context, containers, components, deployment) is
+maintained as developer documentation: see :doc:`developer-info`.
+
+Quickstart
+----------
+
+New to Klea? Start with installation and the end-to-end RAG tutorial:
+
+* :doc:`install` -- install Klea (PyPI or from source, with optional extras)
+* :doc:`tutorials/create-and-use-rag` -- build your first vector store, configure a domain, and query it
 
 Prototype Deployments
 ---------------------
@@ -64,6 +87,13 @@ awarded to `Padraig Gleeson
 <https://profiles.ucl.ac.uk/77575-ankur-sinha>`_ at `University College
 London <https://openneuroai.org/>`_.
 
+Klea is developed and maintained by `Ankur Sinha
+<https://profiles.ucl.ac.uk/77575-ankur-sinha>`_ (GitHub:
+`@sanjayankur31 <https://github.com/sanjayankur31>`_) with contributions
+from the NeuroML community (see `all-contributors
+<https://github.com/NeuroML/neuroklea#contributors>`_ and
+:doc:`contributing`).
+
 .. image:: _static/biofair-logo.png
    :alt: BioFAIR logo
    :class: biofair-logo
@@ -75,16 +105,19 @@ London <https://openneuroai.org/>`_.
    :hidden:
 
    install
-   concepts/index
-   glossary
    tutorials/index
+   concepts/index
+   cookbook/index
    cli/index
+   glossary
+   troubleshooting
 
 .. toctree::
    :caption: Develop
    :hidden:
 
    contributing
+   developer-info
    api/index
 
 .. toctree::

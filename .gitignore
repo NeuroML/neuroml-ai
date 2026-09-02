@@ -64,3 +64,9 @@ target/
 .mypy_cache/
 
 data/scripts/nml-docs
+
+.nicegui/
+
+tmp/
+
+smoke.pkl

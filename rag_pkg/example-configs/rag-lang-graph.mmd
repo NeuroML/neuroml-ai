@@ -1,0 +1,53 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	Checking\20safety(Checking safety)
+	Declining\20query(Declining query)
+	Initializing(Initializing)
+	Classifying\20question(Classifying question)
+	Generating\20search(Generating search)
+	Selecting\20tools(Selecting tools)
+	Running\20tools(Running tools)
+	Answering\20generally(Answering generally)
+	Refusing\20query(Refusing query)
+	Retrieving\20information(Retrieving information)
+	Generating\20answer(Generating answer)
+	Evaluating\20answer(Evaluating answer)
+	Preparing\20response(Preparing response)
+	Requesting\20clarification(Requesting clarification)
+	Summarizing\20history(Summarizing history)
+	Splitting(Splitting)
+	__end__([<p>__end__</p>]):::last
+	Answering\20generally --> Summarizing\20history;
+	Checking\20safety -. &nbsp;safe&nbsp; .-> Classifying\20question;
+	Checking\20safety -. &nbsp;unsafe&nbsp; .-> Declining\20query;
+	Classifying\20question -. &nbsp;non_domain_query&nbsp; .-> Answering\20generally;
+	Classifying\20question -. &nbsp;non_domain_refuse&nbsp; .-> Refusing\20query;
+	Classifying\20question -. &nbsp;domain_query&nbsp; .-> Splitting;
+	Evaluating\20answer -. &nbsp;fallback&nbsp; .-> Answering\20generally;
+	Evaluating\20answer -. &nbsp;rewrite_answer&nbsp; .-> Generating\20answer;
+	Evaluating\20answer -. &nbsp;modify_query&nbsp; .-> Generating\20search;
+	Evaluating\20answer -. &nbsp;best_effort&nbsp; .-> Preparing\20response;
+	Evaluating\20answer -. &nbsp;undefined&nbsp; .-> Requesting\20clarification;
+	Evaluating\20answer -. &nbsp;retrieve_more_info&nbsp; .-> Retrieving\20information;
+	Generating\20answer --> Evaluating\20answer;
+	Generating\20search --> Retrieving\20information;
+	Initializing --> Checking\20safety;
+	Preparing\20response --> Summarizing\20history;
+	Requesting\20clarification --> Summarizing\20history;
+	Retrieving\20information --> Generating\20answer;
+	Running\20tools --> Generating\20answer;
+	Selecting\20tools --> Running\20tools;
+	Splitting --> Generating\20search;
+	Splitting --> Selecting\20tools;
+	__start__ --> Initializing;
+	Declining\20query --> __end__;
+	Refusing\20query --> __end__;
+	Summarizing\20history --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

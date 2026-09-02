@@ -8,18 +8,13 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import json
-import logging
-import uuid
-
-logger = logging.getLogger(__name__)
-
 
 async def run_repl(
     url: str,
     title: str,
     single_query: str = "",
     app_prefix: str = "klea",
+    app_name: str = "klea-tui",
 ) -> None:
     """Run an interactive or single-query chat REPL.
 
@@ -33,14 +28,30 @@ async def run_repl(
     :param title: Application title displayed on start
     :param single_query: If set, run one query and exit instead of REPL loop
     :param app_prefix: Prefix for user/assistant labels (e.g. ``"klea"``)
+    :param app_name: Log identity for this frontend, used as the log file
+        name so each process keeps its own logs (e.g. ``"klea-rag-tui"``)
     """
-    # Lazy: avoids importing httpx + yaspin (and their deps) at module level
-    import httpx
+    # Configure process-wide logging for this client process.  Lazy:
+    # platformdirs / plogging imports are cheap, and everything else is
+    # deferred below so --help stays fast.
+    from platformdirs import PlatformDirs
+
+    from klea_utils.plogging import resolve_log_level, setup_root_logger
+
+    setup_root_logger(
+        app_name,
+        stderr_level=resolve_log_level(),
+        log_dir=PlatformDirs(app_name).user_data_dir,
+    )
+
+    # Lazy: avoids importing yaspin (and its deps) at module level
+    import coolname
     from yaspin import yaspin
 
+    from klea_utils.api.sse import stream_events
     from klea_utils.api.utils import check_api_is_ready
 
-    session_id = str(uuid.uuid4())
+    chat_id = coolname.generate_slug(2)
 
     with yaspin(text="Waiting for API..."):
         await check_api_is_ready(f"{url}/health/ready")
@@ -51,31 +62,20 @@ async def run_repl(
         print()
 
         with yaspin(text="Working ...", timer=True) as spinner:
-            async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream(
-                    "POST",
-                    f"{url}/query/stream",
-                    json={"query": query, "session_id": session_id},
-                ) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if not line.startswith("data: "):
-                            if line.strip():
-                                logger.warning("Skipping non-data line: %s", line[:80])
-                            continue
-                        event = json.loads(line[6:])  # strip out "data: "
-                        if event["type"] == "progress":
-                            spinner.text = event["node"]
-                        elif event["type"] == "complete":
-                            full_response = event.get("message_for_user", "")
-                            spinner.ok("[OK]")
-                        elif event["type"] == "error":
-                            error_msg = event.get("message", "Unknown server error")
-                            spinner.fail("[ERROR]")
-                            break
+            async for event in stream_events(query, chat_id, url):
+                if event["type"] == "progress":
+                    spinner.text = event["node"]
+                elif event["type"] == "complete":
+                    full_response = event.get("message_for_user", "")
+                    spinner.ok("[OK]")
+                elif event["type"] == "error":
+                    error_msg = event.get("message", "Unknown server error")
+                    spinner.fail("[ERROR]")
+                    break
 
         output = error_msg or full_response
-        print(f"{app_prefix} (AI) >>> {output}")
+        label = "(ERROR)" if error_msg else "(AI)"
+        print(f"{app_prefix} {label} >>> {output}")
         print("\n" + "-" * 40 + "\n")
 
     if single_query:

@@ -1,9 +1,5 @@
 # Docs build: install all packages + Sphinx + Furo
--r requirements.txt
+-r requirements-dev.txt
 sphinx
 furo
 sphinxcontrib-typer
-
-# sphinxcontrib-typer not yet compatible with typer >= 0.26.8
-# https://github.com/sphinx-contrib/typer/issues/68
-typer < 0.26.8

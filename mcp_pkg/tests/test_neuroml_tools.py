@@ -10,24 +10,18 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 
-import aiohttp
+import httpx
 import pytest
 import pytest_asyncio
-
 from neuroml_mcp.tools.neuroml_tools import (
-    get_models_from_neuromldb_tool,
-    get_repositories_from_open_source_brain_tool,
-)
-
-logging.basicConfig(
-    format="%(name)s (%(levelname)s) >>> %(message)s\n", level=logging.WARNING
+    get_models_from_neuromldb,
+    get_repositories_from_open_source_brain,
 )
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
-class MockContext(object):
+class MockContext:
     """Test stub replacing fastmcp.Context"""
 
     def __init__(self):
@@ -38,54 +32,64 @@ class MockContext(object):
 
 
 @pytest_asyncio.fixture
-async def aiohttp_ctx():
-    async with aiohttp.ClientSession() as ses:
+async def http_ctx():
+    async with httpx.AsyncClient() as ses:
         ctx = MockContext()
-        ctx.set_state("aiohttp_session", ses)
+        ctx.set_state("http_session", ses)
         yield ctx
 
 
 @pytest.mark.asyncio
-async def test_get_models_from_neuromldb_download(aiohttp_ctx):
+async def test_get_models_from_neuromldb_download(http_ctx):
+    from pathlib import Path
+
     model = "NMLCL000595"
-    res = await get_models_from_neuromldb_tool(
-        ctx=aiohttp_ctx, search_query=model, num=1, download=True
+    res = await get_models_from_neuromldb(
+        ctx=http_ctx, search_query=model, num=1, download=True
     )
     logger.debug(f"{res = }")
-    assert len(res) == 1
+    # Wrapper now returns ToolResult per MCP spec (isError handling)
+    assert not res.is_error
+    data = res.structured_content
+    assert len(data) == 1
 
     # Should download model
-    assert model in list(res.keys())
+    assert model in list(data.keys())
 
-    m = res[model]
-    assert m["resource"].exists()
+    m = data[model]
+    resource = m["resource"]
+    # ToolResult serialises Path to string via FastMCP; handle both
+    path = Path(resource) if isinstance(resource, str) else resource
+    assert path.exists()
     assert m["Type"] == "Cell"
     assert m["Publication_Year"] == 2015
 
 
 @pytest.mark.asyncio
-async def test_get_models_from_neuromldb_nodownload(aiohttp_ctx):
+async def test_get_models_from_neuromldb_nodownload(http_ctx):
     model = "NMLCL000595"
-    res = await get_models_from_neuromldb_tool(
-        ctx=aiohttp_ctx, search_query=model, num=1, download=False
+    res = await get_models_from_neuromldb(
+        ctx=http_ctx, search_query=model, num=1, download=False
     )
     logger.debug(f"{res = }")
-    assert len(res) == 1
+    assert not res.is_error
+    data = res.structured_content
+    assert len(data) == 1
 
-    assert model in list(res.keys())
+    assert model in list(data.keys())
 
-    m = res[model]
+    m = data[model]
     assert m["resource"] is None
     assert m["Type"] == "Cell"
     assert m["Publication_Year"] == 2015
 
 
 @pytest.mark.asyncio
-async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
+async def test_get_repositories_from_open_source_brain(http_ctx):
     # Test basic functionality with a simple search
     search_term = "cerebellum"
-    res = await get_repositories_from_open_source_brain_tool(
-        ctx=aiohttp_ctx,
+    res = await get_repositories_from_open_source_brain(
+        ctx=http_ctx,
         search_query=search_term,
         search_data=True,
         search_models=True,
@@ -93,20 +97,22 @@ async def test_get_repositories_from_open_source_brain(aiohttp_ctx):
     )
     logger.debug(f"{res = }")
 
-    # Should return a dictionary
-    assert isinstance(res, dict)
+    # Wrapper now returns ToolResult per MCP spec
+    assert not res.is_error
+    data = res.structured_content
+    assert isinstance(data, dict)
 
     # Should have some results (may be empty depending on search)
     # Just checking it doesn't crash and returns proper structure
-    assert "Error" not in res or isinstance(res["Error"], str)
+    assert "Error" not in data or isinstance(data["Error"], str)
 
 
 @pytest.mark.asyncio
-async def test_get_repositories_from_open_source_brain_no_results(aiohttp_ctx):
+async def test_get_repositories_from_open_source_brain_no_results(http_ctx):
     # Test with a search term that likely won't return results
     search_term = "nonexistent_search_term_12345"
-    res = await get_repositories_from_open_source_brain_tool(
-        ctx=aiohttp_ctx,
+    res = await get_repositories_from_open_source_brain(
+        ctx=http_ctx,
         search_query=search_term,
         search_data=True,
         search_models=True,
@@ -114,8 +120,10 @@ async def test_get_repositories_from_open_source_brain_no_results(aiohttp_ctx):
     )
     logger.debug(f"{res = }")
 
-    # Should return a dictionary
-    assert isinstance(res, dict)
+    # Wrapper now returns ToolResult per MCP spec
+    assert not res.is_error
+    data = res.structured_content
+    assert isinstance(data, dict)
 
     # Should not crash, even if no results are found
-    assert "Error" not in res or isinstance(res["Error"], str)
+    assert "Error" not in data or isinstance(data["Error"], str)

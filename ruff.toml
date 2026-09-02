@@ -1,0 +1,13 @@
+# Root ruff config for the Klea monorepo.
+# Per-package pyproject.toml files extend these settings.
+[lint]
+ignore = [
+    "EXE001",   # Shebang on non-executable file — project-wide convention
+    "F403",     # Wildcard import (from x import *) — used in __init__.py
+    "F405",     # Undefined from wildcard import — same reason
+    "PIE790",   # Unnecessary pass — intentional, visual cue for no-op hooks
+    "PLR0913",  # Too many arguments — setup_layout needs 8 config params
+    "PLR0915",  # Too many statements — setup_layout is unavoidably large
+    "PLR0917",  # Too many positional args — same reason
+    "PLW0108",  # Unnecessary pass (alternative code) — same reason
+]

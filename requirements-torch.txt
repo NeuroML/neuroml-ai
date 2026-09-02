@@ -1,0 +1,86 @@
+# PyTorch is not a direct dependency of any Klea package, but it IS
+# installed transitively by the document-ingestion extra: the `ingest`
+# extra -> docling -> docling-slim[standard] -> torch + torchvision.
+# The `full` / `test` / `dev` extras all include `ingest`, so plain
+# requirements.txt / requirements-dev.txt bring torch in too.
+#
+# That transitive torch is unpinned and comes from the default index
+# (PyPI), so its CUDA build may not match your GPU: newer CUDA builds
+# drop kernels for older cards, and a mismatched build can report the
+# GPU yet fail every kernel launch.  Choose the right build and install
+# it yourself -- this file is the guide and a pinned, verified example.
+# It is not referenced by the other requirements files.
+#
+# HOW TO CHOOSE YOUR BUILD
+# ------------------------
+# 1. Check your driver and the highest CUDA version it supports:
+#
+#        nvidia-smi            # Driver Version / CUDA Version columns
+#
+# 2. Check your GPU's compute capability (CC).  With a working torch
+#    installed:
+#
+#        python -c "import torch; print(torch.cuda.get_device_capability(0))"
+#
+#    or look the card up in the NVIDIA "CUDA GPUs" documentation.
+#
+# 3. Match the CC to a CUDA build:
+#
+#    - CC 6.0/6.1 (Pascal, e.g. Quadro P1000), CC 7.0/7.5 (Volta/Turing):
+#      use a wheel built with CUDA 12.8 or earlier (cu126, cu128).
+#      CUDA 12.9+ and 13.x dropped support for these GPUs entirely.
+#    - CC 8.0 and newer (Ampere, Ada, Hopper, Blackwell): any recent
+#      build (cu129, cu130, ...) works.
+#
+# 4. Install torch AND torchvision from the SAME CUDA index.  They must
+#    match: torchvision's metadata only pins the base torch version
+#    (torch==X.Y.Z), so a torchvision +cu130 wheel next to a torch
+#    +cu126 wheel installs silently but breaks `import torchvision` at
+#    runtime.
+#
+# RECOMMENDED WORKFLOW
+# --------------------
+# Fresh setup -- install the pinned build first, then the requirements.
+# pip/uv keep an already-installed torch that satisfies docling's
+# torch>=2.2.2,<3.0.0, so the requirements install does not replace it:
+#
+#     uv pip install "torch==2.13.0+cu126" "torchvision==0.28.0+cu126" \
+#         --extra-index-url https://download.pytorch.org/whl/cu126
+#     uv pip install -r requirements.txt        # or requirements-dev.txt
+#
+# Already installed with the wrong build -- force-replace the pair:
+#
+#     uv pip install --reinstall "torch==2.13.0+cu126" \
+#         "torchvision==0.28.0+cu126" \
+#         --extra-index-url https://download.pytorch.org/whl/cu126
+#
+# Use --extra-index-url (not --index-url) so PyPI still supplies the
+# non-CUDA dependencies: the PyTorch index hosts only torch-family and
+# nvidia-* wheels.  The FULL pin (torch==<version>+cu<NN>) stops the
+# package manager silently picking a different CUDA suffix.
+#
+# VERIFY YOUR INSTALL
+# -------------------
+# Snapshot (build, GPU, driver) -- useful for support requests, but note
+# that "Is CUDA available: True" in its output does NOT mean this build
+# has kernels for your GPU:
+#
+#     python -m torch.utils.collect_env
+#
+# Definitive check -- a real CUDA compute op (run from the repo root):
+#
+#     python scripts/test_torch.py
+#
+# PyTorch wheels bundle their own CUDA runtime libraries, so no system
+# CUDA toolkit is required to RUN torch.  A toolkit (with nvcc) is only
+# needed to compile CUDA extensions yourself, and it must match the CUDA
+# version of the wheel (e.g. CUDA 12.6 for a cu126 wheel).
+#
+# ----------------------------------------------------------------------
+# WORKED EXAMPLE -- verified on this machine
+#
+# Quadro P1000 (Pascal, CC 6.1), driver 580.173.02 from RPM Fusion,
+# which reports CUDA 13.0.  The newest torch build that still contains
+# kernels for this GPU is 2.13.0+cu126 (CUDA 12.6).  Without the pin,
+# uv/pip would pick torch 2.13.0+cu130, which has no sm_61 kernels:
+# torch reports the GPU but every kernel launch fails.

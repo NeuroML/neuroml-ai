@@ -19,8 +19,8 @@ This is currently in active development.
 
 The packages included, one in each folder are:
 
-- rag_pkg: a generic RAG implementation
-- code_pkg: AI assisted coding/workflow system
+- agent_pkg: the main Klea agent, a general purpose agent with coding capabilities
+- rag_pkg: a generic RAG implementation, primarily consumed by the agent
 - mcp_pkg: MCP server for NeuroML
 - utils_pkg: common utility functions used by other packages
 

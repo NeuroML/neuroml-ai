@@ -8,82 +8,19 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
-import asyncio
-import importlib.util
-import shlex
-import subprocess
-from contextlib import chdir
-from pathlib import Path
+from klea_utils.paths import get_config_dir
+from klea_utils.ui.cli import make_client_app
+from platformdirs import PlatformDirs
 
-import typer
-from klea_utils.api.utils import validate_url
+from klea_rag.config import write_config_template
 
-rag_app = typer.Typer(help="Simple KLEA RAG user client")
-
-
-def _validate_url(value: str) -> str:
-    try:
-        return validate_url(value)
-    except ValueError as e:
-        raise typer.BadParameter(str(e))
-
-
-@rag_app.command()
-def cli(
-    server_url: str = typer.Option(
-        "http://127.0.0.1:8005",
-        "--server",
-        "-s",
-        help="KLEA RAG server (URL:port)",
-        callback=_validate_url,
-    ),
-    single_query: str = typer.Option(
-        None, "--single-query", "-q", help="Single query mode: answer a query and exit"
-    ),
-    title: str = typer.Option(
-        "KLEA RAG", "--title", "-t", help="Title for application"
-    ),
-):
-    """Klea RAG cli client"""
-    from klea_utils.ui.tui.repl import run_repl
-
-    try:
-        asyncio.run(
-            run_repl(
-                url=server_url,
-                title=title,
-                single_query=single_query or "",
-                app_prefix="klea",
-            )
-        )
-    except KeyboardInterrupt:
-        print("\nInterrupted. Exiting.")
-
-
-@rag_app.command()
-def web(
-    title: str = typer.Option(
-        "KLEA RAG", "--title", "-t", help="Title for application"
-    ),
-    subtitle: str = typer.Option(
-        "Answers use LLM technology and may be incorrect. Please re-confirm.",
-        "--subtitle",
-        "-b",
-        help="Sub title for application",
-    ),
-    server_url: str = typer.Option(
-        "http://127.0.0.1:8005",
-        "--server",
-        "-s",
-        help="KLEA RAG server URL:port",
-        callback=_validate_url,
-    ),
-):
-    """Klea RAG Streamlit client"""
-    spec = importlib.util.find_spec("klea_utils.ui.web.streamlit.app")
-    assert spec and spec.origin, "Could not locate streamlit app entry point"
-    cwd = Path(spec.origin).parent
-    with chdir(cwd):
-        subprocess.run(
-            shlex.split(f"streamlit run app.py '{title}' '{subtitle}' '{server_url}'")
-        )
+rag_app = make_client_app(
+    label="RAG",
+    server_url_default="http://127.0.0.1:8005",
+    app_module="klea_rag.api.main:app",
+    tui_app_name="klea-rag-tui",
+    web_app_name="klea-rag-web",
+    config_env_var="KLEA_RAG_APP_CONFIG_FILE",
+    config_dir=get_config_dir(PlatformDirs("klea-rag")),
+    template_writer=write_config_template,
+)

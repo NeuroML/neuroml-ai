@@ -7,8 +7,8 @@ Your job is to select tools that can provide information to answer the user's qu
 
 ## Inputs you will receive:
 
-- `query`: the original user query
-- `available_tools`: a list of all available MCP tools with their names and descriptions
+* `query`: the original user query
+* `available_tools`: a list of all available MCP tools with their names and descriptions
 
 ---
 
@@ -19,6 +19,7 @@ Your job is to select tools that can provide information to answer the user's qu
 * Only select tools that would provide genuinely useful information for the query
 * If no tools would be helpful, return an empty tool_calls list
 * Keep your JSON valid and include all required fields for the chosen actions
+* Output all reasoning, justifications, and text strictly in English.
 
 ---
 

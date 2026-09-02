@@ -1,8 +1,8 @@
 {
     "general":
     {
-        "default_k": 5,
-        "k_max": 10,
+        "default_k": 10,
+        "k_max": 15,
         "non_domain_chat": true,
         "pre_prompt": "",
         "fallback_to_training_data": true,
@@ -14,7 +14,41 @@
             "vector_stores": [
                 {
                     "name": "nml-docs",
-                    "path": "chroma:../deployments/huggingface/vector-stores/nml-docs_bge-m3.db"
+                    "path": "chroma:../../deployments/huggingface/store/nml-docs"
+                },
+                {
+                    "name": "nml-elife",
+                    "path": "chroma:../../deployments/huggingface/store/nml-elife"
+                },
+                {
+                    "name": "nml-schema-docs",
+                    "path": "chroma:../../deployments/huggingface/store/nml-schema-docs"
+                }
+            ],
+            "bm25_stores": [
+                {
+                    "name": "nml-docs",
+                    "path": "../../deployments/huggingface/store/nml-docs/nml-docs-bm25.pkl"
+                },
+                {
+                    "name": "nml-elife",
+                    "path": "../../deployments/huggingface/store/nml-elife/nml-elife-bm25.pkl"
+                },
+                {
+                    "name": "nml-schema-docs",
+                    "path": "../../deployments/huggingface/store/nml-schema-docs/nml-schema-docs-bm25.pkl"
+                }
+            ],
+            "filter_fields": [
+                {
+                    "name": "journal",
+                    "description": "the journal a paper was published in; use the full journal name",
+                    "value_type": "string"
+                },
+                {
+                    "name": "authors",
+                    "description": "an author of the paper; surname or full name (partial names match)",
+                    "value_type": "list"
                 }
             ]
         }
