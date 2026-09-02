@@ -317,10 +317,17 @@ Web client user storage
 
 The NiceGUI web clients (``klea-rag web``, ``klea web``) keep a small
 per-browser-session identity file so that a returning browser is linked
-back to the same user.  The files are written to a ``.nicegui/`` directory
-relative to the working directory the web client is launched from (not the
-platform user-data directory) and are named
-``storage-user-<session-id>.json``.
+back to the same user.  The files are written to a per-app platform
+user-data directory:
+
+* Linux: ``~/.local/share/<app>/nicegui/``
+* macOS: ``~/Library/Application Support/<app>/nicegui/``
+* Windows: ``%LOCALAPPDATA%\<app>\nicegui\``
+
+(honouring ``XDG_DATA_HOME``), and are named
+``storage-user-<session-id>.json``.  The ``<app>`` is ``klea-rag-web``
+for ``klea-rag web`` and ``klea-web`` for ``klea web``, so the two
+frontends do not overlap.
 
 Each file stores only a pointer to server-side state::
 
@@ -331,7 +338,26 @@ The chat history itself lives in the server's session store
 
 These files are **never deleted automatically**.  NiceGUI prunes stale
 sessions from its in-memory store but leaves the JSON files on disk, so
-they accumulate over time and survive server restarts.  Deleting the
-``.nicegui/`` directory while no web client is running is safe: the next
-page load simply mints a fresh ``user_id`` (existing chats under the old
-id are then not shown in that browser).
+they accumulate over time and survive server restarts.  **Do not delete
+the per-app ``nicegui/`` directory manually** -- it holds the ``user_id``
+pointer (see ``runner.py:1273``) that links the browser to server rows
+in ``~/.local/share/<app>/sessions.db`` (see ``api/app.py:56`` /
+``sessions_db.py:43``).  Removing it mints a new ``user_id`` and
+**orphans** previous chats (they remain in ``sessions.db`` /
+``checkpoints.db`` at ``graph/base.py:610`` but
+``list_chats(user_id)`` at ``sessions_db.py:116`` no longer finds them).
+Only delete ``nicegui/`` **after** you have deleted the session from the
+frontend -- use the ``Delete user session`` action (see
+``runner.py:692``) which calls ``DELETE /chat/{user_id}`` at
+``sessions.py:124`` -> ``delete_user_chats`` at ``sessions_db.py:167``
+and ``adelete_thread`` at ``sessions.py:136`` -- when there is nothing
+left to orphan.
+
+Deployments that need a custom location (e.g. a persistent volume on
+HuggingFace Spaces) can set the single environment variable
+``NICEGUI_STORAGE_PATH`` (honoured by ``nicegui/storage.py``) to an
+absolute directory, for example ``NICEGUI_STORAGE_PATH=/data/nicegui``.
+When set it takes precedence over the per-app default.  The legacy
+``.nicegui/`` directory next to the working directory is no longer used;
+if it exists from an older install it can be removed after confirming
+files have been recreated in the new location.

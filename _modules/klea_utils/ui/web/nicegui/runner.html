@@ -1251,6 +1251,19 @@
         <span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"w-full px-2"</span><span class="p">)</span>
         <span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"flex: 1; min-height: 0; display: flex; flex-direction: column;"</span><span class="p">)</span>
     <span class="p">):</span>
+        <span class="c1"># Backend readiness banner - shown until health-check + hydrate</span>
+        <span class="c1"># complete.  Keeping this in the delivered layout avoids blocking</span>
+        <span class="c1"># ``page.py:wait_for_result`` on the 180s probe (HF cold-start</span>
+        <span class="c1"># race that deleted the client and made ``Drawer.__init__`` crash</span>
+        <span class="c1"># with ``page_container is not in list``).</span>
+        <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">row</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+            <span class="s2">"w-full justify-center items-center gap-2 p-2"</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">_loading_row</span><span class="p">:</span>
+            <span class="n">_loading_spinner</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">spinner</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s2">"dots"</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"w-4 h-4"</span><span class="p">)</span>
+            <span class="n">_loading_label</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"Backend is starting, please wait..."</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+                <span class="s2">"text-xs text-grey-5 italic"</span>
+            <span class="p">)</span>
+
         <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">tabs</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"w-full"</span><span class="p">)</span> <span class="k">as</span> <span class="n">center_tabs</span><span class="p">:</span>
             <span class="n">chat_tab</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">tab</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"chat"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"chat"</span><span class="p">)</span>
             <span class="n">inspect_tab</span> <span class="o">=</span> <span class="n">ui</span><span class="o">.</span><span class="n">tab</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">"inspect"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"inspect"</span><span class="p">)</span>
@@ -1485,6 +1498,67 @@
             <span class="p">):</span>
                 <span class="n">_render_inspector_panel</span><span class="p">()</span>
 
+    <span class="c1"># ---- Background initialisation: health-check + hydrate ----</span>
+    <span class="c1"># Runs after the layout is delivered so ``main_page`` returns</span>
+    <span class="c1"># within ``response_timeout`` even when the backend needs 30-60s</span>
+    <span class="c1"># to become ready on HF (cold container).  Previously the probe</span>
+    <span class="c1"># blocked ``main_page`` and ``page.py:197`` deleted the client,</span>
+    <span class="c1"># so the late ``setup_layout`` crashed at</span>
+    <span class="c1"># ``Drawer.__init__:page_container_index``.</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_initial_load</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Wait for backend, hydrate chats, then refresh UI."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"initial load: probing </span><span class="si">%s</span><span class="s2">/health/ready"</span><span class="p">,</span> <span class="n">server_url</span><span class="p">)</span>
+            <span class="k">await</span> <span class="n">check_api_is_ready</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/health/ready"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"backend unavailable after probe: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+            <span class="n">_loading_row</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">_loading_row</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"justify-center"</span><span class="p">):</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">icon</span><span class="p">(</span><span class="s2">"cloud_off"</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-grey-5"</span><span class="p">)</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"Backend unavailable"</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-sm text-grey-7"</span><span class="p">)</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"Please check that the server is running."</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
+                    <span class="s2">"text-xs text-grey-5"</span>
+                <span class="p">)</span>
+                <span class="n">ui</span><span class="o">.</span><span class="n">button</span><span class="p">(</span>
+                    <span class="s2">"Retry"</span><span class="p">,</span>
+                    <span class="n">on_click</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_initial_load</span><span class="p">()),</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">props</span><span class="p">(</span><span class="s2">"flat dense color=primary"</span><span class="p">)</span>
+            <span class="n">ui</span><span class="o">.</span><span class="n">notification</span><span class="p">(</span>
+                <span class="s2">"Backend unavailable - click Retry when ready"</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s2">"negative"</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">close_button</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Hydrate (swallows its own exceptions but log here as well).</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"backend ready, hydrating chats for user_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="k">await</span> <span class="n">hydrate_chats</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"hydrate done, chats keys=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">chats</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"hydrate failed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># Clear banner and enable input.</span>
+        <span class="n">_loading_row</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">_loading_row</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"hidden"</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">text</span><span class="o">.</span><span class="n">enable</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"enable input failed (already enabled?): </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">_render_chat_list</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="n">_render_chat_area</span><span class="p">()</span>
+        <span class="n">_status_pane</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="n">_render_inspector_panel</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"initial load complete"</span><span class="p">)</span>
+
+    <span class="c1"># Disable chat input until backend is ready; _initial_load re-enables.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">text</span><span class="o">.</span><span class="n">disable</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"disable input failed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="n">background_tasks</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">_initial_load</span><span class="p">())</span>
+
     <span class="c1"># ---- Footer ----</span>
     <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">footer</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"bg-grey-3 dark:bg-grey-9 text-xs py-1"</span><span class="p">):</span>
         <span class="n">ui</span><span class="o">.</span><span class="n">html</span><span class="p">(</span><span class="n">footer_text</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"w-full text-center text-grey-6"</span><span class="p">)</span></div>
@@ -1530,6 +1604,9 @@
 <span class="sd">    """</span>
     <span class="c1"># Configure process-wide logging for this client process.  Lazy:</span>
     <span class="c1"># platformdirs / plogging imports are cheap and this is a CLI entry.</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
     <span class="kn">from</span><span class="w"> </span><span class="nn">platformdirs</span><span class="w"> </span><span class="kn">import</span> <span class="n">PlatformDirs</span>
 
     <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.plogging</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_log_level</span><span class="p">,</span> <span class="n">setup_root_logger</span>
@@ -1540,16 +1617,66 @@
         <span class="n">log_dir</span><span class="o">=</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">,</span>
     <span class="p">)</span>
 
+    <span class="c1"># NiceGUI storage: default to per-app user_data_dir/nicegui when the</span>
+    <span class="c1"># deployer has not set NICEGUI_STORAGE_PATH.  Single env var keeps</span>
+    <span class="c1"># config simple; app_name gives per-app isolation (klea-rag-web vs</span>
+    <span class="c1"># klea-web share the same frontend code but must not overlap).</span>
+    <span class="c1"># Must set both the env var (for reload subprocess re-import) and</span>
+    <span class="c1"># Storage.path (for already-imported nicegui.storage at runner.py:22).</span>
+    <span class="c1"># Keeps files at ~/.local/share/{app_name}/nicegui/ (XDG_DATA_HOME</span>
+    <span class="c1"># honoured by PlatformDirs) on local single-user, and allows</span>
+    <span class="c1"># deployments to set NICEGUI_STORAGE_PATH=/data/nicegui for persistence.</span>
+    <span class="k">if</span> <span class="s2">"NICEGUI_STORAGE_PATH"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="n">default_storage_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">PlatformDirs</span><span class="p">(</span><span class="n">app_name</span><span class="p">)</span><span class="o">.</span><span class="n">user_data_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"nicegui"</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"NICEGUI_STORAGE_PATH"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">default_storage_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">"set default NICEGUI_STORAGE_PATH=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"NICEGUI_STORAGE_PATH"</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">storage_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"NICEGUI_STORAGE_PATH"</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">storage_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"failed to create NICEGUI_STORAGE_PATH </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">storage_dir</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">nicegui.storage</span><span class="w"> </span><span class="kn">import</span> <span class="n">Storage</span>
+
+        <span class="n">Storage</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">storage_dir</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">"nicegui Storage.path set to </span><span class="si">%s</span><span class="s2"> (app_name=</span><span class="si">%s</span><span class="s2">)"</span><span class="p">,</span> <span class="n">Storage</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">app_name</span>
+        <span class="p">)</span>
+        <span class="c1"># Rebuild storage so FilePersistentDict picks up the new path when</span>
+        <span class="c1"># app.storage was already instantiated at import time.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">app</span><span class="o">.</span><span class="n">is_started</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">nicegui</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">_nicegui_app</span>
+
+            <span class="n">_nicegui_app</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"rebuilt nicegui app.storage for path </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">Storage</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">"failed to configure NiceGUI storage path </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">storage_dir</span><span class="p">,</span> <span class="n">e</span>
+        <span class="p">)</span>
+
     <span class="n">host</span><span class="p">,</span> <span class="n">port_str</span> <span class="o">=</span> <span class="n">nicegui_url</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
     <span class="n">port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">port_str</span><span class="p">)</span>
 
-    <span class="nd">@ui</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="n">response_timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+    <span class="nd">@ui</span><span class="o">.</span><span class="n">page</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="n">response_timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main_page</span><span class="p">():</span>
-<span class="w">        </span><span class="sd">"""Build the main page after ensuring the WebSocket is connected.</span>
+<span class="w">        </span><span class="sd">"""Build the main page without blocking on backend readiness.</span>
 
-<span class="sd">        ``ui.run_javascript`` (used inside ``_render_chat_area``) only</span>
-<span class="sd">        works after the client has connected, so we await</span>
-<span class="sd">        ``ui.context.client.connected()`` first.</span>
+<span class="sd">        ``ui.context.client.connected()`` is awaited, then</span>
+<span class="sd">        :func:`setup_layout` is called **immediately** so</span>
+<span class="sd">        ``nicegui/page.py`` delivers the response within</span>
+<span class="sd">        ``response_timeout`` (60s).  Backend health-check and</span>
+<span class="sd">        ``hydrate_chats`` run as a background task *after* the layout</span>
+<span class="sd">        is delivered; ``setup_layout`` shows a ``Backend is starting``</span>
+<span class="sd">        banner until they succeed.  This avoids the HF cold-start race</span>
+<span class="sd">        where ``check_api_is_ready(timeout=180)`` outlives the page</span>
+<span class="sd">        timeout, the client is deleted by ``page.py:197``, and the</span>
+<span class="sd">        late ``setup_layout`` crashes in ``Drawer.__init__`` with</span>
+<span class="sd">        ``ValueError: page_container is not in list``.</span>
+
+<span class="sd">        User identity is resolved before any ``await`` so</span>
+<span class="sd">        ``app.storage.user`` is still in the request context.</span>
 <span class="sd">        """</span>
         <span class="c1"># Establish the per-browser user identity at the very top of the</span>
         <span class="c1"># page builder, before any await. `app.storage.user` is only</span>
@@ -1571,28 +1698,9 @@
 
         <span class="k">await</span> <span class="n">ui</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">connected</span><span class="p">()</span>
 
-        <span class="c1"># The page builder runs exactly once -- build the appropriate page</span>
-        <span class="c1"># directly rather than showing a loading spinner and then swapping.</span>
-        <span class="c1"># The ``response_timeout=30`` on the page decorator gives the health</span>
-        <span class="c1"># check time to complete before the client sees a timeout.</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">await</span> <span class="n">check_api_is_ready</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">server_url</span><span class="si">}</span><span class="s2">/health/ready"</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">ui</span><span class="o">.</span><span class="n">add_css</span><span class="p">(</span><span class="s2">".nicegui-content { display: flex; flex: 1; }"</span><span class="p">)</span>
-            <span class="k">with</span> <span class="n">ui</span><span class="o">.</span><span class="n">column</span><span class="p">()</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"w-full h-full items-center justify-center gap-4"</span><span class="p">):</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">icon</span><span class="p">(</span><span class="s2">"cloud_off"</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="s2">"4rem"</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-grey-5"</span><span class="p">)</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"Backend unavailable"</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span><span class="s2">"text-xl text-grey-7"</span><span class="p">)</span>
-                <span class="n">ui</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">"Please check that the Klea server is running."</span><span class="p">)</span><span class="o">.</span><span class="n">classes</span><span class="p">(</span>
-                    <span class="s2">"text-grey-5"</span>
-                <span class="p">)</span>
-            <span class="k">return</span>
-
         <span class="n">chat_id</span> <span class="o">=</span> <span class="s2">""</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"user_id=</span><span class="si">%s</span><span class="s2"> chat_id=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">chat_id</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"before hydrate: chats keys=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">chats</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
-        <span class="k">await</span> <span class="n">hydrate_chats</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">user_id</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"after hydrate: chats keys=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">chats</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
 
         <span class="n">setup_layout</span><span class="p">(</span>
             <span class="n">chat_id</span><span class="o">=</span><span class="n">chat_id</span><span class="p">,</span>

@@ -431,10 +431,14 @@ metadata, and sample windows of contiguous chunks.</p>
 <span class="pre">Support/&lt;app&gt;/&lt;app&gt;.log</span></code> (macOS), or <code class="docutils literal notranslate"><span class="pre">%LOCALAPPDATA%\&lt;app&gt;\&lt;app&gt;.log</span></code>
 (Windows) – see <a class="reference internal" href="install.html#logging"><span class="std std-ref">Logging</span></a> in <a class="reference internal" href="install.html"><span class="doc">Installation</span></a> for the full per-CLI
 table.  The console shows <code class="docutils literal notranslate"><span class="pre">INFO</span></code>; the file captures <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code>.</p>
-<p>NiceGUI web clients keep <code class="docutils literal notranslate"><span class="pre">.nicegui/storage-user-*.json</span></code> small session
-pointers beside the launch directory (not in the user-data directory);
-they are never auto-deleted and accumulate until you remove
-<code class="docutils literal notranslate"><span class="pre">.nicegui/</span></code> while no client is running – safe to do.</p>
+<p>NiceGUI web clients keep <code class="docutils literal notranslate"><span class="pre">storage-user-*.json</span></code> small session
+pointers in the per-app user-data <code class="docutils literal notranslate"><span class="pre">nicegui/</span></code> directory
+(<code class="docutils literal notranslate"><span class="pre">~/.local/share/&lt;app&gt;/nicegui/</span></code> on Linux, honouring
+<code class="docutils literal notranslate"><span class="pre">NICEGUI_STORAGE_PATH</span></code> when set); they are never auto-deleted.  Do not
+remove the <code class="docutils literal notranslate"><span class="pre">nicegui/</span></code> directory unless the session has been deleted
+from the frontend first (see <code class="docutils literal notranslate"><span class="pre">Web</span> <span class="pre">client</span> <span class="pre">user</span> <span class="pre">storage</span></code> in
+<a class="reference internal" href="install.html"><span class="doc">Installation</span></a>) – otherwise chats are orphaned under the old
+<code class="docutils literal notranslate"><span class="pre">user_id</span></code>.</p>
 </section>
 <section id="huggingface-spaces">
 <h2>HuggingFace Spaces<a class="headerlink" href="#huggingface-spaces" title="Link to this heading">¶</a></h2>

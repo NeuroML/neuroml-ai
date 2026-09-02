@@ -170,10 +170,14 @@ Support/<app>/<app>.log`` (macOS), or ``%LOCALAPPDATA%\<app>\<app>.log``
 (Windows) -- see :ref:`logging` in :doc:`install` for the full per-CLI
 table.  The console shows ``INFO``; the file captures ``DEBUG``.
 
-NiceGUI web clients keep ``.nicegui/storage-user-*.json`` small session
-pointers beside the launch directory (not in the user-data directory);
-they are never auto-deleted and accumulate until you remove
-``.nicegui/`` while no client is running -- safe to do.
+NiceGUI web clients keep ``storage-user-*.json`` small session
+pointers in the per-app user-data ``nicegui/`` directory
+(``~/.local/share/<app>/nicegui/`` on Linux, honouring
+``NICEGUI_STORAGE_PATH`` when set); they are never auto-deleted.  Do not
+remove the ``nicegui/`` directory unless the session has been deleted
+from the frontend first (see ``Web client user storage`` in
+:doc:`install`) -- otherwise chats are orphaned under the old
+``user_id``.
 
 HuggingFace Spaces
 ------------------
