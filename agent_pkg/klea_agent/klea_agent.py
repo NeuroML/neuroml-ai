@@ -99,8 +99,8 @@ class KleaAgent(BaseLangGraph):
     def get_allowed_msgpack_modules(self) -> list[type | tuple[str, ...]]:
         """Extend base allowlist with Agent-specific checkpointed schemas.
 
-        Mirrors ``rag_pkg/klea_rag/rag.py:get_allowed_msgpack_modules`` — the
-        base list (``TokenUsage``, ``ToolCallSchema``, ``CallToolResult``, …)
+        Mirrors ``rag_pkg/klea_rag/rag.py:get_allowed_msgpack_modules``  ---  the
+        base list (``TokenUsage``, ``ToolCallSchema``, ``CallToolResult``, ...)
         is extended with schemas that are stored in the checkpoint.  The base
         already probes for ``AudioContent``/``McpCallToolResult``.
         """
@@ -137,7 +137,7 @@ class KleaAgent(BaseLangGraph):
 
     @override
     async def _pre_graph(self) -> None:
-        """Hook before graph compilation — parity with RAG.
+        """Hook before graph compilation  ---  parity with RAG.
 
         Currently a no-op; reserved for wiring that depends on the MCP client
         but must happen before ``_create_graph`` (e.g. future retrieval setup).
@@ -158,7 +158,7 @@ class KleaAgent(BaseLangGraph):
     ) -> dict[str, Any]:
         """Mark the current plan step done/failed from the tool results.
 
-        Any ``is_error`` result marks the step ``failed`` — this mirrors the
+        Any ``is_error`` result marks the step ``failed``  ---  this mirrors the
         permission + ``isError`` handling in
         ``klea_utils/mcp/dispatch.py:dispatch_tool_calls`` and
         ``klea_utils/nodes/tools_caller.py:ToolsCallerNode``.  Guards against
@@ -242,7 +242,7 @@ class KleaAgent(BaseLangGraph):
         # ToolsPicker/Caller are the shared nodes from ``klea_utils`` (ADR-0020).
         # ``tools_info`` is the per-domain description map built by
         # ``BaseLangGraph._build_tools_info`` before ``_create_graph``; the
-        # explicit ``prompt_registry_location`` is required — the shared
+        # explicit ``prompt_registry_location`` is required  ---  the shared
         # class would otherwise resolve ``prompts/`` relative to
         # ``klea_utils``.  ``model_type="chat"`` per review (may become a
         # dedicated "reasoning" role later).
@@ -266,18 +266,18 @@ class KleaAgent(BaseLangGraph):
         self._answer_user_node = AnswerUser(
             logger=self.logger, label="Preparing response"
         )
+        # Wire nodes  ---  order mirrors ``rag_pkg/klea_rag/rag.py:_create_graph``
+        # (guard -> goal -> explore -> picker/caller -> evaluate -> answer).
+        # Parallel tool calls are already handled by
+        # ``klea_utils/mcp/dispatch.py:dispatch_tool_calls`` via
+        # ``asyncio.gather``; the older ToolOrchestrator TODO is kept for
+        # context on multi-tool prompt/schema evolution.
         self.workflow.add_node(self._planner_node.label, self._planner_node.execute)
-        # TODO: modify to use a ToolOrchestrator that can call multiple tools
-        # in parallel asynchronously
-        # Note that this depends on how the agent is setup---if it's setup to
-        # run one call at a time, this isn't required, but ideally, it should
-        # be able to call multiple tools---but the prompts/state schema will
-        # need to updated for that
-        self.workflow.add_node(
-            self._tools_caller_node.label, self._tools_caller_node.execute
-        )
         self.workflow.add_node(
             self._tools_picker_node.label, self._tools_picker_node.execute
+        )
+        self.workflow.add_node(
+            self._tools_caller_node.label, self._tools_caller_node.execute
         )
         # Evaluator: needs to handle failed tool calls and ask the planner to
         # update the plan if required
