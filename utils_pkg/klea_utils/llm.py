@@ -539,7 +539,7 @@ def check_model_works(model, timeout=30, retries=5):
         )
         model._supports_structured_output = True
         logger.info("Model supports structured output")
-    except Exception:
+    except Exception:  # noqa: BLE001
         model._supports_structured_output = False
 
     for attempt in range(retries):
@@ -559,7 +559,7 @@ def check_model_works(model, timeout=30, retries=5):
                 False,
                 f"{e.__class__.__name__}: check if any inference providers are available for the selected model",
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_msg = f"{e.__class__.__name__}: {e.__str__()}"
             logger.warning(
                 f"Attempt #{attempt + 1}/{retries}: model unavailable: {error_msg}"
@@ -883,7 +883,7 @@ def resolve_langchain_endpoint(instance: Any, config: RunnableConfig) -> str | N
     """
     try:
         model = instance._model(config)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug(f"Failed to materialise concrete model for endpoint: {e}")
         return None
     for attr in _LANGCHAIN_BASE_URL_ATTRS:

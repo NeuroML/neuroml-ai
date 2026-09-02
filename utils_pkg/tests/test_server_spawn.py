@@ -164,7 +164,7 @@ class TestSpawnServer(unittest.TestCase):
         self.mock_popen.assert_not_called()
 
     def test_spawns_and_terminates_on_exit(self):
-        mock_proc = self._proc(poll_result=None)
+        self._proc(poll_result=None)
         # Probe 1 (reuse check): down -> spawn.
         # Probe 2 (window iteration 1): still down.
         # Probe 3 (window iteration 2): up -> break out of the window.
@@ -191,7 +191,7 @@ class TestSpawnServer(unittest.TestCase):
         # immediately (bad module path, port already in use).  The fast-fail
         # window must raise right away instead of waiting out the retry
         # budget, and the (already dead) process is not terminated again.
-        mock_proc = self._proc(poll_result=3, returncode=3)
+        self._proc(poll_result=3, returncode=3)
         mock_instance = self.mock_client.return_value.__enter__.return_value
         mock_instance.get.side_effect = httpx.ConnectError("down")
         self.mock_monotonic.return_value = 0
@@ -212,7 +212,7 @@ class TestSpawnServer(unittest.TestCase):
         # every probe fails.  The fast-fail window is exhausted, the long
         # retrying wait gives up after ``timeout``, and spawn_server raises
         # while still cleaning up the spawned process.
-        mock_proc = self._proc(poll_result=None)
+        self._proc(poll_result=None)
         mock_instance = self.mock_client.return_value.__enter__.return_value
         mock_instance.get.side_effect = httpx.ConnectError("down")
         # Simulate time progression: start 0, then deadline 1, need monotonic to exceed

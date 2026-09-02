@@ -103,7 +103,7 @@ async def fetch_active_models(
             data: dict[str, dict[str, str]] = resp.json()
             logger.debug("Active models for %s:%s: %s", user_id, chat_id, data)
             return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to fetch active models from %s: %s",
                 url,
@@ -139,7 +139,7 @@ def fetch_active_models_sync(
             data: dict[str, dict[str, str]] = resp.json()
             logger.debug("Active models for %s:%s: %s", user_id, chat_id, data)
             return data
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to fetch active models from %s: %s",
                 url,

@@ -171,7 +171,7 @@ def convert_batch_worker(
                     encoded = path.encode()[:4095]
                     # c_char array: pad with nulls so stale tail is cleared
                     current_file.value = encoded + b"\x00" * (4096 - len(encoded))
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     try:
@@ -197,7 +197,7 @@ def convert_batch_worker(
             try:
                 docs, extracted = builder._convert_and_chunk(file_path, resolver)
                 builder._save_to_cache(docs, extracted, source_path, file_hash)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 worker_logger.error(f"Failed to process {file_path.name}: {e}")
                 _emit(
                     ChunkItemResult(
@@ -280,7 +280,7 @@ def _run_worker_and_put(
             # Fallback for non-incremental callers: put the whole list
             for r in result:
                 queue.put(r)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         # The process is about to exit; the parent's polling/kill logic
         # handles a missing sentinel.  Log for the record.
         logger.error(f"Chunk worker crashed before returning results: {e}")
@@ -288,7 +288,7 @@ def _run_worker_and_put(
         # Sentinel so the parent knows the worker finished its puts.
         try:
             queue.put(None)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
 
@@ -316,7 +316,7 @@ def _run_one_worker(
     # exception handling).
     try:
         current_file = ctx.Value(ctypes.c_char * 4096, b"\x00" * 4096, lock=True)
-    except Exception:
+    except Exception:  # noqa: BLE001
         current_file = None
 
     queue: Any = ctx.Queue()
@@ -352,7 +352,7 @@ def _run_one_worker(
                         with current_file.get_lock():
                             raw = bytes(current_file.value).split(b"\x00", 1)[0]
                             cur = raw.decode()
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
                 exitcode = process.exitcode
                 sig = f" (signal {-exitcode})" if exitcode and exitcode < 0 else ""

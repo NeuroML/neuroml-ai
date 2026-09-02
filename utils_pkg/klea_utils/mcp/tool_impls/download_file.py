@@ -195,7 +195,7 @@ async def download_file(
                         if project_root
                         else Path.cwd().resolve()
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     root = Path.cwd().resolve()
 
                 # Early Content-Length guard
@@ -218,13 +218,15 @@ async def download_file(
                             f"Download parent outside project after resolve: {target.parent}"
                         )
                         return None
-                    if target.exists() and target.is_symlink():
-                        # Leaf is a symlink to outside — re-resolve and check
-                        if not target.resolve().is_relative_to(root):
-                            logger.warning(
-                                f"Download target symlink outside project: {target} -> {target.resolve()}"
-                            )
-                            return None
+                    if (
+                        target.exists()
+                        and target.is_symlink()
+                        and not target.resolve().is_relative_to(root)
+                    ):
+                        logger.warning(
+                            f"Download target symlink outside project: {target} -> {target.resolve()}"
+                        )
+                        return None
                     # Also reject if any parent component is a symlink outside root
                     for parent in target.parent.parents:
                         if parent == root or str(parent).startswith(str(root)):
@@ -247,7 +249,7 @@ async def download_file(
                     # Prefer aiter_bytes for streaming; fallback to content for fakes
                     aiter = getattr(response, "aiter_bytes", None)
                     if callable(aiter):
-                        with open(tmp, "wb") as f:
+                        with open(tmp, "wb") as f:  # noqa: ASYNC230
                             async for chunk in aiter():
                                 if not chunk:
                                     continue
@@ -258,7 +260,7 @@ async def download_file(
                                     try:
                                         f.close()
                                         tmp.unlink(missing_ok=True)
-                                    except Exception:
+                                    except Exception:  # noqa: BLE001, S110
                                         pass
                                     return None
                                 f.write(chunk)
@@ -277,7 +279,7 @@ async def download_file(
                         # Re-check cap before write
                         if isinstance(data, str):
                             data = data.encode()
-                        with open(tmp, "wb") as f:
+                        with open(tmp, "wb") as f:  # noqa: ASYNC230
                             f.write(data)  # type: ignore[arg-type]
                             written = len(data)  # type: ignore[arg-type]
                     # Atomic replace after successful write and re-check
@@ -297,7 +299,7 @@ async def download_file(
                         )
                         try:
                             tmp.unlink(missing_ok=True)
-                        except Exception:
+                        except Exception:  # noqa: BLE001, S110
                             pass
                         return None
                     tmp.replace(target)
@@ -308,7 +310,7 @@ async def download_file(
                     try:
                         if tmp.exists():
                             tmp.unlink(missing_ok=True)
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
                     # Let retryer handle transient errors
                     if isinstance(exc, (httpx.HTTPError, TimeoutError)):
@@ -320,7 +322,7 @@ async def download_file(
                 if stream_exit is not None:
                     try:
                         await stream_exit(None, None, None)
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
         logger.warning(f"Too many redirects for {url}")
         return None

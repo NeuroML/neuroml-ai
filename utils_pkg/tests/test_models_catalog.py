@@ -258,7 +258,7 @@ class TestEndpointModelLimits(unittest.TestCase):
         assert limits is not None
         self.assertEqual(limits.context, 262144)
         get.assert_called_once()
-        args, kwargs = get.call_args
+        args, _kwargs = get.call_args
         self.assertEqual(args[0], "https://api.mistral.ai/v1/models")
 
     def test_no_base_url_returns_none(self):
@@ -319,7 +319,7 @@ class TestEndpointModelLimits(unittest.TestCase):
         self.assertIsNotNone(limits)
         assert limits is not None
         self.assertEqual(limits.context, 262144)
-        args, kwargs = get.call_args
+        _args, kwargs = get.call_args
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer env-secret")
 
     def test_explicit_key_wins_over_env(self):
@@ -334,7 +334,7 @@ class TestEndpointModelLimits(unittest.TestCase):
             models_catalog.probe_endpoint_model_limits(
                 "openai", "Qwen", "https://example.com/v1", "explicit-secret"
             )
-        args, kwargs = get.call_args
+        _args, kwargs = get.call_args
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer explicit-secret")
 
     def test_env_key_derived_from_provider(self):
@@ -349,7 +349,7 @@ class TestEndpointModelLimits(unittest.TestCase):
             models_catalog.probe_endpoint_model_limits(
                 "mistralai", "Qwen", "https://api.mistral.ai/v1"
             )
-        args, kwargs = get.call_args
+        _args, kwargs = get.call_args
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer mistral-secret")
 
 

@@ -756,7 +756,7 @@ class StoresBuilder:
                 # Flush the final partial batch (a corpus smaller than one
                 # batch never opened the file mid-loop).
                 if bm25_file is None:
-                    bm25_file = open(bm25_path_obj, "wb")
+                    bm25_file = open(bm25_path_obj, "wb")  # noqa: SIM115
                 if bm25_batch:
                     pickle.dump(bm25_batch, bm25_file)
                 bm25_file.close()
@@ -1100,16 +1100,16 @@ class StoresBuilder:
         with open(path) as f:
             data = json.load(f)
         if not isinstance(data, dict):
-            raise ValueError(
+            raise TypeError(
                 f"Metadata map must be a JSON object (dict), got {type(data).__name__}"
             )
         for k, v in data.items():
             if not isinstance(k, str):
-                raise ValueError(
+                raise TypeError(
                     f"Metadata map keys must be strings, got {type(k).__name__}"
                 )
             if not isinstance(v, dict):
-                raise ValueError(
+                raise TypeError(
                     f"Values in metadata map must be dicts, "
                     f"got {type(v).__name__} for key {k!r}"
                 )

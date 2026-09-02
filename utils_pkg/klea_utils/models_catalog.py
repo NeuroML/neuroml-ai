@@ -137,7 +137,7 @@ def _load_catalog_from_disk(cache_path: Path, allow_stale: bool = False) -> dict
             return None
         logger.debug("Loaded models.dev catalog from disk cache: %s", cache_path)
         return data
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to read models.dev disk cache %s: %s", cache_path, e)
         return None
 
@@ -149,7 +149,7 @@ def _write_catalog_to_disk(cache_path: Path, data: dict) -> None:
         with open(cache_path, "w") as f:
             json.dump(data, f)
         logger.debug("Wrote models.dev catalog to disk cache: %s", cache_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to write models.dev disk cache %s: %s", cache_path, e)
 
 
@@ -222,7 +222,7 @@ def get_catalog_model_limits(provider: str, model_name: str) -> ModelLimits | No
 
     try:
         catalog = _catalog()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("models.dev catalog unavailable: %s", e)
         return None
 
@@ -364,7 +364,7 @@ def _fetch_endpoint_max_model_len(
         )
         resp.raise_for_status()
         data = resp.json()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(
             f"Failed to fetch model limits from {url}: {e.__class__.__name__}"
         )

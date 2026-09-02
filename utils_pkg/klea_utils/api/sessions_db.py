@@ -23,7 +23,7 @@ import logging
 import sqlite3
 import threading
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -93,7 +93,7 @@ class SessionStore:
     # ------------------------------------------------------------------
 
     def _now(self) -> float:
-        return datetime.now().timestamp()
+        return datetime.now(timezone.utc).timestamp()
 
     def _json_dumps(self, obj: Any) -> str:
         return json.dumps(obj, ensure_ascii=False)

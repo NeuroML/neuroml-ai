@@ -68,7 +68,7 @@ def create_chat_router() -> APIRouter:
         except RuntimeError as e:
             logger.warning(f"Service not ready: {e}")
             raise HTTPException(status_code=503, detail=str(e))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"{e}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=str(e))
         finally:
@@ -111,7 +111,7 @@ def create_chat_router() -> APIRouter:
                             event.get("message_for_user", ""),
                         )
                     yield f"data: {json.dumps(event)}\n\n"
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"{e}\n{traceback.format_exc()}")
                 error_event = json.dumps(
                     {

@@ -83,7 +83,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     @override
     def _update_state(self, result: AnswerSchema, state: BaseModel) -> dict[str, Any]:
         """Update state with the generated answer and formatted references."""
-        thought, answer = split_output_by_section(result.answer, "<think>", "</think>")
+        _thought, answer = split_output_by_section(result.answer, "<think>", "</think>")
         refs = result.references
 
         full_answer = self._update_reference_list(answer, refs)
@@ -114,7 +114,7 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
         :returns: answer text with formatted references if available
         """
         full_answer = f"{answer}"
-        newrefs = list(set([r.strip() for r in references]))
+        newrefs = list({r.strip() for r in references})
 
         if len(newrefs):
             full_answer += "\n\nReferences:\n\n"

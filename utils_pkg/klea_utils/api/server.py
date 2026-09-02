@@ -232,7 +232,7 @@ def spawn_server(
                 resp.raise_for_status()
                 data = resp.json()
                 return data.get("status") == "ready"
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     if _probe_once():
@@ -305,10 +305,10 @@ def spawn_server(
                     os.killpg(os.getpgid(proc.pid), 15)  # SIGTERM to group
                 else:
                     proc.terminate()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 try:
                     proc.terminate()
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
             try:
                 proc.wait(timeout=10)
@@ -318,12 +318,12 @@ def spawn_server(
                         os.killpg(os.getpgid(proc.pid), 9)  # SIGKILL to group
                     else:
                         proc.kill()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     try:
                         proc.kill()
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
                 try:
                     proc.wait(timeout=5)
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass

@@ -525,7 +525,7 @@ class TestConvertAndChunkNormalization:
         monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
         monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
 
-        docs, extracted = builder._convert_and_chunk(
+        _docs, extracted = builder._convert_and_chunk(
             Path("MiTuraga2022.pdf"), resolver=None
         )
 
@@ -572,7 +572,7 @@ class TestConvertAndChunkNormalization:
         monkeypatch.setattr(builder, "_get_converter", lambda: _FakeConverter())
         monkeypatch.setattr(builder, "_get_chunker", lambda: chunker)
 
-        docs, extracted = builder._convert_and_chunk(
+        _docs, extracted = builder._convert_and_chunk(
             Path("Olivares2017.pdf"), resolver=None
         )
 

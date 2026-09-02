@@ -255,7 +255,7 @@ async def get_models_from_neuromldb(
                 NMLDB_CLIENT, neuromldb_search_url, search_query
             )
             NEUROMLDB_SEARCH_CACHE[search_query] = res
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_text = f"Error searching NeuroML-DB: {e.__class__.__name__}: {e}"
             logger.error(error_text)
             return to_result({"Error": error_text})
@@ -290,7 +290,7 @@ async def get_models_from_neuromldb(
                     else:
                         logger.error(f"Could not get model xml for {model_id}")
                         mcopy["resource"] = ""
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.error(f"Error downloading xml for {model_id}: {e}")
                     mcopy["resource"] = None
         else:
@@ -393,7 +393,7 @@ async def get_repositories_from_open_source_brain(
                 max_num=num,
             )
             OSBv2_SEARCH_CACHE[cache_key] = res
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_text = f"Error searching OSBv2: {e.__class__.__name__}: {e}"
             logger.error(error_text)
             return to_result({"Error": error_text})

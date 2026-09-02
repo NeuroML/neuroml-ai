@@ -130,11 +130,11 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
                 # Memory enabled: super() returns a ("system", text) list plus
                 # recent history; replace just the text part.
                 text = system_prompt[0][1]
-                sentence, newline, rest = text.partition("\n")
+                _sentence, _newline, rest = text.partition("\n")
                 system_prompt = list(system_prompt)
                 system_prompt[0] = ("system", new_sentence + rest)
             else:
-                sentence, newline, rest = system_prompt.partition("\n")
+                _sentence, _newline, rest = system_prompt.partition("\n")
                 system_prompt = new_sentence + rest
             self.logger.debug(f"New {system_prompt =}")
 

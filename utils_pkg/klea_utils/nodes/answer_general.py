@@ -96,7 +96,7 @@ class AnswerGeneral(BaseLLMNode):
                 answer += f"\n\n{format_alert(fallback.warning)}\n\n"
 
         content = content_to_str(result.content)
-        thought, answer_text = split_output_by_section(content, "<think>", "</think>")
+        _thought, answer_text = split_output_by_section(content, "<think>", "</think>")
         answer += answer_text
 
         messages = list(state.messages)  # type: ignore

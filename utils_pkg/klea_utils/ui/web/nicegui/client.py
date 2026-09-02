@@ -71,7 +71,7 @@ async def hydrate_chats(server_url: str, user_id: str) -> None:
                                 )
                                 for msg in msg_resp.json()
                             ]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to hydrate chats from server: %s", e)
 
 
@@ -88,7 +88,7 @@ async def create_chat_on_server(server_url: str, user_id: str, chat_id: str) -> 
                 chat_data = resp.json()
                 ensure_chat(user_id, chat_id)
                 chats[f"{user_id}:{chat_id}"]["name"] = chat_data.get("title", chat_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to create chat on server: %s", e)
 
 
@@ -99,7 +99,7 @@ async def delete_chat_on_server(server_url: str, user_id: str, chat_id: str) -> 
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.delete(f"{server_url}/chat/{user_id}/{chat_id}")
             logger.debug("status=%d", resp.status_code)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to delete chat on server: %s", e)
 
 
@@ -113,7 +113,7 @@ async def rename_chat_on_server(
                 f"{server_url}/chat/{user_id}/{chat_id}",
                 json={"title": title},
             )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to rename chat on server: %s", e)
 
 
@@ -128,7 +128,7 @@ async def set_model_override(
                 json=payload,
             )
             return resp.status_code == 200
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to set model override: %s", e)
         return False
 
@@ -143,6 +143,6 @@ async def clear_model_override(
                 f"{server_url}/chat/{user_id}/{chat_id}/models/overrides/{role}",
             )
             return resp.status_code == 200
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to clear model override: %s", e)
         return False

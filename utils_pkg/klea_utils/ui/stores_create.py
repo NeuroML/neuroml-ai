@@ -37,7 +37,7 @@ def _store_dir(store_path: str) -> Path | None:
     :param store_path: Vector store URI (``scheme:location``)
     :returns: Resolved local directory, or ``None`` for remote schemes
     """
-    scheme, sep, location = store_path.partition(":")
+    _scheme, sep, location = store_path.partition(":")
     if not sep:
         return None
     if location.startswith(("http://", "https://", "postgresql://", "postgres://")):
@@ -123,7 +123,7 @@ def pre_check(
             print("(both store runs target the SAME collection, so they merge)")
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 
@@ -224,7 +224,7 @@ def chunk(
             worker_batch_size=worker_batch_size,
         )
         builder.write_heading_template(file_headings, source_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 
@@ -255,7 +255,7 @@ def chunk(
         with open(map_path) as f:
             data = json.load(f)
         print(format_metadata_lint_report(lint_metadata_map(data)))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"Could not lint metadata map: {e}")
 
 
@@ -336,7 +336,7 @@ def map_lint(
             raise typer.Exit(1)
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 
@@ -519,7 +519,7 @@ def store(
                             select_sample_windows(docs, anchors=3),
                         )
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self_logger = logging.getLogger("klea-stores-create")
                 self_logger.warning(f"Could not auto-run store-lint: {e}")
         logger.info(f"Done -- collection '{collection_name}' is ready")
@@ -533,7 +533,7 @@ def store(
         )
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 
@@ -608,7 +608,7 @@ def store_lint(
         print(format_store_lint_report(report, sample_windows))
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 
@@ -776,7 +776,7 @@ def build(
             worker_batch_size=worker_batch_size,
         )
         logger.info(f"Done -- collection '{collection_name}' is ready")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Failed: {e}")
         raise typer.Exit(1) from None
 

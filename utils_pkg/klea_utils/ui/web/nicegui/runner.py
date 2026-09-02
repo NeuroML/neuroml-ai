@@ -561,7 +561,7 @@ def setup_layout(
                     .props("open")
                     .classes("inspector-entry mb-2 w-full")
                 ):
-                    with (
+                    with (  # noqa: SIM117
                         ui.element("summary")
                         .classes("text-xs font-bold cursor-pointer w-full")
                         .on("click", lambda i=idx: _toggle_inspector_entry(i))
@@ -740,7 +740,7 @@ def setup_layout(
                     )
                     dialog.close()
                     return
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to delete user session: %s", e)
             ui.notification(
                 f"Failed to delete session: {e}",

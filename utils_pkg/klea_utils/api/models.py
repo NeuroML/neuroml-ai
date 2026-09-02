@@ -97,8 +97,8 @@ def create_models_router() -> APIRouter:
             else:
                 defaults[role] = override
 
-        for role in defaults:
-            defaults[role]["overridden"] = role in overrides
+        for role, value in defaults.items():
+            value["overridden"] = role in overrides
 
         logger.debug(
             "get_chat_active_models(%s, %s): %d role(s)",
