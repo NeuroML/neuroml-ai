@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -30,7 +30,10 @@ _DEFAULT_NUM_HISTORY_CHARS = 10_000
 
 class SummariseMemoryNode(BaseLLMNode):
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 4096}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 4096,
+    }
     """Node that summarises conversation history into a context summary.
 
     Uses _pre_exec() to skip execution if there isn't enough *old*

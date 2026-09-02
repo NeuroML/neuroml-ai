@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -20,7 +20,10 @@ from .base import BaseLLMNode
 
 class GuardNode(BaseLLMNode):
     model_type = "guard"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 2048,
+    }
     """Safety guard node that checks if user queries are safe to process.
 
     Evaluates whether a query contains potentially harmful content

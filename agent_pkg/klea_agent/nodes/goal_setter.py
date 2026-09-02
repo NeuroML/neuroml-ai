@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from klea_utils.nodes.base import BaseLLMNode
 from pydantic import BaseModel
@@ -21,7 +21,7 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
     """Goal setter node"""
 
     model_type = "plan"
-    model_defaults = {"temperature": 0.01}
+    model_defaults: ClassVar[dict[str, Any]] = {"temperature": 0.01}
 
     def __init__(
         self,

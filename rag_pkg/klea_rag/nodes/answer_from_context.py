@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from klea_utils.llm import (
     extract_llm_output_content,
@@ -33,7 +33,10 @@ class AnswerFromContext(BaseLLMNode[AnswerSchema]):
     """Generate an answer from the provided context"""
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 4096}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 4096,
+    }
 
     def __init__(
         self,

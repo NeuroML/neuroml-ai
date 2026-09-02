@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel
@@ -32,7 +32,10 @@ class FallbackConfig(BaseModel):
 
 class AnswerGeneral(BaseLLMNode):
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 2048,
+    }
     """Answer general (non-domain) questions using the LLM's training data.
 
     Provides a conversational, user-friendly response. Optionally appends

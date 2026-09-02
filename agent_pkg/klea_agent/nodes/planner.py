@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from klea_utils.mcp.schemas import ToolInfo
 from klea_utils.nodes.base import BaseLLMNode
@@ -22,7 +22,7 @@ class Planner(BaseLLMNode[PlanSchema]):
     """Node that creates or updates an execution plan."""
 
     model_type = "plan"
-    model_defaults = {"temperature": 0.01}
+    model_defaults: ClassVar[dict[str, Any]] = {"temperature": 0.01}
 
     def __init__(
         self,

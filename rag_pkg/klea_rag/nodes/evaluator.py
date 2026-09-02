@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from klea_utils.llm import extract_llm_output_content, prompt_value_to_messages
 from klea_utils.nodes.abstract import NodeStreamData
@@ -23,7 +23,10 @@ class Evaluator(BaseLLMNode[EvaluateAnswerSchema]):
     """Node that evaluates a RAG-generated answer against retrieved context."""
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.0, "max_output_tokens": 4096}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.0,
+        "max_output_tokens": 4096,
+    }
 
     def __init__(
         self,

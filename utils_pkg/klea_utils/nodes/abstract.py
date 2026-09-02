@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Literal, final
+from typing import Any, ClassVar, Literal, final
 
 from langchain.messages import AIMessage
 from langchain_core.prompt_values import PromptValue
@@ -238,7 +238,7 @@ class AbstractLLMNode[TSchema: BaseModel](
     this node uses.  Must match a key set up by the orchestrator in
     ``_setup_models()``.
     """
-    model_defaults: dict[str, Any] = {}
+    model_defaults: ClassVar[dict[str, Any]] = {}
     """Node-level model configuration defaults.
 
     These are **frozen**  ---  user context overrides cannot change them.

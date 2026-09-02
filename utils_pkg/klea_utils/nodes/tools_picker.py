@@ -11,7 +11,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import json
 import logging
 from pathlib import Path
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from pydantic import BaseModel
 
@@ -42,7 +42,10 @@ class ToolsPicker(BaseLLMNode[BaseModel]):
     """
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.01, "max_output_tokens": 2048}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.01,
+        "max_output_tokens": 2048,
+    }
 
     def __init__(
         self,

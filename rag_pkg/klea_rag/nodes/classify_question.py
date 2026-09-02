@@ -9,7 +9,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
 import logging
-from typing import Any, override
+from typing import Any, ClassVar, override
 
 from klea_utils.llm import (
     extract_llm_output_content,
@@ -26,7 +26,10 @@ from klea_rag.schemas import RAGState
 # Type is calculated at runtime in orchestrator
 class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 2048,
+    }
     """Classify a user query into domain categories.
 
     Uses an LLM to determine which domains the query belongs to, based on

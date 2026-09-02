@@ -10,7 +10,7 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 
 import logging
 from textwrap import dedent
-from typing import Any, cast, override
+from typing import Any, ClassVar, cast, override
 
 from klea_utils.llm import (
     extract_llm_output_content,
@@ -38,7 +38,10 @@ class GenerateRetrievalQuery(BaseLLMNode[RetrievalQueryOutput]):
     """
 
     model_type = "chat"
-    model_defaults = {"temperature": 0.3, "max_output_tokens": 2048}
+    model_defaults: ClassVar[dict[str, Any]] = {
+        "temperature": 0.3,
+        "max_output_tokens": 2048,
+    }
 
     def __init__(
         self,
