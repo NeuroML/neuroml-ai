@@ -160,6 +160,18 @@ def _run_web(
         spec = importlib.util.find_spec("klea_utils.ui.web.nicegui.app")
         assert spec and spec.origin, "Could not locate nicegui app entry point"
         cwd = Path(spec.origin).parent
+        # Forward NICEGUI_STORAGE_PATH for reload subprocess and per-app
+        # default.  If not set, derive from PlatformDirs(web_app_name) so
+        # klea-rag-web and klea-web use separate user_data_dir/nicegui dirs.
+        import os
+
+        from platformdirs import PlatformDirs
+
+        env = dict(os.environ)
+        if "NICEGUI_STORAGE_PATH" not in env:
+            env["NICEGUI_STORAGE_PATH"] = str(
+                (Path(PlatformDirs(web_app_name).user_data_dir) / "nicegui").resolve()
+            )
         with chdir(cwd):
             subprocess.run(
                 shlex.split(
@@ -172,6 +184,7 @@ def _run_web(
                     + (" --reload" if reload else "")
                 ),
                 check=False,
+                env=env,
             )
 
 

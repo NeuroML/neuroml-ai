@@ -16,6 +16,33 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import os
+import sys
+from pathlib import Path
+
+from platformdirs import PlatformDirs
+
+# Default NiceGUI storage to per-app user_data_dir/nicegui when the
+# deployer has not set NICEGUI_STORAGE_PATH.  nicegui/storage.py:84
+# honours NICEGUI_STORAGE_PATH at import time.  For per-app isolation
+# (klea-rag-web vs klea-web share the same frontend code) we need the
+# app_name, which is parsed below as --app-name.  When NICEGUI_STORAGE_PATH
+# is already set by the deployer (e.g. /data/nicegui on HF) we preserve it;
+# otherwise we defer the per-app default to runner.py:run_nicegui_app which
+# knows app_name.  This early fallback only covers the generic case when
+# app.py is run directly without --app-name.
+if "NICEGUI_STORAGE_PATH" not in os.environ:
+    # Peek at --app-name without fully parsing (avoid consuming title/url)
+    _app_name = "klea-web"
+    if "--app-name" in sys.argv:
+        try:
+            _app_name = sys.argv[sys.argv.index("--app-name") + 1]
+        except (IndexError, ValueError):
+            pass
+    os.environ["NICEGUI_STORAGE_PATH"] = str(
+        (Path(PlatformDirs(_app_name).user_data_dir) / "nicegui").resolve()
+    )
+
 from klea_utils.ui.web.nicegui.parser import make_parser
 from klea_utils.ui.web.nicegui.runner import run_nicegui_app
 
