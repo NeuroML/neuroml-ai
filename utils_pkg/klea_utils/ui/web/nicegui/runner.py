@@ -962,6 +962,19 @@ def setup_layout(
         .classes("w-full px-2")
         .style("flex: 1; min-height: 0; display: flex; flex-direction: column;")
     ):
+        # Backend readiness banner - shown until health-check + hydrate
+        # complete.  Keeping this in the delivered layout avoids blocking
+        # ``page.py:wait_for_result`` on the 180s probe (HF cold-start
+        # race that deleted the client and made ``Drawer.__init__`` crash
+        # with ``page_container is not in list``).
+        with ui.row().classes(
+            "w-full justify-center items-center gap-2 p-2"
+        ) as _loading_row:
+            _loading_spinner = ui.spinner(type="dots").classes("w-4 h-4")
+            _loading_label = ui.label("Backend is starting, please wait...").classes(
+                "text-xs text-grey-5 italic"
+            )
+
         with ui.tabs().classes("w-full") as center_tabs:
             chat_tab = ui.tab(name="chat", label="chat")
             inspect_tab = ui.tab(name="inspect", label="inspect")
@@ -1196,6 +1209,67 @@ def setup_layout(
             ):
                 _render_inspector_panel()
 
+    # ---- Background initialisation: health-check + hydrate ----
+    # Runs after the layout is delivered so ``main_page`` returns
+    # within ``response_timeout`` even when the backend needs 30-60s
+    # to become ready on HF (cold container).  Previously the probe
+    # blocked ``main_page`` and ``page.py:197`` deleted the client,
+    # so the late ``setup_layout`` crashed at
+    # ``Drawer.__init__:page_container_index``.
+    async def _initial_load() -> None:
+        """Wait for backend, hydrate chats, then refresh UI."""
+        try:
+            logger.debug("initial load: probing %s/health/ready", server_url)
+            await check_api_is_ready(f"{server_url}/health/ready")
+        except Exception as e:  # noqa: BLE001
+            logger.warning("backend unavailable after probe: %s", e)
+            _loading_row.clear()
+            with _loading_row.classes("justify-center"):
+                ui.icon("cloud_off").classes("text-grey-5")
+                ui.label("Backend unavailable").classes("text-sm text-grey-7")
+                ui.label("Please check that the server is running.").classes(
+                    "text-xs text-grey-5"
+                )
+                ui.button(
+                    "Retry",
+                    on_click=lambda: background_tasks.create(_initial_load()),
+                ).props("flat dense color=primary")
+            ui.notification(
+                "Backend unavailable - click Retry when ready",
+                type="negative",
+                timeout=0,
+                close_button=True,
+            )
+            return
+
+        # Hydrate (swallows its own exceptions but log here as well).
+        try:
+            logger.debug("backend ready, hydrating chats for user_id=%s", user_id)
+            await hydrate_chats(server_url, user_id)
+            logger.debug("hydrate done, chats keys=%s", list(chats.keys()))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("hydrate failed: %s", e)
+
+        # Clear banner and enable input.
+        _loading_row.clear()
+        _loading_row.classes("hidden")
+        try:
+            text.enable()
+        except Exception as e:  # noqa: BLE001
+            logger.debug("enable input failed (already enabled?): %s", e)
+        _render_chat_list.refresh()
+        _render_chat_area()
+        _status_pane.refresh()
+        _render_inspector_panel.refresh()
+        logger.debug("initial load complete")
+
+    # Disable chat input until backend is ready; _initial_load re-enables.
+    try:
+        text.disable()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("disable input failed: %s", e)
+    background_tasks.create(_initial_load())
+
     # ---- Footer ----
     with ui.footer().classes("bg-grey-3 dark:bg-grey-9 text-xs py-1"):
         ui.html(footer_text).classes("w-full text-center text-grey-6")
@@ -1238,6 +1312,9 @@ def run_nicegui_app(
     """
     # Configure process-wide logging for this client process.  Lazy:
     # platformdirs / plogging imports are cheap and this is a CLI entry.
+    import os
+    from pathlib import Path
+
     from platformdirs import PlatformDirs
 
     from klea_utils.plogging import resolve_log_level, setup_root_logger
@@ -1248,16 +1325,66 @@ def run_nicegui_app(
         log_dir=PlatformDirs(app_name).user_data_dir,
     )
 
+    # NiceGUI storage: default to per-app user_data_dir/nicegui when the
+    # deployer has not set NICEGUI_STORAGE_PATH.  Single env var keeps
+    # config simple; app_name gives per-app isolation (klea-rag-web vs
+    # klea-web share the same frontend code but must not overlap).
+    # Must set both the env var (for reload subprocess re-import) and
+    # Storage.path (for already-imported nicegui.storage at runner.py:22).
+    # Keeps files at ~/.local/share/{app_name}/nicegui/ (XDG_DATA_HOME
+    # honoured by PlatformDirs) on local single-user, and allows
+    # deployments to set NICEGUI_STORAGE_PATH=/data/nicegui for persistence.
+    if "NICEGUI_STORAGE_PATH" not in os.environ:
+        default_storage_dir = Path(PlatformDirs(app_name).user_data_dir) / "nicegui"
+        os.environ["NICEGUI_STORAGE_PATH"] = str(default_storage_dir.resolve())
+        logger.debug(
+            "set default NICEGUI_STORAGE_PATH=%s", os.environ["NICEGUI_STORAGE_PATH"]
+        )
+    storage_dir = Path(os.environ["NICEGUI_STORAGE_PATH"]).resolve()
+    try:
+        storage_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("failed to create NICEGUI_STORAGE_PATH %s: %s", storage_dir, e)
+    try:
+        from nicegui.storage import Storage
+
+        Storage.path = storage_dir
+        logger.debug(
+            "nicegui Storage.path set to %s (app_name=%s)", Storage.path, app_name
+        )
+        # Rebuild storage so FilePersistentDict picks up the new path when
+        # app.storage was already instantiated at import time.
+        if not app.is_started:
+            from nicegui import app as _nicegui_app
+
+            _nicegui_app.storage = Storage()
+            logger.debug("rebuilt nicegui app.storage for path %s", Storage.path)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "failed to configure NiceGUI storage path %s: %s", storage_dir, e
+        )
+
     host, port_str = nicegui_url.rsplit(":", 1)
     port = int(port_str)
 
-    @ui.page("/", response_timeout=30)
+    @ui.page("/", response_timeout=60)
     async def main_page():
-        """Build the main page after ensuring the WebSocket is connected.
+        """Build the main page without blocking on backend readiness.
 
-        ``ui.run_javascript`` (used inside ``_render_chat_area``) only
-        works after the client has connected, so we await
-        ``ui.context.client.connected()`` first.
+        ``ui.context.client.connected()`` is awaited, then
+        :func:`setup_layout` is called **immediately** so
+        ``nicegui/page.py`` delivers the response within
+        ``response_timeout`` (60s).  Backend health-check and
+        ``hydrate_chats`` run as a background task *after* the layout
+        is delivered; ``setup_layout`` shows a ``Backend is starting``
+        banner until they succeed.  This avoids the HF cold-start race
+        where ``check_api_is_ready(timeout=180)`` outlives the page
+        timeout, the client is deleted by ``page.py:197``, and the
+        late ``setup_layout`` crashes in ``Drawer.__init__`` with
+        ``ValueError: page_container is not in list``.
+
+        User identity is resolved before any ``await`` so
+        ``app.storage.user`` is still in the request context.
         """
         # Establish the per-browser user identity at the very top of the
         # page builder, before any await. `app.storage.user` is only
@@ -1279,28 +1406,9 @@ def run_nicegui_app(
 
         await ui.context.client.connected()
 
-        # The page builder runs exactly once -- build the appropriate page
-        # directly rather than showing a loading spinner and then swapping.
-        # The ``response_timeout=30`` on the page decorator gives the health
-        # check time to complete before the client sees a timeout.
-        try:
-            await check_api_is_ready(f"{server_url}/health/ready")
-        except Exception:
-            ui.add_css(".nicegui-content { display: flex; flex: 1; }")
-            with ui.column().classes("w-full h-full items-center justify-center gap-4"):
-                ui.icon("cloud_off", size="4rem").classes("text-grey-5")
-                ui.label("Backend unavailable").classes("text-xl text-grey-7")
-                ui.label("Please check that the Klea server is running.").classes(
-                    "text-grey-5"
-                )
-            return
-
         chat_id = ""
 
         logger.debug("user_id=%s chat_id=%s", user_id, chat_id)
-        logger.debug("before hydrate: chats keys=%s", list(chats.keys()))
-        await hydrate_chats(server_url, user_id)
-        logger.debug("after hydrate: chats keys=%s", list(chats.keys()))
 
         setup_layout(
             chat_id=chat_id,
