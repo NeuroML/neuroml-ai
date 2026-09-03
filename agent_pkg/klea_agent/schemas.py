@@ -74,6 +74,14 @@ class KleaAgentState(BaseModel):
     usage_metrics: Annotated[TokenUsage, add_token_usage] = Field(
         default_factory=TokenUsage
     )
+    # Operating mode: general is the default unverified agentic workflow;
+    # scientific will enforce ADR-0029 evidence/verification invariants.
+    # Surfaced at every node via NodeStreamData so the user is always aware
+    # of the active mode; one-way downgrade (scientific -> general) allowed
+    # with explicit permission, upgrade requires new session.
+    mode: Literal["general", "scientific"] = Field(
+        default="general", validate_default=True
+    )
 
     # code string if any
     code: CodeSchema = CodeSchema()

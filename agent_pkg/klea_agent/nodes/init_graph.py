@@ -39,8 +39,18 @@ class InitGraphState(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
 
     @override
     async def execute(self, state: KleaAgentState) -> dict[str, Any]:
-        """Reset state fields to their initial values."""
+        """Reset state fields to their initial values.
+
+        Preserves ``mode`` when already set (per-session mode survives
+        across turns via checkpoint); otherwise defaults to ``general``.
+        This ensures the user-selected or API-provided mode is not
+        clobbered on each invocation while keeping the default unverified
+        general workflow.
+        """
         self.write_custom_stream({"type": "progress", "node": self.label})
+        self.logger.debug(f"{state.mode = }")
+        # Preserve explicitly set mode; default to general for new sessions
+        mode = getattr(state, "mode", "general") or "general"
         return {
             "guard_decision": "safe",
             "message_for_user": "",
@@ -52,4 +62,5 @@ class InitGraphState(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
             "artefacts": {},
             "discovery_per_step": Discovery(),
             "code": CodeSchema(),
+            "mode": mode,
         }
