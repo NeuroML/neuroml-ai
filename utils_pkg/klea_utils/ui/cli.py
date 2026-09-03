@@ -209,6 +209,7 @@ def make_client_app(
     config_env_var: str | None = None,
     config_dir: str | Path | None = None,
     template_writer: Callable[[Path], Path] | None = None,
+    mode_default: str | None = None,
 ) -> typer.Typer:
     """Create a Typer app for a Klea user client (cli + web).
 
@@ -242,6 +243,11 @@ def make_client_app(
         directory when validating ``--profile``
     :param template_writer: Callable that writes a config template into
         the working directory for ``--profile template``
+    :param mode_default: Default mode for ``--mode`` (e.g. ``"general"``).
+        When ``None`` (default) the ``--mode`` flag is not added. When set,
+        both ``cli`` and ``web`` gain ``--mode general|scientific`` with that
+        default; ``scientific`` is currently gated and will error with an
+        actionable message until the scientific workflow lands.
     :returns: A :class:`typer.Typer` app for use as a CLI entry point
     """
     app = typer.Typer(help=f"Simple KLEA {label} user client")
@@ -269,6 +275,17 @@ def make_client_app(
         "directory or the config dir. Use 'template' to scaffold a "
         "new config and exit.",
     )
+    # Mode is optional and only added when the caller opts in (e.g. agent
+    # wants --mode general|scientific; RAG stays without it). Validated as
+    # a string choice rather than a strict Literal so the error can be
+    # actionable (“scientific not yet implemented”).
+    mode_option = None
+    if mode_default is not None:
+        mode_option = typer.Option(
+            mode_default,
+            "--mode",
+            help="Agent operating mode: general (default, unverified) | scientific (not yet implemented)",
+        )
 
     @app.callback(invoke_without_command=True)
     def main(ctx: typer.Context):
@@ -290,7 +307,22 @@ def make_client_app(
         ),
         debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
         profile: str = profile_option,
+        mode: str = mode_option
+        if mode_option is not None
+        else typer.Option(None, "--mode", hidden=True),  # type: ignore[assignment]
     ):
+        # Gate scientific until the ADR-0029 workflow lands; keep the flag
+        # visible in --help so the contract is discoverable.
+        if mode_option is not None and mode not in (None, "general", "scientific"):
+            typer.echo(
+                f"Invalid --mode {mode!r}: choose 'general' or 'scientific'", err=True
+            )
+            raise typer.Exit(code=2)
+        if mode == "scientific":
+            typer.echo(
+                "Scientific mode is not yet implemented (general is default).", err=True
+            )
+            raise typer.Exit(code=2)
         _run_cli(
             server_url=server_url,
             title=title,
@@ -342,7 +374,20 @@ def make_client_app(
         ),
         debug: bool = typer.Option(False, "--debug", help="Enable debug logging"),
         profile: str = profile_option,
+        mode: str = mode_option
+        if mode_option is not None
+        else typer.Option(None, "--mode", hidden=True),  # type: ignore[assignment]
     ):
+        if mode_option is not None and mode not in (None, "general", "scientific"):
+            typer.echo(
+                f"Invalid --mode {mode!r}: choose 'general' or 'scientific'", err=True
+            )
+            raise typer.Exit(code=2)
+        if mode == "scientific":
+            typer.echo(
+                "Scientific mode is not yet implemented (general is default).", err=True
+            )
+            raise typer.Exit(code=2)
         _run_web(
             server_url=server_url,
             title=title,

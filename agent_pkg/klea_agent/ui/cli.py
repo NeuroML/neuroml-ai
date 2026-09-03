@@ -23,4 +23,5 @@ agent_app = make_client_app(
     config_env_var="KLEA_AGENT_APP_CONFIG_FILE",
     config_dir=get_config_dir(PlatformDirs("klea")),
     template_writer=write_config_template,
+    mode_default="general",
 )
