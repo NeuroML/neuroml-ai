@@ -64,3 +64,4 @@ Structure:
 | `adr/0027-doi-bibliographic-resolver.md` | ADR-0027: DOI/Bibliographic resolver: round-robin tiered cascade with disk cache |
 | `system/c4-component-rag.md` | C4 model Level 3: RAG component diagram (auto-generated Mermaid core + elk augmentation) |
 | `system/c4-deployment.md` | C4 model Deployment: build-time vs local vs container platform (Docker with HuggingFace Spaces node) |
+| `system/streaming.md` | Streaming contract: graph nodes → API SSE → frontend (Inspection tab, status drawer, chat) |
