@@ -306,12 +306,16 @@
 <span class="sd">Author: Ankur Sinha &lt;sanjay DOT ankur AT gmail DOT com&gt;</span>
 <span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">typer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">fastmcp</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastMCP</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.lifespan</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_http_session_lifespan</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_tools</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.mcp.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">bundled_tools</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 <span class="c1">#: The bundled FastMCP server instance.  Apps embed this module as a stdio</span>
 <span class="c1">#: subprocess (``python -m klea_utils.mcp.server.bundled``); tests and the</span>
@@ -343,8 +347,22 @@
 <span class="sd">    deployment that runs Klea and the bundled server on different hosts) can</span>
 <span class="sd">    point its ``mcp_servers`` config at this server's URL.</span>
 <span class="sd">    """</span>
+    <span class="c1"># Guard: give a clear install hint when the [mcp] extra is missing.</span>
+    <span class="c1"># Lazy: require_extra uses only find_spec (stdlib) so ``klea-mcp --help``</span>
+    <span class="c1"># stays fast. Keep this before any heavy work so ``klea-mcp`` (stdio/http)</span>
+    <span class="c1"># without the extra fails fast with guidance.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Lazy: require_extra uses only find_spec (stdlib).</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">klea_utils.imports</span><span class="w"> </span><span class="kn">import</span> <span class="n">require_extra</span>
+
+        <span class="n">require_extra</span><span class="p">([</span><span class="s2">"bs4"</span><span class="p">,</span> <span class="s2">"anydoc"</span><span class="p">],</span> <span class="s2">"mcp"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">typer</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">typer</span><span class="o">.</span><span class="n">Exit</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
     <span class="c1"># Lazy: only the stdio/http run path needs the run machinery; keeping</span>
-    <span class="c1"># this body thin means `klea-mcp --help` does not force the server to</span>
+    <span class="c1"># this body thin means ``klea-mcp --help`` does not force the server to</span>
     <span class="c1"># start.</span>
     <span class="k">if</span> <span class="n">transport</span> <span class="o">==</span> <span class="s2">"http"</span><span class="p">:</span>
         <span class="n">bundle_server</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">transport</span><span class="o">=</span><span class="s2">"http"</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>

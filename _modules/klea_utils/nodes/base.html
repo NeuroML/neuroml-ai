@@ -1003,13 +1003,13 @@
 
 <span class="s2">            </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{"</span><span class="p">,</span><span class="w"> </span><span class="s2">"{{"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"}"</span><span class="p">,</span><span class="w"> </span><span class="s2">"}}"</span><span class="p">)</span><span class="si">}</span>
 
-<span class="s2">            The response must be a JSON object like this example (replace</span>
-<span class="s2">            the placeholder values with real content):</span>
+<span class="s2">            The response must be a raw, valid JSON object like this example</span>
+<span class="s2">            (replace the placeholder values with real content):</span>
 
 <span class="s2">            </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">example</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{"</span><span class="p">,</span><span class="w"> </span><span class="s2">"{{"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"}"</span><span class="p">,</span><span class="w"> </span><span class="s2">"}}"</span><span class="p">)</span><span class="si">}</span>
 
-<span class="s2">            Do not output the schema definition itself, or the</span>
-<span class="s2">            'title'/'type'/'properties' keys.</span>
+<span class="s2">            Do not output the schema definition itself, or notes/comments, or</span>
+<span class="s2">            the 'title'/'type'/'properties' keys.</span>
 <span class="s2">            """</span>
         <span class="p">)</span>
 
