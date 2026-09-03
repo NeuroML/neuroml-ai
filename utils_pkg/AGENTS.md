@@ -85,7 +85,7 @@ klea_utils/
 │   ├── tui/        # Textual/TUI chat client (repl.py)
 │   ├── stores_create.py # CLI for store creation (klea-stores-create)
 │   └── web/        # Web frontends
-│       ├── nicegui/ # NiceGUI web UI (3-column layout, inspector, model config;
+│       ├── nicegui/ # NiceGUI web UI (inspection tab, model config;
 │       │             #   parser.py -- argparse for the app.py entry point)
 │       └── streamlit/ # Streamlit web UI
 ```
