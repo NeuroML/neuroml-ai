@@ -89,7 +89,7 @@ class ClassifyQuestion[TSchema: BaseModel](BaseLLMNode[TSchema]):
         system_prompt = self._load_prompt_file(f"{self.prompt_prefix}_system")
 
         # additional logic
-        system_prompt += f"\n\n## Domains\n{self._build_domain_str()}\n\n"
+        system_prompt += f"{self._build_domain_str()}\n\n"
 
         if self.memory:
             memory_addition = self._get_memory_addition(state)
