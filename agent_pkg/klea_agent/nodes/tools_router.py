@@ -64,14 +64,16 @@ class ToolsRouter(AbstractRouterNode[KleaAgentState]):
 
         self.logger.debug(f"{route = }")
 
+        mode = getattr(state, "mode", "general") or "general"
         info = NodeStreamData(
             heading="Tool Routing",
-            summary=f"Routing: {route}",
+            summary=f"Routing: {route} [mode={mode}]",
             details={
                 "route": route,
                 "has_error": has_error,
                 "tool_count": len(tool_results),
                 "plan_status": getattr(plan, "status", None),
+                "mode": mode,
             },
         )
         self.write_custom_stream(

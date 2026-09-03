@@ -43,11 +43,12 @@ class AnswerUser(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
 
         answer = state.message_for_user
         self.logger.info(f"Returning final answer to user: {answer}")
+        mode = getattr(state, "mode", "general") or "general"
 
         info = NodeStreamData(
             heading="Response",
-            summary=f"Answer ready ({len(answer)} chars)",
-            details={"char_count": len(answer)},
+            summary=f"Answer ready ({len(answer)} chars) [mode={mode}]",
+            details={"char_count": len(answer), "mode": mode},
         )
         self.write_custom_stream(
             NodeStreamEvent(type="info", node=self.label, data=info).model_dump()

@@ -114,6 +114,11 @@ class Planner(BaseLLMNode[PlanSchema]):
         assert self._last_state_updates is not None
         assert self._last_result is not None
         result = self._last_result
+        mode = (
+            getattr(self._last_state, "mode", "general")
+            if self._last_state
+            else "general"
+        )
         if isinstance(result, PlanSchema):
             summary = (
                 f"Plan with {len(result.step_list)} step(s), status={result.status}"
@@ -125,10 +130,11 @@ class Planner(BaseLLMNode[PlanSchema]):
                     {"step_number": s.step_number, "description": s.description}
                     for s in result.step_list
                 ],
+                "mode": mode,
             }
         else:
             summary = "Plan updated"
-            details: dict[str, Any] = {}
+            details: dict[str, Any] = {"mode": mode}
         return NodeStreamData(
             heading="Plan",
             summary=summary,

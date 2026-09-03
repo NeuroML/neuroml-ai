@@ -11,7 +11,11 @@ Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 import logging
 from typing import Any, override
 
-from klea_utils.nodes.abstract import AbstractLangGraphNode
+from klea_utils.nodes.abstract import (
+    AbstractLangGraphNode,
+    NodeStreamData,
+    NodeStreamEvent,
+)
 
 from klea_agent.schemas import (
     CodeSchema,
@@ -51,6 +55,14 @@ class InitGraphState(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
         self.logger.debug(f"{state.mode = }")
         # Preserve explicitly set mode; default to general for new sessions
         mode = getattr(state, "mode", "general") or "general"
+        info = NodeStreamData(
+            heading="Session Init",
+            summary=f"Mode: {mode}",
+            details={"mode": mode},
+        )
+        self.write_custom_stream(
+            NodeStreamEvent(type="info", node=self.label, data=info).model_dump()
+        )
         return {
             "guard_decision": "safe",
             "message_for_user": "",

@@ -77,15 +77,21 @@ class GoalSetter(BaseLLMNode[GoalSchema]):
         assert self._last_state_updates is not None
         assert self._last_result is not None
         result = self._last_result
+        mode = (
+            getattr(self._last_state, "mode", "general")
+            if self._last_state
+            else "general"
+        )
         if isinstance(result, GoalSchema):
             summary = f"Goal: {result.goal[:80]}" if result.goal else "Goal set"
             details = {
                 "goal": result.goal,
                 "success_criteria": result.success_criteria,
+                "mode": mode,
             }
         else:
             summary = "Goal set"
-            details = {}
+            details = {"mode": mode}
         return NodeStreamData(
             heading="Goal Definition",
             summary=summary,

@@ -56,13 +56,15 @@ class Evaluator(AbstractLangGraphNode[KleaAgentState, dict[str, Any]]):
             result["plan"] = plan
 
         # Inspector streams — keep evaluators inspectable per ADR-0013
+        mode = getattr(state, "mode", "general") or "general"
         info = NodeStreamData(
             heading="Plan Evaluation",
-            summary=f"Plan status: {plan.status} ({plan.current_step_index}/{len(plan.step_list)})",
+            summary=f"Plan status: {plan.status} ({plan.current_step_index}/{len(plan.step_list)}) [mode={mode}]",
             details={
                 "status": plan.status,
                 "current_step_index": plan.current_step_index,
                 "total_steps": len(plan.step_list),
+                "mode": mode,
             },
         )
         self.write_custom_stream(
