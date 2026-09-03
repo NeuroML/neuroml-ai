@@ -713,13 +713,13 @@ class BaseLLMNode[TSchema: BaseModel](AbstractLLMNode[TSchema]):
 
             {json.dumps(schema).replace("{", "{{").replace("}", "}}")}
 
-            The response must be a JSON object like this example (replace
-            the placeholder values with real content):
+            The response must be a raw, valid JSON object like this example
+            (replace the placeholder values with real content):
 
             {json.dumps(example).replace("{", "{{").replace("}", "}}")}
 
-            Do not output the schema definition itself, or the
-            'title'/'type'/'properties' keys.
+            Do not output the schema definition itself, or notes/comments, or
+            the 'title'/'type'/'properties' keys.
             """
         )
 
