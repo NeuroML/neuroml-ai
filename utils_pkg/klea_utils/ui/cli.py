@@ -144,6 +144,17 @@ def _run_web(
     template_writer: Callable[[Path], Path] | None = None,
 ) -> None:
     """Run the NiceGUI web client."""
+    # Guard: nicegui is an optional extra (utils_pkg/setup.cfg: [nicegui]).
+    # Keep this at function entry so ``web --help`` still works but
+    # ``web`` without the extra fails fast with an actionable hint.
+    try:
+        # Lazy: require_extra uses only find_spec (stdlib).
+        from klea_utils.imports import require_extra
+
+        require_extra("nicegui", "nicegui")
+    except ImportError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from None
     if debug:
         # Make debug visible to the spawned server and web app processes.
         from klea_utils.plogging import enable_debug_logging
