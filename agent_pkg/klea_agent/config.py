@@ -8,11 +8,14 @@ Copyright 2026 Ankur Sinha
 Author: Ankur Sinha <sanjay DOT ankur AT gmail DOT com>
 """
 
+import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from klea_utils.mcp.server.config import BundledToolsConfig
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class GeneralConfig(BaseModel):
@@ -21,6 +24,13 @@ class GeneralConfig(BaseModel):
     #: The shared bundled tools server is on by default for the agent
     #: (batteries-included coding agent); deployers can disable or filter it.
     bundled_tools: BundledToolsConfig = Field(default_factory=BundledToolsConfig)
+    #: Default operating mode for new sessions. ``general`` is the unverified
+    #: agentic workflow; ``scientific`` will enforce ADR-0029 invariants.
+    #: Per-session ``mode`` in ``KleaAgentState`` (checkpoint truth) overrides
+    #: this default after the first turn.
+    mode: Literal["general", "scientific"] = Field(
+        default="general", validate_default=True
+    )
 
 
 class AppConfig(BaseModel):
